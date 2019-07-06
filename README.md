@@ -8,8 +8,7 @@ This generator creates pydantic mode from an openapi file.
 
 output:
 ```python
-@dataclass
-class Pet:
+class Pet(BaseModel):
     id: int
     name: str
     tag: str = None
@@ -17,14 +16,12 @@ class Pet:
 
 Pets = List[Pet]
 
-@dataclass
-class Error:
+class Error(BaseModel):
     code: int
     message: str
 
 
-@dataclass
-class api:
+class api(BaseModel):
     apiKey: str = None
     apiVersionNumber: str = None
 
