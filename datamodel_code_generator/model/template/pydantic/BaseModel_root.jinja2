@@ -1,0 +1,5 @@
+{% for decorator in decorators -%}
+{{ decorator }}
+{% endfor -%}
+class {{ class_name }}(BaseModel):
+    __root__: {{ _type }}

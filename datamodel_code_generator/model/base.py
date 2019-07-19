@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, List
 
-from mako.template import Template
+from jinja2 import Template
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
@@ -19,15 +19,15 @@ class DataModelField:
 
 
 class TemplateBase(ABC):
-    def __init__(self, template_file_name):
-        self.template_file_name: str = template_file_name
+    def __init__(self, template_file_path):
+        self.template_file_path: str = template_file_path
         self._template: Optional[Template] = None
 
     @property
     def template(self) -> Template:
         if self._template:
             return self._template
-        self._template = Template(filename=str(TEMPLATE_DIR / self.template_file_name))
+        self._template = Template((TEMPLATE_DIR / self.template_file_path).read_text())
         return self._template
 
     @abstractmethod
@@ -42,12 +42,12 @@ class TemplateBase(ABC):
 
 
 class DataModel(TemplateBase, ABC):
-    TEMPLATE_FILE_NAME: str = ''
+    TEMPLATE_FILE_PATH: str = ''
 
     def __init__(self, name: str, fields: List[DataModelField],
                  decorators: Optional[List[str]] = None, base_class: Optional[str] = None):
 
-        if not self.TEMPLATE_FILE_NAME:
+        if not self.TEMPLATE_FILE_PATH:
             raise Exception(f'TEMPLATE_FILE_NAME Not Set')
 
         self.name: str = name
@@ -56,7 +56,7 @@ class DataModel(TemplateBase, ABC):
         self.base_class: Optional[str] = base_class
         self._template: Optional[Template] = None
 
-        super().__init__(template_file_name=self.TEMPLATE_FILE_NAME)
+        super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
     def render(self) -> str:
         response = self._render(

@@ -1,4 +1,2 @@
-prance
-mako
-flex
-openapi_spec_validator
+prance==0.15.0
+jinja2==2.10.1
