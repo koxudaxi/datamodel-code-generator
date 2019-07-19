@@ -1,5 +1,5 @@
 from .base import DataModelField, DataModel
-from .alias import Alias
+from .custom_roo_type import CustomRootType
 from .pydantic import BaseModel
 from .dataclass import DataClass
 

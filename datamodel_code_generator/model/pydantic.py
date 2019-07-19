@@ -4,7 +4,7 @@ from datamodel_code_generator.model import DataModel, DataModelField
 
 
 class BaseModel(DataModel):
-    TEMPLATE_FILE_NAME = 'pydantic_BaseModel.mako'
+    TEMPLATE_FILE_PATH = 'pydantic/BaseModel.jinja2'
 
     def __init__(self, name: str, fields: List[DataModelField],
                  decorators: Optional[List[str]] = None):

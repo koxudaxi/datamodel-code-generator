@@ -1,7 +1,7 @@
 from dataclasses import dataclass, Field
 from typing import Dict, Type, Optional, List, Set
 
-from datamodel_code_generator.model import DataModelField, Alias, DataModel
+from datamodel_code_generator.model import DataModelField, CustomRootType, DataModel
 
 from prance import ResolvingParser, BaseParser
 
@@ -67,10 +67,10 @@ class Parser:
         # continue
         if '$ref' in obj['items']:
             _type: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
-            self.models.append(Alias(name, _type))
+            self.models.append(CustomRootType(name, _type))
         elif 'properties' in obj['items']:
             self.parse_object(name[:-1], obj['items'])
-            self.models.append(Alias(name, f'List[{name[:-1]}]'))
+            self.models.append(CustomRootType(name, f'List[{name[:-1]}]'))
 
     def parse(self):
         for obj_name, obj in base_parser.specification['components']['schemas'].items():
