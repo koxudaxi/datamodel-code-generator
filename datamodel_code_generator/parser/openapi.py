@@ -1,6 +1,6 @@
-from dataclasses import Field, dataclass
 from typing import Dict, List, Optional, Set, Type, Union
 
+from dataclasses import Field, dataclass
 from prance import BaseParser, ResolvingParser
 
 from ..model import CustomRootType, DataModel, DataModelField

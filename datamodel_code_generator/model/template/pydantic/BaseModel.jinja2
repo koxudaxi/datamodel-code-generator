@@ -6,6 +6,6 @@ class {{ class_name }}(BaseModel):
     {%- if field.required %}
     {{ field.name }}: {{ field.type_hint }}
     {%- else %}
-    {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
+    {{ field.name }}: Optional[{{ field.type_hint }}] = {{ field.default }}
     {%- endif %}
 {%- endfor -%}
