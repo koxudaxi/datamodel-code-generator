@@ -4,33 +4,35 @@ This generator creates pydantic mode from an openapi file.
 
 ## This project is an experimental phase.
 
-# example
+## Installation
 
-output:
-```python
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: str = None
+Install the package in editable mode:
 
-
-Pets = List[Pet]
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class api(BaseModel):
-    apiKey: str = None
-    apiVersionNumber: str = None
-
-
-apis = List[api]
-
+```sh
+$ git clone git@github.com:koxudaxi/datamodel-code-generator.git
+$ pip install -e datamodel-code-generator
 ```
 
-input:
+## Usage
+
+The `datamodel-codegen` command:
+```
+usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
+
+optional arguments:
+  -h, --help       show this help message and exit
+  --input INPUT    Open API YAML file
+  --output OUTPUT  Output file
+```
+
+## Example
+
+```sh
+$ datamodel-codegen --input api.yaml --output model.py
+```
+
+
+`api.yaml`:
 ```yaml
 openapi: "3.0.0"
 info:
@@ -178,5 +180,27 @@ components:
 #            type: string
 #            format: uriref
 #            description: A URL to the API console for each API
+```
 
+`model.py`:
+```python
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: str = None
+
+
+Pets = List[Pet]
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class api(BaseModel):
+    apiKey: str = None
+    apiVersionNumber: str = None
+
+
+apis = List[api]
 ```

@@ -1,0 +1,1 @@
+recursive-include datamodel_code_generator/model/template/pydantic/ *.jinja2

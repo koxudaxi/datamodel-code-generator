@@ -1,10 +1,10 @@
 from dataclasses import Field, dataclass
-from typing import Dict, List, Optional, Set, Type, Iterator, Union
+from typing import Dict, List, Optional, Set, Type, Union
 
 from prance import BaseParser, ResolvingParser
 
-from datamodel_code_generator.model import CustomRootType, DataModel, DataModelField
-from datamodel_code_generator.model.base import TemplateBase
+from ..model import CustomRootType, DataModel, DataModelField
+from ..model.base import TemplateBase
 
 
 @dataclass
@@ -41,10 +41,6 @@ def get_data_type(_type, format =None) -> DataType:
     return data_types[_type][_format]
 
 
-resolving_parser = ResolvingParser('api.yaml', backend='openapi-spec-validator')
-base_parser = BaseParser('api.yaml', backend='openapi-spec-validator')
-
-
 def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
     if isinstance(templates, TemplateBase):
         templates = [templates]
@@ -52,7 +48,11 @@ def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
 
 
 class Parser:
-    def __init__(self, data_model_type: Type[DataModel], data_model_field_type: Type[DataModelField]):
+    def __init__(self, data_model_type: Type[DataModel], data_model_field_type: Type[DataModelField],
+                 filename: str = "api.yaml"):
+        self.base_parser = BaseParser(filename, backend='openapi-spec-validator')
+        self.resolving_parser = ResolvingParser(filename, backend='openapi-spec-validator')
+
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
         self.models = []
@@ -81,7 +81,7 @@ class Parser:
 
     def parse(self) -> str:
         parsed_objects: List[str] = []
-        for obj_name, obj in base_parser.specification['components']['schemas'].items():
+        for obj_name, obj in self.base_parser.specification['components']['schemas'].items():
             if 'properties' in obj:
                 parsed_objects.append(self.parse_object(obj_name, obj))
             elif 'items' in obj:
