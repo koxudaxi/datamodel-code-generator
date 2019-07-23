@@ -1,11 +1,11 @@
-{% for decorator in decorators -%}
+{%- for decorator in decorators -%}
 {{ decorator }}
-{% endfor -%}
+{%- endfor -%}
 class {{ class_name }}(BaseModel):
 {%- for field in fields -%}
-    {% if field.required -%}
+    {%- if field.required %}
     {{ field.name }}: {{ field.type_hint }}
-    {% else -%}
+    {%- else %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
-    {% endif -%}
-{% endfor -%}
+    {%- endif %}
+{%- endfor -%}
