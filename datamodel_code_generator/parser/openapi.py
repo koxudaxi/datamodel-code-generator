@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set, Type, Union
+from typing import Dict, List, Optional, Set, Type, Union, Iterator
 
 from dataclasses import Field, dataclass
 from prance import BaseParser, ResolvingParser
@@ -44,7 +44,7 @@ def get_data_type(_type, format =None) -> DataType:
 def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
     if isinstance(templates, TemplateBase):
         templates = [templates]
-    return '\n\n'.join(str(m) for m in templates)
+    return '\n\n\n'.join(str(m) for m in templates)
 
 
 class Parser:
@@ -55,9 +55,8 @@ class Parser:
 
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
-        self.models = []
 
-    def parse_object(self, name: str, obj: Dict) -> str:
+    def parse_object(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
         requires: Set[str] = set(obj.get('required', []))
         d_list: List[DataModelField] = []
         for field_name, filed in obj['properties'].items():
@@ -66,25 +65,23 @@ class Parser:
                 name=field_name, type_hint=get_data_type(filed["type"],
                                                          filed.get("format")).type_hint,
                 required=field_name in requires))
-        return dump_templates(self.data_model_type(name, fields=d_list))
+        yield self.data_model_type(name, fields=d_list)
 
-    def parse_array(self, name: str, obj: Dict) -> str:
-        templates: List[TemplateBase] = []
+    def parse_array(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
         # continue
         if '$ref' in obj['items']:
             _type: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
-            templates.append(CustomRootType(name, _type))
+            yield CustomRootType(name, _type)
         elif 'properties' in obj['items']:
-            self.parse_object(name[:-1], obj['items'])
-            templates.append(CustomRootType(name, f'List[{name[:-1]}]'))
-        return dump_templates(templates)
+            yield from self.parse_object(name[:-1], obj['items'])
+            yield CustomRootType(name, f'List[{name[:-1]}]')
 
     def parse(self) -> str:
-        parsed_objects: List[str] = []
+        templates: List[TemplateBase] = []
         for obj_name, obj in self.base_parser.specification['components']['schemas'].items():
             if 'properties' in obj:
-                parsed_objects.append(self.parse_object(obj_name, obj))
+                templates.extend(self.parse_object(obj_name, obj))
             elif 'items' in obj:
-                parsed_objects.append(self.parse_array(obj_name, obj))
+                templates.extend(self.parse_array(obj_name, obj))
 
-        return '\n\n\n'.join(parsed_objects)
+        return dump_templates(templates)
