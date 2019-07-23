@@ -1,2 +1,5 @@
 prance==0.15.0
 jinja2==2.10.1
+argcomplete==1.10.0
+openapi-spec-validator==0.2.8
+inflect==2.1.0
