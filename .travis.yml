@@ -10,10 +10,12 @@ script:
 deploy:
   - provider: pypi
     user: koxudaxi
+    skip_existing: true
     password:
       secure: Djmf29FcrmJvL5cIqZMGwEwoCua1k8bI/dKoNTLG1UXVSAeh5EKQU8g7LztXAnEszWtzzHgXtQ7p6uYnylltuZToagViuFjQZyTwCr0B1jEP7b2Z86vR29suZh8Sffmqh18SinOchRF+Ey7mnZv5/YADOWpCjCKw+vXKElrkXo+/vVh5sGQzPbzZ2m2fdcbmnF53NDzDMXW4HI8WngIQcH/d8HST6yFMK0+deoYZgyYjXxRQ+eha4K4I5OWOvUg8hDmcPyOsQhaMAHi6UxQqV42I7Sl7sKxpW7PK8kX+Smkq/CilK8VYZWavoGs1lzuuE0JKTsm0Scz2b2EnmvR2tOJesn/hgPdq4+/XMY/lPTVK1Npw5YYk5hm/lpniS1ZB9hhRoeIlQwSuR9qtSbNPIJHT9zFBRE4yQEygx7MAKaoO9uPsFrBmrHMrElL4d0jgLSbWs6MXH05TT3ng56DUiWUsl5+3LclrXdRc2OUMnX+wkCxCh2nBxagLU0DmZBT/17SN57KPia1NxnZjGZCHPXqinVBykPe+72F3asv9vmz0OhM5Y6t54UosPudmPVY+9KaPovHxOJAEpGkXM5/jDLVWB/GMap19dyiyG/Ytk4Pt8AmgthWMnabZqZQq3Ko0/aFvDLmPUt9DR7F4H50gkMP/VjAGGsgWFjXTX262Suc=
     on:
       tags: true
+      python: '3.7'
     distributions: sdist bdist_wheel
   - provider: pages
     skip_cleanup: true
@@ -22,3 +24,4 @@ deploy:
     local_dir: site
     on:
       branch: master
+      python: '3.7'
