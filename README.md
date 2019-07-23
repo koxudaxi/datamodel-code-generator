@@ -2,6 +2,11 @@
 
 This generator creates pydantic mode from an openapi file.
 
+[![Build Status](https://travis-ci.org/koxudaxi/datamodel-code-generator.svg?branch=master)](https://travis-ci.org/koxudaxi/datamodel-code-generator)
+[![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://badge.fury.io/py/datamodel-code-generator)
+[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
+
+
 ## This project is an experimental phase.
 
 ## Installation
@@ -211,3 +216,19 @@ Install the package in editable mode:
 $ git clone git@github.com:koxudaxi/datamodel-code-generator.git
 $ pip install -e datamodel-code-generator
 ```
+
+## PyPi 
+
+[https://pypi.org/project/datamodel-code-generator](https://pypi.org/project/datamodel-code-generator)
+
+## Source Code
+
+[https://github.com/koxudaxi/datamodel-code-generator](https://github.com/koxudaxi/datamodel-code-generator)
+
+## Documentation
+
+[https://koxudaxi.github.io/datamodel-code-generator](https://koxudaxi.github.io/datamodel-code-generator)
+
+## License
+
+datamodel-code-generator is released under the MIT License. http://www.opensource.org/licenses/mit-license
