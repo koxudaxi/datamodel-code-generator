@@ -6,7 +6,7 @@ This generator creates pydantic mode from an openapi file.
 
 ## Installation
 
-Install the package in experimental mode:
+Install the package in editable mode:
 
 ```sh
 $ git clone git@github.com:koxudaxi/datamodel-code-generator.git
@@ -15,7 +15,7 @@ $ pip install -e datamodel-code-generator
 
 ## Usage
 
-The `datamode-codegen` command:
+The `datamodel-codegen` command:
 ```
 usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
 
