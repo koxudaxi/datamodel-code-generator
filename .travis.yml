@@ -5,7 +5,8 @@ python:
 install:
 - pip install ".[all]"
 script:
-- pytest
+- pytest --cov-report=xml --cov=datamodel_code_generator
+- codecov
 - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
 deploy:
   - provider: pypi
