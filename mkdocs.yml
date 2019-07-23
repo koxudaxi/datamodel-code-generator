@@ -1,0 +1,21 @@
+site_name: datamodel-code-generator
+site_description: This generator creates pydantic mode from an openapi file.
+
+theme:
+    name: 'material'
+    palette:
+      primary: 'light blue'
+      accent: 'light blue'
+
+markdown_extensions:
+  - codehilite
+
+repo_name: koxudaxi/datamodel-code-generator
+repo_url: https://github.com/koxudaxi/datamodel-code-generator
+
+google_analytics:
+    - 'UA-142130505-1'
+    - 'auto'
+
+nav:
+    - datamodel-code-generator: 'index.md'

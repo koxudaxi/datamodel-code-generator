@@ -1,16 +1,24 @@
 language: python
 python:
-  - '3.6'
-  - '3.7'
+- '3.6'
+- '3.7'
 install:
-  - pip install ".[all]"
+- pip install ".[all]"
 script:
-  - pytest
+- pytest
+- cp README.md docs/index.md && mkdocs build --verbose --clean --strict
 deploy:
-  provider: pypi
-  user: koxudaxi
-  password:
-    secure: Djmf29FcrmJvL5cIqZMGwEwoCua1k8bI/dKoNTLG1UXVSAeh5EKQU8g7LztXAnEszWtzzHgXtQ7p6uYnylltuZToagViuFjQZyTwCr0B1jEP7b2Z86vR29suZh8Sffmqh18SinOchRF+Ey7mnZv5/YADOWpCjCKw+vXKElrkXo+/vVh5sGQzPbzZ2m2fdcbmnF53NDzDMXW4HI8WngIQcH/d8HST6yFMK0+deoYZgyYjXxRQ+eha4K4I5OWOvUg8hDmcPyOsQhaMAHi6UxQqV42I7Sl7sKxpW7PK8kX+Smkq/CilK8VYZWavoGs1lzuuE0JKTsm0Scz2b2EnmvR2tOJesn/hgPdq4+/XMY/lPTVK1Npw5YYk5hm/lpniS1ZB9hhRoeIlQwSuR9qtSbNPIJHT9zFBRE4yQEygx7MAKaoO9uPsFrBmrHMrElL4d0jgLSbWs6MXH05TT3ng56DUiWUsl5+3LclrXdRc2OUMnX+wkCxCh2nBxagLU0DmZBT/17SN57KPia1NxnZjGZCHPXqinVBykPe+72F3asv9vmz0OhM5Y6t54UosPudmPVY+9KaPovHxOJAEpGkXM5/jDLVWB/GMap19dyiyG/Ytk4Pt8AmgthWMnabZqZQq3Ko0/aFvDLmPUt9DR7F4H50gkMP/VjAGGsgWFjXTX262Suc=
-  on:
-    tags: true
-  distributions: sdist bdist_wheel
+  - provider: pypi
+    user: koxudaxi
+    password:
+      secure: Djmf29FcrmJvL5cIqZMGwEwoCua1k8bI/dKoNTLG1UXVSAeh5EKQU8g7LztXAnEszWtzzHgXtQ7p6uYnylltuZToagViuFjQZyTwCr0B1jEP7b2Z86vR29suZh8Sffmqh18SinOchRF+Ey7mnZv5/YADOWpCjCKw+vXKElrkXo+/vVh5sGQzPbzZ2m2fdcbmnF53NDzDMXW4HI8WngIQcH/d8HST6yFMK0+deoYZgyYjXxRQ+eha4K4I5OWOvUg8hDmcPyOsQhaMAHi6UxQqV42I7Sl7sKxpW7PK8kX+Smkq/CilK8VYZWavoGs1lzuuE0JKTsm0Scz2b2EnmvR2tOJesn/hgPdq4+/XMY/lPTVK1Npw5YYk5hm/lpniS1ZB9hhRoeIlQwSuR9qtSbNPIJHT9zFBRE4yQEygx7MAKaoO9uPsFrBmrHMrElL4d0jgLSbWs6MXH05TT3ng56DUiWUsl5+3LclrXdRc2OUMnX+wkCxCh2nBxagLU0DmZBT/17SN57KPia1NxnZjGZCHPXqinVBykPe+72F3asv9vmz0OhM5Y6t54UosPudmPVY+9KaPovHxOJAEpGkXM5/jDLVWB/GMap19dyiyG/Ytk4Pt8AmgthWMnabZqZQq3Ko0/aFvDLmPUt9DR7F4H50gkMP/VjAGGsgWFjXTX262Suc=
+    on:
+      tags: true
+    distributions: sdist bdist_wheel
+  - provider: pages
+    skip_cleanup: true
+    github_token:
+      secure: Agdof7kepiw3XPif2FeiOIH69pCb8MiR1hqUrzIybu4iT+hi+QsHQOtIoF+vT28jao1j7F9OPv2LGjrQr+slCdPxKE1/EC4kjzkmSw2M8Cru9I3LZNFJZ+efNKVASZ/HH/OKLA+naKTVs78YoD96o7sJ75VkAygcF9JnDbkGN2VlEGyCqi5iVt1MRnvEYh1zpLUbU4bOz1oZiQDhQwjd6xc/MpGrEzhuGgg+DBESh6pLQke3SqacuMs0XWyRAo+L8/DAw/EFxVF/iIV+btMe1amGaimJi7CAhJ2K8UuKPoS08rMROZUsHRVHzlEuEZ8FUYes0UCbfo2Kl+gXMh3CMtm+ZgefpIhWYW0Bgd2h0F5Nb/rsg9oCSPxRcdnZ6TwqagCMpsJGjdAIiHDCcOMMTCsyZvvTWITPPEhNfUY1C5Z52KJdRcQOwdJXiJxZPB9o/78f/x5THnZM3jPT6oEhV/Xzw/5uzg6PeaUT/w7wJBSqufUvV23/1EXXsaMI9Ju8wZgRgSgvwZ4s59RbuBJ3rEctW+iBtQtUsR2Fh/ly5Lcfmk4lqeS7aeWLBCcPCr0PqiXUyafBIYYVYUs5SgQ7Mav4AWLQgCtzZ1MV2tCHsXje+aHQ426LFaaZw6W56dFbz+43RAQJzD1qympLdSUqmmYJM5n5w7v0rX9N4HQgaEg=
+    local_dir: site
+    on:
+      branch: master
