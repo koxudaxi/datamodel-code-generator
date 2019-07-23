@@ -1,0 +1,16 @@
+language: python
+python:
+  - '3.6'
+  - '3.7'
+install:
+  - pip install ".[all]"
+script:
+  - pytest
+deploy:
+  provider: pypi
+  user: koxudaxi
+  password:
+    secure: XXXXXXXX
+  on:
+    tags: true
+  distributions: sdist bdist_wheel
