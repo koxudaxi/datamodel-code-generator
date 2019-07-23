@@ -1,10 +1,15 @@
 from typing import Dict, List, Optional, Set, Type, Union
 
 from dataclasses import Field, dataclass
+
+import inflect
 from prance import BaseParser, ResolvingParser
 
 from ..model import CustomRootType, DataModel, DataModelField
 from ..model.base import TemplateBase
+
+
+inflect_engine = inflect.engine()
 
 
 @dataclass
@@ -75,8 +80,9 @@ class Parser:
             _type: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
             templates.append(CustomRootType(name, _type))
         elif 'properties' in obj['items']:
-            self.parse_object(name[:-1], obj['items'])
-            templates.append(CustomRootType(name, f'List[{name[:-1]}]'))
+            singular_name: str = inflect_engine.singular_noun(name)
+            self.parse_object(singular_name, obj['items'])
+            templates.append(CustomRootType(name, f'List[{singular_name}]'))
         return dump_templates(templates)
 
     def parse(self) -> str:
