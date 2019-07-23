@@ -1,9 +1,10 @@
+import sys
 from dataclasses import Field, dataclass
-from typing import Dict, List, Optional, Set, Type
+from typing import Dict, List, Optional, Set, Type, TextIO
 
 from prance import BaseParser, ResolvingParser
 
-from datamodel_code_generator.model import CustomRootType, DataModel, DataModelField
+from ..model import CustomRootType, DataModel, DataModelField
 
 
 @dataclass
@@ -40,12 +41,12 @@ def get_data_type(_type, format=None) -> DataType:
     return data_types[_type][_format]
 
 
-resolving_parser = ResolvingParser('api.yaml', backend='openapi-spec-validator')
-base_parser = BaseParser('api.yaml', backend='openapi-spec-validator')
-
-
 class Parser:
-    def __init__(self, data_model_type: Type[DataModel], data_model_field_type: Type[DataModelField]):
+    def __init__(self, data_model_type: Type[DataModel], data_model_field_type: Type[DataModelField],
+                 filename: str = "api.yaml"):
+        self.base_parser = BaseParser(filename, backend='openapi-spec-validator')
+        self.resolving_parser = ResolvingParser(filename, backend='openapi-spec-validator')
+
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
         self.models = []
@@ -70,13 +71,11 @@ class Parser:
             self.parse_object(name[:-1], obj['items'])
             self.models.append(CustomRootType(name, f'List[{name[:-1]}]'))
 
-    def parse(self):
-        for obj_name, obj in base_parser.specification['components']['schemas'].items():
+    def parse(self, file: TextIO = sys.stdout):
+        for obj_name, obj in self.base_parser.specification['components']['schemas'].items():
             if 'properties' in obj:
                 self.parse_object(obj_name, obj)
             elif 'items' in obj:
                 self.parse_array(obj_name, obj)
 
-        for data_model in self.models:
-            print(data_model)
-            print('')
+        print("\n\n\n".join(str(data_model).rstrip() for data_model in self.models), file=file)

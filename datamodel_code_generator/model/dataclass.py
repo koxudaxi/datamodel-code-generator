@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from datamodel_code_generator.model import DataModel, DataModelField
+from . import DataModel, DataModelField
 
 
 class DataClass(DataModel):
