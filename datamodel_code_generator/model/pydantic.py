@@ -10,4 +10,3 @@ class BaseModel(DataModel):
                  decorators: Optional[List[str]] = None):
         super().__init__(name=name, fields=fields,
                          decorators=decorators, base_class='BaseModel')
-

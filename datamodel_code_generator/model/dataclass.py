@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List, Optional
 
 from datamodel_code_generator.model import DataModel, DataModelField
 
@@ -8,6 +8,4 @@ class DataClass(DataModel):
 
     def __init__(self, name: str, fields: List[DataModelField],
                  decorators: Optional[List[str]] = None, base_class: Optional[str] = None):
-
         super().__init__(name, fields, decorators, base_class)
-

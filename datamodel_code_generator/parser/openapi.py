@@ -1,9 +1,9 @@
-from dataclasses import dataclass, Field
-from typing import Dict, Type, Optional, List, Set
+from dataclasses import Field, dataclass
+from typing import Dict, List, Optional, Set, Type
 
-from datamodel_code_generator.model import DataModelField, CustomRootType, DataModel
+from prance import BaseParser, ResolvingParser
 
-from prance import ResolvingParser, BaseParser
+from datamodel_code_generator.model import CustomRootType, DataModel, DataModelField
 
 
 @dataclass
@@ -19,36 +19,34 @@ data_types: Dict[str, Dict[str, DataType]] = {
         {
             'int32': DataType(type_hint='int'),
             'int64': DataType(type_hint='int')
-         },
+        },
     'number':
         {
             'float': DataType(type_hint='float'),
             'double': DataType(type_hint='float')
         },
     'string':
-        {   'default': DataType(type_hint='str'),
-            'byte': DataType(type_hint='str'),
-            'binary':  DataType(type_hint='bytes')
-        },
-#               'data': date,}, #As defined by full-date - RFC3339
+        {'default': DataType(type_hint='str'),
+         'byte': DataType(type_hint='str'),
+         'binary': DataType(type_hint='bytes')
+         },
+    #               'data': date,}, #As defined by full-date - RFC3339
     'boolean': {'default': DataType(type_hint='bool')}
 }
 
 
-def get_data_type(_type, format = None) -> DataType:
+def get_data_type(_type, format=None) -> DataType:
     _format: str = format or 'default'
     return data_types[_type][_format]
 
 
-resolving_parser = ResolvingParser('api.yaml', backend = 'openapi-spec-validator')
-base_parser = BaseParser('api.yaml', backend = 'openapi-spec-validator')
-
-
+resolving_parser = ResolvingParser('api.yaml', backend='openapi-spec-validator')
+base_parser = BaseParser('api.yaml', backend='openapi-spec-validator')
 
 
 class Parser:
     def __init__(self, data_model_type: Type[DataModel], data_model_field_type: Type[DataModelField]):
-        self.data_model_type:  Type[DataModel] = data_model_type
+        self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
         self.models = []
 
@@ -63,7 +61,7 @@ class Parser:
                 required=field_name in requires))
         self.models.append(self.data_model_type(name, fields=d_list))
 
-    def parse_array(self,name: str, obj: Dict):
+    def parse_array(self, name: str, obj: Dict):
         # continue
         if '$ref' in obj['items']:
             _type: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"

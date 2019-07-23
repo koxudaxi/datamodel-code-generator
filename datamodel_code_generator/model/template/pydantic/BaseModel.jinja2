@@ -2,7 +2,7 @@
 {{ decorator }}
 {% endfor -%}
 class {{ class_name }}(BaseModel):
-{% for field in fields -%}
+{%- for field in fields -%}
     {% if field.required -%}
     {{ field.name }}: {{ field.type_hint }}
     {% else -%}

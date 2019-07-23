@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 from jinja2 import Template
 
@@ -46,7 +46,6 @@ class DataModel(TemplateBase, ABC):
 
     def __init__(self, name: str, fields: List[DataModelField],
                  decorators: Optional[List[str]] = None, base_class: Optional[str] = None):
-
         if not self.TEMPLATE_FILE_PATH:
             raise Exception(f'TEMPLATE_FILE_NAME Not Set')
 
