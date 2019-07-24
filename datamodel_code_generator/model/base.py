@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from pydantic import BaseModel
 from typing import Any, List, Optional
 
 from jinja2 import Template
+from pydantic import BaseModel
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
