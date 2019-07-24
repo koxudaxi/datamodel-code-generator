@@ -6,13 +6,12 @@ Main function.
 
 import os
 import sys
-from argparse import ArgumentParser, FileType
+from argparse import ArgumentParser, FileType, Namespace
 from datetime import datetime, timezone
 from enum import IntEnum
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import argcomplete
-
 from datamodel_code_generator.model import BaseModel, DataModelField
 from datamodel_code_generator.parser.openapi import Parser
 
@@ -26,7 +25,9 @@ class Exit(IntEnum):
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument("--input", help="Open API YAML file")
-arg_parser.add_argument("--output", help="Output file", type=FileType("wt"), default=sys.stdout)
+arg_parser.add_argument(
+    "--output", help="Output file", type=FileType("wt"), default=sys.stdout
+)
 
 
 def main(args: Optional[Sequence[str]] = None) -> Exit:
@@ -38,9 +39,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if args is None:
         args = sys.argv[1:]
 
-    args = arg_parser.parse_args(args)
+    namespace: Namespace = arg_parser.parse_args(args)
 
-    input_filename = os.path.abspath(os.path.expanduser(args.input))
+    input_filename = os.path.abspath(os.path.expanduser(namespace.input))
     parser = Parser(BaseModel, DataModelField, filename=input_filename)
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     header = f"""\
@@ -54,7 +55,7 @@ from pydantic import BaseModel
 
 
 """
-    with args.output as file:
+    with namespace.output as file:
         print(header, file=file)
         print(parser.parse(), file=file)
 

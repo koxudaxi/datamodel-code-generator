@@ -5,7 +5,7 @@ python:
 install:
 - pip install ".[all]"
 script:
-- mypy datamodel_code_generator --disallow-untyped-defs
+- mypy datamodel_code_generator --disallow-untyped-defs --ignore-missing-imports
 - black datamodel_code_generator tests --check
 - isort --recursive --check-only --thirdparty datamodel_code_generator datamodel_code_generator tests
 - pytest --cov-report=xml --cov=datamodel_code_generator

@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from jinja2 import Template
 
-TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
+TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
 
 class DataModelField:
-    def __init__(self, name: str, type_hint: Optional[str] = None, default: Optional[str] = None,
-                 required: bool = False):
+    def __init__(
+        self,
+        name: str,
+        type_hint: Optional[str] = None,
+        default: Optional[str] = None,
+        required: bool = False,
+    ):
         self.name: str = name
         self.type_hint: Optional[str] = type_hint
         self.required: bool = required
@@ -19,7 +24,7 @@ class DataModelField:
 
 
 class TemplateBase(ABC):
-    def __init__(self, template_file_path):
+    def __init__(self, template_file_path: str) -> None:
         self.template_file_path: str = template_file_path
         self._template: Optional[Template] = None
 
@@ -34,7 +39,7 @@ class TemplateBase(ABC):
     def render(self) -> str:
         pass
 
-    def _render(self, *args, **kwargs):
+    def _render(self, *args: Any, **kwargs: Any) -> str:
         return self.template.render(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -42,15 +47,20 @@ class TemplateBase(ABC):
 
 
 class DataModel(TemplateBase, ABC):
-    TEMPLATE_FILE_PATH: str = ''
+    TEMPLATE_FILE_PATH: str = ""
 
-    def __init__(self, name: str, fields: List[DataModelField],
-                 decorators: Optional[List[str]] = None, base_class: Optional[str] = None):
+    def __init__(
+        self,
+        name: str,
+        fields: List[DataModelField],
+        decorators: Optional[List[str]] = None,
+        base_class: Optional[str] = None,
+    ) -> None:
         if not self.TEMPLATE_FILE_PATH:
-            raise Exception(f'TEMPLATE_FILE_NAME Not Set')
+            raise Exception(f"TEMPLATE_FILE_NAME Not Set")
 
         self.name: str = name
-        self.fields: List[DataModelField] = fields or DataModelField(name='pass')
+        self.fields: List[DataModelField] = fields or [DataModelField(name="pass")]
         self.decorators: List[str] = decorators or []
         self.base_class: Optional[str] = base_class
         self._template: Optional[Template] = None
@@ -62,6 +72,6 @@ class DataModel(TemplateBase, ABC):
             class_name=self.name,
             fields=self.fields,
             decorators=self.decorators,
-            base_class=self.base_class
+            base_class=self.base_class,
         )
         return response
