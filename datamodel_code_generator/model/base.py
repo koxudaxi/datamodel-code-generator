@@ -18,13 +18,10 @@ class DataModelField(BaseModel):
 class TemplateBase(ABC):
     def __init__(self, template_file_path: str) -> None:
         self.template_file_path: str = template_file_path
-        self._template: Optional[Template] = None
+        self._template: Template = Template((TEMPLATE_DIR / self.template_file_path).read_text())
 
     @property
     def template(self) -> Template:
-        if self._template:
-            return self._template
-        self._template = Template((TEMPLATE_DIR / self.template_file_path).read_text())
         return self._template
 
     @abstractmethod
