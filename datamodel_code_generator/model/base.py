@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+from pydantic import BaseModel
 from typing import Any, List, Optional
 
 from jinja2 import Template
@@ -7,18 +8,11 @@ from jinja2 import Template
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
 
-class DataModelField:
-    def __init__(
-        self,
-        name: str,
-        type_hint: Optional[str] = None,
-        default: Optional[str] = None,
-        required: bool = False,
-    ):
-        self.name: str = name
-        self.type_hint: Optional[str] = type_hint
-        self.required: bool = required
-        self.default: Optional[str] = default
+class DataModelField(BaseModel):
+    name: str
+    type_hint: Optional[str]
+    default: Optional[str]
+    required: bool = False
 
 
 class TemplateBase(ABC):
