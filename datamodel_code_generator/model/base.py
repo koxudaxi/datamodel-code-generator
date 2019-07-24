@@ -18,7 +18,9 @@ class DataModelField(BaseModel):
 class TemplateBase(ABC):
     def __init__(self, template_file_path: str) -> None:
         self.template_file_path: str = template_file_path
-        self._template: Template = Template((TEMPLATE_DIR / self.template_file_path).read_text())
+        self._template: Template = Template(
+            (TEMPLATE_DIR / self.template_file_path).read_text()
+        )
 
     @property
     def template(self) -> Template:
@@ -52,7 +54,6 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
         self.decorators: List[str] = decorators or []
         self.base_class: Optional[str] = base_class
-        self._template: Optional[Template] = None
 
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
