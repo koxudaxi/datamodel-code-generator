@@ -34,9 +34,9 @@ data_types: Dict[str, Dict[str, DataType]] = {
 }
 
 
-def get_data_type(_type, format=None) -> DataType:
-    _format: str = format or 'default'
-    return data_types[_type][_format]
+def get_data_type(type_: str, format_: Optional[str] = None) -> DataType:
+    format_ = format_ or 'default'
+    return data_types[type_][format_]
 
 
 def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
