@@ -4,7 +4,7 @@ from datamodel_code_generator.model import DataModel, DataModelField
 
 
 class BaseModel(DataModel):
-    TEMPLATE_FILE_PATH = "pydantic/BaseModel.jinja2"
+    TEMPLATE_FILE_PATH = 'pydantic/BaseModel.jinja2'
 
     def __init__(
         self,
@@ -13,5 +13,5 @@ class BaseModel(DataModel):
         decorators: Optional[List[str]] = None,
     ):
         super().__init__(
-            name=name, fields=fields, decorators=decorators, base_class="BaseModel"
+            name=name, fields=fields, decorators=decorators, base_class='BaseModel'
         )

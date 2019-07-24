@@ -4,7 +4,7 @@ from . import DataModel, DataModelField
 
 
 class DataClass(DataModel):
-    TEMPLATE_FILE_PATH = "dataclass.jinja2"
+    TEMPLATE_FILE_PATH = 'dataclass.jinja2'
 
     def __init__(
         self,

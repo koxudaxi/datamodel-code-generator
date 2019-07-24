@@ -6,7 +6,7 @@ from typing import Any, List, Optional
 
 from jinja2 import Template
 
-TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
+TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
 
 class DataModelField:
@@ -47,7 +47,7 @@ class TemplateBase(ABC):
 
 
 class DataModel(TemplateBase, ABC):
-    TEMPLATE_FILE_PATH: str = ""
+    TEMPLATE_FILE_PATH: str = ''
 
     def __init__(
         self,
@@ -57,10 +57,10 @@ class DataModel(TemplateBase, ABC):
         base_class: Optional[str] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
-            raise Exception(f"TEMPLATE_FILE_NAME Not Set")
+            raise Exception(f'TEMPLATE_FILE_NAME Not Set')
 
         self.name: str = name
-        self.fields: List[DataModelField] = fields or [DataModelField(name="pass")]
+        self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
         self.decorators: List[str] = decorators or []
         self.base_class: Optional[str] = base_class
         self._template: Optional[Template] = None
