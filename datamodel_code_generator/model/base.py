@@ -28,7 +28,7 @@ class TemplateBase(ABC):
 
     @abstractmethod
     def render(self) -> str:
-        pass
+        raise NotImplementedError
 
     def _render(self, *args: Any, **kwargs: Any) -> str:
         return self.template.render(*args, **kwargs)
