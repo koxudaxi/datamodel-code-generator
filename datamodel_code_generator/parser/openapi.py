@@ -4,8 +4,8 @@ from typing import Dict, Iterator, List, Optional, Set, Type, Union
 import inflect
 from prance import BaseParser, ResolvingParser
 
-from ..model import CustomRootType, DataModel, DataModelField
-from ..model.base import TemplateBase
+from ..model.base import DataModel, DataModelField, TemplateBase
+from ..model.pydantic import CustomRootType
 
 inflect_engine = inflect.engine()
 
@@ -49,7 +49,8 @@ class Parser:
     def __init__(
         self,
         data_model_type: Type[DataModel],
-        data_model_field_type: Type[DataModelField],
+        data_model_root_type: Type[DataModel],
+        data_model_field_type: Type[DataModelField] = DataModelField,
         filename: str = 'api.yaml',
     ):
         self.base_parser = BaseParser(filename, backend='openapi-spec-validator')
@@ -58,6 +59,7 @@ class Parser:
         )
 
         self.data_model_type: Type[DataModel] = data_model_type
+        self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
 
     def parse_object(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
@@ -79,12 +81,14 @@ class Parser:
     def parse_array(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
         # continue
         if '$ref' in obj['items']:
-            _type: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
-            yield CustomRootType(name, _type)
+            type_: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
+            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
         elif 'properties' in obj['items']:
             singular_name: str = inflect_engine.singular_noun(name)
             yield from self.parse_object(singular_name, obj['items'])
-            yield CustomRootType(name, f'List[{singular_name}]')
+            yield self.data_model_root_type(
+                name, [DataModelField(type_hint=f'List[{singular_name}]')]
+            )
 
     def parse(self) -> str:
         templates: List[TemplateBase] = []
