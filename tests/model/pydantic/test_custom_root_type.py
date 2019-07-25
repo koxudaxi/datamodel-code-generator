@@ -1,5 +1,6 @@
 from datamodel_code_generator.model import DataModelField
-from datamodel_code_generator.model.pydantic.custom_root_type import CustomRootType
+from datamodel_code_generator.model.pydantic.custom_root_type import \
+    CustomRootType
 
 
 def test_custom_root_type():
