@@ -9,7 +9,7 @@ TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
 
 class DataModelField(BaseModel):
-    name: str
+    name: Optional[str]
     type_hint: Optional[str]
     default: Optional[str]
     required: bool = False
@@ -39,6 +39,7 @@ class TemplateBase(ABC):
 
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: str = ''
+    BASE_CLASS: str = ''
 
     def __init__(
         self,
@@ -48,7 +49,7 @@ class DataModel(TemplateBase, ABC):
         base_class: Optional[str] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
-            raise Exception(f'TEMPLATE_FILE_NAME Not Set')
+            raise Exception('TEMPLATE_FILE_NAME is undefined')
 
         self.name: str = name
         self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
@@ -62,6 +63,6 @@ class DataModel(TemplateBase, ABC):
             class_name=self.name,
             fields=self.fields,
             decorators=self.decorators,
-            base_class=self.base_class,
+            base_class=self.BASE_CLASS,
         )
         return response

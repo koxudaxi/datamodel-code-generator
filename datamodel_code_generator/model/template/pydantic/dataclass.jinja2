@@ -1,8 +1,12 @@
-{%- for decorator in decorators -%}
+{% for decorator in decorators -%}
 {{ decorator }}
-{%- endfor -%}
+{% endfor -%}
 @dataclass
+{%- if base_class %}
+class {{ class_name }}({{ base_class }}):
+{%- else %}
 class {{ class_name }}:
+{%- endif %}
 {%- for field in fields -%}
     {%- if field.required %}
     {{ field.name }}: {{ field.type_hint }}
