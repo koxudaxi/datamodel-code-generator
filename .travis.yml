@@ -9,7 +9,7 @@ cache: pip
 script:
 - mypy datamodel_code_generator --disallow-untyped-defs --ignore-missing-imports
 - black datamodel_code_generator tests --check --skip-string-normalization
-- isort --recursive --check-only --thirdparty datamodel_code_generator datamodel_code_generator tests
+- isort --recursive --check-only -w 120 --thirdparty datamodel_code_generator datamodel_code_generator tests
 - pytest --cov=datamodel_code_generator tests
 - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
 after_success:
