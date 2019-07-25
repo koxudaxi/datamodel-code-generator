@@ -1,8 +1,7 @@
 from tempfile import NamedTemporaryFile
 
 import pytest
-from datamodel_code_generator.model.base import (DataModel, DataModelField,
-                                                 TemplateBase)
+from datamodel_code_generator.model.base import DataModel, DataModelField, TemplateBase
 
 
 class A(TemplateBase):
