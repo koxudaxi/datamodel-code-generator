@@ -1,36 +1,30 @@
-from dataclasses import Field, dataclass
 from typing import Dict, Iterator, List, Optional, Set, Type, Union
 
 import inflect
+from datamodel_code_generator.parser.base import DataType, Parser, Types
 from prance import BaseParser, ResolvingParser
 
 from ..model.base import DataModel, DataModelField, TemplateBase
-from ..model.pydantic import CustomRootType
 
 inflect_engine = inflect.engine()
 
-
-@dataclass
-class DataType:
-    type_hint: str
-    format: Optional[str] = None
-    default: Optional[Field] = None
-
-
 data_types: Dict[str, Dict[str, DataType]] = {
     # https://docs.python.org/3.7/library/json.html#encoders-and-decoders
-    'integer': {'int32': DataType(type_hint='int'), 'int64': DataType(type_hint='int')},
+    'integer': {'int32': DataType(type=Types.int), 'int64': DataType(type=Types.int)},
     'number': {
-        'float': DataType(type_hint='float'),
-        'double': DataType(type_hint='float'),
+        'float': DataType(type=Types.float),
+        'double': DataType(type=Types.float),
     },
     'string': {
-        'default': DataType(type_hint='str'),
-        'byte': DataType(type_hint='str'),
-        'binary': DataType(type_hint='bytes'),
+        'default': DataType(type=Types.str),
+        'byte': DataType(type=Types.str),  # base64 encoded string
+        'binary': DataType(type=Types.bytes),
+        'date': DataType(type=Types.date, raw_type=Types.str),
+        'date-time': DataType(type=Types.datetime, raw_type=Types.str),
+        'password': DataType(type=Types.secret_str, raw_type=Types.str),
     },
     #               'data': date,}, #As defined by full-date - RFC3339
-    'boolean': {'default': DataType(type_hint='bool')},
+    'boolean': {'default': DataType(type=Types.bool)},
 }
 
 
@@ -45,7 +39,7 @@ def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
     return '\n\n\n'.join(str(m) for m in templates)
 
 
-class Parser:
+class OpenAPIParser(Parser):
     def __init__(
         self,
         data_model_type: Type[DataModel],
@@ -57,10 +51,9 @@ class Parser:
         self.resolving_parser = ResolvingParser(
             filename, backend='openapi-spec-validator'
         )
-
-        self.data_model_type: Type[DataModel] = data_model_type
-        self.data_model_root_type: Type[DataModel] = data_model_root_type
-        self.data_model_field_type: Type[DataModelField] = data_model_field_type
+        super().__init__(
+            data_model_type, data_model_root_type, data_model_field_type, filename
+        )
 
     def parse_object(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
         requires: Set[str] = set(obj.get('required', []))
@@ -70,9 +63,7 @@ class Parser:
             d_list.append(
                 self.data_model_field_type(
                     name=field_name,
-                    type_hint=get_data_type(
-                        filed['type'], filed.get('format')
-                    ).type_hint,
+                    type=get_data_type(filed['type'], filed.get('format')).type,
                     required=field_name in requires,
                 )
             )
@@ -82,12 +73,12 @@ class Parser:
         # continue
         if '$ref' in obj['items']:
             type_: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
-            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
+            yield self.data_model_root_type(name, [DataModelField(type=type_)])
         elif 'properties' in obj['items']:
             singular_name: str = inflect_engine.singular_noun(name)
             yield from self.parse_object(singular_name, obj['items'])
             yield self.data_model_root_type(
-                name, [DataModelField(type_hint=f'List[{singular_name}]')]
+                name, [DataModelField(type=f'List[{singular_name}]')]
             )
 
     def parse(self) -> str:
