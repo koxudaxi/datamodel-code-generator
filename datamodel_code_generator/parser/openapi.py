@@ -83,8 +83,10 @@ class OpenAPIParser(Parser):
                 name, [DataModelField(type_hint=f'List[{singular_name}]')]
             )
         else:
-            data_type = get_data_type(obj['items']['type'], obj['items'].get('format')).type.value
-            type_: str = f"List[{data_type}]"
+            data_type = get_data_type(
+                obj['items']['type'], obj['items'].get('format')
+            ).type.value
+            type_ = f"List[{data_type}]"
             yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
 
     def parse(self) -> str:
@@ -97,10 +99,16 @@ class OpenAPIParser(Parser):
             elif 'items' in obj:
                 templates.extend(self.parse_array(obj_name, obj))
             else:
-                templates.append(self.data_model_root_type(
-                    obj_name,
-                    [DataModelField(type_hint=get_data_type(
-                        obj['type'], obj.get('format')
-                    ).type.value)])
+                templates.append(
+                    self.data_model_root_type(
+                        obj_name,
+                        [
+                            DataModelField(
+                                type_hint=get_data_type(
+                                    obj['type'], obj.get('format')
+                                ).type.value
+                            )
+                        ],
+                    )
                 )
         return dump_templates(templates)
