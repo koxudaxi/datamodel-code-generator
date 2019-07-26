@@ -48,6 +48,14 @@ class Users(BaseModel):
     __root__: List[User] = None
 
 
+class Id(BaseModel):
+    __root__: str = None
+
+
+class Rules(BaseModel):
+    __root__: List[str] = None
+
+
 class Error(BaseModel):
     code: int
     message: str

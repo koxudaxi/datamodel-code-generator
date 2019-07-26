@@ -129,6 +129,12 @@ components:
             type: string
           tag:
             type: string
+    Id:
+      type: string
+    Rules:
+      type: array
+      items:
+        type: string
     Error:
       required:
         - code
