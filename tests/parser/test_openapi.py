@@ -59,25 +59,35 @@ def test_openapi_parser_parse():
     assert (
         parser.parse()
         == '''class Pet(BaseModel):
-    id: None
-    name: None
-    tag: Optional[None] = None
+    id: int
+    name: str
+    tag: Optional[str] = None
 
 
 class Pets(BaseModel):
-    __root__: None = None
+    __root__: List[Pet] = None
+
+
+class User(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(BaseModel):
+    __root__: List[User] = None
 
 
 class Error(BaseModel):
-    code: None
-    message: None
+    code: int
+    message: str
 
 
 class api(BaseModel):
-    apiKey: Optional[None] = None
-    apiVersionNumber: Optional[None] = None
+    apiKey: Optional[str] = None
+    apiVersionNumber: Optional[str] = None
 
 
 class apis(BaseModel):
-    __root__: None = None'''
+    __root__: List[api] = None'''
     )

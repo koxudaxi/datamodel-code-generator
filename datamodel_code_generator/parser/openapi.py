@@ -63,7 +63,9 @@ class OpenAPIParser(Parser):
             d_list.append(
                 self.data_model_field_type(
                     name=field_name,
-                    type=get_data_type(filed['type'], filed.get('format')).type,
+                    type_hint=get_data_type(
+                        filed['type'], filed.get('format')
+                    ).type.value,
                     required=field_name in requires,
                 )
             )
@@ -73,12 +75,12 @@ class OpenAPIParser(Parser):
         # continue
         if '$ref' in obj['items']:
             type_: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
-            yield self.data_model_root_type(name, [DataModelField(type=type_)])
+            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
         elif 'properties' in obj['items']:
             singular_name: str = inflect_engine.singular_noun(name)
             yield from self.parse_object(singular_name, obj['items'])
             yield self.data_model_root_type(
-                name, [DataModelField(type=f'List[{singular_name}]')]
+                name, [DataModelField(type_hint=f'List[{singular_name}]')]
             )
 
     def parse(self) -> str:
