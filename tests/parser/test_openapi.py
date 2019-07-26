@@ -3,7 +3,12 @@ from tempfile import NamedTemporaryFile
 
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
-from datamodel_code_generator.parser.openapi import DataType, OpenAPIParser, dump_templates, get_data_type
+from datamodel_code_generator.parser.openapi import (
+    DataType,
+    OpenAPIParser,
+    dump_templates,
+    get_data_type,
+)
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data'
 
