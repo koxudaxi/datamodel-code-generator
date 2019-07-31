@@ -3,8 +3,8 @@ from tempfile import NamedTemporaryFile
 
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
+from datamodel_code_generator.parser.base import DataType
 from datamodel_code_generator.parser.openapi import (
-    DataType,
     OpenAPIParser,
     dump_templates,
     get_data_type,
@@ -27,18 +27,19 @@ def test_get_data_type():
     assert get_data_type('integer', 'int64') == DataType(type='int')
     assert get_data_type('number', 'float') == DataType(type='float')
     assert get_data_type('number', 'double') == DataType(type='float')
+    assert get_data_type('number', 'time') == DataType(type='time')
     assert get_data_type('string') == DataType(type='str')
     assert get_data_type('string', 'byte') == DataType(type='str')
     assert get_data_type('string', 'binary') == DataType(type='bytes')
     assert get_data_type('boolean') == DataType(type='bool')
     assert get_data_type('string') == DataType(type='str')
-    assert get_data_type('string', 'date') == DataType(type='date', raw_type='str')
-    assert get_data_type('string', 'date-time') == DataType(
-        type='datetime', raw_type='str'
-    )
-    assert get_data_type('string', 'password') == DataType(
-        type='secret_str', raw_type='str'
-    )
+    assert get_data_type('string', 'date') == DataType(type='date')
+    assert get_data_type('string', 'date-time') == DataType(type='datetime')
+    assert get_data_type('string', 'password') == DataType(type='SecretStr')
+    assert get_data_type('string', 'email') == DataType(type='EmailStr')
+    assert get_data_type('string', 'uri') == DataType(type='UrlStr')
+    assert get_data_type('string', 'ipv4') == DataType(type='IPv4Address')
+    assert get_data_type('string', 'ipv6') == DataType(type='IPv6Address')
 
 
 def test_dump_templates():
