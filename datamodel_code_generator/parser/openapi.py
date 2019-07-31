@@ -1,36 +1,12 @@
 from typing import Dict, Iterator, List, Optional, Set, Type, Union
 
 import inflect
-from datamodel_code_generator.parser.base import DataType, Parser, Types
+from datamodel_code_generator.parser.base import Parser, get_data_type
 from prance import BaseParser, ResolvingParser
 
 from ..model.base import DataModel, DataModelField, TemplateBase
 
 inflect_engine = inflect.engine()
-
-data_types: Dict[str, Dict[str, DataType]] = {
-    # https://docs.python.org/3.7/library/json.html#encoders-and-decoders
-    'integer': {'int32': DataType(type=Types.int), 'int64': DataType(type=Types.int)},
-    'number': {
-        'float': DataType(type=Types.float),
-        'double': DataType(type=Types.float),
-    },
-    'string': {
-        'default': DataType(type=Types.str),
-        'byte': DataType(type=Types.str),  # base64 encoded string
-        'binary': DataType(type=Types.bytes),
-        'date': DataType(type=Types.date, raw_type=Types.str),
-        'date-time': DataType(type=Types.datetime, raw_type=Types.str),
-        'password': DataType(type=Types.secret_str, raw_type=Types.str),
-    },
-    #               'data': date,}, #As defined by full-date - RFC3339
-    'boolean': {'default': DataType(type=Types.bool)},
-}
-
-
-def get_data_type(type_: str, format_: Optional[str] = None) -> DataType:
-    format_ = format_ or 'default'
-    return data_types[type_][format_]
 
 
 def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
@@ -65,7 +41,7 @@ class OpenAPIParser(Parser):
                     name=field_name,
                     type_hint=get_data_type(
                         filed['type'], filed.get('format')
-                    ).type.value,
+                    ).type_hint,
                     required=field_name in requires,
                 )
             )
@@ -85,7 +61,7 @@ class OpenAPIParser(Parser):
         else:
             data_type = get_data_type(
                 obj['items']['type'], obj['items'].get('format')
-            ).type.value
+            ).type_hint
             type_ = f"List[{data_type}]"
             yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
 
@@ -106,7 +82,7 @@ class OpenAPIParser(Parser):
                             DataModelField(
                                 type_hint=get_data_type(
                                     obj['type'], obj.get('format')
-                                ).type.value
+                                ).type_hint
                             )
                         ],
                     )
