@@ -1,7 +1,12 @@
-from typing import Dict, Iterator, List, Set, Type, Union
+from typing import Dict, Iterator, List, Optional, Set, Type, Union
 
 import inflect
-from datamodel_code_generator.parser.base import JsonSchemaObject, Parser, get_data_type
+from datamodel_code_generator.parser.base import (
+    JsonSchemaObject,
+    Parser,
+    get_data_type,
+    snake_to_upper_camel,
+)
 from prance import BaseParser, ResolvingParser
 
 from ..model.base import DataModel, DataModelField, TemplateBase
@@ -15,18 +20,30 @@ def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
     return '\n\n\n'.join(str(m) for m in templates)
 
 
+def create_class_name(field_name: str) -> str:
+    upper_camel_name = snake_to_upper_camel(field_name)
+    if upper_camel_name == field_name:
+        upper_camel_name += '_'
+    return upper_camel_name
+
+
 class OpenAPIParser(Parser):
     def __init__(
         self,
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
-        filename: str = 'api.yaml',
+        filename: Optional[str] = None,
     ):
-        self.base_parser = BaseParser(filename, backend='openapi-spec-validator')
-        self.resolving_parser = ResolvingParser(
-            filename, backend='openapi-spec-validator'
+        self.base_parser = (
+            BaseParser(filename, backend='openapi-spec-validator') if filename else None
         )
+        self.resolving_parser = (
+            ResolvingParser(filename, backend='openapi-spec-validator')
+            if filename
+            else None
+        )
+
         super().__init__(
             data_model_type, data_model_root_type, data_model_field_type, filename
         )
@@ -35,21 +52,25 @@ class OpenAPIParser(Parser):
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
         for field_name, filed in obj.properties.items():  # type: ignore
-            if filed.is_array:
-                yield from self.parse_array(field_name, filed)
-            elif filed.is_object:
-                yield from self.parse_object(field_name, filed)
+            if filed.is_array or filed.is_object:
+                class_name = create_class_name(field_name)
+                if filed.is_array:
+                    yield from self.parse_array(class_name, filed)
+                else:
+                    yield from self.parse_object(class_name, filed)
+                field_type_hint: str = class_name
+            else:
+                field_type_hint = get_data_type(filed).type_hint
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
-                    type_hint=get_data_type(filed).type_hint,
+                    type_hint=field_type_hint,
                     required=field_name in requires,
                 )
             )
         yield self.data_model_type(name, fields=fields)
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
-        # continue
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
@@ -59,7 +80,9 @@ class OpenAPIParser(Parser):
             if item.ref:
                 items_obj_name.append(item.ref.split('/')[-1])
             elif isinstance(item, JsonSchemaObject) and item.properties:
-                singular_name: str = inflect_engine.singular_noun(name)
+                singular_name = inflect_engine.singular_noun(name)
+                if singular_name is False:
+                    singular_name = f'{name}Item'
                 yield from self.parse_object(singular_name, item)
                 items_obj_name.append(singular_name)
             else:

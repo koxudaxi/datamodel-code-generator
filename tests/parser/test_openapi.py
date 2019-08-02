@@ -72,6 +72,134 @@ def test_dump_templates():
         )
 
 
+@pytest.mark.parametrize(
+    "source_obj,generated_classes",
+    [
+        (
+            {'properties': {'name': {'type': 'string'}}},
+            '''class Pets(BaseModel):
+    name: Optional[str] = None''',
+        ),
+        (
+            {
+                'properties': {
+                    'kind': {
+                        'type': 'object',
+                        'properties': {'name': {'type': 'string'}},
+                    }
+                }
+            },
+            '''class Kind(BaseModel):
+    name: Optional[str] = None
+
+
+class Pets(BaseModel):
+    kind: Optional[Kind] = None''',
+        ),
+        (
+            {
+                'properties': {
+                    'Kind': {
+                        'type': 'object',
+                        'properties': {'name': {'type': 'string'}},
+                    }
+                }
+            },
+            '''class Kind_(BaseModel):
+    name: Optional[str] = None
+
+
+class Pets(BaseModel):
+    Kind: Optional[Kind_] = None''',
+        ),
+        (
+            {
+                'properties': {
+                    'pet_kind': {
+                        'type': 'object',
+                        'properties': {'name': {'type': 'string'}},
+                    }
+                }
+            },
+            '''class PetKind(BaseModel):
+    name: Optional[str] = None
+
+
+class Pets(BaseModel):
+    pet_kind: Optional[PetKind] = None''',
+        ),
+        (
+            {
+                'properties': {
+                    'kind': {
+                        'type': 'object',
+                        'items': {
+                            'type': 'object',
+                            'properties': {'name': {'type': 'string'}},
+                        },
+                    }
+                }
+            },
+            '''class KindItem(BaseModel):
+    name: Optional[str] = None
+
+
+class Kind(BaseModel):
+    __root__: List[KindItem] = None
+
+
+class Pets(BaseModel):
+    kind: Optional[Kind] = None''',
+        ),
+    ],
+)
+def test_parse_object(source_obj, generated_classes):
+    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parsed_templates = parser.parse_object(
+        'Pets', JsonSchemaObject.parse_obj(source_obj)
+    )
+    assert dump_templates(list(parsed_templates)) == generated_classes
+
+
+@pytest.mark.parametrize(
+    "source_obj,generated_classes",
+    [
+        (
+            {
+                'type': 'array',
+                'items': {'type': 'object', 'properties': {'name': {'type': 'string'}}},
+            },
+            '''class Pet(BaseModel):
+    name: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet] = None''',
+        ),
+        (
+            {
+                'type': 'array',
+                'items': [
+                    {'type': 'object', 'properties': {'name': {'type': 'string'}}}
+                ],
+            },
+            '''class Pet(BaseModel):
+    name: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet] = None''',
+        ),
+    ],
+)
+def test_parse_array(source_obj, generated_classes):
+    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parsed_templates = parser.parse_array(
+        'Pets', JsonSchemaObject.parse_obj(source_obj)
+    )
+    assert dump_templates(list(parsed_templates)) == generated_classes
+
+
 def test_openapi_parser_parse():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, filename=str(DATA_PATH / 'api.yaml')

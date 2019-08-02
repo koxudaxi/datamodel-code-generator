@@ -6,6 +6,10 @@ from pydantic import BaseModel, Schema
 from ..model.base import DataModel, DataModelField
 
 
+def snake_to_upper_camel(word: str) -> str:
+    return ''.join(x.capitalize() for x in word.split('_'))
+
+
 class DataType(BaseModel):
     type: str
     is_func: bool = False
@@ -51,7 +55,7 @@ json_schema_data_formats: Dict[str, Dict[str, DataType]] = {
 
 
 class JsonSchemaObject(BaseModel):
-    items: Union['JsonSchemaObject', List['JsonSchemaObject'], None]
+    items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
     uniqueItem: Optional[bool]
     type: Optional[str]
     format: Optional[str]
@@ -87,7 +91,7 @@ def get_data_type(obj: JsonSchemaObject) -> DataType:
     format_ = obj.format or 'default'
     if obj.type:
         return json_schema_data_formats[obj.type][format_]
-    raise ValueError('invalid schema object')
+    raise ValueError(f'invalid schema object {obj}')
 
 
 class Parser(ABC):
@@ -96,13 +100,13 @@ class Parser(ABC):
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
-        filename: str = 'api.yaml',
+        filename: Optional[str] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
-        self.filename: str = filename
+        self.filename: Optional[str] = filename
 
     @abstractmethod
     def parse(self) -> str:
