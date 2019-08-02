@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type, Union, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Schema
 
 from ..model.base import DataModel, DataModelField
 
@@ -44,9 +44,43 @@ json_schema_data_formats: Dict[str, Dict[str, DataType]] = {
 }
 
 
-def get_data_type(type_: str, format_: Optional[str] = None) -> DataType:
-    format_ = format_ or 'default'
-    return json_schema_data_formats[type_][format_]
+class JsonSchemaObject(BaseModel):
+    items: Union['JsonSchemaObject', List['JsonSchemaObject'], None]
+    uniqueItem: Optional[bool]
+    type: Optional[str]
+    format: Optional[str]
+    pattern: Optional[str]
+    minLength: Optional[int]
+    maxLength: Optional[int]
+    minimum: Optional[float]
+    maximum: Optional[float]
+    multipleOf: Optional[float]
+    exclusiveMaximum: Optional[bool]
+    exclusiveMinimum: Optional[bool]
+    additionalProperties: Optional['JsonSchemaObject']
+    anyOf: Optional[List['JsonSchemaObject']]
+    enum: Optional[List[str]]
+    writeOnly: Optional[bool]
+    properties: Optional[Dict[str, 'JsonSchemaObject']]
+    required: Optional[List[str]]
+    ref: Optional[str] = Schema(default=None, alias='$ref')
+
+    @property
+    def is_object(self) -> bool:
+        return self.properties is not None or self.type == 'object'
+
+    @property
+    def is_array(self) -> bool:
+        return self.items is not None or self.type == 'array'
+
+
+JsonSchemaObject.update_forward_refs()
+
+
+def get_data_type(obj: JsonSchemaObject) -> DataType:
+    # if json_schema_object.
+    format_ = obj.format or 'default'
+    return json_schema_data_formats[obj.type][format_]
 
 
 class Parser(ABC):
