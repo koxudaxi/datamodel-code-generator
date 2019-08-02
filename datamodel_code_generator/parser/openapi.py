@@ -1,7 +1,7 @@
 from typing import Dict, Iterator, List, Set, Type, Union
 
 import inflect
-from datamodel_code_generator.parser.base import Parser, get_data_type, JsonSchemaObject
+from datamodel_code_generator.parser.base import JsonSchemaObject, Parser, get_data_type
 from prance import BaseParser, ResolvingParser
 
 from ..model.base import DataModel, DataModelField, TemplateBase
@@ -34,7 +34,7 @@ class OpenAPIParser(Parser):
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
-        for field_name, filed in obj.properties.items():  # type: str, JsonSchemaObject
+        for field_name, filed in obj.properties.items():  # type: ignore
             if filed.is_array:
                 yield from self.parse_array(field_name, filed)
             elif filed.is_object:
@@ -53,7 +53,7 @@ class OpenAPIParser(Parser):
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
-            items = obj.items
+            items = obj.items  # type: ignore
         items_obj_name: List[str] = []
         for item in items:
             if item.ref:
@@ -66,16 +66,15 @@ class OpenAPIParser(Parser):
                 data_type = get_data_type(item).type_hint
                 items_obj_name.append(data_type)
         support_types = f', '.join(items_obj_name)
-        yield self.data_model_root_type(name, [DataModelField(type_hint=f'List[{support_types}]')])
-
-    def parse_root_type(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         yield self.data_model_root_type(
-            name,
-            [
-                DataModelField(
-                    type_hint=get_data_type(obj).type_hint
-                )
-            ],
+            name, [DataModelField(type_hint=f'List[{support_types}]')]
+        )
+
+    def parse_root_type(
+        self, name: str, obj: JsonSchemaObject
+    ) -> Iterator[TemplateBase]:
+        yield self.data_model_root_type(
+            name, [DataModelField(type_hint=get_data_type(obj).type_hint)]
         )
 
     def parse(self) -> str:

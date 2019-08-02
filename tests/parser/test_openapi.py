@@ -2,7 +2,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pytest
-
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import DataType, JsonSchemaObject
@@ -26,32 +25,40 @@ class A(TemplateBase):
 
 @pytest.mark.parametrize(
     "schema_type,schema_format,result_type",
-    [('integer', 'int32', 'int'),
-     ('integer', 'int64', 'int'),
-     ('number', 'float', 'float'),
-     ('number', 'double', 'float'),
-     ('number', 'time', 'time'),
-     ('string', None, 'str'),
-     ('string', 'byte', 'str'),
-     ('string', 'binary', 'bytes'),
-     ('boolean', None, 'bool'),
-     ('string', 'date', 'date'),
-     ('string', 'date-time', 'datetime'),
-     ('string', 'password', 'SecretStr'),
-     ('string', 'email', 'EmailStr'),
-     ('string', 'uri', 'UrlStr'),
-     ('string', 'uuid', 'UUID'),
-     ('string', 'uuid1', 'UUID1'),
-     ('string', 'uuid2', 'UUID2'),
-     ('string', 'uuid3', 'UUID3'),
-     ('string', 'uuid4', 'UUID4'),
-     ('string', 'uuid5', 'UUID5'),
-     ('string', 'ipv4', 'IPv4Address'),
-     ('string', 'ipv6', 'IPv6Address'),
-     ],
+    [
+        ('integer', 'int32', 'int'),
+        ('integer', 'int64', 'int'),
+        ('number', 'float', 'float'),
+        ('number', 'double', 'float'),
+        ('number', 'time', 'time'),
+        ('string', None, 'str'),
+        ('string', 'byte', 'str'),
+        ('string', 'binary', 'bytes'),
+        ('boolean', None, 'bool'),
+        ('string', 'date', 'date'),
+        ('string', 'date-time', 'datetime'),
+        ('string', 'password', 'SecretStr'),
+        ('string', 'email', 'EmailStr'),
+        ('string', 'uri', 'UrlStr'),
+        ('string', 'uuid', 'UUID'),
+        ('string', 'uuid1', 'UUID1'),
+        ('string', 'uuid2', 'UUID2'),
+        ('string', 'uuid3', 'UUID3'),
+        ('string', 'uuid4', 'UUID4'),
+        ('string', 'uuid5', 'UUID5'),
+        ('string', 'ipv4', 'IPv4Address'),
+        ('string', 'ipv6', 'IPv6Address'),
+    ],
 )
 def test_get_data_type(schema_type, schema_format, result_type):
-    assert get_data_type(JsonSchemaObject(type=schema_type, format=schema_format)) == DataType(type=result_type)
+    assert get_data_type(
+        JsonSchemaObject(type=schema_type, format=schema_format)
+    ) == DataType(type=result_type)
+
+
+def test_get_data_type_invalid_obj():
+    with pytest.raises(ValueError, match='invalid schema object'):
+        get_data_type(JsonSchemaObject())
 
 
 def test_dump_templates():

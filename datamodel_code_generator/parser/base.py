@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type, Union, List
+from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel, Schema
 
@@ -69,7 +69,7 @@ class JsonSchemaObject(BaseModel):
     writeOnly: Optional[bool]
     properties: Optional[Dict[str, 'JsonSchemaObject']]
     required: Optional[List[str]]
-    ref: Optional[str] = Schema(default=None, alias='$ref')
+    ref: Optional[str] = Schema(default=None, alias='$ref')  # type: ignore
 
     @property
     def is_object(self) -> bool:
@@ -85,7 +85,9 @@ JsonSchemaObject.update_forward_refs()
 
 def get_data_type(obj: JsonSchemaObject) -> DataType:
     format_ = obj.format or 'default'
-    return json_schema_data_formats[obj.type][format_]
+    if obj.type:
+        return json_schema_data_formats[obj.type][format_]
+    raise ValueError('invalid schema object')
 
 
 class Parser(ABC):
