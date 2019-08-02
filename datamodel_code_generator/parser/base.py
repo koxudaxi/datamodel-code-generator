@@ -78,7 +78,6 @@ JsonSchemaObject.update_forward_refs()
 
 
 def get_data_type(obj: JsonSchemaObject) -> DataType:
-    # if json_schema_object.
     format_ = obj.format or 'default'
     return json_schema_data_formats[obj.type][format_]
 

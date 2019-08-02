@@ -1,9 +1,11 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import pytest
+
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
-from datamodel_code_generator.parser.base import DataType
+from datamodel_code_generator.parser.base import DataType, JsonSchemaObject
 from datamodel_code_generator.parser.openapi import (
     OpenAPIParser,
     dump_templates,
@@ -22,24 +24,28 @@ class A(TemplateBase):
         return self._data
 
 
-def test_get_data_type():
-    assert get_data_type('integer', 'int32') == DataType(type='int')
-    assert get_data_type('integer', 'int64') == DataType(type='int')
-    assert get_data_type('number', 'float') == DataType(type='float')
-    assert get_data_type('number', 'double') == DataType(type='float')
-    assert get_data_type('number', 'time') == DataType(type='time')
-    assert get_data_type('string') == DataType(type='str')
-    assert get_data_type('string', 'byte') == DataType(type='str')
-    assert get_data_type('string', 'binary') == DataType(type='bytes')
-    assert get_data_type('boolean') == DataType(type='bool')
-    assert get_data_type('string') == DataType(type='str')
-    assert get_data_type('string', 'date') == DataType(type='date')
-    assert get_data_type('string', 'date-time') == DataType(type='datetime')
-    assert get_data_type('string', 'password') == DataType(type='SecretStr')
-    assert get_data_type('string', 'email') == DataType(type='EmailStr')
-    assert get_data_type('string', 'uri') == DataType(type='UrlStr')
-    assert get_data_type('string', 'ipv4') == DataType(type='IPv4Address')
-    assert get_data_type('string', 'ipv6') == DataType(type='IPv6Address')
+@pytest.mark.parametrize(
+    "schema_type,schema_format,result_type",
+    [('integer', 'int32', 'int'),
+     ('integer', 'int64', 'int'),
+     ('number', 'float', 'float'),
+     ('number', 'double', 'float'),
+     ('number', 'time', 'time'),
+     ('string', None, 'str'),
+     ('string', 'byte', 'str'),
+     ('string', 'binary', 'bytes'),
+     ('boolean', None, 'bool'),
+     ('string', 'date', 'date'),
+     ('string', 'date-time', 'datetime'),
+     ('string', 'password', 'SecretStr'),
+     ('string', 'email', 'EmailStr'),
+     ('string', 'uri', 'UrlStr'),
+     ('string', 'ipv4', 'IPv4Address'),
+     ('string', 'ipv6', 'IPv6Address'),
+     ],
+)
+def test_get_data_type(schema_type, schema_format, result_type):
+    assert get_data_type(JsonSchemaObject(type=schema_type, format=schema_format)) == DataType(type=result_type)
 
 
 def test_dump_templates():

@@ -33,18 +33,20 @@ class OpenAPIParser(Parser):
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         requires: Set[str] = set(obj.required or [])
-        d_list: List[DataModelField] = []
+        fields: List[DataModelField] = []
         for field_name, filed in obj.properties.items():  # type: str, JsonSchemaObject
             if filed.is_array:
                 yield from self.parse_array(field_name, filed)
-            d_list.append(
+            elif filed.is_object:
+                yield from self.parse_object(field_name, filed)
+            fields.append(
                 self.data_model_field_type(
                     name=field_name,
                     type_hint=get_data_type(filed).type_hint,
                     required=field_name in requires,
                 )
             )
-        yield self.data_model_type(name, fields=d_list)
+        yield self.data_model_type(name, fields=fields)
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         # continue
@@ -61,9 +63,10 @@ class OpenAPIParser(Parser):
                 yield from self.parse_object(singular_name, item)
                 items_obj_name.append(singular_name)
             else:
-                data_type = get_data_type(obj).type_hint
+                data_type = get_data_type(item).type_hint
                 items_obj_name.append(data_type)
-        yield self.data_model_root_type(name, [DataModelField(type_hint=', '.join(items_obj_name))])
+        support_types = f', '.join(items_obj_name)
+        yield self.data_model_root_type(name, [DataModelField(type_hint=f'List[{support_types}]')])
 
     def parse_root_type(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         yield self.data_model_root_type(
