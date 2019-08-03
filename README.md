@@ -175,14 +175,14 @@ components:
           apiVersionNumber:
             type: string
             description: To be used as a version parameter value
-#          apiUrl:
-#            type: string
-#            format: uriref
-#            description: "The URL describing the dataset's fields"
-#          apiDocumentationUrl:
-#            type: string
-#            format: uriref
-#            description: A URL to the API console for each API
+          apiUrl:
+            type: string
+            format: uri
+            description: "The URL describing the dataset's fields"
+          apiDocumentationUrl:
+            type: string
+            format: uri
+            description: A URL to the API console for each API
 ```
 
 `model.py`:
@@ -215,6 +215,8 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
 
 
 class apis(BaseModel):

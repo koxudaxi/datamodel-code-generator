@@ -1,5 +1,6 @@
 from typing import Dict, Iterator, List, Optional, Set, Type, Union
 
+import black
 import inflect
 from datamodel_code_generator.parser.base import (
     JsonSchemaObject,
@@ -7,11 +8,16 @@ from datamodel_code_generator.parser.base import (
     get_data_type,
     snake_to_upper_camel,
 )
+from datamodel_code_generator.types import Import
+from isort import SortImports
 from prance import BaseParser, ResolvingParser
 
 from ..model.base import DataModel, DataModelField, TemplateBase
 
 inflect_engine = inflect.engine()
+
+IMPORT_LIST = Import(import_='List', from_='typing')
+IMPORT_OPTIONAL = Import(import_='Optional', from_='typing')
 
 
 def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
@@ -60,14 +66,18 @@ class OpenAPIParser(Parser):
                     yield from self.parse_object(class_name, filed)
                 field_type_hint: str = class_name
             else:
-                field_type_hint = get_data_type(filed).type_hint
+                data_type = get_data_type(filed, self.data_model_type)
+                self.imports.append(data_type.import_)
+                field_type_hint = data_type.type_hint
+            required: bool = field_name in requires
+            if not required:
+                self.imports.append(IMPORT_OPTIONAL)
             fields.append(
                 self.data_model_field_type(
-                    name=field_name,
-                    type_hint=field_type_hint,
-                    required=field_name in requires,
+                    name=field_name, type_hint=field_type_hint, required=required
                 )
             )
+        self.imports.append(self.data_model_type.get_import())
         yield self.data_model_type(name, fields=fields)
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -86,9 +96,11 @@ class OpenAPIParser(Parser):
                 yield from self.parse_object(singular_name, item)
                 items_obj_name.append(singular_name)
             else:
-                data_type = get_data_type(item).type_hint
-                items_obj_name.append(data_type)
+                data_type = get_data_type(item, self.data_model_type)
+                items_obj_name.append(data_type.type_hint)
+                self.imports.append(data_type.import_)
         support_types = f', '.join(items_obj_name)
+        self.imports.append(IMPORT_LIST)
         yield self.data_model_root_type(
             name, [DataModelField(type_hint=f'List[{support_types}]')]
         )
@@ -96,11 +108,20 @@ class OpenAPIParser(Parser):
     def parse_root_type(
         self, name: str, obj: JsonSchemaObject
     ) -> Iterator[TemplateBase]:
+        self.imports.append(self.data_model_type.get_import())
+        data_type = get_data_type(obj, self.data_model_type)
+        self.imports.append(data_type.import_)
+        requires: Set[str] = set(obj.required or [])
+        required: bool = name in requires
+        if not required:
+            self.imports.append(IMPORT_OPTIONAL)
         yield self.data_model_root_type(
-            name, [DataModelField(type_hint=get_data_type(obj).type_hint)]
+            name, [DataModelField(type_hint=data_type.type_hint, required=required)]
         )
 
-    def parse(self) -> str:
+    def parse(
+        self, with_import: Optional[bool] = True, format_: Optional[bool] = True
+    ) -> str:
         templates: List[TemplateBase] = []
         for obj_name, raw_obj in self.base_parser.specification['components'][
             'schemas'
@@ -112,4 +133,19 @@ class OpenAPIParser(Parser):
                 templates.extend(self.parse_array(obj_name, obj))
             else:
                 templates.extend(self.parse_root_type(obj_name, obj))
-        return dump_templates(templates)
+
+        result: str = ''
+        if with_import:
+            result += f'{self.imports.dump()}\n\n\n'
+        result += dump_templates(templates)
+        if format_:
+            result = black.format_str(
+                result,
+                mode=black.FileMode(
+                    target_versions={black.TargetVersion.PY36},
+                    string_normalization=False,
+                ),
+            )
+            result = SortImports(file_contents=result).output
+
+        return result

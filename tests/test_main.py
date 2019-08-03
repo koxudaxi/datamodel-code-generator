@@ -24,8 +24,7 @@ def test_main():
 
 from typing import List, Optional
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, UrlStr
 
 
 class Pet(BaseModel):
@@ -64,10 +63,13 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
 
 
 class apis(BaseModel):
     __root__: List[api] = None
+
 '''
         )
 

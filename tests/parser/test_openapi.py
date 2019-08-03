@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Optional
 
 import pytest
 from datamodel_code_generator.model.base import TemplateBase
@@ -10,6 +11,7 @@ from datamodel_code_generator.parser.openapi import (
     dump_templates,
     get_data_type,
 )
+from datamodel_code_generator.types import Import
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data'
 
@@ -24,41 +26,45 @@ class A(TemplateBase):
 
 
 @pytest.mark.parametrize(
-    "schema_type,schema_format,result_type",
+    "schema_type,schema_format,result_type,from_,import_",
     [
-        ('integer', 'int32', 'int'),
-        ('integer', 'int64', 'int'),
-        ('number', 'float', 'float'),
-        ('number', 'double', 'float'),
-        ('number', 'time', 'time'),
-        ('string', None, 'str'),
-        ('string', 'byte', 'str'),
-        ('string', 'binary', 'bytes'),
-        ('boolean', None, 'bool'),
-        ('string', 'date', 'date'),
-        ('string', 'date-time', 'datetime'),
-        ('string', 'password', 'SecretStr'),
-        ('string', 'email', 'EmailStr'),
-        ('string', 'uri', 'UrlStr'),
-        ('string', 'uuid', 'UUID'),
-        ('string', 'uuid1', 'UUID1'),
-        ('string', 'uuid2', 'UUID2'),
-        ('string', 'uuid3', 'UUID3'),
-        ('string', 'uuid4', 'UUID4'),
-        ('string', 'uuid5', 'UUID5'),
-        ('string', 'ipv4', 'IPv4Address'),
-        ('string', 'ipv6', 'IPv6Address'),
+        ('integer', 'int32', 'int', None, None),
+        ('integer', 'int64', 'int', None, None),
+        ('number', 'float', 'float', None, None),
+        ('number', 'double', 'float', None, None),
+        ('number', 'time', 'time', None, None),
+        ('string', None, 'str', None, None),
+        ('string', 'byte', 'str', None, None),
+        ('string', 'binary', 'bytes', None, None),
+        ('boolean', None, 'bool', None, None),
+        ('string', 'date', 'date', None, None),
+        ('string', 'date-time', 'datetime', None, None),
+        ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
+        ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
+        ('string', 'uri', 'UrlStr', 'pydantic', 'UrlStr'),
+        ('string', 'uuid', 'UUID', 'pydantic', 'UUID'),
+        ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1'),
+        ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2'),
+        ('string', 'uuid3', 'UUID3', 'pydantic', 'UUID3'),
+        ('string', 'uuid4', 'UUID4', 'pydantic', 'UUID4'),
+        ('string', 'uuid5', 'UUID5', 'pydantic', 'UUID5'),
+        ('string', 'ipv4', 'IPv4Address', 'pydantic', 'IPv4Address'),
+        ('string', 'ipv6', 'IPv6Address', 'pydantic', 'IPv6Address'),
     ],
 )
-def test_get_data_type(schema_type, schema_format, result_type):
+def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
+    if from_ and import_:
+        import_obj: Optional[Import] = Import(from_=from_, import_=import_)
+    else:
+        import_obj = None
     assert get_data_type(
-        JsonSchemaObject(type=schema_type, format=schema_format)
-    ) == DataType(type=result_type)
+        JsonSchemaObject(type=schema_type, format=schema_format), BaseModel
+    ) == DataType(type=result_type, import_=import_obj)
 
 
 def test_get_data_type_invalid_obj():
     with pytest.raises(ValueError, match='invalid schema object'):
-        get_data_type(JsonSchemaObject())
+        get_data_type(JsonSchemaObject(), BaseModel)
 
 
 def test_dump_templates():
@@ -206,7 +212,12 @@ def test_openapi_parser_parse():
     )
     assert (
         parser.parse()
-        == '''class Pet(BaseModel):
+        == '''from typing import List, Optional
+
+from pydantic import BaseModel, UrlStr
+
+
+class Pet(BaseModel):
     id: int
     name: str
     tag: Optional[str] = None
@@ -242,8 +253,11 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
 
 
 class apis(BaseModel):
-    __root__: List[api] = None'''
+    __root__: List[api] = None
+'''
     )

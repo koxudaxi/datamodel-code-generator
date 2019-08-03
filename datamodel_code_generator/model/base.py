@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
+from datamodel_code_generator.types import DataType, Import, Types
 from jinja2 import Template
 from pydantic import BaseModel
 
@@ -40,6 +41,9 @@ class TemplateBase(ABC):
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: str = ''
     BASE_CLASS: str = ''
+    FROM_: Optional[str] = None
+    IMPORT_: str = ''
+    DATA_TYPE_MAP: Dict[Types, DataType] = {}
 
     def __init__(
         self,
@@ -66,3 +70,11 @@ class DataModel(TemplateBase, ABC):
             base_class=self.BASE_CLASS,
         )
         return response
+
+    @classmethod
+    def get_import(cls) -> Import:
+        return Import(from_=cls.FROM_, import_=cls.IMPORT_)
+
+    @classmethod
+    def get_data_type(cls, types: Types) -> DataType:
+        return cls.DATA_TYPE_MAP[types]

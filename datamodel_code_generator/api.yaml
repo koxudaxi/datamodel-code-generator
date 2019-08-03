@@ -136,11 +136,11 @@ components:
           apiVersionNumber:
             type: string
             description: To be used as a version parameter value
-#          apiUrl:
-#            type: string
-#            format: uriref
-#            description: "The URL describing the dataset's fields"
-#          apiDocumentationUrl:
-#            type: string
-#            format: uriref
-#            description: A URL to the API console for each API
+          apiUrl:
+            type: string
+            format: uri
+            description: "The URL describing the dataset's fields"
+          apiDocumentationUrl:
+            type: string
+            format: uri
+            description: A URL to the API console for each API

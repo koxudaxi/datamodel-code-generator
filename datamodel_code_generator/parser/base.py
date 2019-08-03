@@ -1,56 +1,38 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import DefaultDict, Dict, List, Optional, Set, Type, Union
 
+from datamodel_code_generator.types import DataType, Imports
 from pydantic import BaseModel, Schema
 
-from ..model.base import DataModel, DataModelField
+from ..model.base import DataModel, DataModelField, Types
 
 
 def snake_to_upper_camel(word: str) -> str:
     return ''.join(x.capitalize() for x in word.split('_'))
 
 
-class DataType(BaseModel):
-    type: str
-    is_func: bool = False
-    kwargs: Optional[Dict[str, Any]]
-
-    @property
-    def type_hint(self) -> str:
-        # if self.is_func:
-        #     if self.kwargs:
-        #         kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
-        #         return f'{self.type}({kwargs})'
-        #     return f'{self.type}()'
-        return self.type
-
-
-json_schema_data_formats: Dict[str, Dict[str, DataType]] = {
-    'integer': {'int32': DataType(type='int'), 'int64': DataType(type='int')},
-    'number': {
-        'float': DataType(type='float'),
-        'double': DataType(type='float'),
-        'time': DataType(type='time'),
-    },
+json_schema_data_formats: Dict[str, Dict[str, Types]] = {
+    'integer': {'int32': Types.int32, 'int64': Types.int64},
+    'number': {'float': Types.float, 'double': Types.double, 'time': Types.time},
     'string': {
-        'default': DataType(type='str'),
-        'byte': DataType(type='str'),  # base64 encoded string
-        'binary': DataType(type='bytes'),
-        'date': DataType(type='date'),
-        'date-time': DataType(type='datetime'),
-        'password': DataType(type='SecretStr'),
-        'email': DataType(type='EmailStr'),
-        'uuid': DataType(type='UUID'),
-        'uuid1': DataType(type='UUID1'),
-        'uuid2': DataType(type='UUID2'),
-        'uuid3': DataType(type='UUID3'),
-        'uuid4': DataType(type='UUID4'),
-        'uuid5': DataType(type='UUID5'),
-        'uri': DataType(type='UrlStr'),
-        'ipv4': DataType(type='IPv4Address'),
-        'ipv6': DataType(type='IPv6Address'),
+        'default': Types.string,
+        'byte': Types.byte,  # base64 encoded string
+        'binary': Types.binary,
+        'date': Types.date,
+        'date-time': Types.date_time,
+        'password': Types.password,
+        'email': Types.email,
+        'uuid': Types.uuid,
+        'uuid1': Types.uuid1,
+        'uuid2': Types.uuid2,
+        'uuid3': Types.uuid3,
+        'uuid4': Types.uuid4,
+        'uuid5': Types.uuid5,
+        'uri': Types.uri,
+        'ipv4': Types.ipv4,
+        'ipv6': Types.ipv6,
     },
-    'boolean': {'default': DataType(type='bool')},
+    'boolean': {'default': Types.boolean},
 }
 
 
@@ -87,10 +69,10 @@ class JsonSchemaObject(BaseModel):
 JsonSchemaObject.update_forward_refs()
 
 
-def get_data_type(obj: JsonSchemaObject) -> DataType:
+def get_data_type(obj: JsonSchemaObject, data_model: Type[DataModel]) -> DataType:
     format_ = obj.format or 'default'
     if obj.type:
-        return json_schema_data_formats[obj.type][format_]
+        return data_model.get_data_type(json_schema_data_formats[obj.type][format_])
     raise ValueError(f'invalid schema object {obj}')
 
 
@@ -107,7 +89,10 @@ class Parser(ABC):
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
         self.filename: Optional[str] = filename
+        self.imports: Imports = Imports()
 
     @abstractmethod
-    def parse(self) -> str:
+    def parse(
+        self, with_import: Optional[bool] = True, format_: Optional[bool] = True
+    ) -> str:
         raise NotImplementedError
