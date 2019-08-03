@@ -16,9 +16,9 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
     @classmethod
     def create_line(cls, from_: Optional[str], imports: Set[str]) -> str:
         line: str = ''
-        if from_:
+        if from_:  # pragma: no cover
             line = f'from {from_} '
-        line += f"import {', '.join(imports)}"
+        line += f"import {', '.join(sorted(imports))}"
         return line
 
     def dump(self) -> str:
