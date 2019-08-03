@@ -102,7 +102,7 @@ class OpenAPIParser(Parser):
         support_types = f', '.join(items_obj_name)
         self.imports.append(IMPORT_LIST)
         yield self.data_model_root_type(
-            name, [DataModelField(type_hint=f'List[{support_types}]')]
+            name, [DataModelField(type_hint=f'List[{support_types}]', required=True)]
         )
 
     def parse_root_type(
@@ -111,12 +111,10 @@ class OpenAPIParser(Parser):
         self.imports.append(self.data_model_type.get_import())
         data_type = get_data_type(obj, self.data_model_type)
         self.imports.append(data_type.import_)
-        requires: Set[str] = set(obj.required or [])
-        required: bool = name in requires
-        if not required:
+        if obj.nullable:
             self.imports.append(IMPORT_OPTIONAL)
         yield self.data_model_root_type(
-            name, [DataModelField(type_hint=data_type.type_hint, required=required)]
+            name, [self.data_model_field_type(type_hint=data_type.type_hint, required=not obj.nullable)]
         )
 
     def parse(

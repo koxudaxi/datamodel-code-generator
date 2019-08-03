@@ -151,7 +151,7 @@ class Pets(BaseModel):
 
 
 class Kind(BaseModel):
-    __root__: List[KindItem] = None
+    __root__: List[KindItem]
 
 
 class Pets(BaseModel):
@@ -180,7 +180,7 @@ def test_parse_object(source_obj, generated_classes):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = None''',
+    __root__: List[Pet]''',
         ),
         (
             {
@@ -194,7 +194,7 @@ class Pets(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = None''',
+    __root__: List[Pet]''',
         ),
     ],
 )
@@ -206,13 +206,31 @@ def test_parse_array(source_obj, generated_classes):
     assert dump_templates(list(parsed_templates)) == generated_classes
 
 
-def test_openapi_parser_parse():
-    parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'api.yaml')
+@pytest.mark.parametrize(
+    "source_obj,generated_classes",
+    [
+        (
+            {'type': 'string', 'nullable': True},
+            '''class Name(BaseModel):
+    __root__: Optional[str] = None''',
+        ),
+        (
+                {'type': 'string', 'nullable': False},
+                '''class Name(BaseModel):
+    __root__: str''',
+        ),
+    ],
+)
+def test_parse_root_type(source_obj, generated_classes):
+    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parsed_templates = parser.parse_root_type(
+        'Name', JsonSchemaObject.parse_obj(source_obj)
     )
-    assert (
-        parser.parse()
-        == '''from typing import List, Optional
+    assert dump_templates(list(parsed_templates)) == generated_classes
+
+@pytest.mark.parametrize(
+    "with_import, format_, result",
+    [(True, True, '''from typing import List, Optional
 
 from pydantic import BaseModel, UrlStr
 
@@ -224,7 +242,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = None
+    __root__: List[Pet]
 
 
 class User(BaseModel):
@@ -234,15 +252,15 @@ class User(BaseModel):
 
 
 class Users(BaseModel):
-    __root__: List[User] = None
+    __root__: List[User]
 
 
 class Id(BaseModel):
-    __root__: str = None
+    __root__: str
 
 
 class Rules(BaseModel):
-    __root__: List[str] = None
+    __root__: List[str]
 
 
 class Error(BaseModel):
@@ -258,6 +276,104 @@ class api(BaseModel):
 
 
 class apis(BaseModel):
-    __root__: List[api] = None
-'''
+    __root__: List[api]
+'''),
+     (False, True, '''class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class User(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(BaseModel):
+    __root__: List[User]
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Rules(BaseModel):
+    __root__: List[str]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class api(BaseModel):
+    apiKey: Optional[str] = None
+    apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
+
+
+class apis(BaseModel):
+    __root__: List[api]
+'''),
+     (True, False, '''from typing import List, Optional
+from pydantic import BaseModel, UrlStr
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class User(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(BaseModel):
+    __root__: List[User]
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Rules(BaseModel):
+    __root__: List[str]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class api(BaseModel):
+    apiKey: Optional[str] = None
+    apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
+
+
+class apis(BaseModel):
+    __root__: List[api]''')
+     ]
+)
+def test_openapi_parser_parse(with_import, format_, result):
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'api.yaml')
+    )
+    assert (
+        parser.parse(with_import=with_import, format_=format_)
+        == result
     )

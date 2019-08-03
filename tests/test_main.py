@@ -34,7 +34,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = None
+    __root__: List[Pet]
 
 
 class User(BaseModel):
@@ -44,15 +44,15 @@ class User(BaseModel):
 
 
 class Users(BaseModel):
-    __root__: List[User] = None
+    __root__: List[User]
 
 
 class Id(BaseModel):
-    __root__: str = None
+    __root__: str
 
 
 class Rules(BaseModel):
-    __root__: List[str] = None
+    __root__: List[str]
 
 
 class Error(BaseModel):
@@ -68,7 +68,7 @@ class api(BaseModel):
 
 
 class apis(BaseModel):
-    __root__: List[api] = None
+    __root__: List[api]
 
 '''
         )

@@ -56,6 +56,7 @@ class JsonSchemaObject(BaseModel):
     properties: Optional[Dict[str, 'JsonSchemaObject']]
     required: Optional[List[str]]
     ref: Optional[str] = Schema(default=None, alias='$ref')  # type: ignore
+    nullable: Optional[bool] = False
 
     @property
     def is_object(self) -> bool:
