@@ -114,7 +114,12 @@ class OpenAPIParser(Parser):
         if obj.nullable:
             self.imports.append(IMPORT_OPTIONAL)
         yield self.data_model_root_type(
-            name, [self.data_model_field_type(type_hint=data_type.type_hint, required=not obj.nullable)]
+            name,
+            [
+                self.data_model_field_type(
+                    type_hint=data_type.type_hint, required=not obj.nullable
+                )
+            ],
         )
 
     def parse(

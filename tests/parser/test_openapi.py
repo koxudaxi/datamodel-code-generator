@@ -215,8 +215,8 @@ def test_parse_array(source_obj, generated_classes):
     __root__: Optional[str] = None''',
         ),
         (
-                {'type': 'string', 'nullable': False},
-                '''class Name(BaseModel):
+            {'type': 'string', 'nullable': False},
+            '''class Name(BaseModel):
     __root__: str''',
         ),
     ],
@@ -228,9 +228,14 @@ def test_parse_root_type(source_obj, generated_classes):
     )
     assert dump_templates(list(parsed_templates)) == generated_classes
 
+
 @pytest.mark.parametrize(
     "with_import, format_, result",
-    [(True, True, '''from typing import List, Optional
+    [
+        (
+            True,
+            True,
+            '''from typing import List, Optional
 
 from pydantic import BaseModel, UrlStr
 
@@ -277,8 +282,12 @@ class api(BaseModel):
 
 class apis(BaseModel):
     __root__: List[api]
-'''),
-     (False, True, '''class Pet(BaseModel):
+''',
+        ),
+        (
+            False,
+            True,
+            '''class Pet(BaseModel):
     id: int
     name: str
     tag: Optional[str] = None
@@ -320,8 +329,12 @@ class api(BaseModel):
 
 class apis(BaseModel):
     __root__: List[api]
-'''),
-     (True, False, '''from typing import List, Optional
+''',
+        ),
+        (
+            True,
+            False,
+            '''from typing import List, Optional
 from pydantic import BaseModel, UrlStr
 
 
@@ -366,14 +379,12 @@ class api(BaseModel):
 
 
 class apis(BaseModel):
-    __root__: List[api]''')
-     ]
+    __root__: List[api]''',
+        ),
+    ],
 )
 def test_openapi_parser_parse(with_import, format_, result):
     parser = OpenAPIParser(
         BaseModel, CustomRootType, filename=str(DATA_PATH / 'api.yaml')
     )
-    assert (
-        parser.parse(with_import=with_import, format_=format_)
-        == result
-    )
+    assert parser.parse(with_import=with_import, format_=format_) == result
