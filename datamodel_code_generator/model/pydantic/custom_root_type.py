@@ -1,8 +1,8 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from datamodel_code_generator.model.base import DataModel, DataModelField
-from datamodel_code_generator.model.pydantic.base_model import type_map
-from datamodel_code_generator.types import Types
+from datamodel_code_generator.model.pydantic.types import get_data_type
+from datamodel_code_generator.types import DataType, Types
 
 
 class CustomRootType(DataModel):
@@ -10,7 +10,6 @@ class CustomRootType(DataModel):
     BASE_CLASS = 'BaseModel'
     FROM_ = 'pydantic'
     IMPORT_ = 'BaseModel'
-    DATA_TYPE_MAP = type_map
 
     def __init__(
         self,
@@ -19,3 +18,7 @@ class CustomRootType(DataModel):
         decorators: Optional[List[str]] = None,
     ):
         super().__init__(name, fields=fields, decorators=decorators)
+
+    @classmethod
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+        return get_data_type(types, **kwargs)

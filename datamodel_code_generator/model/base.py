@@ -43,7 +43,6 @@ class DataModel(TemplateBase, ABC):
     BASE_CLASS: str = ''
     FROM_: Optional[str] = None
     IMPORT_: str = ''
-    DATA_TYPE_MAP: Dict[Types, DataType] = {}
 
     def __init__(
         self,
@@ -76,5 +75,6 @@ class DataModel(TemplateBase, ABC):
         return Import(from_=cls.FROM_, import_=cls.IMPORT_)
 
     @classmethod
-    def get_data_type(cls, types: Types) -> DataType:
-        return cls.DATA_TYPE_MAP[types]
+    @abstractmethod
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+        raise NotImplementedError

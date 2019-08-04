@@ -39,17 +39,19 @@ class DataType(BaseModel):
 
     @property
     def type_hint(self) -> str:
-        # if self.is_func:
-        #     if self.kwargs:
-        #         kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
-        #         return f'{self.type}({kwargs})'
-        #     return f'{self.type}()'
+        if self.is_func:
+            if self.kwargs:
+                kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
+                return f'{self.type}({kwargs})'
+            return f'{self.type}()'
         return self.type
 
 
 class Types(Enum):
+    integer = auto()
     int32 = auto()
     int64 = auto()
+    number = auto()
     float = auto()
     double = auto()
     time = auto()

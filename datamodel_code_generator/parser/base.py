@@ -12,8 +12,13 @@ def snake_to_upper_camel(word: str) -> str:
 
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
-    'integer': {'int32': Types.int32, 'int64': Types.int64},
-    'number': {'float': Types.float, 'double': Types.double, 'time': Types.time},
+    'integer': {'int32': Types.int32, 'int64': Types.int64, 'default': Types.integer},
+    'number': {
+        'float': Types.float,
+        'double': Types.double,
+        'time': Types.time,
+        'default': Types.number,
+    },
     'string': {
         'default': Types.string,
         'byte': Types.byte,  # base64 encoded string
@@ -72,9 +77,12 @@ JsonSchemaObject.update_forward_refs()
 
 def get_data_type(obj: JsonSchemaObject, data_model: Type[DataModel]) -> DataType:
     format_ = obj.format or 'default'
-    if obj.type:
-        return data_model.get_data_type(json_schema_data_formats[obj.type][format_])
-    raise ValueError(f'invalid schema object {obj}')
+    if obj.type is None:
+        raise ValueError(f'invalid schema object {obj}')
+
+    return data_model.get_data_type(
+        json_schema_data_formats[obj.type][format_], **obj.dict()
+    )
 
 
 class Parser(ABC):
