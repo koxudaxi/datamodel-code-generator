@@ -21,11 +21,14 @@ $ pip install datamodel-code-generator
 The `datamodel-codegen` command:
 ```
 usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
+                         [--base-class BASE_CLASS]
 
 optional arguments:
-  -h, --help       show this help message and exit
-  --input INPUT    Open API YAML file
-  --output OUTPUT  Output file
+  -h, --help            show this help message and exit
+  --input INPUT         Open API YAML file
+  --output OUTPUT       Output file
+  --base-class BASE_CLASS
+                        Base Class
 ```
 
 ## Example
