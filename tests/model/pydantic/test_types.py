@@ -118,3 +118,9 @@ def test_get_data_str_type(types, params, data_type):
 )
 def test_get_data_type(types, params, data_type):
     assert get_data_type(types, **params) == data_type
+
+
+def test_data_type_type_hint():
+    assert DataType(type='str').type_hint == 'str'
+    assert DataType(type='constr', is_func=True).type_hint == 'constr()'
+    assert DataType(type='constr', is_func=True, kwargs={'min_length': 10}).type_hint == 'constr(min_length=10)'
