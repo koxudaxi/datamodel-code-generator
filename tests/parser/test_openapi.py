@@ -392,8 +392,8 @@ class apis(BaseModel):
 
 from pydantic import UrlStr
 
-
 from custom_module import Base
+
 
 class Pet(Base):
     id: int

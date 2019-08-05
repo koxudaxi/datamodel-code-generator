@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Any, DefaultDict, Dict, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel
 
@@ -7,6 +7,13 @@ from pydantic import BaseModel
 class Import(BaseModel):
     from_: Optional[str] = None
     import_: str
+
+    @classmethod
+    def from_full_path(cls, class_path: str) -> 'Import':
+        split_class_path: List[str] = class_path.split('.')
+        return Import(
+            from_='.'.join(split_class_path[:-1]) or None, import_=split_class_path[-1]
+        )
 
 
 class Imports(DefaultDict[Optional[str], Set[str]]):
@@ -26,8 +33,12 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             self.create_line(from_, imports) for from_, imports in self.items()
         )
 
-    def append(self, import_: Optional[Import]) -> None:
-        if import_:
+    def append(self, imports: Union[Import, List[Import], None]) -> None:
+        if imports is None:
+            return None
+        if isinstance(imports, Import):
+            imports = [imports]
+        for import_ in imports:
             self[import_.from_].add(import_.import_)
 
 

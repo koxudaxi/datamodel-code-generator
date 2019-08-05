@@ -56,13 +56,9 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
         self.decorators: List[str] = decorators or []
         self.base_class: Optional[str] = base_class or self.BASE_CLASS
+        self.imports: List[Import] = []
         if self.base_class:
-            split_class_path = self.base_class.split('.')
-            self.import_: Optional[Import] = Import(
-                from_='.'.join(split_class_path[:-1]), import_=split_class_path[-1]
-            )
-        else:
-            self.import_ = None
+            self.imports.append(Import.from_full_path(self.base_class))
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
     def render(self) -> str:
@@ -70,7 +66,7 @@ class DataModel(TemplateBase, ABC):
             class_name=self.name,
             fields=self.fields,
             decorators=self.decorators,
-            base_class=self.import_.import_ if self.import_ else None,
+            base_class=self.base_class.split('.')[-1] if self.base_class else None,
         )
         return response
 

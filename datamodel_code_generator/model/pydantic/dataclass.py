@@ -2,14 +2,11 @@ from typing import Any, List, Optional
 
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.pydantic.types import get_data_type, type_map
-from datamodel_code_generator.types import DataType, Types
+from datamodel_code_generator.types import DataType, Import, Types
 
 
 class DataClass(DataModel):
     TEMPLATE_FILE_PATH = 'pydantic/dataclass.jinja2'
-    FROM_ = 'pydantic.dataclasses'
-    IMPORT_ = 'pydantic.dataclasses.dataclass'
-    DATA_TYPE_MAP = type_map
 
     def __init__(
         self,
@@ -20,6 +17,7 @@ class DataClass(DataModel):
     ):
 
         super().__init__(name, fields, decorators, base_class)
+        self.imports.append(Import.from_full_path('pydantic.dataclasses.dataclass'))
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
