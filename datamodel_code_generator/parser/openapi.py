@@ -88,8 +88,7 @@ class OpenAPIParser(Parser):
         data_model_type = self.data_model_type(
             name, fields=fields, base_class=self.base_class
         )
-        if data_model_type.imports:
-            self.imports.append(data_model_type.imports)
+        self.imports.append(data_model_type.imports)
         yield data_model_type
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -135,8 +134,7 @@ class OpenAPIParser(Parser):
             ],
             base_class=self.base_class,
         )
-        if data_model_root_type.imports:
-            self.imports.append(data_model_root_type.imports)
+        self.imports.append(data_model_root_type.imports)
         yield data_model_root_type
 
     def parse(

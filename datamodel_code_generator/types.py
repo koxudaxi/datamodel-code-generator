@@ -34,12 +34,11 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
         )
 
     def append(self, imports: Union[Import, List[Import], None]) -> None:
-        if imports is None:
-            return None
-        if isinstance(imports, Import):
-            imports = [imports]
-        for import_ in imports:
-            self[import_.from_].add(import_.import_)
+        if imports:
+            if isinstance(imports, Import):
+                imports = [imports]
+            for import_ in imports:
+                self[import_.from_].add(import_.import_)
 
 
 class DataType(BaseModel):
