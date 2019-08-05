@@ -106,3 +106,52 @@ class api(BaseModel):
 class apis(BaseModel):
     __root__: List[api] = None'''
     )
+
+
+def test_openapi_parser_parse_base_class():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'api.yaml'), base_class='Base'
+    )
+    assert (
+        parser.parse()
+        == '''class Pet(Base):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(Base):
+    __root__: List[Pet] = None
+
+
+class User(Base):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(Base):
+    __root__: List[User] = None
+
+
+class Id(Base):
+    __root__: str = None
+
+
+class Rules(Base):
+    __root__: List[str] = None
+
+
+class Error(Base):
+    code: int
+    message: str
+
+
+class api(Base):
+    apiKey: Optional[str] = None
+    apiVersionNumber: Optional[str] = None
+
+
+class apis(Base):
+    __root__: List[api] = None'''
+    )

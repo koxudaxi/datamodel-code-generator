@@ -54,7 +54,7 @@ class DataModel(TemplateBase, ABC):
         self.name: str = name
         self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
         self.decorators: List[str] = decorators or []
-        self.base_class: Optional[str] = base_class
+        self.base_class: Optional[str] = base_class or self.BASE_CLASS
 
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
@@ -63,6 +63,6 @@ class DataModel(TemplateBase, ABC):
             class_name=self.name,
             fields=self.fields,
             decorators=self.decorators,
-            base_class=self.BASE_CLASS,
+            base_class=self.base_class,
         )
         return response

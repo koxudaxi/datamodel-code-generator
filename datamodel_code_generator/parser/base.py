@@ -62,12 +62,14 @@ class Parser(ABC):
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: str = 'api.yaml',
+        base_class: Optional[str] = None
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
         self.filename: str = filename
+        self.base_class: Optional[str] = base_class
 
     @abstractmethod
     def parse(self) -> str:

@@ -22,13 +22,14 @@ class OpenAPIParser(Parser):
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: str = 'api.yaml',
+        base_class: Optional[str] = None
     ):
         self.base_parser = BaseParser(filename, backend='openapi-spec-validator')
         self.resolving_parser = ResolvingParser(
             filename, backend='openapi-spec-validator'
         )
         super().__init__(
-            data_model_type, data_model_root_type, data_model_field_type, filename
+            data_model_type, data_model_root_type, data_model_field_type, filename, base_class
         )
 
     def parse_object(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
@@ -45,25 +46,25 @@ class OpenAPIParser(Parser):
                     required=field_name in requires,
                 )
             )
-        yield self.data_model_type(name, fields=d_list)
+        yield self.data_model_type(name, fields=d_list, base_class=self.base_class)
 
     def parse_array(self, name: str, obj: Dict) -> Iterator[TemplateBase]:
         # continue
         if '$ref' in obj['items']:
             type_: str = f"List[{obj['items']['$ref'].split('/')[-1]}]"
-            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
+            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)], base_class=self.base_class)
         elif 'properties' in obj['items']:
             singular_name: str = inflect_engine.singular_noun(name)
             yield from self.parse_object(singular_name, obj['items'])
             yield self.data_model_root_type(
-                name, [DataModelField(type_hint=f'List[{singular_name}]')]
+                name, [DataModelField(type_hint=f'List[{singular_name}]')], base_class=self.base_class
             )
         else:
             data_type = get_data_type(
                 obj['items']['type'], obj['items'].get('format')
             ).type_hint
             type_ = f"List[{data_type}]"
-            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)])
+            yield self.data_model_root_type(name, [DataModelField(type_hint=type_)], base_class=self.base_class)
 
     def parse(self) -> str:
         templates: List[TemplateBase] = []
@@ -85,6 +86,7 @@ class OpenAPIParser(Parser):
                                 ).type_hint
                             )
                         ],
+                        base_class=self.base_class
                     )
                 )
         return dump_templates(templates)
