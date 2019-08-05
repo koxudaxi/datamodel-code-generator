@@ -29,7 +29,7 @@ arg_parser.add_argument(
     '--output', help='Output file', type=FileType('wt'), default=sys.stdout
 )
 arg_parser.add_argument(
-    '--base-class', help='Base Class', type=str, default='BaseModel'
+    '--base-class', help='Base Class', type=str, default='pydantic.BaseModel'
 )
 
 

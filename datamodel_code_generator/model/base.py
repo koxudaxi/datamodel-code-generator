@@ -63,6 +63,6 @@ class DataModel(TemplateBase, ABC):
             class_name=self.name,
             fields=self.fields,
             decorators=self.decorators,
-            base_class=self.base_class,
+            base_class=self.base_class.split('.')[-1],
         )
         return response
