@@ -1,6 +1,6 @@
 # datamodel-code-generator
 
-This generator creates pydantic mode from an openapi file.
+This code generator creates pydantic mode from an openapi file.
 
 [![Build Status](https://travis-ci.org/koxudaxi/datamodel-code-generator.svg?branch=master)](https://travis-ci.org/koxudaxi/datamodel-code-generator)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://badge.fury.io/py/datamodel-code-generator)
@@ -21,11 +21,14 @@ $ pip install datamodel-code-generator
 The `datamodel-codegen` command:
 ```
 usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
+                         [--base-class BASE_CLASS]
 
 optional arguments:
-  -h, --help       show this help message and exit
-  --input INPUT    Open API YAML file
-  --output OUTPUT  Output file
+  -h, --help            show this help message and exit
+  --input INPUT         Open API YAML file
+  --output OUTPUT       Output file
+  --base-class BASE_CLASS
+                        Base Class
 ```
 
 ## Example

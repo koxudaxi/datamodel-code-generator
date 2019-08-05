@@ -40,6 +40,7 @@ class OpenAPIParser(Parser):
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
+        base_class: Optional[str] = None,
     ):
         self.base_parser = (
             BaseParser(filename, backend='openapi-spec-validator') if filename else None
@@ -51,7 +52,11 @@ class OpenAPIParser(Parser):
         )
 
         super().__init__(
-            data_model_type, data_model_root_type, data_model_field_type, filename
+            data_model_type,
+            data_model_root_type,
+            data_model_field_type,
+            filename,
+            base_class,
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -74,11 +79,18 @@ class OpenAPIParser(Parser):
                 self.imports.append(IMPORT_OPTIONAL)
             fields.append(
                 self.data_model_field_type(
-                    name=field_name, type_hint=field_type_hint, required=required
+                    name=field_name,
+                    type_hint=field_type_hint,
+                    required=required,
+                    base_class=self.base_class,
                 )
             )
-        self.imports.append(self.data_model_type.get_import())
-        yield self.data_model_type(name, fields=fields)
+        data_model_type = self.data_model_type(
+            name, fields=fields, base_class=self.base_class
+        )
+        if data_model_type.import_:
+            self.imports.append(data_model_type.import_)
+        yield data_model_type
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         if isinstance(obj.items, JsonSchemaObject):
@@ -102,25 +114,30 @@ class OpenAPIParser(Parser):
         support_types = f', '.join(items_obj_name)
         self.imports.append(IMPORT_LIST)
         yield self.data_model_root_type(
-            name, [DataModelField(type_hint=f'List[{support_types}]', required=True)]
+            name,
+            [DataModelField(type_hint=f'List[{support_types}]', required=True)],
+            base_class=self.base_class,
         )
 
     def parse_root_type(
         self, name: str, obj: JsonSchemaObject
     ) -> Iterator[TemplateBase]:
-        self.imports.append(self.data_model_type.get_import())
         data_type = get_data_type(obj, self.data_model_type)
         self.imports.append(data_type.import_)
         if obj.nullable:
             self.imports.append(IMPORT_OPTIONAL)
-        yield self.data_model_root_type(
+        data_model_root_type = self.data_model_root_type(
             name,
             [
                 self.data_model_field_type(
                     type_hint=data_type.type_hint, required=not obj.nullable
                 )
             ],
+            base_class=self.base_class,
         )
+        if data_model_root_type.import_:
+            self.imports.append(data_model_root_type.import_)
+        yield data_model_root_type
 
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True

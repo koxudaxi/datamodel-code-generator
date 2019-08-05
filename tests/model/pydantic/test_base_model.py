@@ -31,14 +31,17 @@ def test_base_model_optional():
 def test_base_model_decorator():
     field = DataModelField(name='a', type_hint='str', default="'abc'", required=False)
 
-    base_model = BaseModel(name='test_model', fields=[field], decorators=['@validate'])
+    base_model = BaseModel(
+        name='test_model', fields=[field], decorators=['@validate'], base_class='Base'
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
+    assert base_model.base_class == 'Base'
     assert base_model.decorators == ['@validate']
     assert (
         base_model.render() == '@validate\n'
-        'class test_model(BaseModel):\n'
+        'class test_model(Base):\n'
         '    a: Optional[str] = \'abc\''
     )
 

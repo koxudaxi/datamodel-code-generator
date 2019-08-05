@@ -16,8 +16,10 @@ class DataClass(DataModel):
         name: str,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
+        base_class: Optional[str] = None,
     ):
-        super().__init__(name, fields, decorators)
+
+        super().__init__(name, fields, decorators, base_class)
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:

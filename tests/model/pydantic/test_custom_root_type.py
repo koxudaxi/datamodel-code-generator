@@ -39,14 +39,15 @@ def test_custom_root_type_decorator():
         name='test_model',
         fields=[DataModelField(type_hint='str', required=True)],
         decorators=['@validate'],
+        base_class='Base',
     )
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [DataModelField(type_hint='str', required=True)]
-
+    assert custom_root_type.base_class == 'Base'
     assert (
         custom_root_type.render() == '@validate\n'
-        'class test_model(BaseModel):\n'
+        'class test_model(Base):\n'
         '    __root__: str'
     )
 

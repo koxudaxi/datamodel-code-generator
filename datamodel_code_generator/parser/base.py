@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import DefaultDict, Dict, List, Optional, Set, Type, Union
+from typing import Dict, List, Optional, Type, Union
 
 from datamodel_code_generator.types import DataType, Imports
 from pydantic import BaseModel, Schema
@@ -92,6 +92,7 @@ class Parser(ABC):
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
+        base_class: Optional[str] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -99,6 +100,7 @@ class Parser(ABC):
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
         self.filename: Optional[str] = filename
         self.imports: Imports = Imports()
+        self.base_class: Optional[str] = base_class
 
     @abstractmethod
     def parse(
