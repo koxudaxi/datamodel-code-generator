@@ -40,3 +40,15 @@ def test_base_model_decorator():
         'class test_model(BaseModel):\n'
         '    a: Optional[str] = \'abc\''
     )
+
+
+def test_base_model_base_class():
+    field = DataModelField(name='a', type_hint='str', required=True)
+
+    base_model = BaseModel(name='test_model', fields=[field], base_class='Base')
+
+    assert base_model.name == 'test_model'
+    assert base_model.fields == [field]
+    assert base_model.decorators == []
+    assert base_model.base_class == 'Base'
+    assert base_model.render() == 'class test_model(Base):\n' '    a: str'

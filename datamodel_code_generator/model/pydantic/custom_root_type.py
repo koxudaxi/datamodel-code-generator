@@ -12,5 +12,8 @@ class CustomRootType(DataModel):
         name: str,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
+        base_class: Optional[str] = None,
     ):
-        super().__init__(name, fields=fields, decorators=decorators)
+        super().__init__(
+            name, fields=fields, decorators=decorators, base_class=base_class
+        )
