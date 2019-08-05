@@ -110,7 +110,10 @@ class apis(BaseModel):
 
 def test_openapi_parser_parse_base_class():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'api.yaml'), base_class='Base'
+        BaseModel,
+        CustomRootType,
+        filename=str(DATA_PATH / 'api.yaml'),
+        base_class='Base',
     )
     assert (
         parser.parse()

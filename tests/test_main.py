@@ -80,7 +80,14 @@ def test_main_base_class():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
-            ['--input', str(DATA_PATH / 'api.yaml'), '--output', str(output_file), '--base-class', 'Base']
+            [
+                '--input',
+                str(DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--base-class',
+                'Base',
+            ]
         )
         assert return_code == Exit.OK
         assert (

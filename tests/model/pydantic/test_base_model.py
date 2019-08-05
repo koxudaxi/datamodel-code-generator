@@ -41,6 +41,7 @@ def test_base_model_decorator():
         '    a: Optional[str] = \'abc\''
     )
 
+
 def test_base_model_base_class():
     field = DataModelField(name='a', type_hint='str', required=True)
 
