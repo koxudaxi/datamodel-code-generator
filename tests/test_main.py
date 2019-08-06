@@ -24,8 +24,7 @@ def test_main():
 
 from typing import List, Optional
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, UrlStr
 
 
 class Pet(BaseModel):
@@ -35,7 +34,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = None
+    __root__: List[Pet]
 
 
 class User(BaseModel):
@@ -45,15 +44,15 @@ class User(BaseModel):
 
 
 class Users(BaseModel):
-    __root__: List[User] = None
+    __root__: List[User]
 
 
 class Id(BaseModel):
-    __root__: str = None
+    __root__: str
 
 
 class Rules(BaseModel):
-    __root__: List[str] = None
+    __root__: List[str]
 
 
 class Error(BaseModel):
@@ -64,10 +63,13 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
 
 
 class apis(BaseModel):
-    __root__: List[api] = None
+    __root__: List[api]
+
 '''
         )
 
@@ -86,7 +88,7 @@ def test_main_base_class():
                 '--output',
                 str(output_file),
                 '--base-class',
-                'Base',
+                'custom_module.Base',
             ]
         )
         assert return_code == Exit.OK
@@ -98,8 +100,9 @@ def test_main_base_class():
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import UrlStr
 
+from custom_module import Base
 
 
 class Pet(Base):
@@ -109,7 +112,7 @@ class Pet(Base):
 
 
 class Pets(Base):
-    __root__: List[Pet] = None
+    __root__: List[Pet]
 
 
 class User(Base):
@@ -119,15 +122,15 @@ class User(Base):
 
 
 class Users(Base):
-    __root__: List[User] = None
+    __root__: List[User]
 
 
 class Id(Base):
-    __root__: str = None
+    __root__: str
 
 
 class Rules(Base):
-    __root__: List[str] = None
+    __root__: List[str]
 
 
 class Error(Base):
@@ -138,10 +141,13 @@ class Error(Base):
 class api(Base):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
 
 
 class apis(Base):
-    __root__: List[api] = None
+    __root__: List[api]
+
 '''
         )
 

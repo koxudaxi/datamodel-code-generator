@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
+from datamodel_code_generator.types import DataType, Import, Types
 from jinja2 import Template
 from pydantic import BaseModel
 
@@ -55,7 +56,9 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
         self.decorators: List[str] = decorators or []
         self.base_class: Optional[str] = base_class or self.BASE_CLASS
-
+        self.imports: List[Import] = []
+        if self.base_class:
+            self.imports.append(Import.from_full_path(self.base_class))
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
     def render(self) -> str:
@@ -66,3 +69,8 @@ class DataModel(TemplateBase, ABC):
             base_class=self.base_class.split('.')[-1] if self.base_class else None,
         )
         return response
+
+    @classmethod
+    @abstractmethod
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+        raise NotImplementedError

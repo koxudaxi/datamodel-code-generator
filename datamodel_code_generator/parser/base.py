@@ -1,58 +1,88 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type
+from typing import Dict, List, Optional, Type, Union
 
-from pydantic import BaseModel
+from datamodel_code_generator.types import DataType, Imports
+from pydantic import BaseModel, Schema
 
-from ..model.base import DataModel, DataModelField
-
-
-class DataType(BaseModel):
-    type: str
-    is_func: bool = False
-    kwargs: Optional[Dict[str, Any]]
-
-    @property
-    def type_hint(self) -> str:
-        # if self.is_func:
-        #     if self.kwargs:
-        #         kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
-        #         return f'{self.type}({kwargs})'
-        #     return f'{self.type}()'
-        return self.type
+from ..model.base import DataModel, DataModelField, Types
 
 
-json_schema_data_formats: Dict[str, Dict[str, DataType]] = {
-    'integer': {'int32': DataType(type='int'), 'int64': DataType(type='int')},
+def snake_to_upper_camel(word: str) -> str:
+    return ''.join(x.capitalize() for x in word.split('_'))
+
+
+json_schema_data_formats: Dict[str, Dict[str, Types]] = {
+    'integer': {'int32': Types.int32, 'int64': Types.int64, 'default': Types.integer},
     'number': {
-        'float': DataType(type='float'),
-        'double': DataType(type='float'),
-        'time': DataType(type='time'),
+        'float': Types.float,
+        'double': Types.double,
+        'time': Types.time,
+        'default': Types.number,
     },
     'string': {
-        'default': DataType(type='str'),
-        'byte': DataType(type='str'),  # base64 encoded string
-        'binary': DataType(type='bytes'),
-        'date': DataType(type='date'),
-        'date-time': DataType(type='datetime'),
-        'password': DataType(type='SecretStr'),
-        'email': DataType(type='EmailStr'),
-        'uuid': DataType(type='UUID'),
-        'uuid1': DataType(type='UUID1'),
-        'uuid2': DataType(type='UUID2'),
-        'uuid3': DataType(type='UUID3'),
-        'uuid4': DataType(type='UUID4'),
-        'uuid5': DataType(type='UUID5'),
-        'uri': DataType(type='UrlStr'),
-        'ipv4': DataType(type='IPv4Address'),
-        'ipv6': DataType(type='IPv6Address'),
+        'default': Types.string,
+        'byte': Types.byte,  # base64 encoded string
+        'binary': Types.binary,
+        'date': Types.date,
+        'date-time': Types.date_time,
+        'password': Types.password,
+        'email': Types.email,
+        'uuid': Types.uuid,
+        'uuid1': Types.uuid1,
+        'uuid2': Types.uuid2,
+        'uuid3': Types.uuid3,
+        'uuid4': Types.uuid4,
+        'uuid5': Types.uuid5,
+        'uri': Types.uri,
+        'ipv4': Types.ipv4,
+        'ipv6': Types.ipv6,
     },
-    'boolean': {'default': DataType(type='bool')},
+    'boolean': {'default': Types.boolean},
 }
 
 
-def get_data_type(type_: str, format_: Optional[str] = None) -> DataType:
-    format_ = format_ or 'default'
-    return json_schema_data_formats[type_][format_]
+class JsonSchemaObject(BaseModel):
+    items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
+    uniqueItem: Optional[bool]
+    type: Optional[str]
+    format: Optional[str]
+    pattern: Optional[str]
+    minLength: Optional[int]
+    maxLength: Optional[int]
+    minimum: Optional[float]
+    maximum: Optional[float]
+    multipleOf: Optional[float]
+    exclusiveMaximum: Optional[bool]
+    exclusiveMinimum: Optional[bool]
+    additionalProperties: Optional['JsonSchemaObject']
+    anyOf: Optional[List['JsonSchemaObject']]
+    enum: Optional[List[str]]
+    writeOnly: Optional[bool]
+    properties: Optional[Dict[str, 'JsonSchemaObject']]
+    required: Optional[List[str]]
+    ref: Optional[str] = Schema(default=None, alias='$ref')  # type: ignore
+    nullable: Optional[bool] = False
+
+    @property
+    def is_object(self) -> bool:
+        return self.properties is not None or self.type == 'object'
+
+    @property
+    def is_array(self) -> bool:
+        return self.items is not None or self.type == 'array'
+
+
+JsonSchemaObject.update_forward_refs()
+
+
+def get_data_type(obj: JsonSchemaObject, data_model: Type[DataModel]) -> DataType:
+    format_ = obj.format or 'default'
+    if obj.type is None:
+        raise ValueError(f'invalid schema object {obj}')
+
+    return data_model.get_data_type(
+        json_schema_data_formats[obj.type][format_], **obj.dict()
+    )
 
 
 class Parser(ABC):
@@ -61,16 +91,19 @@ class Parser(ABC):
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
-        filename: str = 'api.yaml',
+        filename: Optional[str] = None,
         base_class: Optional[str] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
-        self.filename: str = filename
+        self.filename: Optional[str] = filename
+        self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
 
     @abstractmethod
-    def parse(self) -> str:
+    def parse(
+        self, with_import: Optional[bool] = True, format_: Optional[bool] = True
+    ) -> str:
         raise NotImplementedError

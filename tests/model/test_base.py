@@ -1,7 +1,9 @@
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 import pytest
 from datamodel_code_generator.model.base import DataModel, DataModelField, TemplateBase
+from datamodel_code_generator.types import DataType, Types
 
 
 class A(TemplateBase):
@@ -10,6 +12,10 @@ class A(TemplateBase):
 
 
 class B(DataModel):
+    @classmethod
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+        pass
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -17,7 +23,9 @@ class B(DataModel):
 
 
 class C(DataModel):
-    pass
+    @classmethod
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+        pass
 
 
 template: str = '''{%- for decorator in decorators -%}

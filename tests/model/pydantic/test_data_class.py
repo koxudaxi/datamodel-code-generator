@@ -1,5 +1,6 @@
 from datamodel_code_generator.model import DataModelField
 from datamodel_code_generator.model.pydantic.dataclass import DataClass
+from datamodel_code_generator.types import DataType, Types
 
 
 def test_data_class():
@@ -39,3 +40,7 @@ def test_data_class_optional():
         'class test_model:\n'
         '    a: str = \'abc\''
     )
+
+
+def test_data_class_get_data_type():
+    assert DataClass.get_data_type(Types.integer) == DataType(type='int')
