@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Type, Union, Set
+from typing import Dict, List, Optional, Set, Type, Union
 
 from datamodel_code_generator.types import DataType, Imports
 from pydantic import BaseModel, Schema
@@ -70,6 +70,10 @@ class JsonSchemaObject(BaseModel):
     @property
     def is_array(self) -> bool:
         return self.items is not None or self.type == 'array'
+
+    @property
+    def ref_object_name(self) -> str:
+        return self.ref.split('/')[-1]  # type: ignore
 
 
 JsonSchemaObject.update_forward_refs()

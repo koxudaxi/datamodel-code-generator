@@ -482,6 +482,7 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
 
+
 @pytest.mark.parametrize(
     "source_obj,generated_classes",
     [
@@ -507,11 +508,11 @@ def test_parse_root_type(source_obj, generated_classes):
 
 def test_openapi_parser_parse_duplicate_models():
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        filename=str(DATA_PATH / 'duplicate_models.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'duplicate_models.yaml')
     )
-    assert parser.parse() == """from typing import List, Optional
+    assert (
+        parser.parse()
+        == """from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -550,3 +551,4 @@ class EventRoot(BaseModel):
 class EventObject(BaseModel):
     event: Optional[Event] = None
 """
+    )

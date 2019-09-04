@@ -61,7 +61,7 @@ class OpenAPIParser(Parser):
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         if name in self.created_model_names:
-            yield None
+            return None
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
         for field_name, filed in obj.properties.items():  # type: ignore
@@ -99,7 +99,7 @@ class OpenAPIParser(Parser):
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         if name in self.created_model_names:
-            yield None
+            return None
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
@@ -131,7 +131,7 @@ class OpenAPIParser(Parser):
         self, name: str, obj: JsonSchemaObject
     ) -> Iterator[TemplateBase]:
         if name in self.created_model_names:
-            yield None
+            return None
         if obj.type:
             data_type = get_data_type(obj, self.data_model_type)
             self.imports.append(data_type.import_)
@@ -140,7 +140,7 @@ class OpenAPIParser(Parser):
             self.created_model_names.add(name)
             type_hint: str = data_type.type_hint
         else:
-            type_hint = obj.ref.split('/')[-1]
+            type_hint = obj.ref_object_name
         data_model_root_type = self.data_model_root_type(
             name,
             [
