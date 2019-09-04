@@ -283,6 +283,14 @@ class api(BaseModel):
 
 class apis(BaseModel):
     __root__: List[api]
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None
 ''',
         ),
         (
@@ -331,6 +339,14 @@ class api(BaseModel):
 
 class apis(BaseModel):
     __root__: List[api]
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None
 ''',
         ),
         (
@@ -382,7 +398,15 @@ class api(BaseModel):
 
 
 class apis(BaseModel):
-    __root__: List[api]''',
+    __root__: List[api]
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None''',
         ),
         (
             True,
@@ -437,6 +461,14 @@ class api(Base):
 
 class apis(Base):
     __root__: List[api]
+
+
+class Event(Base):
+    name: Optional[str] = None
+
+
+class Result(Base):
+    event: Optional[Event] = None
 ''',
         ),
     ],

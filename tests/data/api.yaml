@@ -164,3 +164,13 @@ components:
             type: string
             format: uri
             description: A URL to the API console for each API
+    Event:
+      type: object
+      properties:
+        name:
+          type: string
+    Result:
+        type: object
+        properties:
+          event:
+            $ref: '#/components/schemas/Event'
