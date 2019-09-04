@@ -98,6 +98,7 @@ components:
         type: object
         properties:
           event:
+            type: array
             items:
               $ref: '#/components/schemas/Event'
     DuplicateObject2:
