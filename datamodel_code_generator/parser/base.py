@@ -108,11 +108,20 @@ class Parser(ABC):
         self.base_class: Optional[str] = base_class
         self.created_model_names: Set[str] = set()
         self.target_python_version: str = target_python_version
+        self.un_resolve_classes: Set[str] = set()
 
     def get_type_name(self, name: str) -> str:
         if self.target_python_version == '3.6':
             return f"'{name}'"
         return name
+
+    def add_un_resolve_class(self, class_name: str, reference_name: Union[str, List[str]]) -> None:
+        if isinstance(reference_name, str):
+            if reference_name not in self.created_model_names:
+                self.un_resolve_classes.add(class_name)
+        elif isinstance(reference_name, list):
+            if set(reference_name) - self.created_model_names:
+                self.un_resolve_classes.add(class_name)
 
     @abstractmethod
     def parse(

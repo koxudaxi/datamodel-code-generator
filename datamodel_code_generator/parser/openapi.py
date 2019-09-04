@@ -76,9 +76,11 @@ class OpenAPIParser(Parser):
                     ].type_hint
                 else:
                     yield from self.parse_object(class_name, filed)
+                    self.add_un_resolve_class(name, class_name)
                     field_type_hint = self.get_type_name(class_name)
             else:
                 if filed.ref:
+                    self.add_un_resolve_class(name, filed.ref_object_name)
                     field_type_hint = self.get_type_name(filed.ref_object_name)
                 else:
                     data_type = get_data_type(filed, self.data_model_type)
@@ -122,6 +124,7 @@ class OpenAPIParser(Parser):
                 items_obj_name.append(data_type.type_hint)
                 self.imports.append(data_type.import_)
         if items_obj_name:
+            self.add_un_resolve_class(name, items_obj_name)
             support_types = ', '.join(items_obj_name)
             type_hint: str = f'List[{support_types}]'
         else:
@@ -144,6 +147,7 @@ class OpenAPIParser(Parser):
                 self.imports.append(IMPORT_OPTIONAL)
             type_hint: str = data_type.type_hint
         else:
+            self.add_un_resolve_class(name, obj.ref_object_name)
             type_hint = self.get_type_name(obj.ref_object_name)
         data_model_root_type = self.data_model_root_type(
             name,
