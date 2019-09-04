@@ -550,5 +550,17 @@ class EventRoot(BaseModel):
 
 class EventObject(BaseModel):
     event: Optional[Event] = None
+
+
+class DuplicateObject1(BaseModel):
+    event: Optional[Event] = None
+
+
+class DuplicateObject2(BaseModel):
+    event: Optional[Event] = None
+
+
+class DuplicateObject3(BaseModel):
+    __root__: Event
 """
     )
