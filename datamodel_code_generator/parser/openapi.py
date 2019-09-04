@@ -69,7 +69,9 @@ class OpenAPIParser(Parser):
                     models = list(self.parse_array(class_name, filed))
                     yield from models[:-1]
                     root_model = models[-1]
-                    field_type_hint: str = root_model.fields[0].type_hint  # type: ignore
+                    field_type_hint: str = root_model.fields[  # type: ignore
+                        0
+                    ].type_hint
                 else:
                     yield from self.parse_object(class_name, filed)
                     field_type_hint = class_name
