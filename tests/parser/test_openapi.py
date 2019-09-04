@@ -239,7 +239,9 @@ def test_parse_root_type(source_obj, generated_classes):
             True,
             True,
             None,
-            '''from typing import List, Optional
+            '''from __future__ import annotations
+
+from typing import List, Optional
 
 from pydantic import BaseModel, UrlStr
 
@@ -358,6 +360,7 @@ class Result(BaseModel):
             None,
             '''from typing import List, Optional
 from pydantic import BaseModel, UrlStr
+from __future__ import annotations
 
 
 class Pet(BaseModel):
@@ -415,7 +418,9 @@ class Result(BaseModel):
             True,
             True,
             'custom_module.Base',
-            '''from typing import List, Optional
+            '''from __future__ import annotations
+
+from typing import List, Optional
 
 from pydantic import UrlStr
 
@@ -515,7 +520,9 @@ def test_openapi_parser_parse_duplicate_models():
     )
     assert (
         parser.parse()
-        == """from typing import List, Optional
+        == """from __future__ import annotations
+
+from typing import List, Optional
 
 from pydantic import BaseModel
 

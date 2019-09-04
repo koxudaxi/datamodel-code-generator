@@ -41,6 +41,7 @@ class OpenAPIParser(Parser):
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
+        target_python_version: str = '3.7',
     ):
         self.base_parser = (
             BaseParser(filename, backend='openapi-spec-validator') if filename else None
@@ -57,6 +58,7 @@ class OpenAPIParser(Parser):
             data_model_field_type,
             filename,
             base_class,
+            target_python_version,
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -74,10 +76,10 @@ class OpenAPIParser(Parser):
                     ].type_hint
                 else:
                     yield from self.parse_object(class_name, filed)
-                    field_type_hint = class_name
+                    field_type_hint = self.get_type_name(class_name)
             else:
                 if filed.ref:
-                    field_type_hint = filed.ref_object_name
+                    field_type_hint = self.get_type_name(filed.ref_object_name)
                 else:
                     data_type = get_data_type(filed, self.data_model_type)
                     self.imports.append(data_type.import_)
@@ -108,13 +110,13 @@ class OpenAPIParser(Parser):
         items_obj_name: List[str] = []
         for item in items:
             if item.ref:
-                items_obj_name.append(item.ref_object_name)
+                items_obj_name.append(self.get_type_name(item.ref_object_name))
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 singular_name = inflect_engine.singular_noun(name)
                 if singular_name is False:
                     singular_name = f'{name}Item'
                 yield from self.parse_object(singular_name, item)
-                items_obj_name.append(singular_name)
+                items_obj_name.append(self.get_type_name(singular_name))
             else:
                 data_type = get_data_type(item, self.data_model_type)
                 items_obj_name.append(data_type.type_hint)
@@ -142,7 +144,7 @@ class OpenAPIParser(Parser):
                 self.imports.append(IMPORT_OPTIONAL)
             type_hint: str = data_type.type_hint
         else:
-            type_hint = obj.ref_object_name
+            type_hint = self.get_type_name(obj.ref_object_name)
         data_model_root_type = self.data_model_root_type(
             name,
             [
@@ -173,6 +175,8 @@ class OpenAPIParser(Parser):
 
         result: str = ''
         if with_import:
+            if self.target_python_version == '3.7':
+                self.imports.append(Import(from_='__future__', import_='annotations'))
             result += f'{self.imports.dump()}\n\n\n'
         result += dump_templates(templates)
         if format_:
