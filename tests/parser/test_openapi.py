@@ -138,11 +138,13 @@ class Pets(BaseModel):
             {
                 'properties': {
                     'kind': {
-                        'type': 'object',
-                        'items': {
-                            'type': 'object',
-                            'properties': {'name': {'type': 'string'}},
-                        },
+                        'type': 'array',
+                        'items': [
+                            {
+                                'type': 'object',
+                                'properties': {'name': {'type': 'string'}},
+                            }
+                        ],
                     }
                 }
             },
@@ -150,12 +152,20 @@ class Pets(BaseModel):
     name: Optional[str] = None
 
 
-class Kind(BaseModel):
-    __root__: List[KindItem]
-
-
 class Pets(BaseModel):
-    kind: Optional[Kind] = None''',
+    kind: Optional[List[KindItem]] = None''',
+        ),
+        (
+            {
+                'properties': {
+                    'kind': {
+                        'type': 'array',
+                        'items': [],
+                    }
+                }
+            },
+            '''class Pets(BaseModel):
+    kind: Optional[List] = None''',
         ),
     ],
 )
@@ -553,6 +563,10 @@ class EventObject(BaseModel):
 
 
 class DuplicateObject1(BaseModel):
+    event: Optional[List[Event]] = None
+
+
+class Event(BaseModel):
     event: Optional[Event] = None
 
 
