@@ -60,6 +60,8 @@ class OpenAPIParser(Parser):
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
+        if name in self.created_model_names:
+            return None
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
         for field_name, filed in obj.properties.items():  # type: ignore
@@ -92,9 +94,12 @@ class OpenAPIParser(Parser):
             name, fields=fields, base_class=self.base_class
         )
         self.imports.append(data_model_type.imports)
+        self.created_model_names.add(name)
         yield data_model_type
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
+        if name in self.created_model_names:
+            return None
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
@@ -115,6 +120,7 @@ class OpenAPIParser(Parser):
                 self.imports.append(data_type.import_)
         support_types = f', '.join(items_obj_name)
         self.imports.append(IMPORT_LIST)
+        self.created_model_names.add(name)
         yield self.data_model_root_type(
             name,
             [DataModelField(type_hint=f'List[{support_types}]', required=True)],
@@ -124,20 +130,28 @@ class OpenAPIParser(Parser):
     def parse_root_type(
         self, name: str, obj: JsonSchemaObject
     ) -> Iterator[TemplateBase]:
-        data_type = get_data_type(obj, self.data_model_type)
-        self.imports.append(data_type.import_)
-        if obj.nullable:
-            self.imports.append(IMPORT_OPTIONAL)
+        if name in self.created_model_names:
+            return None
+        if obj.type:
+            data_type = get_data_type(obj, self.data_model_type)
+            self.imports.append(data_type.import_)
+            if obj.nullable:
+                self.imports.append(IMPORT_OPTIONAL)
+            self.created_model_names.add(name)
+            type_hint: str = data_type.type_hint
+        else:
+            type_hint = obj.ref_object_name
         data_model_root_type = self.data_model_root_type(
             name,
             [
                 self.data_model_field_type(
-                    type_hint=data_type.type_hint, required=not obj.nullable
+                    type_hint=type_hint, required=not obj.nullable
                 )
             ],
             base_class=self.base_class,
         )
         self.imports.append(data_model_root_type.imports)
+        self.created_model_names.add(name)
         yield data_model_root_type
 
     def parse(

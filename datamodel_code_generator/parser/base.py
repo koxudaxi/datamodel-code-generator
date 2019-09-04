@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Optional, Set, Type, Union
 
 from datamodel_code_generator.types import DataType, Imports
 from pydantic import BaseModel, Schema
@@ -71,6 +71,10 @@ class JsonSchemaObject(BaseModel):
     def is_array(self) -> bool:
         return self.items is not None or self.type == 'array'
 
+    @property
+    def ref_object_name(self) -> str:
+        return self.ref.split('/')[-1]  # type: ignore
+
 
 JsonSchemaObject.update_forward_refs()
 
@@ -101,6 +105,7 @@ class Parser(ABC):
         self.filename: Optional[str] = filename
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
+        self.created_model_names: Set[str] = set()
 
     @abstractmethod
     def parse(
