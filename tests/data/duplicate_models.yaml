@@ -94,3 +94,19 @@ components:
         properties:
           event:
             $ref: '#/components/schemas/Event'
+    DuplicateObject1:
+        type: object
+        properties:
+          event:
+            items:
+              $ref: '#/components/schemas/Event'
+    DuplicateObject2:
+        type: object
+        properties:
+          event:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    DuplicateObject3:
+        $ref: '#/components/schemas/Event'

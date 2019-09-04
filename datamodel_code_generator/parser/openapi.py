@@ -61,7 +61,7 @@ class OpenAPIParser(Parser):
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         if name in self.created_model_names:
-            return None
+            return
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
         for field_name, filed in obj.properties.items():  # type: ignore
@@ -74,7 +74,7 @@ class OpenAPIParser(Parser):
                 field_type_hint: str = class_name
             else:
                 if filed.ref:
-                    field_type_hint = filed.ref.split('/')[-1]
+                    field_type_hint = filed.ref_object_name
                 else:
                     data_type = get_data_type(filed, self.data_model_type)
                     self.imports.append(data_type.import_)
@@ -99,7 +99,7 @@ class OpenAPIParser(Parser):
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         if name in self.created_model_names:
-            return None
+            return
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
@@ -107,7 +107,7 @@ class OpenAPIParser(Parser):
         items_obj_name: List[str] = []
         for item in items:
             if item.ref:
-                items_obj_name.append(item.ref.split('/')[-1])
+                items_obj_name.append(item.ref_object_name)
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 singular_name = inflect_engine.singular_noun(name)
                 if singular_name is False:
@@ -130,14 +130,13 @@ class OpenAPIParser(Parser):
     def parse_root_type(
         self, name: str, obj: JsonSchemaObject
     ) -> Iterator[TemplateBase]:
-        if name in self.created_model_names:
-            return None
+        if name in self.created_model_names:  # pragma: no cover
+            return
         if obj.type:
             data_type = get_data_type(obj, self.data_model_type)
             self.imports.append(data_type.import_)
             if obj.nullable:
                 self.imports.append(IMPORT_OPTIONAL)
-            self.created_model_names.add(name)
             type_hint: str = data_type.type_hint
         else:
             type_hint = obj.ref_object_name
