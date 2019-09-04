@@ -71,9 +71,12 @@ class OpenAPIParser(Parser):
                     yield from self.parse_object(class_name, filed)
                 field_type_hint: str = class_name
             else:
-                data_type = get_data_type(filed, self.data_model_type)
-                self.imports.append(data_type.import_)
-                field_type_hint = data_type.type_hint
+                if filed.ref:
+                    field_type_hint = filed.ref.split('/')[-1]
+                else:
+                    data_type = get_data_type(filed, self.data_model_type)
+                    self.imports.append(data_type.import_)
+                    field_type_hint = data_type.type_hint
             required: bool = field_name in requires
             if not required:
                 self.imports.append(IMPORT_OPTIONAL)
