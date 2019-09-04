@@ -97,6 +97,7 @@ class Parser(ABC):
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
+        target_python_version: str = '3.7'
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -106,6 +107,12 @@ class Parser(ABC):
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
         self.created_model_names: Set[str] = set()
+        self.target_python_version: str = target_python_version
+
+    def get_type_name(self, name: str) -> str:
+        if self.target_python_version == '3.6':
+            return f"'{name}'"
+        return name
 
     @abstractmethod
     def parse(
