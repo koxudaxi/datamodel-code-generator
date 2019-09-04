@@ -481,3 +481,72 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
+
+@pytest.mark.parametrize(
+    "source_obj,generated_classes",
+    [
+        (
+            {'type': 'string', 'nullable': True},
+            '''class Name(BaseModel):
+    __root__: Optional[str] = None''',
+        ),
+        (
+            {'type': 'string', 'nullable': False},
+            '''class Name(BaseModel):
+    __root__: str''',
+        ),
+    ],
+)
+def test_parse_root_type(source_obj, generated_classes):
+    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parsed_templates = parser.parse_root_type(
+        'Name', JsonSchemaObject.parse_obj(source_obj)
+    )
+    assert dump_templates(list(parsed_templates)) == generated_classes
+
+
+def test_openapi_parser_parse_duplicate_models():
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        filename=str(DATA_PATH / 'duplicate_models.yaml')
+    )
+    assert parser.parse() == """from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None
+
+
+class Events(BaseModel):
+    __root__: List[Event]
+
+
+class EventRoot(BaseModel):
+    __root__: Event
+
+
+class EventObject(BaseModel):
+    event: Optional[Event] = None
+"""

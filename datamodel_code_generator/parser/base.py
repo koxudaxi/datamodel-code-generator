@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Optional, Type, Union, Set
 
 from datamodel_code_generator.types import DataType, Imports
 from pydantic import BaseModel, Schema
@@ -101,6 +101,7 @@ class Parser(ABC):
         self.filename: Optional[str] = filename
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
+        self.created_model_names: Set[str] = set()
 
     @abstractmethod
     def parse(
