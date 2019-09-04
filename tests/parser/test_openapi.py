@@ -156,14 +156,7 @@ class Pets(BaseModel):
     kind: Optional[List[KindItem]] = None''',
         ),
         (
-            {
-                'properties': {
-                    'kind': {
-                        'type': 'array',
-                        'items': [],
-                    }
-                }
-            },
+            {'properties': {'kind': {'type': 'array', 'items': []}}},
             '''class Pets(BaseModel):
     kind: Optional[List] = None''',
         ),

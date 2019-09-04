@@ -69,7 +69,7 @@ class OpenAPIParser(Parser):
                     models = list(self.parse_array(class_name, filed))
                     yield from models[:-1]
                     root_model = models[-1]
-                    field_type_hint: str = root_model.fields[0].type_hint
+                    field_type_hint: str = root_model.fields[0].type_hint  # type: ignore
                 else:
                     yield from self.parse_object(class_name, filed)
                     field_type_hint = class_name
@@ -98,7 +98,7 @@ class OpenAPIParser(Parser):
         self.created_model_names.add(name)
         yield data_model_type
 
-    def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[DataModel]:
+    def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
