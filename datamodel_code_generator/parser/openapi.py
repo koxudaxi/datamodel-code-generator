@@ -41,7 +41,7 @@ class OpenAPIParser(Parser):
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
-        target_python_version: str = '3.7'
+        target_python_version: str = '3.7',
     ):
         self.base_parser = (
             BaseParser(filename, backend='openapi-spec-validator') if filename else None
@@ -58,7 +58,7 @@ class OpenAPIParser(Parser):
             data_model_field_type,
             filename,
             base_class,
-            target_python_version
+            target_python_version,
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -159,9 +159,7 @@ class OpenAPIParser(Parser):
         yield data_model_root_type
 
     def parse(
-        self,
-        with_import: Optional[bool] = True,
-        format_: Optional[bool] = True,
+        self, with_import: Optional[bool] = True, format_: Optional[bool] = True
     ) -> str:
         templates: List[TemplateBase] = []
         for obj_name, raw_obj in self.base_parser.specification['components'][

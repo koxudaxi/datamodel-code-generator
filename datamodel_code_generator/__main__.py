@@ -31,7 +31,9 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--base-class', help='Base Class', type=str, default='pydantic.BaseModel'
 )
-arg_parser.add_argument('--target-python-version', choices=['3.6', '3.7'], default='3.7')
+arg_parser.add_argument(
+    '--target-python-version', choices=['3.6', '3.7'], default='3.7'
+)
 
 
 def main(args: Optional[Sequence[str]] = None) -> Exit:
@@ -51,7 +53,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         CustomRootType,
         filename=input_filename,
         base_class=namespace.base_class,
-        target_python_version=namespace.target_python_version
+        target_python_version=namespace.target_python_version,
     )
     body = parser.parse()
 

@@ -97,7 +97,7 @@ class Parser(ABC):
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
-        target_python_version: str = '3.7'
+        target_python_version: str = '3.7',
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
