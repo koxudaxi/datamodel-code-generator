@@ -42,13 +42,16 @@ class OpenAPIParser(Parser):
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
         target_python_version: str = '3.7',
+        text: Optional[str] = None,
     ):
         self.base_parser = (
-            BaseParser(filename, backend='openapi-spec-validator') if filename else None
+            BaseParser(filename, text, backend='openapi-spec-validator')
+            if filename or text
+            else None
         )
         self.resolving_parser = (
-            ResolvingParser(filename, backend='openapi-spec-validator')
-            if filename
+            ResolvingParser(filename, text, backend='openapi-spec-validator')
+            if filename or text
             else None
         )
 
@@ -59,6 +62,7 @@ class OpenAPIParser(Parser):
             filename,
             base_class,
             target_python_version,
+            text,
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:

@@ -98,6 +98,7 @@ class Parser(ABC):
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
         target_python_version: str = '3.7',
+        text: Optional[str] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -109,6 +110,7 @@ class Parser(ABC):
         self.created_model_names: Set[str] = set()
         self.target_python_version: str = target_python_version
         self.un_resolve_classes: Set[str] = set()
+        self.text: Optional[str] = text
 
     def get_type_name(self, name: str) -> str:
         if self.target_python_version == '3.6':
