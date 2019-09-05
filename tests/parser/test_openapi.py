@@ -37,8 +37,8 @@ class A(TemplateBase):
         ('string', 'byte', 'str', None, None),
         ('string', 'binary', 'bytes', None, None),
         ('boolean', None, 'bool', None, None),
-        ('string', 'date', 'date', None, None),
-        ('string', 'date-time', 'datetime', None, None),
+        ('string', 'date', 'date', 'datetime', 'date'),
+        ('string', 'date-time', 'datetime', 'datetime', 'datetime'),
         ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
         ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
         ('string', 'uri', 'UrlStr', 'pydantic', 'UrlStr'),
@@ -576,5 +576,82 @@ class DuplicateObject2(BaseModel):
 
 class DuplicateObject3(BaseModel):
     __root__: Event
+"""
+    )
+
+
+def test_openapi_parser_parse_resolved_models():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'resolved_models.yaml')
+    )
+    assert (
+        parser.parse()
+        == """from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Resolved(BaseModel):
+    resolved: Optional[List[str]] = None
+"""
+    )
+
+
+def test_openapi_parser_parse_lazy_resolved_models():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'lazy_resolved_models.yaml')
+    )
+    assert (
+        parser.parse()
+        == """from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Results(BaseModel):
+    envets: Optional[List[Events]] = None
+    event: Optional[List[Event]] = None
+
+
+class Events(BaseModel):
+    __root__: List[Event]
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
 """
     )

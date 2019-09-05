@@ -13,8 +13,8 @@ type_map: Dict[Types, DataType] = {
     Types.string: DataType(type='str'),
     Types.byte: DataType(type='str'),  # base64 encoded string
     Types.binary: DataType(type='bytes'),
-    Types.date: DataType(type='date'),
-    Types.date_time: DataType(type='datetime'),
+    Types.date: DataType(type='date', import_=Import(from_='datetime', import_='date')),
+    Types.date_time: DataType(type='datetime', import_=Import(from_='datetime', import_='datetime')),
     Types.password: DataType(
         type='SecretStr', import_=Import(from_='pydantic', import_='SecretStr')
     ),
