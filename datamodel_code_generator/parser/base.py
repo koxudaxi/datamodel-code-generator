@@ -9,7 +9,7 @@ from ..model.base import DataModel, DataModelField, Types
 
 
 def snake_to_upper_camel(word: str) -> str:
-    return ''.join(x.capitalize() for x in word.split('_'))
+    return ''.join(x[0].upper() + x[1:] for x in word.split('_'))
 
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
