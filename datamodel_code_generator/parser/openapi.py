@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List, Optional, Set, Type, Union, Callable
+from typing import Callable, Dict, Iterator, List, Optional, Set, Type, Union
 
 import black
 import inflect
@@ -6,8 +6,9 @@ from datamodel_code_generator.parser.base import (
     JsonSchemaObject,
     Parser,
     get_data_type,
+    resolve_references,
     snake_to_upper_camel,
-    resolve_references)
+)
 from datamodel_code_generator.types import Import
 from isort import SortImports
 from prance import BaseParser, ResolvingParser
@@ -43,7 +44,7 @@ class OpenAPIParser(Parser):
         base_class: Optional[str] = None,
         target_python_version: str = '3.7',
         text: Optional[str] = None,
-        dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None
+        dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
     ):
         self.base_parser = (
             BaseParser(filename, text, backend='openapi-spec-validator')
@@ -64,7 +65,7 @@ class OpenAPIParser(Parser):
             base_class,
             target_python_version,
             text,
-            dump_resolve_reference_action
+            dump_resolve_reference_action,
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -85,7 +86,9 @@ class OpenAPIParser(Parser):
                         0
                     ].type_hint
                     if class_name in self.unresolved_classes:  # pragma: no cover
-                        field_class_names = field_class_names | self.unresolved_classes.pop(class_name)
+                        field_class_names = (
+                            field_class_names | self.unresolved_classes.pop(class_name)
+                        )
                 else:
                     yield from self.parse_object(class_name, filed)
                     field_class_names.add(class_name)
@@ -197,8 +200,10 @@ class OpenAPIParser(Parser):
             result += f'{self.imports.dump()}\n\n\n'
         result += dump_templates(templates)
         if self.dump_resolve_reference_action:
-            resolved_references, _ = resolve_references(list(self.created_model_names), self.unresolved_classes)
-            result += f'\n\n{self.dump_resolve_reference_action(self.unresolved_classes)}'
+            resolved_references, _ = resolve_references(
+                list(self.created_model_names), self.unresolved_classes
+            )
+            result += f'\n\n{self.dump_resolve_reference_action(list(self.unresolved_classes))}'
         if format_:
             result = black.format_str(
                 result,
