@@ -656,6 +656,7 @@ class Event(BaseModel):
 """
     )
 
+
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, filename=str(DATA_PATH / 'enum_models.yaml')
