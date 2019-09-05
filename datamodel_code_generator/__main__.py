@@ -12,7 +12,11 @@ from enum import IntEnum
 from typing import Optional, Sequence, Union
 
 import argcomplete
-from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
+from datamodel_code_generator.model.pydantic import (
+    BaseModel,
+    CustomRootType,
+    dump_resolve_reference_action,
+)
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 
 
@@ -67,6 +71,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         base_class=namespace.base_class,
         target_python_version=namespace.target_python_version,
         text=namespace.input.read(),
+        dump_resolve_reference_action=dump_resolve_reference_action,
     )
     body = parser.parse()
 

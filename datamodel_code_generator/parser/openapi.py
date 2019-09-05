@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List, Optional, Set, Type, Union
+from typing import Callable, Dict, Iterator, List, Optional, Set, Type, Union
 
 import black
 import inflect
@@ -6,6 +6,7 @@ from datamodel_code_generator.parser.base import (
     JsonSchemaObject,
     Parser,
     get_data_type,
+    resolve_references,
     snake_to_upper_camel,
 )
 from datamodel_code_generator.types import Import
@@ -43,6 +44,7 @@ class OpenAPIParser(Parser):
         base_class: Optional[str] = None,
         target_python_version: str = '3.7',
         text: Optional[str] = None,
+        dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
     ):
         self.base_parser = (
             BaseParser(filename, text, backend='openapi-spec-validator')
@@ -63,13 +65,18 @@ class OpenAPIParser(Parser):
             base_class,
             target_python_version,
             text,
+            dump_resolve_reference_action,
         )
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
+        field_class_names: Set[str] = set()
         for field_name, filed in obj.properties.items():  # type: ignore
-            if filed.is_array or filed.is_object:
+            if filed.ref:
+                self.add_unresolved_classes(name, filed.ref_object_name)
+                field_type_hint = self.get_type_name(filed.ref_object_name)
+            elif filed.is_array or filed.is_object:
                 class_name = create_class_name(field_name)
                 if filed.is_array:
                     models = list(self.parse_array(class_name, filed))
@@ -78,16 +85,18 @@ class OpenAPIParser(Parser):
                     field_type_hint: str = root_model.fields[  # type: ignore
                         0
                     ].type_hint
+                    if class_name in self.unresolved_classes:  # pragma: no cover
+                        field_class_names = (
+                            field_class_names | self.unresolved_classes.pop(class_name)
+                        )
                 else:
                     yield from self.parse_object(class_name, filed)
+                    field_class_names.add(class_name)
                     field_type_hint = self.get_type_name(class_name)
             else:
-                if filed.ref:
-                    field_type_hint = self.get_type_name(filed.ref_object_name)
-                else:
-                    data_type = get_data_type(filed, self.data_model_type)
-                    self.imports.append(data_type.import_)
-                    field_type_hint = data_type.type_hint
+                data_type = get_data_type(filed, self.data_model_type)
+                self.imports.append(data_type.import_)
+                field_type_hint = data_type.type_hint
             required: bool = field_name in requires
             if not required:
                 self.imports.append(IMPORT_OPTIONAL)
@@ -104,6 +113,7 @@ class OpenAPIParser(Parser):
         )
         self.imports.append(data_model_type.imports)
         self.created_model_names.add(name)
+        self.add_unresolved_classes(name, list(field_class_names))
         yield data_model_type
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> Iterator[TemplateBase]:
@@ -112,9 +122,12 @@ class OpenAPIParser(Parser):
         else:
             items = obj.items  # type: ignore
         items_obj_name: List[str] = []
+        reference_obj_class: List[str] = []
         for item in items:
             if item.ref:
-                items_obj_name.append(self.get_type_name(item.ref_object_name))
+                class_name = self.get_type_name(item.ref_object_name)
+                items_obj_name.append(class_name)
+                reference_obj_class.append(class_name)
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 singular_name = inflect_engine.singular_noun(name)
                 if singular_name is False:
@@ -126,6 +139,8 @@ class OpenAPIParser(Parser):
                 items_obj_name.append(data_type.type_hint)
                 self.imports.append(data_type.import_)
         if items_obj_name:
+            if reference_obj_class:
+                self.add_unresolved_classes(name, reference_obj_class)
             support_types = ', '.join(items_obj_name)
             type_hint: str = f'List[{support_types}]'
         else:
@@ -148,6 +163,7 @@ class OpenAPIParser(Parser):
                 self.imports.append(IMPORT_OPTIONAL)
             type_hint: str = data_type.type_hint
         else:
+            self.add_unresolved_classes(name, obj.ref_object_name)
             type_hint = self.get_type_name(obj.ref_object_name)
         data_model_root_type = self.data_model_root_type(
             name,
@@ -183,6 +199,11 @@ class OpenAPIParser(Parser):
                 self.imports.append(Import(from_='__future__', import_='annotations'))
             result += f'{self.imports.dump()}\n\n\n'
         result += dump_templates(templates)
+        if self.dump_resolve_reference_action:
+            resolved_references, _ = resolve_references(
+                list(self.created_model_names), self.unresolved_classes
+            )
+            result += f'\n\n{self.dump_resolve_reference_action(list(self.unresolved_classes))}'
         if format_:
             result = black.format_str(
                 result,

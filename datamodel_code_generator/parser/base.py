@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Set, Type, Union
+from collections import OrderedDict
+from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from datamodel_code_generator.types import DataType, Imports
 from pydantic import BaseModel, Schema
@@ -89,6 +90,35 @@ def get_data_type(obj: JsonSchemaObject, data_model: Type[DataModel]) -> DataTyp
     )
 
 
+ReferenceMapSet = Dict[str, Set[str]]
+ResolvedReferences = List[str]
+
+
+def resolve_references(
+    resolved_references: ResolvedReferences, references: ReferenceMapSet
+) -> Tuple[ResolvedReferences, ReferenceMapSet]:
+    unresolved_references: ReferenceMapSet = OrderedDict()
+    for key, item in references.items():
+        if key in item and len(item) == 1:  # only self-referencing
+            resolved_references.append(key)
+        elif (
+            not item - set(key) - set(resolved_references)
+        ):  # reference classes have been resolved
+            resolved_references.append(key)
+        else:
+            unresolved_references[key] = item
+    if unresolved_references:
+        try:
+            return resolve_references(resolved_references, unresolved_references)
+        except RecursionError:
+            unresolved_classes = ', '.join(
+                f"[class: {k} references: {v}]"
+                for k, v in unresolved_references.items()
+            )
+            raise Exception(f'A Parser can not resolve classes: {unresolved_classes}.')
+    return resolved_references, unresolved_references
+
+
 class Parser(ABC):
     def __init__(
         self,
@@ -99,6 +129,7 @@ class Parser(ABC):
         base_class: Optional[str] = None,
         target_python_version: str = '3.7',
         text: Optional[str] = None,
+        dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -109,12 +140,31 @@ class Parser(ABC):
         self.base_class: Optional[str] = base_class
         self.created_model_names: Set[str] = set()
         self.target_python_version: str = target_python_version
+        self.unresolved_classes: ReferenceMapSet = OrderedDict()
         self.text: Optional[str] = text
+        self.dump_resolve_reference_action: Optional[
+            Callable[[List[str]], str]
+        ] = dump_resolve_reference_action
 
     def get_type_name(self, name: str) -> str:
         if self.target_python_version == '3.6':
             return f"'{name}'"
         return name
+
+    def add_unresolved_classes(
+        self, class_name: str, reference_names: Union[str, List[str]]
+    ) -> None:
+        if isinstance(reference_names, str):
+            if self.target_python_version == '3.6':
+                reference_names = reference_names.replace("'", "")
+            if reference_names not in self.created_model_names:  # pragma: no cover
+                self.unresolved_classes[class_name] = {reference_names}
+        else:
+            if self.target_python_version == '3.6':
+                reference_names = [r.replace("'", "") for r in reference_names]
+            unresolved_reference = set(reference_names) - self.created_model_names
+            if unresolved_reference:
+                self.unresolved_classes[class_name] = unresolved_reference
 
     @abstractmethod
     def parse(
