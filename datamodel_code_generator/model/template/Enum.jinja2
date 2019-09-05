@@ -1,0 +1,7 @@
+{% for decorator in decorators -%}
+{{ decorator }}
+{% endfor -%}
+class {{ class_name }}(Enum):
+{%- for field in fields %}
+    {{ field.name }} = {{ field.default }}
+{%- endfor -%}

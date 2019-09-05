@@ -111,12 +111,12 @@ class Pets(BaseModel):
                     }
                 }
             },
-            '''class Kind_(BaseModel):
+            '''class Kind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    Kind: Optional[Kind_] = None''',
+    Kind: Optional[Kind] = None''',
         ),
         (
             {
@@ -653,5 +653,56 @@ class Events(BaseModel):
 
 class Event(BaseModel):
     name: Optional[str] = None
+"""
+    )
+
+
+def test_openapi_parser_parse_enum_models():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'enum_models.yaml')
+    )
+    print(parser.parse())
+    assert (
+        parser.parse()
+        == """from __future__ import annotations
+
+from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Type(Enum):
+    a = 'a'
+    b = 'b'
+
+
+class EnumObject(BaseModel):
+    type: Optional[Type] = None
+
+
+class EnumRoot1(Enum):
+    a = 'a'
+    b = 'b'
+
+
+class IntEnum1(Enum):
+    number_1 = 1
+    number_2 = 2
 """
     )

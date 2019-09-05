@@ -1,7 +1,8 @@
-from typing import Callable, Dict, Iterator, List, Optional, Set, Type, Union
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
 
 import black
 import inflect
+from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser.base import (
     JsonSchemaObject,
     Parser,
@@ -29,8 +30,6 @@ def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
 
 def create_class_name(field_name: str) -> str:
     upper_camel_name = snake_to_upper_camel(field_name)
-    if upper_camel_name == field_name:
-        upper_camel_name += '_'
     return upper_camel_name
 
 
@@ -93,6 +92,10 @@ class OpenAPIParser(Parser):
                     yield from self.parse_object(class_name, filed)
                     field_class_names.add(class_name)
                     field_type_hint = self.get_type_name(class_name)
+            elif filed.enum:
+                enum_name = self.get_type_name(field_name)
+                field_type_hint, enum = self.parse_enum(enum_name, filed)
+                yield enum
             else:
                 data_type = get_data_type(filed, self.data_model_type)
                 self.imports.append(data_type.import_)
@@ -134,6 +137,7 @@ class OpenAPIParser(Parser):
                     singular_name = f'{name}Item'
                 yield from self.parse_object(singular_name, item)
                 items_obj_name.append(self.get_type_name(singular_name))
+                print(singular_name)
             else:
                 data_type = get_data_type(item, self.data_model_type)
                 items_obj_name.append(data_type.type_hint)
@@ -178,6 +182,31 @@ class OpenAPIParser(Parser):
         self.created_model_names.add(name)
         yield data_model_root_type
 
+    def parse_enum(self, name: str, obj: JsonSchemaObject) -> Tuple[str, TemplateBase]:
+        enum_fields = []
+
+        for enum_part in obj.enum:  # type: ignore
+            if obj.type == 'string':
+                default = f"'{enum_part}'"
+            else:
+                default = enum_part
+            if obj.type == 'string':
+                field_name = enum_part
+            else:
+                field_name = f'{obj.type}_{enum_part}'
+            enum_fields.append(
+                self.data_model_field_type(name=field_name, default=default)
+            )
+        enum_name = name
+        count = 1
+        while enum_name in self.created_model_names:
+            enum_name = f'{name}_{count}'
+            count += 1
+        enum_name = create_class_name(enum_name)
+        self.imports.append(Import(import_='Enum', from_='enum'))
+        self.created_model_names.add(enum_name)
+        return enum_name, Enum(enum_name, fields=enum_fields)
+
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
     ) -> str:
@@ -190,6 +219,8 @@ class OpenAPIParser(Parser):
                 templates.extend(self.parse_object(obj_name, obj))
             elif obj.is_array:
                 templates.extend(self.parse_array(obj_name, obj))
+            elif obj.enum:
+                templates.append(self.parse_enum(obj_name, obj)[1])
             else:
                 templates.extend(self.parse_root_type(obj_name, obj))
 
