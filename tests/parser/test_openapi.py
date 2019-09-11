@@ -3,15 +3,12 @@ from tempfile import NamedTemporaryFile
 from typing import Optional
 
 import pytest
+from datamodel_code_generator import PythonVersion
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import DataType, JsonSchemaObject
-from datamodel_code_generator.parser.openapi import (
-    OpenAPIParser,
-    dump_templates,
-    get_data_type,
-)
-from datamodel_code_generator.types import Import
+from datamodel_code_generator.parser.openapi import OpenAPIParser, dump_templates
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data'
 
@@ -57,14 +54,17 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
         import_obj: Optional[Import] = Import(from_=from_, import_=import_)
     else:
         import_obj = None
-    assert get_data_type(
-        JsonSchemaObject(type=schema_type, format=schema_format), BaseModel
+
+    parser = OpenAPIParser(BaseModel, CustomRootType)
+    assert parser.get_data_type(
+        JsonSchemaObject(type=schema_type, format=schema_format)
     ) == DataType(type=result_type, import_=import_obj)
 
 
 def test_get_data_type_invalid_obj():
     with pytest.raises(ValueError, match='invalid schema object'):
-        get_data_type(JsonSchemaObject(), BaseModel)
+        parser = OpenAPIParser(BaseModel, CustomRootType)
+        assert parser.get_data_type(JsonSchemaObject())
 
 
 def test_dump_templates():
@@ -566,12 +566,12 @@ class DuplicateObject1(BaseModel):
     event: Optional[List[Event]] = None
 
 
-class Event(BaseModel):
+class Event_2(BaseModel):
     event: Optional[Event] = None
 
 
 class DuplicateObject2(BaseModel):
-    event: Optional[Event] = None
+    event: Optional[Event_2] = None
 
 
 class DuplicateObject3(BaseModel):
@@ -661,7 +661,6 @@ def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, filename=str(DATA_PATH / 'enum_models.yaml')
     )
-    print(parser.parse())
     assert (
         parser.parse()
         == """from __future__ import annotations
@@ -696,12 +695,61 @@ class EnumObject(BaseModel):
     type: Optional[Type] = None
 
 
-class EnumRoot1(Enum):
+class EnumRoot(Enum):
     a = 'a'
     b = 'b'
 
 
-class IntEnum1(Enum):
+class IntEnum(Enum):
+    number_1 = 1
+    number_2 = 2
+"""
+    )
+
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        filename=str(DATA_PATH / 'enum_models.yaml'),
+        target_python_version=PythonVersion.PY_36,
+    )
+    assert (
+        parser.parse()
+        == """from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List['Pet']
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Type(Enum):
+    a = 'a'
+    b = 'b'
+
+
+class EnumObject(BaseModel):
+    type: Optional['Type'] = None
+
+
+class EnumRoot(Enum):
+    a = 'a'
+    b = 'b'
+
+
+class IntEnum(Enum):
     number_1 = 1
     number_2 = 2
 """
