@@ -754,3 +754,60 @@ class IntEnum(Enum):
     number_2 = 2
 """
     )
+
+
+def test_openapi_parser_parse_anyof():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'anyof.yaml')
+    )
+    print(parser.parse())
+    assert (
+        parser.parse()
+        == """from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Car(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class AnyOfItemItem(BaseModel):
+    name: Optional[str] = None
+
+
+class AnyOfItem(BaseModel):
+    __root__: Union[Pet, Car, AnyOfItemItem]
+
+
+class AnyOfobjItem(BaseModel):
+    name: Optional[str] = None
+
+
+class AnyOfobj(BaseModel):
+    item: Optional[Union[Pet, Car, AnyOfobjItem]] = None
+
+
+class AnyOfArrayItem(BaseModel):
+    name: Optional[str] = None
+
+
+class AnyOfArray(BaseModel):
+    __root__: List[Union[Pet, Car, AnyOfArrayItem]]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+"""
+    )
