@@ -79,6 +79,18 @@ class OpenAPIParser(Parser):
                 enum = self.parse_enum(field_name, filed)
                 field_type_hint = self.get_type_name(getattr(enum, 'name'))
                 yield enum
+            elif filed.anyOf:
+                any_of_item_names: List[str] = []
+                for any_of_item in filed.anyOf:
+                    if any_of_item.ref:  # $ref
+                        class_name = self.get_type_name(any_of_item.ref_object_name)
+                        any_of_item_names.append(self.get_type_name(class_name))
+                        field_class_names.add(class_name)
+                    else:
+                        singular_name = get_singular_name(name)
+                        yield from self.parse_object(singular_name, any_of_item)
+                        any_of_item_names.append(self.get_type_name(singular_name))
+                field_type_hint = f'Union[{", ".join(any_of_item_names)}]'
             else:
                 data_type = self.get_data_type(filed)
                 self.imports.append(data_type.import_)
@@ -118,6 +130,19 @@ class OpenAPIParser(Parser):
                 singular_name = get_singular_name(name)
                 yield from self.parse_object(singular_name, item)
                 items_obj_name.append(self.get_type_name(singular_name))
+            elif item.anyOf:
+                any_of_item_names: List[str] = []
+                for any_of_item in item.anyOf:
+                    if any_of_item.ref:  # $ref
+                        class_name = self.get_type_name(any_of_item.ref_object_name)
+                        any_of_item_names.append(self.get_type_name(class_name))
+                        reference_obj_class.append(class_name)
+                    else:
+                        singular_name = get_singular_name(name)
+                        yield from self.parse_object(singular_name, item)
+                        any_of_item_names.append(self.get_type_name(singular_name))
+                classes_name = f'Union[{", ".join(any_of_item_names)}]'
+                items_obj_name.append(classes_name)
             else:
                 data_type = self.get_data_type(item)
                 items_obj_name.append(data_type.type_hint)
@@ -146,6 +171,21 @@ class OpenAPIParser(Parser):
             if obj.nullable:
                 self.imports.append(IMPORT_OPTIONAL)
             type_hint: str = data_type.type_hint
+        elif obj.anyOf:
+            any_of_item_names: List[str] = []
+            field_class_names: List[str] = []
+
+            for any_of_item in obj.anyOf:
+                if any_of_item.ref:  # $ref
+                    class_name = self.get_type_name(any_of_item.ref_object_name)
+                    any_of_item_names.append(self.get_type_name(class_name))
+                    field_class_names.append(class_name)
+                else:
+                    singular_name = get_singular_name(name)
+                    yield from self.parse_object(singular_name, any_of_item)
+                    any_of_item_names.append(self.get_type_name(singular_name))
+            type_hint = f'Union[{", ".join(any_of_item_names)}]'
+            self.add_unresolved_classes(name, field_class_names)
         else:
             self.add_unresolved_classes(name, obj.ref_object_name)
             type_hint = self.get_type_name(obj.ref_object_name)
