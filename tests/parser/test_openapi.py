@@ -755,6 +755,7 @@ class IntEnum(Enum):
 """
     )
 
+
 def test_openapi_parser_parse_anyof():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, filename=str(DATA_PATH / 'anyof.yaml')
