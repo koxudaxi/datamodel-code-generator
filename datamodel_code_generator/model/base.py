@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
-from datamodel_code_generator.types import DataType, Import, Types
+from datamodel_code_generator.imports import Import
+from datamodel_code_generator.types import DataType, Types
 from jinja2 import Template
 from pydantic import BaseModel
 

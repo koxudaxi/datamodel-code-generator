@@ -1,8 +1,9 @@
 from typing import Any, List, Optional
 
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.pydantic.types import get_data_type, type_map
-from datamodel_code_generator.types import DataType, Import, Types
+from datamodel_code_generator.types import DataType, Types
 
 
 class DataClass(DataModel):

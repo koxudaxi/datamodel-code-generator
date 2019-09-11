@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
-from datamodel_code_generator.types import DataType, Import, Types
+from datamodel_code_generator.imports import Import
+from datamodel_code_generator.types import DataType, Types
 
 type_map: Dict[Types, DataType] = {
     Types.integer: DataType(type='int'),
