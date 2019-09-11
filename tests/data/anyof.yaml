@@ -127,6 +127,11 @@ components:
       anyOf:
         - $ref: "#/components/schemas/Pet"
         - $ref: "#/components/schemas/Car"
+        - type: object
+          properties:
+              name:
+                type: string
+
     AnyOfobj:
       type: object
       properties:
@@ -134,12 +139,20 @@ components:
           anyOf:
             - $ref: "#/components/schemas/Pet"
             - $ref: "#/components/schemas/Car"
+            - type: object
+              properties:
+                name:
+                  type: string
     AnyOfArray:
       type: array
       items:
           anyOf:
             - $ref: "#/components/schemas/Pet"
             - $ref: "#/components/schemas/Car"
+            - type: object
+              properties:
+                name:
+                  type: string
     Error:
       required:
         - code

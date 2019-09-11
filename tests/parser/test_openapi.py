@@ -782,16 +782,28 @@ class Car(BaseModel):
     tag: Optional[str] = None
 
 
+class AnyOfItemItem(BaseModel):
+    name: Optional[str] = None
+
+
 class AnyOfItem(BaseModel):
-    __root__: Union[Pet, Car]
+    __root__: Union[Pet, Car, AnyOfItemItem]
+
+
+class AnyOfobjItem(BaseModel):
+    name: Optional[str] = None
 
 
 class AnyOfobj(BaseModel):
-    item: Optional[Union[Pet, Car]] = None
+    item: Optional[Union[Pet, Car, AnyOfobjItem]] = None
+
+
+class AnyOfArrayItem(BaseModel):
+    name: Optional[str] = None
 
 
 class AnyOfArray(BaseModel):
-    __root__: List[Union[Pet, Car]]
+    __root__: List[Union[Pet, Car, AnyOfArrayItem]]
 
 
 class Error(BaseModel):

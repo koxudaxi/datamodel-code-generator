@@ -139,7 +139,7 @@ class OpenAPIParser(Parser):
                         reference_obj_class.append(class_name)
                     else:
                         singular_name = get_singular_name(name)
-                        yield from self.parse_object(singular_name, item)
+                        yield from self.parse_object(singular_name, any_of_item)
                         any_of_item_names.append(self.get_type_name(singular_name))
                 classes_name = f'Union[{", ".join(any_of_item_names)}]'
                 items_obj_name.append(classes_name)
