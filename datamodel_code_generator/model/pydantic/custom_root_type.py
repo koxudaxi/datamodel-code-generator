@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModel, DataModelField
 from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
@@ -15,10 +16,15 @@ class CustomRootType(DataModel):
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
         base_class: Optional[str] = None,
+        imports: Optional[List[Import]] = None,
     ):
 
         super().__init__(
-            name, fields=fields, decorators=decorators, base_class=base_class
+            name,
+            fields=fields,
+            decorators=decorators,
+            base_class=base_class,
+            imports=imports,
         )
 
     @classmethod

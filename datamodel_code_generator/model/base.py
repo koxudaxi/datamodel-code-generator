@@ -49,6 +49,7 @@ class DataModel(TemplateBase, ABC):
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
         base_class: Optional[str] = None,
+        imports: Optional[List[Import]] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_NAME is undefined')
@@ -57,7 +58,7 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelField] = fields or [DataModelField(name='pass')]
         self.decorators: List[str] = decorators or []
         self.base_class: Optional[str] = base_class or self.BASE_CLASS
-        self.imports: List[Import] = []
+        self.imports: List[Import] = imports or []
         if self.base_class:
             self.imports.append(Import.from_full_path(self.base_class))
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)

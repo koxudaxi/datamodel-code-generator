@@ -24,10 +24,61 @@ def snake_to_upper_camel(word: str) -> str:
     return ''.join(x[0].upper() + x[1:] for x in word.split('_'))
 
 
-def dump_templates(templates: Union[TemplateBase, List[TemplateBase]]) -> str:
+def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
     if isinstance(templates, TemplateBase):
         templates = [templates]
     return '\n\n\n'.join(str(m) for m in templates)
+
+
+class ClassNames:
+    def __init__(self, python_version: PythonVersion):
+        self.python_version: PythonVersion = python_version
+        self._class_names: List[str] = []
+        self._version_compatibles: List[str] = []
+        self._unresolved_class_names: List[str] = []
+
+    @property
+    def class_names(self) -> List[str]:
+        return self._class_names
+
+    @property
+    def unresolved_class_names(self) -> List[str]:
+        return self._unresolved_class_names
+
+    def add(
+        self, name: str, resolved: bool = True, version_compatible: bool = False
+    ) -> None:
+        if name in self._class_names:
+            return None
+        self._class_names.append(name)
+        if version_compatible:
+            self._version_compatibles.append(name)
+        if not resolved:
+            self._unresolved_class_names.append(name)
+
+    def _get_version_compatible_names(self) -> List[str]:
+        class_names: List[str] = []
+        for name in self._class_names:
+            if name in self._version_compatibles:
+                name = self._get_version_compatible_name(name)
+            class_names.append(name)
+        return class_names
+
+    def _get_version_compatible_name(self, name: str) -> str:
+        if self.python_version == PythonVersion.PY_36:
+            return f"'{name}'"
+        return name
+
+    def get_list_type(self) -> str:
+        if self.class_names:
+            return f'List[{", ".join(self._get_version_compatible_names())}]'
+        return 'List'
+
+    def get_union_type(self) -> str:
+        return f'Union[{", ".join(self._get_version_compatible_names())}]'
+
+    def get_type(self) -> str:
+        return ", ".join(self._get_version_compatible_names())
 
 
 ReferenceMapSet = Dict[str, Set[str]]
@@ -69,6 +120,7 @@ class Parser(ABC):
         base_class: Optional[str] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,
+        result: Optional[List[DataModel]] = None,
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
     ):
 
@@ -82,9 +134,15 @@ class Parser(ABC):
         self.target_python_version: PythonVersion = target_python_version
         self.unresolved_classes: ReferenceMapSet = OrderedDict()
         self.text: Optional[str] = text
+        self.result: List[DataModel] = result or []
         self.dump_resolve_reference_action: Optional[
             Callable[[List[str]], str]
         ] = dump_resolve_reference_action
+
+    def append_result(self, data_model: DataModel) -> None:
+        self.imports.append(data_model.imports)
+        self.created_model_names.add(data_model.name)
+        self.result.append(data_model)
 
     def get_type_name(self, name: str) -> str:
         if self.target_python_version == PythonVersion.PY_36:

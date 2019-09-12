@@ -167,7 +167,7 @@ def test_parse_object(source_obj, generated_classes):
     parsed_templates = parser.parse_object(
         'Pets', JsonSchemaObject.parse_obj(source_obj)
     )
-    assert dump_templates(list(parsed_templates)) == generated_classes
+    assert dump_templates(list(parser.result)) == generated_classes
 
 
 @pytest.mark.parametrize(
@@ -206,7 +206,7 @@ def test_parse_array(source_obj, generated_classes):
     parsed_templates = parser.parse_array(
         'Pets', JsonSchemaObject.parse_obj(source_obj)
     )
-    assert dump_templates(list(parsed_templates)) == generated_classes
+    assert dump_templates(list(parser.result)) == generated_classes
 
 
 @pytest.mark.parametrize(
@@ -508,10 +508,8 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
 )
 def test_parse_root_type(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parsed_templates = parser.parse_root_type(
-        'Name', JsonSchemaObject.parse_obj(source_obj)
-    )
-    assert dump_templates(list(parsed_templates)) == generated_classes
+    parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj))
+    assert dump_templates(list(parser.result)) == generated_classes
 
 
 def test_openapi_parser_parse_duplicate_models():
@@ -760,7 +758,6 @@ def test_openapi_parser_parse_anyof():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, filename=str(DATA_PATH / 'anyof.yaml')
     )
-    print(parser.parse())
     assert (
         parser.parse()
         == """from __future__ import annotations
@@ -790,12 +787,12 @@ class AnyOfItem(BaseModel):
     __root__: Union[Pet, Car, AnyOfItemItem]
 
 
-class AnyOfobjItem(BaseModel):
+class itemItem(BaseModel):
     name: Optional[str] = None
 
 
 class AnyOfobj(BaseModel):
-    item: Optional[Union[Pet, Car, AnyOfobjItem]] = None
+    item: Optional[Union[Pet, Car, itemItem]] = None
 
 
 class AnyOfArrayItem(BaseModel):
