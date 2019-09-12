@@ -48,11 +48,11 @@ class ClassNames:
     def add(
         self, name: str, ref: bool = False, version_compatible: bool = False
     ) -> None:
+        if ref and name not in self._class_names:
+            self._unresolved_class_names.append(name)
         self._class_names.append(name)
         if version_compatible:
             self._version_compatibles.append(name)
-        if ref and name not in self._class_names:  # pragma: no cover
-            self._unresolved_class_names.append(name)
 
     def _get_version_compatible_names(self) -> List[str]:
         class_names: List[str] = []

@@ -70,23 +70,22 @@ class OpenAPIParser(Parser):
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
-        field_class_names: ClassNames = ClassNames(self.target_python_version)
+        unresolved_class_names: List[str] = []
         for field_name, filed in obj.properties.items():  # type: ignore
+            field_class_names: ClassNames = ClassNames(self.target_python_version)
             if filed.ref:
                 field_class_names.add(filed.ref_object_name, version_compatible=True)
                 field_type_hint = field_class_names.get_type()
-            elif filed.is_array or filed.is_object:
+            elif filed.is_array:
                 class_name = self.get_class_name(field_name)
-                if filed.is_array:
-                    self.parse_array(class_name, filed)
-                    root_model = self.result.pop()
-                    field_type_hint: str = root_model.fields[  # type: ignore
-                        0
-                    ].type_hint
-                else:
-                    self.parse_object(class_name, filed)
-                    field_class_names.add(class_name, version_compatible=True)
-                    field_type_hint = field_class_names.get_type()
+                array_field, array_field_classes = self.parse_array_field(class_name, filed)
+                field_type_hint: str = array_field.type_hint
+                field_class_names = array_field_classes
+            elif filed.is_object:
+                class_name = self.get_class_name(field_name)
+                self.parse_object(class_name, filed)
+                field_class_names.add(class_name, version_compatible=True)
+                field_type_hint = field_class_names.get_type()
             elif filed.enum:
                 self.parse_enum(field_name, filed)
                 field_class_names.add(self.result[-1].name, version_compatible=True)
@@ -94,6 +93,7 @@ class OpenAPIParser(Parser):
             elif filed.anyOf:
                 any_of_item_names = self.parse_any_of(field_name, filed)
                 field_type_hint = any_of_item_names.get_union_type()
+                unresolved_class_names.extend(any_of_item_names.unresolved_class_names)
             else:
                 data_type = self.get_data_type(filed)
                 self.imports.append(data_type.import_)
@@ -109,13 +109,14 @@ class OpenAPIParser(Parser):
                     base_class=self.base_class,
                 )
             )
+            unresolved_class_names.extend(field_class_names.unresolved_class_names)
         data_model_type = self.data_model_type(
             name, fields=fields, base_class=self.base_class
         )
-        self.add_unresolved_classes(name, field_class_names.unresolved_class_names)
+        self.add_unresolved_classes(name, unresolved_class_names)
         self.append_result(data_model_type)
 
-    def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
+    def _parse_array(self, name: str, obj: JsonSchemaObject) -> Tuple[DataModel, ClassNames]:
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
@@ -137,20 +138,27 @@ class OpenAPIParser(Parser):
                 data_type = self.get_data_type(item)
                 item_obj_names.add(data_type.type_hint)
                 self.imports.append(data_type.import_)
-
-        self.add_unresolved_classes(name, item_obj_names.unresolved_class_names)
-        self.append_result(
-            self.data_model_root_type(
-                name,
-                [
-                    DataModelField(
-                        type_hint=item_obj_names.get_list_type(), required=True
-                    )
-                ],
-                base_class=self.base_class,
-                imports=[IMPORT_LIST],
-            )
+        data_model_root = self.data_model_root_type(
+            name,
+            [
+                DataModelField(
+                    type_hint=item_obj_names.get_list_type(), required=True
+                )
+            ],
+            base_class=self.base_class,
+            imports=[IMPORT_LIST],
         )
+
+        return data_model_root, item_obj_names
+
+    def parse_array_field(self, name: str, obj: JsonSchemaObject) -> Tuple[DataModelField, ClassNames]:
+        data_model_root, item_obj_names = self._parse_array(name, obj)
+        return data_model_root.fields[0], item_obj_names
+
+    def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
+        data_model_root, item_obj_names = self._parse_array(name, obj)
+        self.add_unresolved_classes(name, item_obj_names.unresolved_class_names)
+        self.append_result(data_model_root)
 
     def parse_root_type(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.type:

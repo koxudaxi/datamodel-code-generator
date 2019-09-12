@@ -564,12 +564,12 @@ class DuplicateObject1(BaseModel):
     event: Optional[List[Event]] = None
 
 
-class Event_2(BaseModel):
+class Event_1(BaseModel):
     event: Optional[Event] = None
 
 
 class DuplicateObject2(BaseModel):
-    event: Optional[Event_2] = None
+    event: Optional[Event_1] = None
 
 
 class DuplicateObject3(BaseModel):
@@ -651,6 +651,7 @@ class Events(BaseModel):
 
 class Event(BaseModel):
     name: Optional[str] = None
+    event: Optional[Event] = None
 """
     )
 

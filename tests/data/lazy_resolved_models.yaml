@@ -91,3 +91,5 @@ components:
       properties:
         name:
           type: string
+        event:
+          $ref: '#/components/schemas/Event'
