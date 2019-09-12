@@ -78,8 +78,10 @@ class OpenAPIParser(Parser):
                 field_type_hint = field_class_names.get_type()
             elif filed.is_array:
                 class_name = self.get_class_name(field_name)
-                array_field, array_field_classes = self.parse_array_field(class_name, filed)
-                field_type_hint: str = array_field.type_hint
+                array_field, array_field_classes = self.parse_array_field(
+                    class_name, filed
+                )
+                field_type_hint = array_field.type_hint  # type: ignore
                 field_class_names = array_field_classes
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
@@ -116,7 +118,9 @@ class OpenAPIParser(Parser):
         self.add_unresolved_classes(name, unresolved_class_names)
         self.append_result(data_model_type)
 
-    def _parse_array(self, name: str, obj: JsonSchemaObject) -> Tuple[DataModel, ClassNames]:
+    def _parse_array(
+        self, name: str, obj: JsonSchemaObject
+    ) -> Tuple[DataModel, ClassNames]:
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
@@ -140,18 +144,16 @@ class OpenAPIParser(Parser):
                 self.imports.append(data_type.import_)
         data_model_root = self.data_model_root_type(
             name,
-            [
-                DataModelField(
-                    type_hint=item_obj_names.get_list_type(), required=True
-                )
-            ],
+            [DataModelField(type_hint=item_obj_names.get_list_type(), required=True)],
             base_class=self.base_class,
             imports=[IMPORT_LIST],
         )
 
         return data_model_root, item_obj_names
 
-    def parse_array_field(self, name: str, obj: JsonSchemaObject) -> Tuple[DataModelField, ClassNames]:
+    def parse_array_field(
+        self, name: str, obj: JsonSchemaObject
+    ) -> Tuple[DataModelField, ClassNames]:
         data_model_root, item_obj_names = self._parse_array(name, obj)
         return data_model_root.fields[0], item_obj_names
 
