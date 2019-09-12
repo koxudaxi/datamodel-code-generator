@@ -1,7 +1,6 @@
 from typing import Any, List, Optional
 
 from datamodel_code_generator.model import DataModel, DataModelField
-from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
 
 
