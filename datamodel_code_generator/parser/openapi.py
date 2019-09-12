@@ -58,8 +58,9 @@ class OpenAPIParser(Parser):
             return any_of_item_names
         for any_of_item in obj.anyOf:
             if any_of_item.ref:  # $ref
-                class_name = self.get_type_name(any_of_item.ref_object_name)
-                any_of_item_names.add(class_name, version_compatible=True)
+                any_of_item_names.add(
+                    any_of_item.ref_object_name, ref=True, version_compatible=True
+                )
             else:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, any_of_item)
@@ -111,8 +112,7 @@ class OpenAPIParser(Parser):
         data_model_type = self.data_model_type(
             name, fields=fields, base_class=self.base_class
         )
-        if field_class_names.unresolved_class_names:
-            self.add_unresolved_classes(name, field_class_names.unresolved_class_names)
+        self.add_unresolved_classes(name, field_class_names.unresolved_class_names)
         self.append_result(data_model_type)
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
@@ -123,7 +123,9 @@ class OpenAPIParser(Parser):
         item_obj_names: ClassNames = ClassNames(self.target_python_version)
         for item in items:
             if item.ref:
-                item_obj_names.add(item.ref_object_name, version_compatible=True)
+                item_obj_names.add(
+                    item.ref_object_name, ref=True, version_compatible=True
+                )
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, item)
@@ -136,8 +138,7 @@ class OpenAPIParser(Parser):
                 item_obj_names.add(data_type.type_hint)
                 self.imports.append(data_type.import_)
 
-        if item_obj_names.unresolved_class_names:
-            self.add_unresolved_classes(name, item_obj_names.unresolved_class_names)
+        self.add_unresolved_classes(name, item_obj_names.unresolved_class_names)
         self.append_result(
             self.data_model_root_type(
                 name,
@@ -162,8 +163,10 @@ class OpenAPIParser(Parser):
             any_of_item_names = self.parse_any_of(name, obj)
             type_hint = any_of_item_names.get_union_type()
         else:
+            obj_names: ClassNames = ClassNames(self.target_python_version)
+            obj_names.add(obj.ref_object_name, ref=True, version_compatible=True)
             self.add_unresolved_classes(name, obj.ref_object_name)
-            type_hint = self.get_type_name(obj.ref_object_name)
+            type_hint = obj_names.get_type()
         data_model_root_type = self.data_model_root_type(
             name,
             [

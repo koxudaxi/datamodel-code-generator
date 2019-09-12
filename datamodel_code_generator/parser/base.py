@@ -46,14 +46,12 @@ class ClassNames:
         return self._unresolved_class_names
 
     def add(
-        self, name: str, resolved: bool = True, version_compatible: bool = False
+        self, name: str, ref: bool = False, version_compatible: bool = False
     ) -> None:
-        if name in self._class_names:
-            return None
         self._class_names.append(name)
         if version_compatible:
             self._version_compatibles.append(name)
-        if not resolved:
+        if ref and name not in self._class_names:  # pragma: no cover
             self._unresolved_class_names.append(name)
 
     def _get_version_compatible_names(self) -> List[str]:
@@ -144,11 +142,6 @@ class Parser(ABC):
         self.created_model_names.add(data_model.name)
         self.result.append(data_model)
 
-    def get_type_name(self, name: str) -> str:
-        if self.target_python_version == PythonVersion.PY_36:
-            return f"'{name}'"
-        return name
-
     def get_class_name(self, field_name: str) -> str:
         upper_camel_name = snake_to_upper_camel(field_name)
         return self.get_uniq_name(upper_camel_name)
@@ -169,7 +162,7 @@ class Parser(ABC):
         if self.target_python_version == PythonVersion.PY_36:
             reference_names = [r.replace("'", "") for r in reference_names]
         unresolved_reference = set(reference_names) - self.created_model_names
-        if unresolved_reference:
+        if unresolved_reference:  # pragma: no cover
             self.unresolved_classes[class_name] = unresolved_reference
 
     @abstractmethod
