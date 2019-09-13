@@ -55,6 +55,9 @@ class ClassNames:
         if version_compatible:
             self._version_compatibles.append(name)
 
+    def add_unresolved_name(self, name: str) -> None:
+        self._unresolved_class_names.append(name)
+
     def extend(self, class_name: 'ClassNames') -> None:
         self._class_names.extend(class_name.class_names)
         self._unresolved_class_names.extend(class_name.unresolved_class_names)
@@ -119,7 +122,6 @@ def sort_data_models(
                 require_update_action_models.append(model.name)
         else:
             unresolved_references.append(model)
-            # sorted_data_models[model.name] = model
     if unresolved_references:
         try:
             return sort_data_models(
