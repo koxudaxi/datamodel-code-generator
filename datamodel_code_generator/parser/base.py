@@ -27,6 +27,7 @@ def snake_to_upper_camel(word: str) -> str:
 def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
     if isinstance(templates, TemplateBase):
         templates = [templates]
+
     return '\n\n\n'.join(str(m) for m in templates)
 
 
@@ -88,32 +89,49 @@ class ClassNames:
 
 
 ReferenceMapSet = Dict[str, Set[str]]
-ResolvedReferences = List[str]
+SortedDataModels = Dict[str, DataModel]
 
 
-def resolve_references(
-    resolved_references: ResolvedReferences, references: ReferenceMapSet
-) -> Tuple[ResolvedReferences, ReferenceMapSet]:
-    unresolved_references: ReferenceMapSet = OrderedDict()
-    for key, item in references.items():
-        if key in item and len(item) == 1:  # only self-referencing
-            resolved_references.append(key)
+def sort_data_models(
+    unsorted_data_models: List[DataModel],
+    sorted_data_models: Optional[SortedDataModels] = None,
+    require_update_action_models: Optional[List[str]] = None,
+) -> Tuple[List[DataModel], SortedDataModels, List[str]]:
+    if sorted_data_models is None:
+        sorted_data_models = OrderedDict()
+    if require_update_action_models is None:
+        require_update_action_models = []
+
+    unresolved_references: List[DataModel] = []
+    for model in unsorted_data_models:
+        if not model.reference_classes:
+            sorted_data_models[model.name] = model
         elif (
-            not item - set(key) - set(resolved_references)
+            model.name in model.reference_classes and len(model.reference_classes) == 1
+        ):  # only self-referencing
+            sorted_data_models[model.name] = model
+            require_update_action_models.append(model.name)
+        elif (
+            not set(model.reference_classes) - set(model.name) - set(sorted_data_models)
         ):  # reference classes have been resolved
-            resolved_references.append(key)
+            sorted_data_models[model.name] = model
+            if model.name in model.reference_classes:
+                require_update_action_models.append(model.name)
         else:
-            unresolved_references[key] = item
+            unresolved_references.append(model)
+            # sorted_data_models[model.name] = model
     if unresolved_references:
         try:
-            return resolve_references(resolved_references, unresolved_references)
+            return sort_data_models(
+                unresolved_references, sorted_data_models, require_update_action_models
+            )
         except RecursionError:
             unresolved_classes = ', '.join(
-                f"[class: {k} references: {v}]"
-                for k, v in unresolved_references.items()
+                f"[class: {item.name} references: {item.reference_classes}]"
+                for item in unresolved_references
             )
             raise Exception(f'A Parser can not resolve classes: {unresolved_classes}.')
-    return resolved_references, unresolved_references
+    return unresolved_references, sorted_data_models, require_update_action_models
 
 
 class Parser(ABC):
@@ -138,9 +156,8 @@ class Parser(ABC):
         self.base_class: Optional[str] = base_class
         self.created_model_names: Set[str] = set()
         self.target_python_version: PythonVersion = target_python_version
-        self.unresolved_classes: ReferenceMapSet = OrderedDict()
         self.text: Optional[str] = text
-        self.result: List[DataModel] = result or []
+        self.results: List[DataModel] = result or []
         self.dump_resolve_reference_action: Optional[
             Callable[[List[str]], str]
         ] = dump_resolve_reference_action
@@ -148,7 +165,7 @@ class Parser(ABC):
     def append_result(self, data_model: DataModel) -> None:
         self.imports.append(data_model.imports)
         self.created_model_names.add(data_model.name)
-        self.result.append(data_model)
+        self.results.append(data_model)
 
     def get_class_name(self, field_name: str) -> str:
         upper_camel_name = snake_to_upper_camel(field_name)
@@ -161,17 +178,6 @@ class Parser(ABC):
             uniq_name = f'{name}_{count}'
             count += 1
         return uniq_name
-
-    def add_unresolved_classes(
-        self, class_name: str, reference_names: Union[str, List[str]]
-    ) -> None:
-        if isinstance(reference_names, str):
-            reference_names = [reference_names]
-        if self.target_python_version == PythonVersion.PY_36:
-            reference_names = [r.replace("'", "") for r in reference_names]
-        unresolved_reference = set(reference_names) - self.created_model_names
-        if unresolved_reference:  # pragma: no cover
-            self.unresolved_classes[class_name] = unresolved_reference
 
     @abstractmethod
     def parse(

@@ -18,6 +18,7 @@ class CustomRootType(DataModel):
         base_classes: Optional[List[str]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
+        reference_classes: Optional[List[str]] = None,
     ):
         super().__init__(
             name,
@@ -26,6 +27,7 @@ class CustomRootType(DataModel):
             base_classes=base_classes,
             imports=imports,
             auto_import=auto_import,
+            reference_classes=reference_classes,
         )
 
     @classmethod

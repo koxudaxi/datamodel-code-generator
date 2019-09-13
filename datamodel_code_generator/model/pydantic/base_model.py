@@ -16,6 +16,7 @@ class BaseModel(DataModel):
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[str]] = None,
         auto_import: bool = True,
+        reference_classes: Optional[List[str]] = None,
     ):
         super().__init__(
             name=name,
@@ -23,6 +24,7 @@ class BaseModel(DataModel):
             decorators=decorators,
             base_classes=base_classes,
             auto_import=auto_import,
+            reference_classes=reference_classes,
         )
 
     @classmethod

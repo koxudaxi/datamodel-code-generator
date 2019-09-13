@@ -51,15 +51,17 @@ class DataModel(TemplateBase, ABC):
         base_classes: Optional[List[str]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
+        reference_classes: Optional[List[str]] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
-            raise Exception('TEMPLATE_FILE_NAME is undefined')
+            raise Exception('TEMPLATE_FILE_PATH is undefined')
 
         self.name: str = name
         self.fields: List[DataModelField] = fields or []
         self.decorators: List[str] = decorators or []
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
+        self.reference_classes: List[str] = reference_classes or []
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes or [self.BASE_CLASS]
 
