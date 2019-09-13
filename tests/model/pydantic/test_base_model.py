@@ -4,7 +4,7 @@ from datamodel_code_generator.types import DataType, Types
 
 
 def test_base_model():
-    field = DataModelField(name='a', type_hint='str', required=True)
+    field = DataModelField(name='a', types='str', required=True)
 
     base_model = BaseModel(name='test_model', fields=[field])
 
@@ -15,7 +15,7 @@ def test_base_model():
 
 
 def test_base_model_optional():
-    field = DataModelField(name='a', type_hint='str', default="'abc'", required=False)
+    field = DataModelField(name='a', types='str', default="'abc'", required=False)
 
     base_model = BaseModel(name='test_model', fields=[field])
 
@@ -29,7 +29,7 @@ def test_base_model_optional():
 
 
 def test_base_model_decorator():
-    field = DataModelField(name='a', type_hint='str', default="'abc'", required=False)
+    field = DataModelField(name='a', types='str', default="'abc'", required=False)
 
     base_model = BaseModel(
         name='test_model',

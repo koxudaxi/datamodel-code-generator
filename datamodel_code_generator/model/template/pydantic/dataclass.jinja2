@@ -11,9 +11,9 @@ class {{ class_name }}:
     pass
 {%- endif %}
 {%- for field in fields -%}
-    {%- if field.required %}
-    {{ field.name }}: {{ field.type_hint }}
-    {%- else %}
+    {%- if field.default %}
     {{ field.name }}: {{ field.type_hint }} = {{field.default}}
+    {%- else %}
+    {{ field.name }}: {{ field.type_hint }}
     {%- endif %}
 {%- endfor -%}

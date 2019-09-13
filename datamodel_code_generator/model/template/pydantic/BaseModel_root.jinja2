@@ -8,6 +8,6 @@ class {{ class_name }}({{ base_class }}):
     {%- if fields[0].required %}
     __root__: {{ fields[0].type_hint }}
     {%- else %}
-    __root__: Optional[{{ fields[0].type_hint }}] = {{fields[0].default}}
+    __root__: {{ fields[0].type_hint }} = {{fields[0].default}}
     {%- endif %}
 {%- endif %}

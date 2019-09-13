@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, Set, Tuple, Type
+from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.format import format_code
@@ -109,6 +109,7 @@ class OpenAPIParser(Parser):
     ) -> Tuple[List[DataModelField], ClassNames]:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
+        field_types: Union[List[str], str]
         field_all_class_names: ClassNames = ClassNames(self.target_python_version)
         for field_name, filed in obj.properties.items():  # type: ignore
             field_class_names: ClassNames = ClassNames(self.target_python_version)
@@ -116,44 +117,44 @@ class OpenAPIParser(Parser):
                 field_class_names.add(
                     filed.ref_object_name, ref=True, version_compatible=True
                 )
-                field_type_hint = field_class_names.get_type()
+                field_types = field_class_names.get_types()
             elif filed.is_array:
                 class_name = self.get_class_name(field_name)
                 array_fields, array_field_classes = self.parse_array_fields(
                     class_name, filed
                 )
-                field_type_hint = array_fields[0].type_hint  # type: ignore
+                field_types = array_fields[0].type_hint
                 field_class_names = array_field_classes
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
                 self.parse_object(class_name, filed)
                 field_class_names.add(class_name, ref=True, version_compatible=True)
-                field_type_hint = field_class_names.get_type()
+                field_types = field_class_names.get_types()
             elif filed.enum:
                 self.parse_enum(field_name, filed)
                 field_class_names.add(
                     self.results[-1].name, ref=True, version_compatible=True
                 )
-                field_type_hint = field_class_names.get_type()
+                field_types = field_class_names.get_types()
             elif filed.anyOf:
                 any_of_item_names = self.parse_any_of(field_name, filed)
-                field_type_hint = any_of_item_names.get_union_type()
+                field_types = any_of_item_names.get_types()
                 field_all_class_names.extend(any_of_item_names)
             elif filed.allOf:
                 all_of_item_names = self.parse_all_of(field_name, filed)
-                field_type_hint = all_of_item_names.get_type()
+                field_types = all_of_item_names.get_types()
                 field_all_class_names.extend(all_of_item_names)
             else:
                 data_type = self.get_data_type(filed)
                 self.imports.append(data_type.import_)
-                field_type_hint = data_type.type_hint
+                field_types = data_type.type_hint
             required: bool = field_name in requires
             if not required:
                 self.imports.append(IMPORT_OPTIONAL)
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
-                    type_hint=field_type_hint,
+                    types=field_types,
                     required=required,
                     base_classes=[self.base_class] if self.base_class else [],
                 )
@@ -179,6 +180,7 @@ class OpenAPIParser(Parser):
         else:
             items = obj.items  # type: ignore
         item_obj_names: ClassNames = ClassNames(self.target_python_version)
+        is_union: bool = False
         for item in items:
             if item.ref:
                 item_obj_names.add(
@@ -190,19 +192,27 @@ class OpenAPIParser(Parser):
                 item_obj_names.add(singular_name, ref=True, version_compatible=True)
             elif item.anyOf:
                 any_of_item_names = self.parse_any_of(name, item)
-                item_obj_names.add(any_of_item_names.get_union_type())
+                for type_ in any_of_item_names.get_types():
+                    item_obj_names.add(type_)
                 item_obj_names.add_unresolved_name(name)
+                is_union = True
             elif item.allOf:
                 singular_name = get_singular_name(name)
                 all_of_item_names = self.parse_all_of(singular_name, item)
-                item_obj_names.add(all_of_item_names.get_type())
+                for type_ in all_of_item_names.get_types():
+                    item_obj_names.add(type_)
                 item_obj_names.add_unresolved_name(singular_name)
             else:
                 data_type = self.get_data_type(item)
                 item_obj_names.add(data_type.type_hint)
                 self.imports.append(data_type.import_)
 
-        field = DataModelField(type_hint=item_obj_names.get_list_type(), required=True)
+        field = DataModelField(
+            types=item_obj_names.get_types(),
+            required=True,
+            is_list=True,
+            is_union=is_union,
+        )
         return [field], item_obj_names
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
@@ -224,22 +234,18 @@ class OpenAPIParser(Parser):
             self.imports.append(data_type.import_)
             if obj.nullable:
                 self.imports.append(IMPORT_OPTIONAL)
-            type_hint: str = data_type.type_hint
+            types: Union[str, List[str]] = data_type.type_hint
         elif obj.anyOf:
             any_of_item_names = self.parse_any_of(name, obj)
-            type_hint = any_of_item_names.get_union_type()
+            types = any_of_item_names.get_types()
         else:
             obj_names: ClassNames = ClassNames(self.target_python_version)
             obj_names.add(obj.ref_object_name, ref=True, version_compatible=True)
             reference_classes.append(obj.ref_object_name)
-            type_hint = obj_names.get_type()
+            types = obj_names.get_types()
         data_model_root_type = self.data_model_root_type(
             name,
-            [
-                self.data_model_field_type(
-                    type_hint=type_hint, required=not obj.nullable
-                )
-            ],
+            [self.data_model_field_type(types=types, required=not obj.nullable)],
             base_classes=[self.base_class] if self.base_class else [],
             reference_classes=reference_classes,
         )
