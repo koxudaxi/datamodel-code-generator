@@ -20,9 +20,7 @@ class DataModelField(BaseModel):
 
     @validator('name')
     def validate_name(cls, name: Any) -> Any:
-        if isinstance(name, str):
-            return re.sub(r'\W', '_', name)
-        return name
+        return re.sub(r'\W', '_', name)
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
