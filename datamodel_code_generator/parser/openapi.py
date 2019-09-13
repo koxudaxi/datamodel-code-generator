@@ -201,7 +201,7 @@ class OpenAPIParser(Parser):
                 data_type = self.get_data_type(item)
                 item_obj_names.add(data_type.type_hint)
                 self.imports.append(data_type.import_)
-
+        self.imports.append(IMPORT_LIST)
         field = DataModelField(type_hint=item_obj_names.get_list_type(), required=True)
         return [field], item_obj_names
 
