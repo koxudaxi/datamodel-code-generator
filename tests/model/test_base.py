@@ -65,7 +65,7 @@ def test_data_model():
             name='test_model',
             fields=[field],
             decorators=['@validate'],
-            base_class='Base',
+            base_classes=['Base'],
         )
 
     assert data_model.name == 'test_model'
@@ -84,5 +84,5 @@ def test_data_model_exception():
     field = DataModelField(
         name='a', type_hint='str', default="" 'abc' "", required=True
     )
-    with pytest.raises(Exception, match='TEMPLATE_FILE_NAME is undefined'):
+    with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
         C(name='abc', fields=[field])

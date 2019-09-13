@@ -32,7 +32,10 @@ def test_base_model_decorator():
     field = DataModelField(name='a', type_hint='str', default="'abc'", required=False)
 
     base_model = BaseModel(
-        name='test_model', fields=[field], decorators=['@validate'], base_class='Base'
+        name='test_model',
+        fields=[field],
+        decorators=['@validate'],
+        base_classes=['Base'],
     )
 
     assert base_model.name == 'test_model'

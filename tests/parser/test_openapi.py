@@ -164,10 +164,8 @@ class Pets(BaseModel):
 )
 def test_parse_object(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parsed_templates = parser.parse_object(
-        'Pets', JsonSchemaObject.parse_obj(source_obj)
-    )
-    assert dump_templates(list(parser.result)) == generated_classes
+    parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj))
+    assert dump_templates(list(parser.results)) == generated_classes
 
 
 @pytest.mark.parametrize(
@@ -206,7 +204,7 @@ def test_parse_array(source_obj, generated_classes):
     parsed_templates = parser.parse_array(
         'Pets', JsonSchemaObject.parse_obj(source_obj)
     )
-    assert dump_templates(list(parser.result)) == generated_classes
+    assert dump_templates(list(parser.results)) == generated_classes
 
 
 @pytest.mark.parametrize(
@@ -509,7 +507,7 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
 def test_parse_root_type(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
     parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj))
-    assert dump_templates(list(parser.result)) == generated_classes
+    assert dump_templates(list(parser.results)) == generated_classes
 
 
 def test_openapi_parser_parse_duplicate_models():
@@ -640,18 +638,18 @@ class Error(BaseModel):
     message: str
 
 
-class Results(BaseModel):
-    envets: Optional[List[Events]] = None
-    event: Optional[List[Event]] = None
+class Event(BaseModel):
+    name: Optional[str] = None
+    event: Optional[Event] = None
 
 
 class Events(BaseModel):
     __root__: List[Event]
 
 
-class Event(BaseModel):
-    name: Optional[str] = None
-    event: Optional[Event] = None
+class Results(BaseModel):
+    envets: Optional[List[Events]] = None
+    event: Optional[List[Event]] = None
 """
     )
 
@@ -802,6 +800,69 @@ class AnyOfArrayItem(BaseModel):
 
 class AnyOfArray(BaseModel):
     __root__: List[Union[Pet, Car, AnyOfArrayItem]]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+"""
+    )
+
+
+def test_openapi_parser_parse_allof():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'allof.yaml')
+    )
+    assert (
+        parser.parse()
+        == """from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Car(BaseModel):
+    number: str
+
+
+class AllOfref(Pet, Car):
+    pass
+
+
+class AllOfobj(BaseModel):
+    name: Optional[str] = None
+    number: Optional[str] = None
+
+
+class AnyOfCombine(Pet, Car):
+    age: Optional[str] = None
+
+
+class item(Pet, Car):
+    age: Optional[str] = None
+
+
+class AnyOfCombineInObject(BaseModel):
+    item: Optional[item] = None
+
+
+class AnyOfCombineInArrayItem(Pet, Car):
+    age: Optional[str] = None
+
+
+class AnyOfCombineInArray(BaseModel):
+    __root__: List[AnyOfCombineInArrayItem]
+
+
+class AnyOfCombineInRoot(Pet, Car):
+    age: Optional[str] = None
 
 
 class Error(BaseModel):
