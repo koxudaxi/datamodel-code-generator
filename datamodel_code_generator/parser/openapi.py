@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type
 
 from datamodel_code_generator import PythonVersion
@@ -65,7 +64,7 @@ class OpenAPIParser(Parser):
             else:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, any_of_item)
-                any_of_item_names.add(singular_name, version_compatible=True)
+                any_of_item_names.add(singular_name, ref=True, version_compatible=True)
         return any_of_item_names
 
     def parse_all_of(self, name: str, obj: JsonSchemaObject) -> ClassNames:
@@ -102,7 +101,7 @@ class OpenAPIParser(Parser):
         all_of_item_names.extend(base_classes)
         self.append_result(data_model_type)
 
-        all_of_name.add(name, version_compatible=True)
+        all_of_name.add(name, ref=True, version_compatible=True)
         return all_of_name
 
     def parse_object_fields(
@@ -114,7 +113,9 @@ class OpenAPIParser(Parser):
         for field_name, filed in obj.properties.items():  # type: ignore
             field_class_names: ClassNames = ClassNames(self.target_python_version)
             if filed.ref:
-                field_class_names.add(filed.ref_object_name, version_compatible=True)
+                field_class_names.add(
+                    filed.ref_object_name, ref=True, version_compatible=True
+                )
                 field_type_hint = field_class_names.get_type()
             elif filed.is_array:
                 class_name = self.get_class_name(field_name)
@@ -126,11 +127,13 @@ class OpenAPIParser(Parser):
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
                 self.parse_object(class_name, filed)
-                field_class_names.add(class_name, version_compatible=True)
+                field_class_names.add(class_name, ref=True, version_compatible=True)
                 field_type_hint = field_class_names.get_type()
             elif filed.enum:
                 self.parse_enum(field_name, filed)
-                field_class_names.add(self.results[-1].name, version_compatible=True)
+                field_class_names.add(
+                    self.results[-1].name, ref=True, version_compatible=True
+                )
                 field_type_hint = field_class_names.get_type()
             elif filed.anyOf:
                 any_of_item_names = self.parse_any_of(field_name, filed)
@@ -184,18 +187,21 @@ class OpenAPIParser(Parser):
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, item)
-                item_obj_names.add(singular_name, version_compatible=True)
+                item_obj_names.add(singular_name, ref=True, version_compatible=True)
             elif item.anyOf:
                 any_of_item_names = self.parse_any_of(name, item)
                 item_obj_names.add(any_of_item_names.get_union_type())
+                item_obj_names.add_unresolved_name(name)
             elif item.allOf:
                 singular_name = get_singular_name(name)
                 all_of_item_names = self.parse_all_of(singular_name, item)
                 item_obj_names.add(all_of_item_names.get_type())
+                item_obj_names.add_unresolved_name(singular_name)
             else:
                 data_type = self.get_data_type(item)
                 item_obj_names.add(data_type.type_hint)
                 self.imports.append(data_type.import_)
+
         field = DataModelField(type_hint=item_obj_names.get_list_type(), required=True)
         return [field], item_obj_names
 
