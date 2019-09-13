@@ -19,10 +19,10 @@ class DataModelField(BaseModel):
     alias: Optional[str]
 
     @validator('name')
-    def validate_name(cls, name: Any) -> str:
+    def validate_name(cls, name: Any) -> Any:
         if isinstance(name, str):
             return re.sub(r'\W', '_', name)
-        raise TypeError('name should be str')
+        return name
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
