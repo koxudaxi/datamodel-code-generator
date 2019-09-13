@@ -1,7 +1,8 @@
 import re
 from abc import ABC, abstractmethod
+from functools import wraps
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional, Union
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.types import DataType, Types
@@ -10,13 +11,55 @@ from pydantic import BaseModel, validator
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
+UNION: str = 'Union'
+OPTIONAL: str = 'Optional'
+LIST: str = 'List'
+
+
+def optional(func: Callable) -> Callable:
+    @wraps(func)
+    def inner(self: 'DataModelField', *args: Any, **kwargs: Any) -> Optional[str]:
+        type_hint: Optional[str] = func(self, *args, **kwargs)
+        if self.required:
+            return type_hint
+        if type_hint is None or type_hint == '':
+            return OPTIONAL
+        return f'{OPTIONAL}[{type_hint}]'
+
+    return inner
+
 
 class DataModelField(BaseModel):
     name: Optional[str]
-    type_hint: Optional[str]
     default: Optional[str]
     required: bool = False
     alias: Optional[str]
+    example: Optional[str]
+    description: Optional[str]
+    types: Union[List[str], str, None]
+    is_list: bool = False
+    is_union: bool = False
+
+    @property  # type: ignore
+    @optional
+    def type_hint(self) -> Optional[str]:
+        if self.types is None:
+            return None
+        types = [self.types] if isinstance(self.types, str) else self.types
+        type_hint = ", ".join(types)
+        if not type_hint:
+            if self.is_list:
+                return LIST
+            return ''
+        if len(types) == 1:
+            if self.is_list:
+                return f'{LIST}[{type_hint}]'
+            return type_hint
+        if self.is_list:
+            if self.is_union:
+                return f'{LIST}[{UNION}[{type_hint}]]'
+            return f'{LIST}[{type_hint}]'
+        return f'{UNION}[{type_hint}]'
 
     @validator('name')
     def validate_name(cls, name: Any) -> Any:

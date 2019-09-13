@@ -76,19 +76,8 @@ class ClassNames:
             return f"'{name}'"
         return name
 
-    def get_list_type(self) -> str:
-        if self.class_names:
-            return f'List[{", ".join(self._get_version_compatible_names())}]'
-        return 'List'
-
-    def get_union_type(self) -> str:
-        return f'Union[{", ".join(self._get_version_compatible_names())}]'
-
-    def get_type(self) -> str:
-        version_compatible_names = self._get_version_compatible_names()
-        if len(version_compatible_names) > 1:  # pragma: no cover
-            raise Exception('Found types in hint_type')
-        return ", ".join(self._get_version_compatible_names())
+    def get_types(self) -> List[str]:
+        return self._get_version_compatible_names()
 
 
 ReferenceMapSet = Dict[str, Set[str]]
