@@ -65,7 +65,7 @@ def test_data_model():
             name='test_model',
             fields=[field],
             decorators=['@validate'],
-            base_class='Base',
+            base_classes=['Base'],
         )
 
     assert data_model.name == 'test_model'

@@ -14,10 +14,13 @@ class DataClass(DataModel):
         name: str,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
-        base_class: Optional[str] = None,
+        base_classes: Optional[List[str]] = None,
+        auto_import: bool = True,
     ):
 
-        super().__init__(name, fields, decorators, base_class)
+        super().__init__(
+            name, fields, decorators, base_classes, auto_import=auto_import
+        )
         self.imports.append(Import.from_full_path('pydantic.dataclasses.dataclass'))
 
     @classmethod

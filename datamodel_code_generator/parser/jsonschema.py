@@ -49,6 +49,7 @@ class JsonSchemaObject(BaseModel):
     exclusiveMinimum: Optional[bool]
     additionalProperties: Optional['JsonSchemaObject']
     anyOf: Optional[List['JsonSchemaObject']]
+    allOf: Optional[List['JsonSchemaObject']]
     enum: Optional[List[str]]
     writeOnly: Optional[bool]
     properties: Optional[Dict[str, 'JsonSchemaObject']]

@@ -15,16 +15,18 @@ class CustomRootType(DataModel):
         name: str,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
-        base_class: Optional[str] = None,
+        base_classes: Optional[List[str]] = None,
         imports: Optional[List[Import]] = None,
+        auto_import: bool = True,
     ):
 
         super().__init__(
             name,
             fields=fields,
             decorators=decorators,
-            base_class=base_class,
+            base_classes=base_classes,
             imports=imports,
+            auto_import=auto_import,
         )
 
     @classmethod

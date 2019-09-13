@@ -14,10 +14,15 @@ class BaseModel(DataModel):
         name: str,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
-        base_class: Optional[str] = None,
+        base_classes: Optional[List[str]] = None,
+        auto_import: bool = True,
     ):
         super().__init__(
-            name=name, fields=fields, decorators=decorators, base_class=base_class
+            name=name,
+            fields=fields,
+            decorators=decorators,
+            base_classes=base_classes,
+            auto_import=auto_import,
         )
 
     @classmethod

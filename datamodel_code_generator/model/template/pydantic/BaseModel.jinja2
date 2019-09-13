@@ -2,6 +2,9 @@
 {{ decorator }}
 {% endfor -%}
 class {{ class_name }}({{ base_class }}):
+{%- if not fields %}
+    pass
+{%- endif %}
 {%- for field in fields -%}
     {%- if field.required %}
     {{ field.name }}: {{ field.type_hint }}
