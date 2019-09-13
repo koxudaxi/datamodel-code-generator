@@ -870,3 +870,28 @@ class Error(BaseModel):
     message: str
 """
     )
+
+
+def test_openapi_parser_parse_alias():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, filename=str(DATA_PATH / 'alias.yaml')
+    )
+    assert (
+        parser.parse()
+        == """from __future__ import annotations
+
+from enum import Enum
+
+from pydantic import BaseModel
+
+
+class Pet(Enum):
+    ca_t = 'ca-t'
+    dog_ = 'dog*'
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+"""
+    )

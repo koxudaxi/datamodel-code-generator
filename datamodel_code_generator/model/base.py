@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, List, Optional
@@ -5,7 +6,7 @@ from typing import Any, List, Optional
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.types import DataType, Types
 from jinja2 import Template
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
@@ -15,6 +16,18 @@ class DataModelField(BaseModel):
     type_hint: Optional[str]
     default: Optional[str]
     required: bool = False
+    alias: Optional[str]
+
+    @validator('name')
+    def validate_name(cls, name: Any) -> str:
+        if isinstance(name, str):
+            return re.sub(r'\W', '_', name)
+        raise TypeError('name should be str')
+
+    def __init__(self, **values: Any) -> None:
+        super().__init__(**values)
+        if not self.alias and 'name' in values:
+            self.alias = values['name']
 
 
 class TemplateBase(ABC):
