@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
@@ -56,7 +54,7 @@ class ClassNames:
         if version_compatible:
             self._version_compatibles.append(name)
 
-    def extend(self, class_name: ClassNames) -> None:
+    def extend(self, class_name: 'ClassNames') -> None:
         self._class_names.extend(class_name.class_names)
         self._unresolved_class_names.extend(class_name.unresolved_class_names)
         self._version_compatibles.extend(class_name._version_compatibles)
