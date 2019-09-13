@@ -19,7 +19,6 @@ class CustomRootType(DataModel):
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
     ):
-
         super().__init__(
             name,
             fields=fields,

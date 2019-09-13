@@ -132,17 +132,42 @@ components:
             number:
               type: string
     AnyOfCombine:
+        allOf:
+          - $ref: "#/components/schemas/Pet"
+          - $ref: "#/components/schemas/Car"
+          - type: object
+            properties:
+              age:
+                type: string
+    AnyOfCombineInObject:
       type: object
       properties:
         item:
-          anyOf:
+          allOf:
             - $ref: "#/components/schemas/Pet"
             - $ref: "#/components/schemas/Car"
             - type: object
               properties:
-                name:
+                age:
                   type: string
-
+    AnyOfCombineInArray:
+      type: array
+      items:
+        allOf:
+          - $ref: "#/components/schemas/Pet"
+          - $ref: "#/components/schemas/Car"
+          - type: object
+            properties:
+              age:
+                type: string
+    AnyOfCombineInRoot:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - $ref: "#/components/schemas/Car"
+        - type: object
+          properties:
+            age:
+              type: string
     Error:
       required:
         - code

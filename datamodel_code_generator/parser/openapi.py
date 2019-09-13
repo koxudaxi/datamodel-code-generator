@@ -84,13 +84,14 @@ class OpenAPIParser(Parser):
                 fields_, class_names = self.parse_object_fields(all_of_item)
                 fields.extend(fields_)
                 all_of_item_names.extend(class_names)
+
+        if base_classes.class_names:
+            base_class_names: List[str] = base_classes.class_names
+        else:
+            base_class_names = [self.base_class] if self.base_class else []
+
         data_model_type = self.data_model_type(
-            name,
-            fields=fields,
-            base_classes=base_classes.class_names or [self.base_class]
-            if self.base_class
-            else [],
-            auto_import=False,
+            name, fields=fields, base_classes=base_class_names, auto_import=False
         )
         all_of_item_names.extend(base_classes)
         self.add_unresolved_classes(name, all_of_item_names.unresolved_class_names)
@@ -183,7 +184,8 @@ class OpenAPIParser(Parser):
                 any_of_item_names = self.parse_any_of(name, item)
                 item_obj_names.add(any_of_item_names.get_union_type())
             elif item.allOf:
-                all_of_item_names = self.parse_all_of(name, item)
+                singular_name = get_singular_name(name)
+                all_of_item_names = self.parse_all_of(singular_name, item)
                 item_obj_names.add(all_of_item_names.get_type())
             else:
                 data_type = self.get_data_type(item)
@@ -214,9 +216,6 @@ class OpenAPIParser(Parser):
         elif obj.anyOf:
             any_of_item_names = self.parse_any_of(name, obj)
             type_hint = any_of_item_names.get_union_type()
-        elif obj.allOf:
-            all_of_item_names = self.parse_all_of(name, obj)
-            type_hint = all_of_item_names.get_type()
         else:
             obj_names: ClassNames = ClassNames(self.target_python_version)
             obj_names.add(obj.ref_object_name, ref=True, version_compatible=True)
@@ -263,6 +262,8 @@ class OpenAPIParser(Parser):
                 self.parse_array(obj_name, obj)
             elif obj.enum:
                 self.parse_enum(obj_name, obj)
+            elif obj.allOf:
+                self.parse_all_of(obj_name, obj)
             else:
                 self.parse_root_type(obj_name, obj)
 

@@ -61,15 +61,14 @@ class DataModel(TemplateBase, ABC):
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
         base_classes = [base_class for base_class in base_classes or [] if base_class]
-        self.base_classes: Optional[List[str]] = base_classes or [self.BASE_CLASS]
+        self.base_classes: List[str] = base_classes or [self.BASE_CLASS]
 
-        if self.base_classes:
-            format_base_classes: List[str] = []
-            for base_class in self.base_classes:
-                if auto_import:
-                    self.imports.append(Import.from_full_path(base_class))
-                format_base_classes.append(base_class.split('.')[-1])
-            self.base_class = ', '.join(format_base_classes) or None
+        format_base_classes: List[str] = []
+        for base_class in self.base_classes:
+            if auto_import:
+                self.imports.append(Import.from_full_path(base_class))
+            format_base_classes.append(base_class.split('.')[-1])
+        self.base_class = ', '.join(format_base_classes) or None
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
     def render(self) -> str:

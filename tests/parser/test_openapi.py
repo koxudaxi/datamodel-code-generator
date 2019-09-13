@@ -817,7 +817,7 @@ def test_openapi_parser_parse_allof():
         parser.parse()
         == """from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -836,25 +836,33 @@ class AllOfref(Pet, Car):
     pass
 
 
-class AllOfref(BaseModel):
-    __root__: AllOfref
-
-
 class AllOfobj(BaseModel):
     name: Optional[str] = None
     number: Optional[str] = None
 
 
-class AllOfobj(BaseModel):
-    __root__: AllOfobj
+class AnyOfCombine(Pet, Car):
+    age: Optional[str] = None
 
 
-class itemItem(BaseModel):
-    name: Optional[str] = None
+class item(Pet, Car):
+    age: Optional[str] = None
 
 
-class AnyOfCombine(BaseModel):
-    item: Optional[Union[Pet, Car, itemItem]] = None
+class AnyOfCombineInObject(BaseModel):
+    item: Optional[item] = None
+
+
+class AnyOfCombineInArrayItem(Pet, Car):
+    age: Optional[str] = None
+
+
+class AnyOfCombineInArray(BaseModel):
+    __root__: List[AnyOfCombineInArrayItem]
+
+
+class AnyOfCombineInRoot(Pet, Car):
+    age: Optional[str] = None
 
 
 class Error(BaseModel):
