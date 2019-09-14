@@ -5,9 +5,9 @@ from datamodel_code_generator.format import format_code
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser.base import (  # resolve_references,
-    TypeNames,
     JsonSchemaObject,
     Parser,
+    TypeNames,
     dump_templates,
     get_singular_name,
     sort_data_models,
@@ -119,7 +119,7 @@ class OpenAPIParser(Parser):
                 array_fields, array_field_classes = self.parse_array_fields(
                     class_name, filed
                 )
-                field_types = array_fields[0].type_hint
+                field_types = array_fields[0].type_hint  # type: ignore
                 field_class_names = array_field_classes
                 self.imports.append(array_fields[0].imports)
             elif filed.is_object:

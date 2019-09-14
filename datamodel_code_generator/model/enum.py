@@ -15,7 +15,9 @@ class Enum(DataModel):
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
     ):
-        super().__init__(name=name, fields=fields, decorators=decorators, auto_import=False)
+        super().__init__(
+            name=name, fields=fields, decorators=decorators, auto_import=False
+        )
         self.imports.append(IMPORT_ENUM)
 
     @classmethod

@@ -4,7 +4,12 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Union
 
-from datamodel_code_generator.imports import Import, IMPORT_LIST, IMPORT_UNION, IMPORT_OPTIONAL
+from datamodel_code_generator.imports import (
+    IMPORT_LIST,
+    IMPORT_OPTIONAL,
+    IMPORT_UNION,
+    Import,
+)
 from datamodel_code_generator.types import DataType, Types
 from jinja2 import Template
 from pydantic import BaseModel, validator
@@ -124,7 +129,9 @@ class DataModel(TemplateBase, ABC):
         self.decorators: List[str] = decorators or []
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
-        self.reference_classes: List[str] = [r for r in reference_classes if r != self.BASE_CLASS] if reference_classes else []
+        self.reference_classes: List[str] = [
+            r for r in reference_classes if r != self.BASE_CLASS
+        ] if reference_classes else []
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes or [self.BASE_CLASS]
 
