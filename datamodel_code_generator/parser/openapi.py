@@ -121,6 +121,7 @@ class OpenAPIParser(Parser):
                 )
                 field_types = array_fields[0].type_hint
                 field_class_names = array_field_classes
+                self.imports.append(array_fields[0].imports)
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
                 self.parse_object(class_name, filed)
