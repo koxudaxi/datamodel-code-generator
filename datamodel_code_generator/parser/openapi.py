@@ -5,7 +5,7 @@ from datamodel_code_generator.format import format_code
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser.base import (  # resolve_references,
-    ClassNames,
+    TypeNames,
     JsonSchemaObject,
     Parser,
     dump_templates,
@@ -48,8 +48,8 @@ class OpenAPIParser(Parser):
             dump_resolve_reference_action,
         )
 
-    def parse_any_of(self, name: str, obj: JsonSchemaObject) -> ClassNames:
-        any_of_item_names: ClassNames = ClassNames(self.target_python_version)
+    def parse_any_of(self, name: str, obj: JsonSchemaObject) -> TypeNames:
+        any_of_item_names: TypeNames = self.create_type_names()
         if not obj.anyOf:  # pragma: no cover
             return any_of_item_names
         for any_of_item in obj.anyOf:
@@ -63,13 +63,13 @@ class OpenAPIParser(Parser):
                 any_of_item_names.add(singular_name, ref=True, version_compatible=True)
         return any_of_item_names
 
-    def parse_all_of(self, name: str, obj: JsonSchemaObject) -> ClassNames:
-        all_of_name = ClassNames(self.target_python_version)
+    def parse_all_of(self, name: str, obj: JsonSchemaObject) -> TypeNames:
+        all_of_name: TypeNames = self.create_type_names()
         if not obj.allOf:  # pragma: no cover
             return all_of_name
         fields: List[DataModelField] = []
-        all_of_item_names: ClassNames = ClassNames(self.target_python_version)
-        base_classes: ClassNames = ClassNames(self.target_python_version)
+        all_of_item_names: TypeNames = self.create_type_names()
+        base_classes: TypeNames = self.create_type_names()
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
                 base_classes.add(
@@ -102,13 +102,13 @@ class OpenAPIParser(Parser):
 
     def parse_object_fields(
         self, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelField], ClassNames]:
+    ) -> Tuple[List[DataModelField], TypeNames]:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
         field_types: Union[List[str], str]
-        field_all_class_names: ClassNames = ClassNames(self.target_python_version)
+        field_all_class_names: TypeNames = self.create_type_names()
         for field_name, filed in obj.properties.items():  # type: ignore
-            field_class_names: ClassNames = ClassNames(self.target_python_version)
+            field_class_names: TypeNames = self.create_type_names()
             if filed.ref:
                 field_class_names.add(
                     filed.ref_object_name, ref=True, version_compatible=True
@@ -169,12 +169,12 @@ class OpenAPIParser(Parser):
 
     def parse_array_fields(
         self, name: str, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelField], ClassNames]:
+    ) -> Tuple[List[DataModelField], TypeNames]:
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
             items = obj.items  # type: ignore
-        item_obj_names: ClassNames = ClassNames(self.target_python_version)
+        item_obj_names: TypeNames = self.create_type_names()
         is_union: bool = False
         for item in items:
             if item.ref:
@@ -231,7 +231,7 @@ class OpenAPIParser(Parser):
             any_of_item_names = self.parse_any_of(name, obj)
             types = any_of_item_names.get_types()
         else:
-            obj_names: ClassNames = ClassNames(self.target_python_version)
+            obj_names: TypeNames = self.create_type_names()
             obj_names.add(obj.ref_object_name, ref=True, version_compatible=True)
             reference_classes.append(obj.ref_object_name)
             types = obj_names.get_types()

@@ -31,7 +31,7 @@ def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
     return '\n\n\n'.join(str(m) for m in templates)
 
 
-class ClassNames:
+class TypeNames:
     def __init__(self, python_version: PythonVersion):
         self.python_version: PythonVersion = python_version
         self._class_names: List[str] = []
@@ -58,7 +58,7 @@ class ClassNames:
     def add_unresolved_name(self, name: str) -> None:
         self._unresolved_class_names.append(name)
 
-    def extend(self, class_name: 'ClassNames') -> None:
+    def extend(self, class_name: 'TypeNames') -> None:
         self._class_names.extend(class_name.class_names)
         self._unresolved_class_names.extend(class_name.unresolved_class_names)
         self._version_compatibles.extend(class_name._version_compatibles)
@@ -169,6 +169,9 @@ class Parser(ABC):
             uniq_name = f'{name}_{count}'
             count += 1
         return uniq_name
+
+    def create_type_names(self) -> TypeNames:
+        return TypeNames(self.target_python_version)
 
     @abstractmethod
     def parse(
