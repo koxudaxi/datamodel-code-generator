@@ -124,7 +124,7 @@ class DataModel(TemplateBase, ABC):
         self.decorators: List[str] = decorators or []
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
-        self.reference_classes: List[str] = reference_classes or []
+        self.reference_classes: List[str] = [r for r in reference_classes if r != self.BASE_CLASS] or []
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes or [self.BASE_CLASS]
 
