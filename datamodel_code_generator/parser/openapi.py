@@ -2,11 +2,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.format import format_code
-from datamodel_code_generator.imports import (
-    IMPORT_ANNOTATIONS,
-    IMPORT_LIST,
-    IMPORT_OPTIONAL,
-)
+from datamodel_code_generator.imports import IMPORT_ANNOTATIONS
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser.base import (  # resolve_references,
     ClassNames,
@@ -125,6 +121,7 @@ class OpenAPIParser(Parser):
                 )
                 field_types = array_fields[0].type_hint
                 field_class_names = array_field_classes
+                self.imports.append(array_fields[0].imports)
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
                 self.parse_object(class_name, filed)
@@ -149,8 +146,6 @@ class OpenAPIParser(Parser):
                 self.imports.append(data_type.import_)
                 field_types = data_type.type_hint
             required: bool = field_name in requires
-            if not required:
-                self.imports.append(IMPORT_OPTIONAL)
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
@@ -206,7 +201,7 @@ class OpenAPIParser(Parser):
                 data_type = self.get_data_type(item)
                 item_obj_names.add(data_type.type_hint)
                 self.imports.append(data_type.import_)
-        self.imports.append(IMPORT_LIST)
+
         field = DataModelField(
             types=item_obj_names.get_types(),
             required=True,
@@ -221,7 +216,6 @@ class OpenAPIParser(Parser):
             name,
             fields,
             base_classes=[self.base_class] if self.base_class else [],
-            imports=[IMPORT_LIST],
             reference_classes=item_obj_names.unresolved_class_names,
         )
 
@@ -232,8 +226,6 @@ class OpenAPIParser(Parser):
         if obj.type:
             data_type = self.get_data_type(obj)
             self.imports.append(data_type.import_)
-            if obj.nullable:
-                self.imports.append(IMPORT_OPTIONAL)
             types: Union[str, List[str]] = data_type.type_hint
         elif obj.anyOf:
             any_of_item_names = self.parse_any_of(name, obj)

@@ -4,7 +4,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Union
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import Import, IMPORT_LIST, IMPORT_UNION, IMPORT_OPTIONAL
 from datamodel_code_generator.types import DataType, Types
 from jinja2 import Template
 from pydantic import BaseModel, validator
@@ -22,6 +22,7 @@ def optional(func: Callable) -> Callable:
         type_hint: Optional[str] = func(self, *args, **kwargs)
         if self.required:
             return type_hint
+        self.imports.append(IMPORT_OPTIONAL)
         if type_hint is None or type_hint == '':
             return OPTIONAL
         return f'{OPTIONAL}[{type_hint}]'
@@ -39,26 +40,32 @@ class DataModelField(BaseModel):
     types: Union[List[str], str, None]
     is_list: bool = False
     is_union: bool = False
+    imports: List[Import] = []
+    type_hint: Optional[str] = None
 
-    @property  # type: ignore
     @optional
-    def type_hint(self) -> Optional[str]:
+    def _get_type_hint(self) -> Optional[str]:
         if self.types is None:
             return None
         types = [self.types] if isinstance(self.types, str) else self.types
         type_hint = ", ".join(types)
         if not type_hint:
             if self.is_list:
+                self.imports.append(IMPORT_LIST)
                 return LIST
             return ''
         if len(types) == 1:
             if self.is_list:
+                self.imports.append(IMPORT_LIST)
                 return f'{LIST}[{type_hint}]'
             return type_hint
         if self.is_list:
+            self.imports.append(IMPORT_LIST)
             if self.is_union:
+                self.imports.append(IMPORT_UNION)
                 return f'{LIST}[{UNION}[{type_hint}]]'
             return f'{LIST}[{type_hint}]'
+        self.imports.append(IMPORT_UNION)
         return f'{UNION}[{type_hint}]'
 
     @validator('name')
@@ -69,6 +76,8 @@ class DataModelField(BaseModel):
         super().__init__(**values)
         if not self.alias and 'name' in values:
             self.alias = values['name']
+        if not self.type_hint:
+            self.type_hint = self._get_type_hint()
 
 
 class TemplateBase(ABC):
@@ -115,7 +124,7 @@ class DataModel(TemplateBase, ABC):
         self.decorators: List[str] = decorators or []
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
-        self.reference_classes: List[str] = reference_classes or []
+        self.reference_classes: List[str] = [r for r in reference_classes if r != self.BASE_CLASS] or []
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes or [self.BASE_CLASS]
 
@@ -125,6 +134,9 @@ class DataModel(TemplateBase, ABC):
                 self.imports.append(Import.from_full_path(base_class))
             format_base_classes.append(base_class.split('.')[-1])
         self.base_class = ', '.join(format_base_classes) or None
+        if auto_import:
+            for field in self.fields:
+                self.imports.extend(field.imports)
         super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
 
     def render(self) -> str:

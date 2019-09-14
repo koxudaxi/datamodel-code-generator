@@ -356,8 +356,8 @@ class Result(BaseModel):
             True,
             False,
             None,
-            '''from typing import List, Optional
-from pydantic import BaseModel, UrlStr
+            '''from pydantic import BaseModel, UrlStr
+from typing import List, Optional
 from __future__ import annotations
 
 
@@ -761,7 +761,7 @@ def test_openapi_parser_parse_anyof():
         parser.parse()
         == """from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
