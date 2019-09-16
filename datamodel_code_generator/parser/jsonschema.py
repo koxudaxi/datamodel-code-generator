@@ -48,12 +48,12 @@ class JsonSchemaObject(BaseModel):
     exclusiveMaximum: Optional[bool]
     exclusiveMinimum: Optional[bool]
     additionalProperties: Optional['JsonSchemaObject']
-    anyOf: Optional[List['JsonSchemaObject']]
-    allOf: Optional[List['JsonSchemaObject']]
-    enum: Optional[List[str]]
+    anyOf: List['JsonSchemaObject'] = []
+    allOf: List['JsonSchemaObject'] = []
+    enum: List[str] = []
     writeOnly: Optional[bool]
     properties: Optional[Dict[str, 'JsonSchemaObject']]
-    required: Optional[List[str]]
+    required: List[str] = []
     ref: Optional[str] = Schema(default=None, alias='$ref')  # type: ignore
     nullable: Optional[bool] = False
 

@@ -50,8 +50,6 @@ class OpenAPIParser(Parser):
 
     def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
         any_of_data_types: List[DataType] = []
-        if not obj.anyOf:  # pragma: no cover
-            return any_of_data_types
         for any_of_item in obj.anyOf:
             if any_of_item.ref:  # $ref
                 any_of_data_types.append(
@@ -72,9 +70,6 @@ class OpenAPIParser(Parser):
         return any_of_data_types
 
     def parse_all_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
-        all_of_data_types: List[DataType] = []
-        if not obj.allOf:  # pragma: no cover
-            return all_of_data_types
         fields: List[DataModelField] = []
         base_classes: List[DataType] = []
         for all_of_item in obj.allOf:
@@ -100,10 +95,7 @@ class OpenAPIParser(Parser):
         )
         self.append_result(data_model_type)
 
-        all_of_data_types.append(
-            self.data_type(type=name, ref=True, version_compatible=True)
-        )
-        return all_of_data_types
+        return [self.data_type(type=name, ref=True, version_compatible=True)]
 
     def parse_object_fields(self, obj: JsonSchemaObject) -> List[DataModelField]:
         requires: Set[str] = set(obj.required or [])
