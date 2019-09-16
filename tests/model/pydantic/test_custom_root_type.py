@@ -6,12 +6,21 @@ from datamodel_code_generator.types import DataType, Types
 def test_custom_root_type():
     custom_root_type = CustomRootType(
         name='test_model',
-        fields=[DataModelField(name='a', types='str', default="'abc'", required=False)],
+        fields=[
+            DataModelField(
+                name='a',
+                data_types=[DataType(type='str')],
+                default="'abc'",
+                required=False,
+            )
+        ],
     )
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [
-        DataModelField(name='a', types='str', default="'abc'", required=False)
+        DataModelField(
+            name='a', data_types=[DataType(type='str')], default="'abc'", required=False
+        )
     ]
 
     assert custom_root_type.render() == (
@@ -21,11 +30,14 @@ def test_custom_root_type():
 
 def test_custom_root_type_required():
     custom_root_type = CustomRootType(
-        name='test_model', fields=[DataModelField(types='str', required=True)]
+        name='test_model',
+        fields=[DataModelField(data_types=[DataType(type='str')], required=True)],
     )
 
     assert custom_root_type.name == 'test_model'
-    assert custom_root_type.fields == [DataModelField(types='str', required=True)]
+    assert custom_root_type.fields == [
+        DataModelField(data_types=[DataType(type='str')], required=True)
+    ]
 
     assert custom_root_type.render() == (
         'class test_model(BaseModel):\n' '    __root__: str'
@@ -35,13 +47,15 @@ def test_custom_root_type_required():
 def test_custom_root_type_decorator():
     custom_root_type = CustomRootType(
         name='test_model',
-        fields=[DataModelField(types='str', required=True)],
+        fields=[DataModelField(data_types=[DataType(type='str')], required=True)],
         decorators=['@validate'],
         base_classes=['Base'],
     )
 
     assert custom_root_type.name == 'test_model'
-    assert custom_root_type.fields == [DataModelField(types='str', required=True)]
+    assert custom_root_type.fields == [
+        DataModelField(data_types=[DataType(type='str')], required=True)
+    ]
     assert custom_root_type.base_class == 'Base'
     assert (
         custom_root_type.render() == '@validate\n'

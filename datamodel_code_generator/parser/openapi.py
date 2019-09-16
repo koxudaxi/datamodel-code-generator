@@ -1,17 +1,17 @@
-from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Callable, Dict, List, Optional, Set, Tuple, Type
 
 from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.format import format_code
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser.base import (  # resolve_references,
+from datamodel_code_generator.parser.base import (
     JsonSchemaObject,
     Parser,
-    TypeNames,
     dump_templates,
     get_singular_name,
     sort_data_models,
 )
+from datamodel_code_generator.types import DataType
 from prance import BaseParser
 
 from ..model.base import DataModel, DataModelField
@@ -48,198 +48,207 @@ class OpenAPIParser(Parser):
             dump_resolve_reference_action,
         )
 
-    def parse_any_of(self, name: str, obj: JsonSchemaObject) -> TypeNames:
-        any_of_item_names: TypeNames = self.create_type_names()
+    def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
+        any_of_data_types: List[DataType] = []
         if not obj.anyOf:  # pragma: no cover
-            return any_of_item_names
+            return any_of_data_types
         for any_of_item in obj.anyOf:
             if any_of_item.ref:  # $ref
-                any_of_item_names.add(
-                    any_of_item.ref_object_name, ref=True, version_compatible=True
+                any_of_data_types.append(
+                    self.data_type(
+                        type=any_of_item.ref_object_name,
+                        ref=True,
+                        version_compatible=True,
+                    )
                 )
             else:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, any_of_item)
-                any_of_item_names.add(singular_name, ref=True, version_compatible=True)
-        return any_of_item_names
+                any_of_data_types.append(
+                    self.data_type(
+                        type=singular_name, ref=True, version_compatible=True
+                    )
+                )
+        return any_of_data_types
 
-    def parse_all_of(self, name: str, obj: JsonSchemaObject) -> TypeNames:
-        all_of_name: TypeNames = self.create_type_names()
+    def parse_all_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
+        all_of_data_types: List[DataType] = []
         if not obj.allOf:  # pragma: no cover
-            return all_of_name
+            return all_of_data_types
         fields: List[DataModelField] = []
-        all_of_item_names: TypeNames = self.create_type_names()
-        base_classes: TypeNames = self.create_type_names()
+        base_classes: List[DataType] = []
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                base_classes.add(
-                    all_of_item.ref_object_name, ref=True, version_compatible=True
+                base_classes.append(
+                    self.data_type(
+                        type=all_of_item.ref_object_name,
+                        ref=True,
+                        version_compatible=True,
+                    )
                 )
 
             else:
                 fields_, class_names = self.parse_object_fields(all_of_item)
                 fields.extend(fields_)
-                all_of_item_names.extend(class_names)
-
-        if base_classes.class_names:
-            base_class_names: List[str] = base_classes.class_names
-        else:
-            base_class_names = [self.base_class] if self.base_class else []
 
         data_model_type = self.data_model_type(
             name,
             fields=fields,
-            base_classes=base_class_names,
+            base_classes=[b.type for b in base_classes],
             auto_import=False,
-            reference_classes=all_of_item_names.unresolved_class_names
-            + base_class_names,
+            custom_base_class=self.base_class,
         )
-        all_of_item_names.extend(base_classes)
         self.append_result(data_model_type)
 
-        all_of_name.add(name, ref=True, version_compatible=True)
-        return all_of_name
+        all_of_data_types.append(
+            self.data_type(type=name, ref=True, version_compatible=True)
+        )
+        return all_of_data_types
 
     def parse_object_fields(
         self, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelField], TypeNames]:
+    ) -> Tuple[List[DataModelField], List[DataType]]:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
-        field_types: Union[List[str], str]
-        field_all_class_names: TypeNames = self.create_type_names()
+        field_all_data_types: List[DataType] = []
+
         for field_name, filed in obj.properties.items():  # type: ignore
-            field_class_names: TypeNames = self.create_type_names()
+            is_list = False
+            field_types: List[DataType] = []
+            field_class_names: List[DataType] = []
             if filed.ref:
-                field_class_names.add(
-                    filed.ref_object_name, ref=True, version_compatible=True
+                field_class_names.append(
+                    self.data_type(
+                        type=filed.ref_object_name, ref=True, version_compatible=True
+                    )
                 )
-                field_types = field_class_names.get_types()
+                field_types = field_class_names
             elif filed.is_array:
                 class_name = self.get_class_name(field_name)
                 array_fields, array_field_classes = self.parse_array_fields(
                     class_name, filed
                 )
-                field_types = array_fields[0].type_hint  # type: ignore
-                field_class_names = array_field_classes
-                self.imports.append(array_fields[0].imports)
+                field_types = array_fields[0].data_types  # type: ignore
+                field_class_names.extend(array_field_classes)
+                is_list = True
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
                 self.parse_object(class_name, filed)
-                field_class_names.add(class_name, ref=True, version_compatible=True)
-                field_types = field_class_names.get_types()
+                field_class_names.append(
+                    self.data_type(type=class_name, ref=True, version_compatible=True)
+                )
+                field_types = field_class_names
             elif filed.enum:
                 self.parse_enum(field_name, filed)
-                field_class_names.add(
-                    self.results[-1].name, ref=True, version_compatible=True
+                field_class_names.append(
+                    self.data_type(
+                        type=self.results[-1].name, ref=True, version_compatible=True
+                    )
                 )
-                field_types = field_class_names.get_types()
+                field_types = field_class_names
             elif filed.anyOf:
                 any_of_item_names = self.parse_any_of(field_name, filed)
-                field_types = any_of_item_names.get_types()
-                field_all_class_names.extend(any_of_item_names)
+                field_types = any_of_item_names
+                field_all_data_types.extend(any_of_item_names)
             elif filed.allOf:
                 all_of_item_names = self.parse_all_of(field_name, filed)
-                field_types = all_of_item_names.get_types()
-                field_all_class_names.extend(all_of_item_names)
+                field_types = all_of_item_names
+                field_all_data_types.extend(all_of_item_names)
             else:
                 data_type = self.get_data_type(filed)
-                self.imports.append(data_type.import_)
-                field_types = data_type.type_hint
+                field_types.append(data_type)
             required: bool = field_name in requires
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
-                    types=field_types,
+                    data_types=field_types,
                     required=required,
-                    base_classes=[self.base_class] if self.base_class else [],
+                    is_list=is_list,
+                    custom_base_class=self.base_class,
                 )
             )
-            field_all_class_names.extend(field_class_names)
-        return fields, field_all_class_names
+            field_all_data_types.extend(field_class_names)
+        return fields, field_all_data_types
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
         fields, field_all_class_names = self.parse_object_fields(obj)
         data_model_type = self.data_model_type(
-            name,
-            fields=fields,
-            base_classes=[self.base_class] if self.base_class else [],
-            reference_classes=field_all_class_names.unresolved_class_names,
+            name, fields=fields, custom_base_class=self.base_class
         )
         self.append_result(data_model_type)
 
     def parse_array_fields(
         self, name: str, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelField], TypeNames]:
+    ) -> Tuple[List[DataModelField], List[DataType]]:
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
             items = obj.items  # type: ignore
-        item_obj_names: TypeNames = self.create_type_names()
+        item_obj_data_types: List[DataType] = []
         is_union: bool = False
         for item in items:
             if item.ref:
-                item_obj_names.add(
-                    item.ref_object_name, ref=True, version_compatible=True
+                item_obj_data_types.append(
+                    self.data_type(
+                        type=item.ref_object_name, ref=True, version_compatible=True
+                    )
                 )
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, item)
-                item_obj_names.add(singular_name, ref=True, version_compatible=True)
+                item_obj_data_types.append(
+                    self.data_type(
+                        type=singular_name, ref=True, version_compatible=True
+                    )
+                )
             elif item.anyOf:
-                any_of_item_names = self.parse_any_of(name, item)
-                for type_ in any_of_item_names.get_types():
-                    item_obj_names.add(type_)
-                item_obj_names.add_unresolved_name(name)
+                any_of_item_data_types = self.parse_any_of(name, item)
+                for type_ in any_of_item_data_types:
+                    item_obj_data_types.append(type_)
                 is_union = True
             elif item.allOf:
                 singular_name = get_singular_name(name)
-                all_of_item_names = self.parse_all_of(singular_name, item)
-                for type_ in all_of_item_names.get_types():
-                    item_obj_names.add(type_)
-                item_obj_names.add_unresolved_name(singular_name)
+                all_of_item_data_types = self.parse_all_of(singular_name, item)
+                for type_ in all_of_item_data_types:
+                    item_obj_data_types.append(type_)
             else:
                 data_type = self.get_data_type(item)
-                item_obj_names.add(data_type.type_hint)
-                self.imports.append(data_type.import_)
+                item_obj_data_types.append(data_type)
 
-        field = DataModelField(
-            types=item_obj_names.get_types(),
+        field = self.data_model_field_type(
+            data_types=item_obj_data_types,
             required=True,
             is_list=True,
             is_union=is_union,
         )
-        return [field], item_obj_names
+        return [field], item_obj_data_types
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
         fields, item_obj_names = self.parse_array_fields(name, obj)
         data_model_root = self.data_model_root_type(
-            name,
-            fields,
-            base_classes=[self.base_class] if self.base_class else [],
-            reference_classes=item_obj_names.unresolved_class_names,
+            name, fields, custom_base_class=self.base_class
         )
 
         self.append_result(data_model_root)
 
     def parse_root_type(self, name: str, obj: JsonSchemaObject) -> None:
-        reference_classes: List[str] = []
         if obj.type:
             data_type = self.get_data_type(obj)
-            self.imports.append(data_type.import_)
-            types: Union[str, List[str]] = data_type.type_hint
+            types: List[DataType] = [data_type]
         elif obj.anyOf:
             any_of_item_names = self.parse_any_of(name, obj)
-            types = any_of_item_names.get_types()
+            types = any_of_item_names
         else:
-            obj_names: TypeNames = self.create_type_names()
-            obj_names.add(obj.ref_object_name, ref=True, version_compatible=True)
-            reference_classes.append(obj.ref_object_name)
-            types = obj_names.get_types()
+            types = [
+                self.data_type(
+                    type=obj.ref_object_name, ref=True, version_compatible=True
+                )
+            ]
+
         data_model_root_type = self.data_model_root_type(
             name,
-            [self.data_model_field_type(types=types, required=not obj.nullable)],
-            base_classes=[self.base_class] if self.base_class else [],
-            reference_classes=reference_classes,
+            [self.data_model_field_type(data_types=types, required=not obj.nullable)],
+            custom_base_class=self.base_class,
         )
         self.append_result(data_model_root_type)
 

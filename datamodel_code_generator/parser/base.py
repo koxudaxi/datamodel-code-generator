@@ -7,7 +7,7 @@ import inflect
 from .. import PythonVersion
 from ..imports import Imports
 from ..model.base import DataModel, DataModelField, TemplateBase
-from ..types import DataType
+from ..types import DataType, DataTypePy36
 from .jsonschema import JsonSchemaObject, json_schema_data_formats
 
 inflect_engine = inflect.engine()
@@ -29,55 +29,6 @@ def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
         templates = [templates]
 
     return '\n\n\n'.join(str(m) for m in templates)
-
-
-class TypeNames:
-    def __init__(self, python_version: PythonVersion):
-        self.python_version: PythonVersion = python_version
-        self._class_names: List[str] = []
-        self._version_compatibles: List[str] = []
-        self._unresolved_class_names: List[str] = []
-
-    @property
-    def class_names(self) -> List[str]:
-        return self._class_names
-
-    @property
-    def unresolved_class_names(self) -> List[str]:
-        return self._unresolved_class_names
-
-    def add(
-        self, name: str, ref: bool = False, version_compatible: bool = False
-    ) -> None:
-        if ref and name not in self._class_names:
-            self._unresolved_class_names.append(name)
-        self._class_names.append(name)
-        if version_compatible:
-            self._version_compatibles.append(name)
-
-    def add_unresolved_name(self, name: str) -> None:
-        self._unresolved_class_names.append(name)
-
-    def extend(self, class_name: 'TypeNames') -> None:
-        self._class_names.extend(class_name.class_names)
-        self._unresolved_class_names.extend(class_name.unresolved_class_names)
-        self._version_compatibles.extend(class_name._version_compatibles)
-
-    def _get_version_compatible_names(self) -> List[str]:
-        class_names: List[str] = []
-        for name in self._class_names:
-            if name in self._version_compatibles:
-                name = self._get_version_compatible_name(name)
-            class_names.append(name)
-        return class_names
-
-    def _get_version_compatible_name(self, name: str) -> str:
-        if self.python_version == PythonVersion.PY_36:
-            return f"'{name}'"
-        return name
-
-    def get_types(self) -> List[str]:
-        return self._get_version_compatible_names()
 
 
 ReferenceMapSet = Dict[str, Set[str]]
@@ -153,6 +104,11 @@ class Parser(ABC):
             Callable[[List[str]], str]
         ] = dump_resolve_reference_action
 
+        if self.target_python_version == PythonVersion.PY_36:
+            self.data_type: Type[DataType] = DataTypePy36
+        else:
+            self.data_type = DataType
+
     def append_result(self, data_model: DataModel) -> None:
         self.imports.append(data_model.imports)
         self.created_model_names.add(data_model.name)
@@ -169,9 +125,6 @@ class Parser(ABC):
             uniq_name = f'{name}_{count}'
             count += 1
         return uniq_name
-
-    def create_type_names(self) -> TypeNames:
-        return TypeNames(self.target_python_version)
 
     @abstractmethod
     def parse(
