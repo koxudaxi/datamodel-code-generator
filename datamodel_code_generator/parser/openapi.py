@@ -88,7 +88,7 @@ class OpenAPIParser(Parser):
                 )
 
             else:
-                fields_, class_names = self.parse_object_fields(all_of_item)
+                fields_ = self.parse_object_fields(all_of_item)
                 fields.extend(fields_)
 
         data_model_type = self.data_model_type(
@@ -105,58 +105,44 @@ class OpenAPIParser(Parser):
         )
         return all_of_data_types
 
-    def parse_object_fields(
-        self, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelField], List[DataType]]:
+    def parse_object_fields(self, obj: JsonSchemaObject) -> List[DataModelField]:
         requires: Set[str] = set(obj.required or [])
         fields: List[DataModelField] = []
-        field_all_data_types: List[DataType] = []
 
         for field_name, filed in obj.properties.items():  # type: ignore
             is_list = False
-            field_types: List[DataType] = []
-            field_class_names: List[DataType] = []
+            field_types: List[DataType]
             if filed.ref:
-                field_class_names.append(
+                field_types = [
                     self.data_type(
                         type=filed.ref_object_name, ref=True, version_compatible=True
                     )
-                )
-                field_types = field_class_names
+                ]
             elif filed.is_array:
                 class_name = self.get_class_name(field_name)
                 array_fields, array_field_classes = self.parse_array_fields(
                     class_name, filed
                 )
-                field_types = array_fields[0].data_types  # type: ignore
-                field_class_names.extend(array_field_classes)
+                field_types = array_fields[0].data_types
                 is_list = True
             elif filed.is_object:
                 class_name = self.get_class_name(field_name)
                 self.parse_object(class_name, filed)
-                field_class_names.append(
+                field_types = [
                     self.data_type(type=class_name, ref=True, version_compatible=True)
-                )
-                field_types = field_class_names
+                ]
             elif filed.enum:
-                self.parse_enum(field_name, filed)
-                field_class_names.append(
-                    self.data_type(
-                        type=self.results[-1].name, ref=True, version_compatible=True
-                    )
-                )
-                field_types = field_class_names
+                enum = self.parse_enum(field_name, filed)
+                field_types = [
+                    self.data_type(type=enum.name, ref=True, version_compatible=True)
+                ]
             elif filed.anyOf:
-                any_of_item_names = self.parse_any_of(field_name, filed)
-                field_types = any_of_item_names
-                field_all_data_types.extend(any_of_item_names)
+                field_types = self.parse_any_of(field_name, filed)
             elif filed.allOf:
-                all_of_item_names = self.parse_all_of(field_name, filed)
-                field_types = all_of_item_names
-                field_all_data_types.extend(all_of_item_names)
+                field_types = self.parse_all_of(field_name, filed)
             else:
                 data_type = self.get_data_type(filed)
-                field_types.append(data_type)
+                field_types = [data_type]
             required: bool = field_name in requires
             fields.append(
                 self.data_model_field_type(
@@ -167,11 +153,10 @@ class OpenAPIParser(Parser):
                     custom_base_class=self.base_class,
                 )
             )
-            field_all_data_types.extend(field_class_names)
-        return fields, field_all_data_types
+        return fields
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
-        fields, field_all_class_names = self.parse_object_fields(obj)
+        fields = self.parse_object_fields(obj)
         data_model_type = self.data_model_type(
             name, fields=fields, custom_base_class=self.base_class
         )
@@ -202,18 +187,13 @@ class OpenAPIParser(Parser):
                     )
                 )
             elif item.anyOf:
-                any_of_item_data_types = self.parse_any_of(name, item)
-                for type_ in any_of_item_data_types:
-                    item_obj_data_types.append(type_)
+                item_obj_data_types.extend(self.parse_any_of(name, item))
                 is_union = True
             elif item.allOf:
                 singular_name = get_singular_name(name)
-                all_of_item_data_types = self.parse_all_of(singular_name, item)
-                for type_ in all_of_item_data_types:
-                    item_obj_data_types.append(type_)
+                item_obj_data_types.extend(self.parse_all_of(singular_name, item))
             else:
-                data_type = self.get_data_type(item)
-                item_obj_data_types.append(data_type)
+                item_obj_data_types.append(self.get_data_type(item))
 
         field = self.data_model_field_type(
             data_types=item_obj_data_types,
@@ -233,11 +213,9 @@ class OpenAPIParser(Parser):
 
     def parse_root_type(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.type:
-            data_type = self.get_data_type(obj)
-            types: List[DataType] = [data_type]
+            types: List[DataType] = [self.get_data_type(obj)]
         elif obj.anyOf:
-            any_of_item_names = self.parse_any_of(name, obj)
-            types = any_of_item_names
+            types = self.parse_any_of(name, obj)
         else:
             types = [
                 self.data_type(
@@ -252,7 +230,7 @@ class OpenAPIParser(Parser):
         )
         self.append_result(data_model_root_type)
 
-    def parse_enum(self, name: str, obj: JsonSchemaObject) -> None:
+    def parse_enum(self, name: str, obj: JsonSchemaObject) -> DataModel:
         enum_fields = []
 
         for enum_part in obj.enum:  # type: ignore
@@ -266,8 +244,9 @@ class OpenAPIParser(Parser):
                 self.data_model_field_type(name=field_name, default=default)
             )
 
-        enum_name = self.get_class_name(name)
-        self.append_result(Enum(enum_name, fields=enum_fields))
+        enum = Enum(self.get_class_name(name), fields=enum_fields)
+        self.append_result(enum)
+        return enum
 
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
