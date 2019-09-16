@@ -15,6 +15,7 @@ class BaseModel(DataModel):
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[str]] = None,
+        custom_base_class: Optional[str] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
     ):
@@ -23,6 +24,7 @@ class BaseModel(DataModel):
             fields=fields,
             decorators=decorators,
             base_classes=base_classes,
+            custom_base_class=custom_base_class,
             auto_import=auto_import,
             reference_classes=reference_classes,
         )

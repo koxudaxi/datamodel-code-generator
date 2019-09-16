@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, List, Optional, Set
 
 from datamodel_code_generator.imports import (
     IMPORT_LIST,
@@ -42,24 +42,22 @@ class DataModelField(BaseModel):
     alias: Optional[str]
     example: Optional[str]
     description: Optional[str]
-    types: Union[List[str], str, None]
+    data_types: List[DataType] = []
     is_list: bool = False
     is_union: bool = False
     imports: List[Import] = []
     type_hint: Optional[str] = None
+    unresolved_types: List[str] = []
 
     @optional
     def _get_type_hint(self) -> Optional[str]:
-        if self.types is None:
-            return None
-        types = [self.types] if isinstance(self.types, str) else self.types
-        type_hint = ", ".join(types)
+        type_hint = ", ".join(d.type_hint for d in self.data_types)
         if not type_hint:
             if self.is_list:
                 self.imports.append(IMPORT_LIST)
                 return LIST
             return ''
-        if len(types) == 1:
+        if len(self.data_types) == 1:
             if self.is_list:
                 self.imports.append(IMPORT_LIST)
                 return f'{LIST}[{type_hint}]'
@@ -81,8 +79,11 @@ class DataModelField(BaseModel):
         super().__init__(**values)
         if not self.alias and 'name' in values:
             self.alias = values['name']
-        if not self.type_hint:
-            self.type_hint = self._get_type_hint()
+        for data_type in self.data_types:
+            self.unresolved_types.extend(data_type.unresolved_types)
+            if data_type.import_:
+                self.imports.append(data_type.import_)
+        self.type_hint = self._get_type_hint()
 
 
 class TemplateBase(ABC):
@@ -117,6 +118,7 @@ class DataModel(TemplateBase, ABC):
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[str]] = None,
+        custom_base_class: Optional[str] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
@@ -129,18 +131,30 @@ class DataModel(TemplateBase, ABC):
         self.decorators: List[str] = decorators or []
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
-        self.reference_classes: List[str] = [
-            r for r in reference_classes if r != self.BASE_CLASS
-        ] if reference_classes else []
         base_classes = [base_class for base_class in base_classes or [] if base_class]
-        self.base_classes: List[str] = base_classes or [self.BASE_CLASS]
+        self.base_classes: List[str] = base_classes
 
-        format_base_classes: List[str] = []
-        for base_class in self.base_classes:
+        self.reference_classes: List[str] = [
+            r for r in base_classes if r != self.BASE_CLASS
+        ] if base_classes else []
+        if reference_classes:
+            self.reference_classes.extend(reference_classes)
+
+        if self.base_classes:
+            self.base_class = ', '.join(self.base_classes)
+        else:
+            base_class_full_path = custom_base_class or self.BASE_CLASS
             if auto_import:
-                self.imports.append(Import.from_full_path(base_class))
-            format_base_classes.append(base_class.split('.')[-1])
-        self.base_class = ', '.join(format_base_classes) or None
+                if base_class_full_path:
+                    self.imports.append(Import.from_full_path(base_class_full_path))
+            self.base_class = base_class_full_path.split('.')[-1]
+
+        unresolved_types: Set[str] = set()
+        for field in self.fields:
+            unresolved_types.update(set(field.unresolved_types))
+
+        self.reference_classes = list(set(self.reference_classes) | unresolved_types)
+
         if auto_import:
             for field in self.fields:
                 self.imports.extend(field.imports)
