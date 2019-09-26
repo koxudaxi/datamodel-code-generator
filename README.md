@@ -14,7 +14,7 @@ This code generator creates pydantic model from an openapi file.
 - OpenAPI 3 (yaml/json)
 
 
-## Implementation schema list
+## Implemented list
 ### OpenAPI 3
 #### DataType
 - string (include patter/minLength/maxLenght)
