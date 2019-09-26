@@ -1,6 +1,6 @@
 import inspect
 from enum import Enum
-from typing import Type, TypeVar, Callable
+from typing import Callable, Type, TypeVar
 
 import pysnooper
 
