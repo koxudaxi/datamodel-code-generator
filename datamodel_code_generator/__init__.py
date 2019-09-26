@@ -1,6 +1,6 @@
 import inspect
 from enum import Enum
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Callable
 
 import pysnooper
 
@@ -19,7 +19,7 @@ class PythonVersion(Enum):
     PY_38 = '3.8'
 
 
-def snooper_to_methods(
+def snooper_to_methods(  # type: ignore
     output=None,
     watch=(),
     watch_explode=(),
@@ -29,8 +29,8 @@ def snooper_to_methods(
     thread_info=False,
     custom_repr=(),
     max_variable_length=100,
-) -> Type[T]:
-    def inner(cls: Type[T]) -> None:
+) -> Callable:
+    def inner(cls: Type[T]) -> Type[T]:
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
             snooper_method = pysnooper.snoop(
