@@ -142,7 +142,6 @@ class OpenAPIParser(Parser):
                     data_types=field_types,
                     required=required,
                     is_list=is_list,
-                    custom_base_class=self.base_class,
                 )
             )
         return fields
