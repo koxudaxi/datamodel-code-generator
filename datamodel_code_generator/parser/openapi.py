@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type
 
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.format import format_code
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS
 from datamodel_code_generator.model.enum import Enum
@@ -17,6 +17,7 @@ from prance import BaseParser
 from ..model.base import DataModel, DataModelField
 
 
+@snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(Parser):
     def __init__(
         self,

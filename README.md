@@ -52,7 +52,8 @@ The `datamodel-codegen` command:
 ```                                                                                                 datamodel-code-generator[10:03:22]
 usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
                          [--base-class BASE_CLASS]
-                         [--target-python-version {3.6,3.7}]
+                         [--target-python-version {3.6,3.7}] [--debug]
+
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -62,6 +63,8 @@ optional arguments:
                         Base Class (default: pydantic.BaseModel)
   --target-python-version {3.6,3.7}
                         target python version (default: 3.7)
+  --debug               show debug message
+
 ```
 
 ## Example

@@ -12,13 +12,12 @@ from enum import IntEnum
 from typing import Optional, Sequence, Union
 
 import argcomplete
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator import PythonVersion, enable_debug_message
 from datamodel_code_generator.model.pydantic import (
     BaseModel,
     CustomRootType,
     dump_resolve_reference_action,
 )
-from datamodel_code_generator.parser.openapi import OpenAPIParser
 
 
 class Exit(IntEnum):
@@ -53,6 +52,7 @@ arg_parser.add_argument(
     choices=['3.6', '3.7'],
     default='3.7',
 )
+arg_parser.add_argument('--debug', help='show debug message', action='store_true')
 
 
 def main(args: Optional[Sequence[str]] = None) -> Exit:
@@ -65,6 +65,11 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         args = sys.argv[1:]
 
     namespace: Namespace = arg_parser.parse_args(args)
+
+    if namespace.debug:  # pragma: no cover
+        enable_debug_message()
+
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
 
     parser = OpenAPIParser(
         BaseModel,
