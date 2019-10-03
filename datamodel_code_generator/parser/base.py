@@ -110,7 +110,6 @@ class Parser(ABC):
             self.data_type = DataType
 
     def append_result(self, data_model: DataModel) -> None:
-        self.imports.append(data_model.imports)
         self.created_model_names.add(data_model.name)
         self.results.append(data_model)
 
@@ -129,7 +128,7 @@ class Parser(ABC):
     @abstractmethod
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
-    ) -> str:
+    ) -> Union[str, Dict[Tuple[str, ...], str]]:
         raise NotImplementedError
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:

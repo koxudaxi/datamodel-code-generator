@@ -39,7 +39,7 @@ class A(TemplateBase):
         ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
         ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
         ('string', 'uri', 'UrlStr', 'pydantic', 'UrlStr'),
-        ('string', 'uuid', 'UUID', 'pydantic', 'UUID'),
+        ('string', 'uuid', 'UUID', 'uuid', 'UUID'),
         ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1'),
         ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2'),
         ('string', 'uuid3', 'UUID3', 'pydantic', 'UUID3'),
@@ -895,3 +895,116 @@ class Error(BaseModel):
     message: str
 """
     )
+
+
+@pytest.mark.parametrize(
+    "with_import, format_, base_class, result",
+    [
+        (
+            True,
+            True,
+            None,
+            {
+                (
+                    "__init__.py",
+                ): """\
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel
+
+from . import models
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Result(BaseModel):
+    event: Optional[models.Event] = None
+""",
+                (
+                    "models.py",
+                ): """\
+from __future__ import annotations
+
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class Species(Enum):
+    dog = 'dog'
+    cat = 'cat'
+    snake = 'snake'
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+    species: Optional[Species] = None
+
+
+class User(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+""",
+                (
+                    "collections.py",
+                ): """\
+from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel, UrlStr
+
+from . import models
+
+
+class Pets(BaseModel):
+    __root__: List[models.Pet]
+
+
+class Users(BaseModel):
+    __root__: List[models.User]
+
+
+class Rules(BaseModel):
+    __root__: List[str]
+
+
+class api(BaseModel):
+    apiKey: Optional[str] = None
+    apiVersionNumber: Optional[str] = None
+    apiUrl: Optional[UrlStr] = None
+    apiDocumentationUrl: Optional[UrlStr] = None
+
+
+class apis(BaseModel):
+    __root__: List[api]
+""",
+            },
+        )
+    ],
+)
+def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        filename=str(DATA_PATH / 'modular.yaml'),
+        base_class=base_class,
+    )
+    assert parser.parse(with_import=with_import, format_=format_) == result
