@@ -83,10 +83,10 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         modules = {output: result}
     else:
         if output is None:
-            print("Modular references require an output directory")
+            print('Modular references require an output directory')
             return Exit.ERROR
         if output.suffix:
-            print("Modular references require an output directory, not a file")
+            print('Modular references require an output directory, not a file')
             return Exit.ERROR
         modules = {output.joinpath(*name): body for name, body in result.items()}
 
@@ -101,13 +101,13 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         if path is not None:
             if not path.parent.exists():
                 path.parent.mkdir()
-            file = path.open("wt")
+            file = path.open('wt')
         else:
             file = None
 
         print(header, file=file)
         if body:
-            print("", file=file)
+            print('', file=file)
             print(body.rstrip(), file=file)
 
         if file is not None:

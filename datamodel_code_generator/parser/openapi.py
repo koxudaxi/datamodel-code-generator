@@ -51,15 +51,15 @@ class OpenAPIParser(Parser):
         )
 
     def get_class_name(self, field_name: str) -> str:
-        if "." in field_name:
-            prefix, field_name = field_name.rsplit(".", 1)
-            prefix += "."
+        if '.' in field_name:
+            prefix, field_name = field_name.rsplit('.', 1)
+            prefix += '.'
         else:
-            prefix = ""
+            prefix = ''
 
         class_name = super().get_class_name(field_name)
 
-        return f"{prefix}{class_name}"
+        return f'{prefix}{class_name}'
 
     def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
         any_of_data_types: List[DataType] = []
@@ -143,7 +143,7 @@ class OpenAPIParser(Parser):
                         )
                     ]
                 else:
-                    field_types = [self.data_type(type="Dict[str, Any]")]
+                    field_types = [self.data_type(type='Dict[str, Any]')]
             elif field.enum:
                 enum = self.parse_enum(field_name, field)
                 field_types = [
@@ -288,13 +288,13 @@ class OpenAPIParser(Parser):
 
         results: Dict[Tuple[str, ...], str] = {}
 
-        module_key = lambda x: (*x.name.split(".")[:-1],)
+        module_key = lambda x: (*x.name.split('.')[:-1],)
 
         grouped_models = groupby(
             sorted(sorted_data_models.values(), key=module_key), key=module_key
         )
         for module, models in ((k, [*v]) for k, v in grouped_models):
-            module_path = ".".join(module)
+            module_path = '.'.join(module)
 
             result: List[str] = []
             imports = Imports()
@@ -305,41 +305,41 @@ class OpenAPIParser(Parser):
                     models_to_update += [model.name]
                 imports.append(model.imports)
                 for ref_name in model.reference_classes:
-                    if "." not in ref_name:
+                    if '.' not in ref_name:
                         continue
-                    ref_path = ref_name.split(".", 1)[0]
+                    ref_path = ref_name.split('.', 1)[0]
                     if ref_path == module_path:
                         continue
-                    imports.append(Import(from_=".", import_=ref_path))
+                    imports.append(Import(from_='.', import_=ref_path))
 
             if with_import:
-                result += [imports.dump(), self.imports.dump(), "\n"]
+                result += [imports.dump(), self.imports.dump(), '\n']
 
             code = dump_templates(models)
             if module_path:
                 # make references relative to current module
-                code = code.replace(f"{module_path}.", "")
+                code = code.replace(f'{module_path}.', '')
             result += [code]
 
             if self.dump_resolve_reference_action is not None:
-                result += ["\n", self.dump_resolve_reference_action(models_to_update)]
+                result += ['\n', self.dump_resolve_reference_action(models_to_update)]
 
-            body = "\n".join(result)
+            body = '\n'.join(result)
             if format_:
                 body = format_code(body, self.target_python_version)
 
             if module:
-                module = (*module[:-1], f"{module[-1]}.py")
-                parent = (*module[:-1], "__init__.py")
+                module = (*module[:-1], f'{module[-1]}.py')
+                parent = (*module[:-1], '__init__.py')
                 if parent not in results:
-                    results[parent] = ""
+                    results[parent] = ''
             else:
-                module = ("__init__.py",)
+                module = ('__init__.py',)
 
             results[module] = body
 
         # retain existing behaviour
-        if [*results] == [("__init__.py",)]:
-            return results[("__init__.py",)]
+        if [*results] == [('__init__.py',)]:
+            return results[('__init__.py',)]
 
         return results
