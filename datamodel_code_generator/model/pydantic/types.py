@@ -24,7 +24,7 @@ type_map: Dict[Types, DataType] = {
     Types.email: DataType(
         type='EmailStr', import_=Import(from_='pydantic', import_='EmailStr')
     ),
-    Types.uuid: DataType(type='UUID', import_=Import(from_='pydantic', import_='UUID')),
+    Types.uuid: DataType(type='UUID', import_=Import(from_='uuid', import_='UUID')),
     Types.uuid1: DataType(
         type='UUID1', import_=Import(from_='pydantic', import_='UUID1')
     ),
