@@ -51,7 +51,7 @@ class DataModelField(BaseModel):
 
     @optional
     def _get_type_hint(self) -> Optional[str]:
-        type_hint = ", ".join(d.type_hint for d in self.data_types)
+        type_hint = ', '.join(d.type_hint for d in self.data_types)
         if not type_hint:
             if self.is_list:
                 self.imports.append(IMPORT_LIST)
