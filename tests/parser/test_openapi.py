@@ -10,7 +10,7 @@ from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import DataType, JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser, dump_templates
 
-DATA_PATH: Path = Path(__file__).parents[1] / 'data'
+DATA_PATH: Path = Path(__file__).parents[1] / "data"
 
 
 class A(TemplateBase):
@@ -25,28 +25,28 @@ class A(TemplateBase):
 @pytest.mark.parametrize(
     "schema_type,schema_format,result_type,from_,import_",
     [
-        ('integer', 'int32', 'int', None, None),
-        ('integer', 'int64', 'int', None, None),
-        ('number', 'float', 'float', None, None),
-        ('number', 'double', 'float', None, None),
-        ('number', 'time', 'time', None, None),
-        ('string', None, 'str', None, None),
-        ('string', 'byte', 'str', None, None),
-        ('string', 'binary', 'bytes', None, None),
-        ('boolean', None, 'bool', None, None),
-        ('string', 'date', 'date', 'datetime', 'date'),
-        ('string', 'date-time', 'datetime', 'datetime', 'datetime'),
-        ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
-        ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
-        ('string', 'uri', 'UrlStr', 'pydantic', 'UrlStr'),
-        ('string', 'uuid', 'UUID', 'uuid', 'UUID'),
-        ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1'),
-        ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2'),
-        ('string', 'uuid3', 'UUID3', 'pydantic', 'UUID3'),
-        ('string', 'uuid4', 'UUID4', 'pydantic', 'UUID4'),
-        ('string', 'uuid5', 'UUID5', 'pydantic', 'UUID5'),
-        ('string', 'ipv4', 'IPv4Address', 'pydantic', 'IPv4Address'),
-        ('string', 'ipv6', 'IPv6Address', 'pydantic', 'IPv6Address'),
+        ("integer", "int32", "int", None, None),
+        ("integer", "int64", "int", None, None),
+        ("number", "float", "float", None, None),
+        ("number", "double", "float", None, None),
+        ("number", "time", "time", None, None),
+        ("string", None, "str", None, None),
+        ("string", "byte", "str", None, None),
+        ("string", "binary", "bytes", None, None),
+        ("boolean", None, "bool", None, None),
+        ("string", "date", "date", "datetime", "date"),
+        ("string", "date-time", "datetime", "datetime", "datetime"),
+        ("string", "password", "SecretStr", "pydantic", "SecretStr"),
+        ("string", "email", "EmailStr", "pydantic", "EmailStr"),
+        ("string", "uri", "UrlStr", "pydantic", "UrlStr"),
+        ("string", "uuid", "UUID", "uuid", "UUID"),
+        ("string", "uuid1", "UUID1", "pydantic", "UUID1"),
+        ("string", "uuid2", "UUID2", "pydantic", "UUID2"),
+        ("string", "uuid3", "UUID3", "pydantic", "UUID3"),
+        ("string", "uuid4", "UUID4", "pydantic", "UUID4"),
+        ("string", "uuid5", "UUID5", "pydantic", "UUID5"),
+        ("string", "ipv4", "IPv4Address", "pydantic", "IPv4Address"),
+        ("string", "ipv6", "IPv6Address", "pydantic", "IPv6Address"),
     ],
 )
 def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
@@ -62,19 +62,19 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
 
 
 def test_get_data_type_invalid_obj():
-    with pytest.raises(ValueError, match='invalid schema object'):
+    with pytest.raises(ValueError, match="invalid schema object"):
         parser = OpenAPIParser(BaseModel, CustomRootType)
         assert parser.get_data_type(JsonSchemaObject())
 
 
 def test_dump_templates():
-    with NamedTemporaryFile('w') as dummy_template:
-        assert dump_templates(A(dummy_template.name, 'abc')) == 'abc'
+    with NamedTemporaryFile("w") as dummy_template:
+        assert dump_templates(A(dummy_template.name, "abc")) == "abc"
         assert (
             dump_templates(
-                [A(dummy_template.name, 'abc'), A(dummy_template.name, 'def')]
+                [A(dummy_template.name, "abc"), A(dummy_template.name, "def")]
             )
-            == 'abc\n\n\ndef'
+            == "abc\n\n\ndef"
         )
 
 
@@ -82,89 +82,89 @@ def test_dump_templates():
     "source_obj,generated_classes",
     [
         (
-            {'properties': {'name': {'type': 'string'}}},
-            '''class Pets(BaseModel):
-    name: Optional[str] = None''',
+            {"properties": {"name": {"type": "string"}}},
+            """class Pets(BaseModel):
+    name: Optional[str] = None""",
         ),
         (
             {
-                'properties': {
-                    'kind': {
-                        'type': 'object',
-                        'properties': {'name': {'type': 'string'}},
+                "properties": {
+                    "kind": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
                     }
                 }
             },
-            '''class Kind(BaseModel):
+            """class Kind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    kind: Optional[Kind] = None''',
+    kind: Optional[Kind] = None""",
         ),
         (
             {
-                'properties': {
-                    'Kind': {
-                        'type': 'object',
-                        'properties': {'name': {'type': 'string'}},
+                "properties": {
+                    "Kind": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
                     }
                 }
             },
-            '''class Kind(BaseModel):
+            """class Kind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    Kind: Optional[Kind] = None''',
+    Kind: Optional[Kind] = None""",
         ),
         (
             {
-                'properties': {
-                    'pet_kind': {
-                        'type': 'object',
-                        'properties': {'name': {'type': 'string'}},
+                "properties": {
+                    "pet_kind": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
                     }
                 }
             },
-            '''class PetKind(BaseModel):
+            """class PetKind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    pet_kind: Optional[PetKind] = None''',
+    pet_kind: Optional[PetKind] = None""",
         ),
         (
             {
-                'properties': {
-                    'kind': {
-                        'type': 'array',
-                        'items': [
+                "properties": {
+                    "kind": {
+                        "type": "array",
+                        "items": [
                             {
-                                'type': 'object',
-                                'properties': {'name': {'type': 'string'}},
+                                "type": "object",
+                                "properties": {"name": {"type": "string"}},
                             }
                         ],
                     }
                 }
             },
-            '''class KindItem(BaseModel):
+            """class KindItem(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    kind: Optional[List[KindItem]] = None''',
+    kind: Optional[List[KindItem]] = None""",
         ),
         (
-            {'properties': {'kind': {'type': 'array', 'items': []}}},
-            '''class Pets(BaseModel):
-    kind: Optional[List] = None''',
+            {"properties": {"kind": {"type": "array", "items": []}}},
+            """class Pets(BaseModel):
+    kind: Optional[List] = None""",
         ),
     ],
 )
 def test_parse_object(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj))
+    parser.parse_object("Pets", JsonSchemaObject.parse_obj(source_obj))
     assert dump_templates(list(parser.results)) == generated_classes
 
 
@@ -173,36 +173,36 @@ def test_parse_object(source_obj, generated_classes):
     [
         (
             {
-                'type': 'array',
-                'items': {'type': 'object', 'properties': {'name': {'type': 'string'}}},
+                "type": "array",
+                "items": {"type": "object", "properties": {"name": {"type": "string"}}},
             },
-            '''class Pet(BaseModel):
+            """class Pet(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]''',
+    __root__: List[Pet]""",
         ),
         (
             {
-                'type': 'array',
-                'items': [
-                    {'type': 'object', 'properties': {'name': {'type': 'string'}}}
+                "type": "array",
+                "items": [
+                    {"type": "object", "properties": {"name": {"type": "string"}}}
                 ],
             },
-            '''class Pet(BaseModel):
+            """class Pet(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]''',
+    __root__: List[Pet]""",
         ),
     ],
 )
 def test_parse_array(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
     parsed_templates = parser.parse_array(
-        'Pets', JsonSchemaObject.parse_obj(source_obj)
+        "Pets", JsonSchemaObject.parse_obj(source_obj)
     )
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -211,21 +211,21 @@ def test_parse_array(source_obj, generated_classes):
     "source_obj,generated_classes",
     [
         (
-            {'type': 'string', 'nullable': True},
-            '''class Name(BaseModel):
-    __root__: Optional[str] = None''',
+            {"type": "string", "nullable": True},
+            """class Name(BaseModel):
+    __root__: Optional[str] = None""",
         ),
         (
-            {'type': 'string', 'nullable': False},
-            '''class Name(BaseModel):
-    __root__: str''',
+            {"type": "string", "nullable": False},
+            """class Name(BaseModel):
+    __root__: str""",
         ),
     ],
 )
 def test_parse_root_type(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
     parsed_templates = parser.parse_root_type(
-        'Name', JsonSchemaObject.parse_obj(source_obj)
+        "Name", JsonSchemaObject.parse_obj(source_obj)
     )
     assert dump_templates(list(parsed_templates)) == generated_classes
 
@@ -237,7 +237,7 @@ def test_parse_root_type(source_obj, generated_classes):
             True,
             True,
             None,
-            '''from __future__ import annotations
+            """from __future__ import annotations
 
 from typing import List, Optional
 
@@ -294,13 +294,13 @@ class Event(BaseModel):
 
 class Result(BaseModel):
     event: Optional[Event] = None
-''',
+""",
         ),
         (
             False,
             True,
             None,
-            '''class Pet(BaseModel):
+            """class Pet(BaseModel):
     id: int
     name: str
     tag: Optional[str] = None
@@ -350,13 +350,13 @@ class Event(BaseModel):
 
 class Result(BaseModel):
     event: Optional[Event] = None
-''',
+""",
         ),
         (
             True,
             False,
             None,
-            '''from pydantic import BaseModel, UrlStr
+            """from pydantic import BaseModel, UrlStr
 from typing import List, Optional
 from __future__ import annotations
 
@@ -410,13 +410,13 @@ class Event(BaseModel):
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None''',
+    event: Optional[Event] = None""",
         ),
         (
             True,
             True,
-            'custom_module.Base',
-            '''from __future__ import annotations
+            "custom_module.Base",
+            """from __future__ import annotations
 
 from typing import List, Optional
 
@@ -475,7 +475,7 @@ class Event(Base):
 
 class Result(Base):
     event: Optional[Event] = None
-''',
+""",
         ),
     ],
 )
@@ -483,7 +483,7 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'api.yaml'),
+        filename=str(DATA_PATH / "api.yaml"),
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
@@ -493,26 +493,26 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
     "source_obj,generated_classes",
     [
         (
-            {'type': 'string', 'nullable': True},
-            '''class Name(BaseModel):
-    __root__: Optional[str] = None''',
+            {"type": "string", "nullable": True},
+            """class Name(BaseModel):
+    __root__: Optional[str] = None""",
         ),
         (
-            {'type': 'string', 'nullable': False},
-            '''class Name(BaseModel):
-    __root__: str''',
+            {"type": "string", "nullable": False},
+            """class Name(BaseModel):
+    __root__: str""",
         ),
     ],
 )
 def test_parse_root_type(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj))
+    parser.parse_root_type("Name", JsonSchemaObject.parse_obj(source_obj))
     assert dump_templates(list(parser.results)) == generated_classes
 
 
 def test_openapi_parser_parse_duplicate_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'duplicate_models.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "duplicate_models.yaml")
     )
     assert (
         parser.parse()
@@ -578,7 +578,7 @@ class DuplicateObject3(BaseModel):
 
 def test_openapi_parser_parse_resolved_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'resolved_models.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "resolved_models.yaml")
     )
     assert (
         parser.parse()
@@ -612,7 +612,7 @@ class Resolved(BaseModel):
 
 def test_openapi_parser_parse_lazy_resolved_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'lazy_resolved_models.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "lazy_resolved_models.yaml")
     )
     assert (
         parser.parse()
@@ -656,7 +656,7 @@ class Results(BaseModel):
 
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'enum_models.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "enum_models.yaml")
     )
     assert (
         parser.parse()
@@ -706,7 +706,7 @@ class IntEnum(Enum):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'enum_models.yaml'),
+        filename=str(DATA_PATH / "enum_models.yaml"),
         target_python_version=PythonVersion.PY_36,
     )
     assert (
@@ -755,7 +755,7 @@ class IntEnum(Enum):
 
 def test_openapi_parser_parse_anyof():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'anyof.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "anyof.yaml")
     )
     assert (
         parser.parse()
@@ -811,7 +811,7 @@ class Error(BaseModel):
 
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'allof.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "allof.yaml")
     )
     assert (
         parser.parse()
@@ -874,7 +874,7 @@ class Error(BaseModel):
 
 def test_openapi_parser_parse_alias():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'alias.yaml')
+        BaseModel, CustomRootType, filename=str(DATA_PATH / "alias.yaml")
     )
     assert (
         parser.parse()
@@ -996,6 +996,21 @@ class api(BaseModel):
 class apis(BaseModel):
     __root__: List[api]
 """,
+                ("foo", "__init__.py"): "",
+                (
+                    "foo",
+                    "bar.py",
+                ): """\
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class Thing(BaseModel):
+    attributes: Optional[Dict[str, Any]] = None
+""",
             },
         )
     ],
@@ -1004,7 +1019,7 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'modular.yaml'),
+        filename=str(DATA_PATH / "modular.yaml"),
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result

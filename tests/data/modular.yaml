@@ -184,3 +184,7 @@ components:
         properties:
           event:
             $ref: '#/components/schemas/models.Event'
+    foo.bar.Thing:
+      properties:
+        attributes:
+          type: object
