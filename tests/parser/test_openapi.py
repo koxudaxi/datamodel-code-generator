@@ -201,9 +201,7 @@ class Pets(BaseModel):
 )
 def test_parse_array(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parser.parse_array(
-        'Pets', JsonSchemaObject.parse_obj(source_obj)
-    )
+    parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj))
     assert dump_templates(list(parser.results)) == generated_classes
 
 
