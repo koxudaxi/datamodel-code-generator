@@ -1,6 +1,6 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional
+from typing import List, Optional
 
 import pytest
 from datamodel_code_generator import PythonVersion
@@ -51,14 +51,14 @@ class A(TemplateBase):
 )
 def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
     if from_ and import_:
-        import_obj: Optional[Import] = Import(from_=from_, import_=import_)
+        imports_: Optional[List[Import]] = [Import(from_=from_, import_=import_)]
     else:
-        import_obj = None
+        imports_ = None
 
     parser = OpenAPIParser(BaseModel, CustomRootType)
     assert parser.get_data_type(
         JsonSchemaObject(type=schema_type, format=schema_format)
-    ) == DataType(type=result_type, import_=import_obj)
+    ) == DataType(type=result_type, imports_=imports_)
 
 
 def test_get_data_type_invalid_obj():
@@ -1001,7 +1001,7 @@ class apis(BaseModel):
                 ): '''\
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
 

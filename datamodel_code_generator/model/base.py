@@ -81,8 +81,8 @@ class DataModelField(BaseModel):
             self.alias = values['name']
         for data_type in self.data_types:
             self.unresolved_types.extend(data_type.unresolved_types)
-            if data_type.import_:
-                self.imports.append(data_type.import_)
+            if data_type.imports_:
+                self.imports.extend(data_type.imports_)
         self.type_hint = self._get_type_hint()
 
 
