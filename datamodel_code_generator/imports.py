@@ -40,8 +40,10 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                 self[import_.from_].add(import_.import_)
 
 
+IMPORT_ANY = Import(import_='Any', from_='typing')
 IMPORT_LIST = Import(import_='List', from_='typing')
 IMPORT_UNION = Import(import_='Union', from_='typing')
 IMPORT_OPTIONAL = Import(import_='Optional', from_='typing')
 IMPORT_ENUM = Import(import_='Enum', from_='enum')
 IMPORT_ANNOTATIONS = Import(from_='__future__', import_='annotations')
+IMPORT_CONSTR = Import(import_='constr', from_='pydantic')

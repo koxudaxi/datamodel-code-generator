@@ -143,7 +143,15 @@ class OpenAPIParser(Parser):
                         )
                     ]
                 else:
-                    field_types = [self.data_type(type='Dict[str, Any]')]
+                    field_types = [
+                        self.data_type(
+                            type='Dict[str, Any]',
+                            imports_=[
+                                Import(from_='typing', import_='Any'),
+                                Import(from_='typing', import_='Dict'),
+                            ],
+                        )
+                    ]
             elif field.enum:
                 enum = self.parse_enum(field_name, field)
                 field_types = [

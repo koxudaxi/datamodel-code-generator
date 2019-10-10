@@ -1,4 +1,5 @@
 import pytest
+from datamodel_code_generator.imports import IMPORT_CONSTR
 from datamodel_code_generator.model.pydantic.types import (
     get_data_float_type,
     get_data_int_type,
@@ -89,17 +90,32 @@ def test_get_data_float_type(types, params, data_type):
         (
             Types.string,
             {'pattern': '^abc'},
-            DataType(type='constr', is_func=True, kwargs={'regex': '^abc'}),
+            DataType(
+                type='constr',
+                is_func=True,
+                kwargs={'regex': '^abc'},
+                imports_=[IMPORT_CONSTR],
+            ),
         ),
         (
             Types.string,
             {'minLength': 10},
-            DataType(type='constr', is_func=True, kwargs={'min_length': 10}),
+            DataType(
+                type='constr',
+                is_func=True,
+                kwargs={'min_length': 10},
+                imports_=[IMPORT_CONSTR],
+            ),
         ),
         (
             Types.string,
             {'maxLength': 10},
-            DataType(type='constr', is_func=True, kwargs={'max_length': 10}),
+            DataType(
+                type='constr',
+                is_func=True,
+                kwargs={'max_length': 10},
+                imports_=[IMPORT_CONSTR],
+            ),
         ),
     ],
 )

@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import IMPORT_CONSTR, Import
 from datamodel_code_generator.types import DataType, Types
 
 type_map: Dict[Types, DataType] = {
@@ -14,40 +14,42 @@ type_map: Dict[Types, DataType] = {
     Types.string: DataType(type='str'),
     Types.byte: DataType(type='str'),  # base64 encoded string
     Types.binary: DataType(type='bytes'),
-    Types.date: DataType(type='date', import_=Import(from_='datetime', import_='date')),
+    Types.date: DataType(
+        type='date', imports_=[Import(from_='datetime', import_='date')]
+    ),
     Types.date_time: DataType(
-        type='datetime', import_=Import(from_='datetime', import_='datetime')
+        type='datetime', imports_=[Import(from_='datetime', import_='datetime')]
     ),
     Types.password: DataType(
-        type='SecretStr', import_=Import(from_='pydantic', import_='SecretStr')
+        type='SecretStr', imports_=[Import(from_='pydantic', import_='SecretStr')]
     ),
     Types.email: DataType(
-        type='EmailStr', import_=Import(from_='pydantic', import_='EmailStr')
+        type='EmailStr', imports_=[Import(from_='pydantic', import_='EmailStr')]
     ),
-    Types.uuid: DataType(type='UUID', import_=Import(from_='uuid', import_='UUID')),
+    Types.uuid: DataType(type='UUID', imports_=[Import(from_='uuid', import_='UUID')]),
     Types.uuid1: DataType(
-        type='UUID1', import_=Import(from_='pydantic', import_='UUID1')
+        type='UUID1', imports_=[Import(from_='pydantic', import_='UUID1')]
     ),
     Types.uuid2: DataType(
-        type='UUID2', import_=Import(from_='pydantic', import_='UUID2')
+        type='UUID2', imports_=[Import(from_='pydantic', import_='UUID2')]
     ),
     Types.uuid3: DataType(
-        type='UUID3', import_=Import(from_='pydantic', import_='UUID3')
+        type='UUID3', imports_=[Import(from_='pydantic', import_='UUID3')]
     ),
     Types.uuid4: DataType(
-        type='UUID4', import_=Import(from_='pydantic', import_='UUID4')
+        type='UUID4', imports_=[Import(from_='pydantic', import_='UUID4')]
     ),
     Types.uuid5: DataType(
-        type='UUID5', import_=Import(from_='pydantic', import_='UUID5')
+        type='UUID5', imports_=[Import(from_='pydantic', import_='UUID5')]
     ),
     Types.uri: DataType(
-        type='UrlStr', import_=Import(from_='pydantic', import_='UrlStr')
+        type='UrlStr', imports_=[Import(from_='pydantic', import_='UrlStr')]
     ),
     Types.ipv4: DataType(
-        type='IPv4Address', import_=Import(from_='pydantic', import_='IPv4Address')
+        type='IPv4Address', imports_=[Import(from_='pydantic', import_='IPv4Address')]
     ),
     Types.ipv6: DataType(
-        type='IPv6Address', import_=Import(from_='pydantic', import_='IPv6Address')
+        type='IPv6Address', imports_=[Import(from_='pydantic', import_='IPv6Address')]
     ),
     Types.boolean: DataType(type='bool'),
 }
@@ -106,7 +108,12 @@ def get_data_str_type(types: Types, **kwargs: Any) -> DataType:
     if kwargs.get('maxLength') is not None:
         data_type_kwargs['max_length'] = kwargs['maxLength']
     if data_type_kwargs:
-        return DataType(type='constr', is_func=True, kwargs=data_type_kwargs)
+        return DataType(
+            type='constr',
+            is_func=True,
+            kwargs=data_type_kwargs,
+            imports_=[IMPORT_CONSTR],
+        )
     return type_map[types]
 
 
