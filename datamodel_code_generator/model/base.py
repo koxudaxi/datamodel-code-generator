@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Set
+from typing import Any, Callable, List, Mapping, Optional, Set
 
 from datamodel_code_generator.imports import (
     IMPORT_LIST,
@@ -87,8 +87,8 @@ class DataModelField(BaseModel):
 
 
 class TemplateBase(ABC):
-    def __init__(self, template_file_path: str) -> None:
-        self.template_file_path: str = template_file_path
+    def __init__(self, template_file_path: Path) -> None:
+        self.template_file_path: Path = template_file_path
         self._template: Template = Template(
             (TEMPLATE_DIR / self.template_file_path).read_text()
         )
@@ -119,12 +119,20 @@ class DataModel(TemplateBase, ABC):
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[str]] = None,
         custom_base_class: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[Mapping[str, Any]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
+
+        template_file_path = Path(self.TEMPLATE_FILE_PATH)
+        if custom_template_dir is not None:
+            custom_template_file_path = custom_template_dir / template_file_path.name
+            if custom_template_file_path.exists():
+                template_file_path = custom_template_file_path
 
         self.name: str = name
         self.fields: List[DataModelField] = fields or []
@@ -149,6 +157,12 @@ class DataModel(TemplateBase, ABC):
                     self.imports.append(Import.from_full_path(base_class_full_path))
             self.base_class = base_class_full_path.split('.')[-1]
 
+        self.extra_template_data = (
+            extra_template_data.get(self.name, {})
+            if extra_template_data is not None
+            else {}
+        )
+
         unresolved_types: Set[str] = set()
         for field in self.fields:
             unresolved_types.update(set(field.unresolved_types))
@@ -158,7 +172,8 @@ class DataModel(TemplateBase, ABC):
         if auto_import:
             for field in self.fields:
                 self.imports.extend(field.imports)
-        super().__init__(template_file_path=self.TEMPLATE_FILE_PATH)
+
+        super().__init__(template_file_path=template_file_path)
 
     def render(self) -> str:
         response = self._render(
@@ -166,6 +181,7 @@ class DataModel(TemplateBase, ABC):
             fields=self.fields,
             decorators=self.decorators,
             base_class=self.base_class,
+            **self.extra_template_data,
         )
         return response
 
