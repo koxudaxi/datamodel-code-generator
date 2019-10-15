@@ -52,6 +52,13 @@ type_map: Dict[Types, DataType] = {
         type='IPv6Address', imports_=[Import(from_='pydantic', import_='IPv6Address')]
     ),
     Types.boolean: DataType(type='bool'),
+    Types.object: DataType(
+        type='Dict[str, Any]',
+        imports_=[
+            Import(from_='typing', import_='Any'),
+            Import(from_='typing', import_='Dict'),
+        ],
+    ),
 }
 
 

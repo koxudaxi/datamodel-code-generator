@@ -188,3 +188,9 @@ components:
       properties:
         attributes:
           type: object
+    foo.bar.Thang:
+      properties:
+        attributes:
+          type: array
+          items:
+            type: object
