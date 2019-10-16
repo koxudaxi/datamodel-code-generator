@@ -49,11 +49,12 @@ $ pip install datamodel-code-generator
 ## Usage
 
 The `datamodel-codegen` command:
-```                                                                                                 datamodel-code-generator[10:03:22]
+```
 usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
                          [--base-class BASE_CLASS]
+                         [--custom-template-dir CUSTOM_TEMPLATE_DIR]
+                         [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--target-python-version {3.6,3.7}] [--debug]
-
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -61,10 +62,13 @@ optional arguments:
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
+  --custom-template-dir CUSTOM_TEMPLATE_DIR
+                        Custom Template Directory
+  --extra-template-data EXTRA_TEMPLATE_DATA
+                        Extra Template Data
   --target-python-version {3.6,3.7}
                         target python version (default: 3.7)
   --debug               show debug message
-
 ```
 
 ## Example

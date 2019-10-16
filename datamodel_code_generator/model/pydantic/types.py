@@ -128,7 +128,7 @@ def get_data_type(types: Types, **kwargs: Any) -> DataType:
     if types == Types.string:
         return get_data_str_type(types, **kwargs)
     elif types in (Types.int32, Types.int64, Types.integer):
-        return get_data_str_type(types, **kwargs)
+        return get_data_int_type(types, **kwargs)
     elif types in (Types.float, Types.double, Types.number, Types.time):
         return get_data_float_type(types, **kwargs)
     return type_map[types]

@@ -4,12 +4,13 @@
 Main function.
 """
 
+import json
 import sys
 from argparse import ArgumentParser, FileType, Namespace
 from datetime import datetime, timezone
 from enum import IntEnum
 from pathlib import Path
-from typing import IO, Any, Optional, Sequence
+from typing import IO, Any, Mapping, Optional, Sequence
 
 import argcomplete
 from datamodel_code_generator import PythonVersion, enable_debug_message
@@ -42,6 +43,12 @@ arg_parser.add_argument(
     default='pydantic.BaseModel',
 )
 arg_parser.add_argument(
+    '--custom-template-dir', help='Custom Template Directory', type=str
+)
+arg_parser.add_argument(
+    '--extra-template-data', help='Extra Template Data', type=FileType('rt')
+)
+arg_parser.add_argument(
     '--target-python-version',
     help='target python version (default: 3.7)',
     choices=['3.6', '3.7'],
@@ -66,10 +73,19 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     from datamodel_code_generator.parser.openapi import OpenAPIParser
 
+    extra_template_data: Optional[Mapping[str, Any]]
+    if namespace.extra_template_data is not None:
+        with namespace.extra_template_data as data:
+            extra_template_data = json.load(data)
+    else:
+        extra_template_data = None
+
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
         base_class=namespace.base_class,
+        custom_template_dir=namespace.custom_template_dir,
+        extra_template_data=extra_template_data,
         target_python_version=PythonVersion(namespace.target_python_version),
         text=namespace.input.read(),
         dump_resolve_reference_action=dump_resolve_reference_action,

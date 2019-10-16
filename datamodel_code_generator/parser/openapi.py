@@ -1,5 +1,6 @@
 from itertools import groupby
-from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, Union
 
 from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.format import format_code
@@ -27,6 +28,8 @@ class OpenAPIParser(Parser):
         data_model_field_type: Type[DataModelField] = DataModelField,
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
+        custom_template_dir: Optional[str] = None,
+        extra_template_data: Optional[Mapping[str, Any]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,
         result: Optional[List[DataModel]] = None,
@@ -37,6 +40,12 @@ class OpenAPIParser(Parser):
             if filename or text
             else None
         )
+        self.custom_template_dir = (
+            Path(custom_template_dir).expanduser().resolve()
+            if custom_template_dir is not None
+            else None
+        )
+        self.extra_template_data = extra_template_data
 
         super().__init__(
             data_model_type,
@@ -105,6 +114,8 @@ class OpenAPIParser(Parser):
             base_classes=[b.type for b in base_classes],
             auto_import=False,
             custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
         )
         self.append_result(data_model_type)
 
@@ -178,7 +189,11 @@ class OpenAPIParser(Parser):
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
         fields = self.parse_object_fields(obj)
         data_model_type = self.data_model_type(
-            name, fields=fields, custom_base_class=self.base_class
+            name,
+            fields=fields,
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
         )
         self.append_result(data_model_type)
 
@@ -226,7 +241,11 @@ class OpenAPIParser(Parser):
     def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
         fields, item_obj_names = self.parse_array_fields(name, obj)
         data_model_root = self.data_model_root_type(
-            name, fields, custom_base_class=self.base_class
+            name,
+            fields,
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
         )
 
         self.append_result(data_model_root)
@@ -247,6 +266,8 @@ class OpenAPIParser(Parser):
             name,
             [self.data_model_field_type(data_types=types, required=not obj.nullable)],
             custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
         )
         self.append_result(data_model_root_type)
 
