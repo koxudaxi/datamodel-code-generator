@@ -180,10 +180,10 @@ components:
         name:
           type: string
     Result:
-        type: object
-        properties:
-          event:
-            $ref: '#/components/schemas/models.Event'
+      type: object
+      properties:
+        event:
+          $ref: '#/components/schemas/models.Event'
     foo.bar.Thing:
       properties:
         attributes:
@@ -194,3 +194,6 @@ components:
           type: array
           items:
             type: object
+    foo.bar.Clone:
+      allOf:
+        - $ref: '#/components/schemas/foo.bar.Thing'

@@ -396,6 +396,10 @@ class Thing(BaseModel):
 
 class Thang(BaseModel):
     attributes: Optional[List[Dict[str, Any]]] = None
+
+
+class Clone(Thing):
+    pass
 ''',
         }
     ],

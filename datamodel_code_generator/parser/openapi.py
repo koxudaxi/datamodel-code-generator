@@ -336,7 +336,7 @@ class OpenAPIParser(Parser):
                 for ref_name in model.reference_classes:
                     if '.' not in ref_name:
                         continue
-                    ref_path = ref_name.split('.', 1)[0]
+                    ref_path = ref_name.rsplit('.', 1)[0]
                     if ref_path == module_path:
                         continue
                     imports.append(Import(from_='.', import_=ref_path))
@@ -345,9 +345,6 @@ class OpenAPIParser(Parser):
                 result += [imports.dump(), self.imports.dump(), '\n']
 
             code = dump_templates(models)
-            if module_path:
-                # make references relative to current module
-                code = code.replace(f'{module_path}.', '')
             result += [code]
 
             if self.dump_resolve_reference_action is not None:
