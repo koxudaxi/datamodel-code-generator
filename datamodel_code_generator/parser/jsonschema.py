@@ -68,7 +68,7 @@ class JsonSchemaObject(BaseModel):
 
     @property
     def ref_object_name(self) -> str:
-        return self.ref.split('/')[-1]  # type: ignore
+        return self.ref.rsplit('/', 1)[-1]  # type: ignore
 
 
 JsonSchemaObject.update_forward_refs()

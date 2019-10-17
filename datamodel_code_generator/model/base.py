@@ -155,7 +155,21 @@ class DataModel(TemplateBase, ABC):
             if auto_import:
                 if base_class_full_path:
                     self.imports.append(Import.from_full_path(base_class_full_path))
-            self.base_class = base_class_full_path.split('.')[-1]
+            self.base_class = base_class_full_path.rsplit('.', 1)[-1]
+
+        if '.' in name:
+            module, class_name = name.rsplit('.', 1)
+            prefix = f'{module}.'
+            if self.base_class.startswith(prefix):
+                self.base_class = self.base_class.replace(prefix, '', 1)
+            for field in self.fields:
+                type_hint = field.type_hint
+                if type_hint is not None and prefix in type_hint:
+                    field.type_hint = type_hint.replace(prefix, '', 1)
+        else:
+            class_name = name
+
+        self.class_name: str = class_name
 
         self.extra_template_data = (
             extra_template_data.get(self.name, {})
@@ -177,7 +191,7 @@ class DataModel(TemplateBase, ABC):
 
     def render(self) -> str:
         response = self._render(
-            class_name=self.name,
+            class_name=self.class_name,
             fields=self.fields,
             decorators=self.decorators,
             base_class=self.base_class,
