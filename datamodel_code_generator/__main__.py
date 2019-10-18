@@ -71,6 +71,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     if namespace.version:  # pragma: no cover
         from datamodel_code_generator.version import version
+
         print(version)
         exit(0)
 
