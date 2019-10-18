@@ -698,6 +698,12 @@ class EnumRoot(Enum):
 class IntEnum(Enum):
     number_1 = 1
     number_2 = 2
+
+
+class AliasEnum(Enum):
+    a = 1
+    b = 2
+    c = 3
 '''
     )
 
@@ -747,6 +753,12 @@ class EnumRoot(Enum):
 class IntEnum(Enum):
     number_1 = 1
     number_2 = 2
+
+
+class AliasEnum(Enum):
+    a = 1
+    b = 2
+    c = 3
 '''
     )
 

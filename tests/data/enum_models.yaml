@@ -85,3 +85,7 @@ components:
     IntEnum:
       enum: [1,2]
       type: number
+    AliasEnum:
+      enum: [1,2,3]
+      type: number
+      x-enum-varnames: ['a', 'b', 'c']
