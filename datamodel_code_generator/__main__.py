@@ -19,7 +19,6 @@ from datamodel_code_generator.model.pydantic import (
     CustomRootType,
     dump_resolve_reference_action,
 )
-from datamodel_code_generator.version import version
 
 
 class Exit(IntEnum):
@@ -71,6 +70,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     namespace: Namespace = arg_parser.parse_args(args)
 
     if namespace.version:  # pragma: no cover
+        from datamodel_code_generator.version import version
         print(version)
         exit(0)
 
