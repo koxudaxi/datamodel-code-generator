@@ -24,7 +24,7 @@ This code generator creates pydantic model from an openapi file.
 - array
 - object
 
-##### String Fromat 
+##### String Format 
 - date
 - datetime
 - password
@@ -32,6 +32,7 @@ This code generator creates pydantic model from an openapi file.
 - uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 - ipv4
 - ipv6
+
 #### Other schema
 - enum
 - allOf (as Multiple inheritance)
@@ -55,6 +56,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--target-python-version {3.6,3.7}] [--debug]
+                         [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -69,6 +71,7 @@ optional arguments:
   --target-python-version {3.6,3.7}
                         target python version (default: 3.7)
   --debug               show debug message
+  --version             show version
 ```
 
 ## Example
