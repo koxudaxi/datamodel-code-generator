@@ -57,6 +57,9 @@ class JsonSchemaObject(BaseModel):
     required: List[str] = []
     ref: Optional[str] = Schema(default=None, alias='$ref')  # type: ignore
     nullable: Optional[bool] = False
+    x_enum_varnames: List[str] = Schema(  # type: ignore
+        default=[], alias='x-enum-varnames'
+    )
 
     @property
     def is_object(self) -> bool:

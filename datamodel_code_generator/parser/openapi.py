@@ -274,13 +274,16 @@ class OpenAPIParser(Parser):
     def parse_enum(self, name: str, obj: JsonSchemaObject) -> DataModel:
         enum_fields = []
 
-        for enum_part in obj.enum:  # type: ignore
+        for i, enum_part in enumerate(obj.enum):  # type: ignore
             if obj.type == 'string':
                 default = f"'{enum_part}'"
                 field_name = enum_part
             else:
                 default = enum_part
-                field_name = f'{obj.type}_{enum_part}'
+                if obj.x_enum_varnames:
+                    field_name = obj.x_enum_varnames[i]
+                else:
+                    field_name = f'{obj.type}_{enum_part}'
             enum_fields.append(
                 self.data_model_field_type(name=field_name, default=default)
             )
