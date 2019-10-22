@@ -290,8 +290,8 @@ We are waiting for your contributions to `datamodel-code-generator`.
 
 ### How to contribute
 ```shell script
-## 1. Clone this repository
-$ git clone git@github.com:koxudaxi/datamodel-code-generator.git
+## 1. Clone your fork repository
+$ git clone git@github.com:<your username>/datamodel-code-generator.git
 $ cd datamodel-code-generator
 
 ## 2. Create `venv` with python3.7 (also you should do with python3.6)
