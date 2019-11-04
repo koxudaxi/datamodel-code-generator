@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, Schema
+from pydantic import BaseModel, Field
 
 from ..types import Types
 
@@ -55,9 +55,9 @@ class JsonSchemaObject(BaseModel):
     writeOnly: Optional[bool]
     properties: Optional[Dict[str, 'JsonSchemaObject']]
     required: List[str] = []
-    ref: Optional[str] = Schema(default=None, alias='$ref')  # type: ignore
+    ref: Optional[str] = Field(default=None, alias='$ref')  # type: ignore
     nullable: Optional[bool] = False
-    x_enum_varnames: List[str] = Schema(  # type: ignore
+    x_enum_varnames: List[str] = Field(  # type: ignore
         default=[], alias='x-enum-varnames'
     )
 
