@@ -81,6 +81,9 @@ class OpenAPIParser(Parser):
                         version_compatible=True,
                     )
                 )
+            elif not any(v for k, v in vars(any_of_item).items() if k != 'type'):
+                # trivial types
+                any_of_data_types.append(self.get_data_type(any_of_item))
             else:
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, any_of_item)
