@@ -302,7 +302,7 @@ class Result(BaseModel):
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel
 
@@ -327,7 +327,7 @@ class User(BaseModel):
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: Optional[Union[str, float, int, bool, Dict[str, Any]]] = None
 ''',
             (
                 'collections.py',
