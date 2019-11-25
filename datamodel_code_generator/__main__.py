@@ -4,13 +4,15 @@
 Main function.
 """
 
+import contextlib
 import json
+import os
 import sys
 from argparse import ArgumentParser, FileType, Namespace
 from datetime import datetime, timezone
 from enum import IntEnum
 from pathlib import Path
-from typing import IO, Any, Mapping, Optional, Sequence
+from typing import IO, Any, Iterator, Mapping, Optional, Sequence
 
 import argcomplete
 from datamodel_code_generator import PythonVersion, enable_debug_message
@@ -26,6 +28,21 @@ class Exit(IntEnum):
 
     OK = 0
     ERROR = 1
+
+
+@contextlib.contextmanager
+def chdir(path: Optional[Path]) -> Iterator[None]:
+    """Changes working directory and returns to previous on exit."""
+
+    if path is None:
+        yield
+    else:
+        prev_cwd = Path.cwd()
+        try:
+            os.chdir(path if path.is_dir() else path.parent)
+            yield
+        finally:
+            os.chdir(prev_cwd)
 
 
 arg_parser = ArgumentParser()
@@ -98,9 +115,10 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         dump_resolve_reference_action=dump_resolve_reference_action,
     )
 
-    result = parser.parse()
-
     output = Path(namespace.output) if namespace.output is not None else None
+
+    with chdir(output):
+        result = parser.parse()
 
     if isinstance(result, str):
         modules = {output: result}
