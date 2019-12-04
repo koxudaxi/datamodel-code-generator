@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List, Mapping, Optional
+from typing import Any, DefaultDict, List, Mapping, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModel, DataModelField
@@ -19,7 +19,7 @@ class CustomRootType(DataModel):
         base_classes: Optional[List[str]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[Mapping[str, Any]] = None,
+        extra_template_data: Optional[DefaultDict[str, Any]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,

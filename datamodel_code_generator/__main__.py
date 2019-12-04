@@ -9,10 +9,11 @@ import json
 import os
 import sys
 from argparse import ArgumentParser, FileType, Namespace
+from collections import defaultdict
 from datetime import datetime, timezone
 from enum import IntEnum
 from pathlib import Path
-from typing import IO, Any, Iterator, Mapping, Optional, Sequence
+from typing import IO, Any, DefaultDict, Dict, Iterator, Mapping, Optional, Sequence
 
 import argcomplete
 from datamodel_code_generator import PythonVersion, enable_debug_message
@@ -97,10 +98,12 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     from datamodel_code_generator.parser.openapi import OpenAPIParser
 
-    extra_template_data: Optional[Mapping[str, Any]]
+    extra_template_data: Optional[DefaultDict[str, Dict]]
     if namespace.extra_template_data is not None:
         with namespace.extra_template_data as data:
-            extra_template_data = json.load(data)
+            extra_template_data = json.load(
+                data, object_hook=lambda d: defaultdict(dict, **d)
+            )
     else:
         extra_template_data = None
 
