@@ -1041,3 +1041,231 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
+
+
+@pytest.mark.parametrize(
+    'with_import, format_, base_class, result',
+    [
+        (
+            True,
+            True,
+            None,
+            '''from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel, Extra
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class User(BaseModel):
+    class Config:
+        extra = Extra.allow
+
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(BaseModel):
+    __root__: List[User]
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Rules(BaseModel):
+    __root__: List[str]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None
+''',
+        ),
+        (
+            False,
+            True,
+            None,
+            '''class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class User(BaseModel):
+    class Config:
+        extra = Extra.allow
+
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(BaseModel):
+    __root__: List[User]
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Rules(BaseModel):
+    __root__: List[str]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None
+''',
+        ),
+        (
+            True,
+            False,
+            None,
+            '''from pydantic import BaseModel, Extra
+from typing import List, Optional
+from __future__ import annotations
+
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(BaseModel):
+    __root__: List[Pet]
+
+
+class User(BaseModel):
+    class Config:
+        extra = Extra.allow
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(BaseModel):
+    __root__: List[User]
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Rules(BaseModel):
+    __root__: List[str]
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class Event(BaseModel):
+    name: Optional[str] = None
+
+
+class Result(BaseModel):
+    event: Optional[Event] = None''',
+        ),
+        (
+            True,
+            True,
+            'custom_module.Base',
+            '''from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import Extra
+
+from custom_module import Base
+
+
+class Pet(Base):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Pets(Base):
+    __root__: List[Pet]
+
+
+class User(Base):
+    class Config:
+        extra = Extra.allow
+
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class Users(Base):
+    __root__: List[User]
+
+
+class Id(Base):
+    __root__: str
+
+
+class Rules(Base):
+    __root__: List[str]
+
+
+class Error(Base):
+    code: int
+    message: str
+
+
+class Event(Base):
+    name: Optional[str] = None
+
+
+class Result(Base):
+    event: Optional[Event] = None
+''',
+        ),
+    ],
+)
+def test_openapi_parser_parse_additional_properties(
+    with_import, format_, base_class, result
+):
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        filename=str(DATA_PATH / 'additional_properties.yaml'),
+        base_class=base_class,
+    )
+    assert parser.parse(with_import=with_import, format_=format_) == result

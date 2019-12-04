@@ -48,7 +48,7 @@ class JsonSchemaObject(BaseModel):
     multipleOf: Optional[float]
     exclusiveMaximum: Optional[bool]
     exclusiveMinimum: Optional[bool]
-    additionalProperties: Optional['JsonSchemaObject']
+    additionalProperties: Union['JsonSchemaObject', bool, None]
     anyOf: List['JsonSchemaObject'] = []
     allOf: List['JsonSchemaObject'] = []
     enum: List[str] = []

@@ -1,6 +1,19 @@
+from collections import defaultdict
 from itertools import groupby
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.format import format_code
@@ -29,7 +42,7 @@ class OpenAPIParser(Parser):
         filename: Optional[str] = None,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[str] = None,
-        extra_template_data: Optional[Mapping[str, Any]] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,
         result: Optional[List[DataModel]] = None,
@@ -45,7 +58,9 @@ class OpenAPIParser(Parser):
             if custom_template_dir is not None
             else None
         )
-        self.extra_template_data = extra_template_data
+        self.extra_template_data: DefaultDict[
+            str, Any
+        ] = extra_template_data or defaultdict(dict)
 
         super().__init__(
             data_model_type,
@@ -69,6 +84,15 @@ class OpenAPIParser(Parser):
         class_name = super().get_class_name(field_name)
 
         return f'{prefix}{class_name}'
+
+    def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
+        if not obj.additionalProperties:
+            return
+
+        # TODO check additional property types.
+        self.extra_template_data[name][
+            'additionalProperties'
+        ] = obj.additionalProperties
 
     def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
         any_of_data_types: List[DataType] = []
@@ -110,7 +134,7 @@ class OpenAPIParser(Parser):
             else:
                 fields_ = self.parse_object_fields(all_of_item)
                 fields.extend(fields_)
-
+        self.set_additional_properties(name, obj)
         data_model_type = self.data_model_type(
             name,
             fields=fields,
@@ -191,6 +215,8 @@ class OpenAPIParser(Parser):
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
         fields = self.parse_object_fields(obj)
+
+        self.set_additional_properties(name, obj)
         data_model_type = self.data_model_type(
             name,
             fields=fields,

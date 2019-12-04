@@ -1,8 +1,9 @@
 import re
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, List, Mapping, Optional, Set
+from typing import Any, Callable, DefaultDict, Dict, List, Mapping, Optional, Set, Union
 
 from datamodel_code_generator.imports import (
     IMPORT_LIST,
@@ -120,7 +121,7 @@ class DataModel(TemplateBase, ABC):
         base_classes: Optional[List[str]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[Mapping[str, Any]] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
@@ -172,9 +173,9 @@ class DataModel(TemplateBase, ABC):
         self.class_name: str = class_name
 
         self.extra_template_data = (
-            extra_template_data.get(self.name, {})
+            extra_template_data[self.name]
             if extra_template_data is not None
-            else {}
+            else defaultdict(dict)
         )
 
         unresolved_types: Set[str] = set()
