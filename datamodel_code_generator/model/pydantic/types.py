@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from datamodel_code_generator.imports import IMPORT_CONSTR, Import
+from datamodel_code_generator.imports import IMPORT_CONSTR, IMPORT_CONINT, IMPORT_CONFLOAT, Import
 from datamodel_code_generator.types import DataType, Types
 
 type_map: Dict[Types, DataType] = {
@@ -80,7 +80,7 @@ def get_data_int_type(types: Types, **kwargs: Any) -> DataType:
             return DataType(type='PositiveInt')
         if len(data_type_kwargs) == 1 and data_type_kwargs.get('ge') == 0:
             return DataType(type='NegativeInt')
-        return DataType(type='conint', is_func=True, kwargs=data_type_kwargs)
+        return DataType(type='conint', is_func=True, kwargs=data_type_kwargs, imports_=[IMPORT_CONINT])
     return type_map[types]
 
 
@@ -102,7 +102,7 @@ def get_data_float_type(types: Types, **kwargs: Any) -> DataType:
             return DataType(type='PositiveFloat')
         if len(data_type_kwargs) == 1 and data_type_kwargs.get('ge') == 0:
             return DataType(type='NegativeFloat')
-        return DataType(type='confloat', is_func=True, kwargs=data_type_kwargs)
+        return DataType(type='confloat', is_func=True, kwargs=data_type_kwargs, imports_=[IMPORT_CONFLOAT])
     return type_map[types]
 
 

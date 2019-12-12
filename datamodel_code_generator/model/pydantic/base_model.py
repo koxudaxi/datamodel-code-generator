@@ -27,6 +27,7 @@ class BaseModel(DataModel):
         extra_template_data: Optional[DefaultDict[str, Any]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
+        imports: Optional[List[Import]] = None,
     ):
 
         super().__init__(
@@ -39,6 +40,7 @@ class BaseModel(DataModel):
             extra_template_data=extra_template_data,
             auto_import=auto_import,
             reference_classes=reference_classes,
+            imports=imports
         )
 
         if 'additionalProperties' in self.extra_template_data:

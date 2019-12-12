@@ -153,6 +153,9 @@ components:
               properties:
                 name:
                   type: string
+                birthday:
+                  type: string
+                  format: date
     Error:
       required:
         - code
