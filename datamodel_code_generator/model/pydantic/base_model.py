@@ -40,7 +40,7 @@ class BaseModel(DataModel):
             extra_template_data=extra_template_data,
             auto_import=auto_import,
             reference_classes=reference_classes,
-            imports=imports
+            imports=imports,
         )
 
         if 'additionalProperties' in self.extra_template_data:
