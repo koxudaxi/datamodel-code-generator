@@ -771,6 +771,7 @@ def test_openapi_parser_parse_anyof():
         parser.parse()
         == '''from __future__ import annotations
 
+from datetime import date
 from typing import List, Optional, Union
 
 from pydantic import BaseModel
@@ -806,6 +807,7 @@ class AnyOfobj(BaseModel):
 
 class AnyOfArrayItem(BaseModel):
     name: Optional[str] = None
+    birthday: Optional[date] = None
 
 
 class AnyOfArray(BaseModel):
@@ -827,9 +829,10 @@ def test_openapi_parser_parse_allof():
         parser.parse()
         == '''from __future__ import annotations
 
+from datetime import date, datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, conint
 
 
 class Pet(BaseModel):
@@ -849,6 +852,11 @@ class AllOfref(Pet, Car):
 class AllOfobj(BaseModel):
     name: Optional[str] = None
     number: Optional[str] = None
+
+
+class AllOfCombine(Pet):
+    birthdate: Optional[date] = None
+    size: Optional[conint(lt=1.0)] = None
 
 
 class AnyOfCombine(Pet, Car):
@@ -873,6 +881,7 @@ class AnyOfCombineInArray(BaseModel):
 
 class AnyOfCombineInRoot(Pet, Car):
     age: Optional[str] = None
+    birthdate: Optional[datetime] = None
 
 
 class Error(BaseModel):

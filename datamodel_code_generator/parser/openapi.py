@@ -144,6 +144,9 @@ class OpenAPIParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
         )
+        # add imports for the fields
+        for f in fields:
+            data_model_type.imports.extend(f.imports)
         self.append_result(data_model_type)
 
         return [self.data_type(type=name, ref=True, version_compatible=True)]

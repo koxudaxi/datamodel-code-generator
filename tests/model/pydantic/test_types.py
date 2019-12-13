@@ -1,5 +1,9 @@
 import pytest
-from datamodel_code_generator.imports import IMPORT_CONSTR
+from datamodel_code_generator.imports import (
+    IMPORT_CONFLOAT,
+    IMPORT_CONINT,
+    IMPORT_CONSTR,
+)
 from datamodel_code_generator.model.pydantic.types import (
     get_data_float_type,
     get_data_int_type,
@@ -16,27 +20,40 @@ from datamodel_code_generator.types import DataType, Types
         (
             Types.integer,
             {'maximum': 10},
-            DataType(type='conint', is_func=True, kwargs={'gt': 10}),
+            DataType(
+                type='conint', is_func=True, kwargs={'gt': 10}, imports_=[IMPORT_CONINT]
+            ),
         ),
         (
             Types.integer,
             {'exclusiveMaximum': 10},
-            DataType(type='conint', is_func=True, kwargs={'ge': 10}),
+            DataType(
+                type='conint', is_func=True, kwargs={'ge': 10}, imports_=[IMPORT_CONINT]
+            ),
         ),
         (
             Types.integer,
             {'minimum': 10},
-            DataType(type='conint', is_func=True, kwargs={'lt': 10}),
+            DataType(
+                type='conint', is_func=True, kwargs={'lt': 10}, imports_=[IMPORT_CONINT]
+            ),
         ),
         (
             Types.integer,
             {'exclusiveMinimum': 10},
-            DataType(type='conint', is_func=True, kwargs={'le': 10}),
+            DataType(
+                type='conint', is_func=True, kwargs={'le': 10}, imports_=[IMPORT_CONINT]
+            ),
         ),
         (
             Types.integer,
             {'multipleOf': 10},
-            DataType(type='conint', is_func=True, kwargs={'multiple_of': 10}),
+            DataType(
+                type='conint',
+                is_func=True,
+                kwargs={'multiple_of': 10},
+                imports_=[IMPORT_CONINT],
+            ),
         ),
         (Types.integer, {'exclusiveMinimum': 0}, DataType(type='PositiveInt')),
         (Types.integer, {'exclusiveMaximum': 0}, DataType(type='NegativeInt')),
@@ -53,27 +70,52 @@ def test_get_data_int_type(types, params, data_type):
         (
             Types.float,
             {'maximum': 10},
-            DataType(type='confloat', is_func=True, kwargs={'gt': 10}),
+            DataType(
+                type='confloat',
+                is_func=True,
+                kwargs={'gt': 10},
+                imports_=[IMPORT_CONFLOAT],
+            ),
         ),
         (
             Types.float,
             {'exclusiveMaximum': 10},
-            DataType(type='confloat', is_func=True, kwargs={'ge': 10}),
+            DataType(
+                type='confloat',
+                is_func=True,
+                kwargs={'ge': 10},
+                imports_=[IMPORT_CONFLOAT],
+            ),
         ),
         (
             Types.float,
             {'minimum': 10},
-            DataType(type='confloat', is_func=True, kwargs={'lt': 10}),
+            DataType(
+                type='confloat',
+                is_func=True,
+                kwargs={'lt': 10},
+                imports_=[IMPORT_CONFLOAT],
+            ),
         ),
         (
             Types.float,
             {'exclusiveMinimum': 10},
-            DataType(type='confloat', is_func=True, kwargs={'le': 10}),
+            DataType(
+                type='confloat',
+                is_func=True,
+                kwargs={'le': 10},
+                imports_=[IMPORT_CONFLOAT],
+            ),
         ),
         (
             Types.float,
             {'multipleOf': 10},
-            DataType(type='confloat', is_func=True, kwargs={'multiple_of': 10}),
+            DataType(
+                type='confloat',
+                is_func=True,
+                kwargs={'multiple_of': 10},
+                imports_=[IMPORT_CONFLOAT],
+            ),
         ),
         (Types.float, {'exclusiveMinimum': 0}, DataType(type='PositiveFloat')),
         (Types.float, {'exclusiveMaximum': 0}, DataType(type='NegativeFloat')),

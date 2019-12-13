@@ -131,6 +131,17 @@ components:
           properties:
             number:
               type: string
+    AllOfCombine:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - type: object
+          properties:
+            birthdate:
+              type: string
+              format: date
+            size:
+              type: integer
+              minimum: 1
     AnyOfCombine:
         allOf:
           - $ref: "#/components/schemas/Pet"
@@ -168,6 +179,9 @@ components:
           properties:
             age:
               type: string
+            birthdate:
+              type: string
+              format: date-time
     Error:
       required:
         - code
