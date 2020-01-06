@@ -39,7 +39,7 @@ This code generator creates pydantic model from an openapi file.
 - enum
 - allOf (as Multiple inheritance)
 - anyOf (as Union)
-- $ref (only one file)
+- $ref (exclude URL Reference)
 
 
 ## Installation

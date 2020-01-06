@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Dict
 
 import pytest
 from datamodel_code_generator.model import DataModel, DataModelField
@@ -15,6 +16,9 @@ class B(DataModel):
 
 
 class C(Parser):
+    def parse_raw(self, name: str, raw: Dict) -> None:
+        pass
+
     def parse(self) -> str:
         return 'parsed'
 
