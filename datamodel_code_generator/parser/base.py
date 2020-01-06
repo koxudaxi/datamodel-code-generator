@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 import inflect
@@ -8,7 +9,8 @@ from .. import PythonVersion
 from ..imports import Imports
 from ..model.base import DataModel, DataModelField, TemplateBase
 from ..types import DataType, DataTypePy36
-from .jsonschema import JsonSchemaObject, json_schema_data_formats
+
+# from .jsonschema import JsonSchemaObject, json_schema_data_formats
 
 inflect_engine = inflect.engine()
 
@@ -109,6 +111,12 @@ class Parser(ABC):
         else:
             self.data_type = DataType
 
+        if filename:
+            self.base_path: Path = Path(filename).absolute().parent
+        else:
+            self.base_path = Path.cwd()
+        self.excludes_ref_path: Set[str] = set()
+
     def append_result(self, data_model: DataModel) -> None:
         self.created_model_names.add(data_model.name)
         self.results.append(data_model)
@@ -126,16 +134,11 @@ class Parser(ABC):
         return uniq_name
 
     @abstractmethod
+    def parse_raw(self, name: str, raw: Dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
     ) -> Union[str, Dict[Tuple[str, ...], str]]:
         raise NotImplementedError
-
-    def get_data_type(self, obj: JsonSchemaObject) -> DataType:
-        format_ = obj.format or 'default'
-        if obj.type is None:
-            raise ValueError(f'invalid schema object {obj}')
-
-        return self.data_model_type.get_data_type(
-            json_schema_data_formats[obj.type][format_], **obj.dict()
-        )

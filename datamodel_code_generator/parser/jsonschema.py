@@ -1,8 +1,16 @@
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
+from ..parser.base import Parser
 from ..types import Types
+
+
+def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict:
+    if len(keys) == 1:
+        return schema[keys[0]]
+    return get_model_by_path(schema[keys[0]], keys[1:])
+
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
     'integer': {'int32': Types.int32, 'int64': Types.int64, 'default': Types.integer},
@@ -75,3 +83,53 @@ class JsonSchemaObject(BaseModel):
 
 
 JsonSchemaObject.update_forward_refs()
+
+
+def parse_ref(obj: JsonSchemaObject, parser: Parser) -> None:
+    if obj.ref:
+        ref: str = obj.ref
+        # https://swagger.io/docs/specification/using-ref/
+        if obj.ref.startswith('#'):
+            # Local Reference – $ref: '#/definitions/myElement'
+            pass
+        elif '://' in ref:
+            # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+            raise NotImplementedError(f'URL Reference is not supported. $ref:{ref}')
+
+        else:
+            # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in the same location.
+            # TODO treat edge case
+            relative_path, object_path = ref.split('#/')
+            full_path = parser.base_path / relative_path
+            with full_path.open() as f:
+                if full_path.suffix.lower() == '.json':
+                    import json
+
+                    ref_body: Dict[str, Any] = json.load(f)
+                else:
+                    # expect yaml
+                    import yaml
+
+                    ref_body = yaml.safe_load(f)
+                object_parents = object_path.split('/')
+                ref_path = str(full_path) + '#/' + object_path
+                if ref_path not in parser.excludes_ref_path:
+                    parser.excludes_ref_path.add(str(full_path) + '#/' + object_path)
+                    model = get_model_by_path(ref_body, object_parents)
+                    parser.parse_raw(object_parents[-1], model)
+
+    if obj.items:
+        if isinstance(obj.items, JsonSchemaObject):
+            parse_ref(obj.items, parser)
+        else:
+            for item in obj.items:
+                parse_ref(item, parser)
+    if isinstance(obj.additionalProperties, JsonSchemaObject):
+        parse_ref(obj.additionalProperties, parser)
+    for item in obj.anyOf:
+        parse_ref(item, parser)
+    for item in obj.allOf:
+        parse_ref(item, parser)
+    if obj.properties:
+        for value in obj.properties.values():
+            parse_ref(value, parser)

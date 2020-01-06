@@ -7,7 +7,8 @@ from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
-from datamodel_code_generator.parser.base import DataType, JsonSchemaObject
+from datamodel_code_generator.parser.base import DataType
+from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser, dump_templates
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data'

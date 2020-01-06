@@ -20,11 +20,15 @@ from datamodel_code_generator.format import format_code
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser.base import (
-    JsonSchemaObject,
     Parser,
     dump_templates,
     get_singular_name,
     sort_data_models,
+)
+from datamodel_code_generator.parser.jsonschema import (
+    JsonSchemaObject,
+    json_schema_data_formats,
+    parse_ref,
 )
 from datamodel_code_generator.types import DataType
 from prance import BaseParser
@@ -72,6 +76,15 @@ class OpenAPIParser(Parser):
             text,
             result,
             dump_resolve_reference_action,
+        )
+
+    def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+        format_ = obj.format or 'default'
+        if obj.type is None:
+            raise ValueError(f'invalid schema object {obj}')
+
+        return self.data_model_type.get_data_type(
+            json_schema_data_formats[obj.type][format_], **obj.dict()
         )
 
     def get_class_name(self, field_name: str) -> str:
@@ -324,23 +337,28 @@ class OpenAPIParser(Parser):
         self.append_result(enum)
         return enum
 
+    def parse_raw(self, name: str, raw: Dict) -> None:
+        obj = JsonSchemaObject.parse_obj(raw)
+        if obj.is_object:
+            self.parse_object(name, obj)
+        elif obj.is_array:
+            self.parse_array(name, obj)
+        elif obj.enum:
+            self.parse_enum(name, obj)
+        elif obj.allOf:
+            self.parse_all_of(name, obj)
+        else:
+            self.parse_root_type(name, obj)
+
+        parse_ref(obj, self)
+
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
     ) -> Union[str, Dict[Tuple[str, ...], str]]:
         for obj_name, raw_obj in self.base_parser.specification['components'][
             'schemas'
         ].items():  # type: str, Dict
-            obj = JsonSchemaObject.parse_obj(raw_obj)
-            if obj.is_object:
-                self.parse_object(obj_name, obj)
-            elif obj.is_array:
-                self.parse_array(obj_name, obj)
-            elif obj.enum:
-                self.parse_enum(obj_name, obj)
-            elif obj.allOf:
-                self.parse_all_of(obj_name, obj)
-            else:
-                self.parse_root_type(obj_name, obj)
+            self.parse_raw(obj_name, raw_obj)
 
         if with_import:
             if self.target_python_version == PythonVersion.PY_37:
