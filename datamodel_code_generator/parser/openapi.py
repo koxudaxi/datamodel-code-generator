@@ -28,6 +28,7 @@ from datamodel_code_generator.parser.base import (
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     json_schema_data_formats,
+    parse_ref,
 )
 from datamodel_code_generator.types import DataType
 from prance import BaseParser
@@ -348,6 +349,8 @@ class OpenAPIParser(Parser):
             self.parse_all_of(name, obj)
         else:
             self.parse_root_type(name, obj)
+
+        parse_ref(obj, self)
 
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
