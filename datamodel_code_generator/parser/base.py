@@ -1,16 +1,16 @@
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from itertools import groupby
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 import inflect
+from datamodel_code_generator.format import format_code
 
 from .. import PythonVersion
-from ..imports import Imports
+from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model.base import DataModel, DataModelField, TemplateBase
 from ..types import DataType, DataTypePy36
-
-# from .jsonschema import JsonSchemaObject, json_schema_data_formats
 
 inflect_engine = inflect.engine()
 
@@ -134,11 +134,74 @@ class Parser(ABC):
         return uniq_name
 
     @abstractmethod
-    def parse_raw(self, name: str, raw: Dict) -> None:
+    def parse_raw(self) -> None:
         raise NotImplementedError
 
-    @abstractmethod
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
     ) -> Union[str, Dict[Tuple[str, ...], str]]:
-        raise NotImplementedError
+
+        self.parse_raw()
+
+        if with_import:
+            if self.target_python_version == PythonVersion.PY_37:
+                self.imports.append(IMPORT_ANNOTATIONS)
+
+        _, sorted_data_models, require_update_action_models = sort_data_models(
+            self.results
+        )
+
+        results: Dict[Tuple[str, ...], str] = {}
+
+        module_key = lambda x: (*x.name.split('.')[:-1],)
+
+        grouped_models = groupby(
+            sorted(sorted_data_models.values(), key=module_key), key=module_key
+        )
+        for module, models in ((k, [*v]) for k, v in grouped_models):
+            module_path = '.'.join(module)
+
+            result: List[str] = []
+            imports = Imports()
+            models_to_update: List[str] = []
+
+            for model in models:
+                if model.name in require_update_action_models:
+                    models_to_update += [model.name]
+                imports.append(model.imports)
+                for ref_name in model.reference_classes:
+                    if '.' not in ref_name:
+                        continue
+                    ref_path = ref_name.rsplit('.', 1)[0]
+                    if ref_path == module_path:
+                        continue
+                    imports.append(Import(from_='.', import_=ref_path))
+
+            if with_import:
+                result += [imports.dump(), self.imports.dump(), '\n']
+
+            code = dump_templates(models)
+            result += [code]
+
+            if self.dump_resolve_reference_action is not None:
+                result += ['\n', self.dump_resolve_reference_action(models_to_update)]
+
+            body = '\n'.join(result)
+            if format_:
+                body = format_code(body, self.target_python_version)
+
+            if module:
+                module = (*module[:-1], f'{module[-1]}.py')
+                parent = (*module[:-1], '__init__.py')
+                if parent not in results:
+                    results[parent] = ''
+            else:
+                module = ('__init__.py',)
+
+            results[module] = body
+
+        # retain existing behaviour
+        if [*results] == [('__init__.py',)]:
+            return results[('__init__.py',)]
+
+        return results
