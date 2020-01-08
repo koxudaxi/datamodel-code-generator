@@ -5,11 +5,11 @@ from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Tuple,
 from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser.base import Parser, get_singular_name
+from datamodel_code_generator.parser.base import get_singular_name
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
+    JsonSchemaParser,
     json_schema_data_formats,
-    parse_ref,
 )
 from datamodel_code_generator.types import DataType
 from prance import BaseParser
@@ -18,7 +18,7 @@ from ..model.base import DataModel, DataModelField
 
 
 @snooper_to_methods(max_variable_length=None)
-class OpenAPIParser(Parser):
+class OpenAPIParser(JsonSchemaParser):
     def __init__(
         self,
         data_model_type: Type[DataModel],
@@ -318,20 +318,23 @@ class OpenAPIParser(Parser):
         self.append_result(enum)
         return enum
 
+    def parse_raw_obj(self, name: str, raw: Dict) -> None:
+        obj = JsonSchemaObject.parse_obj(raw)
+        if obj.is_object:
+            self.parse_object(name, obj)
+        elif obj.is_array:
+            self.parse_array(name, obj)
+        elif obj.enum:
+            self.parse_enum(name, obj)
+        elif obj.allOf:
+            self.parse_all_of(name, obj)
+        else:
+            self.parse_root_type(name, obj)
+
+        self.parse_ref(obj)
+
     def parse_raw(self) -> None:
         for obj_name, raw_obj in self.base_parser.specification['components'][
             'schemas'
         ].items():  # type: str, Dict
-            obj = JsonSchemaObject.parse_obj(raw_obj)
-            if obj.is_object:
-                self.parse_object(obj_name, obj)
-            elif obj.is_array:
-                self.parse_array(obj_name, obj)
-            elif obj.enum:
-                self.parse_enum(obj_name, obj)
-            elif obj.allOf:
-                self.parse_all_of(obj_name, obj)
-            else:
-                self.parse_root_type(obj_name, obj)
-
-            parse_ref(obj, self)
+            self.parse_raw_obj(obj_name, raw_obj)
