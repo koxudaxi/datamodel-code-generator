@@ -1,34 +1,15 @@
 from collections import defaultdict
-from itertools import groupby
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    DefaultDict,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Tuple, Type
 
 from datamodel_code_generator import PythonVersion, snooper_to_methods
-from datamodel_code_generator.format import format_code
-from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser.base import (
-    Parser,
-    dump_templates,
-    get_singular_name,
-    sort_data_models,
-)
+from datamodel_code_generator.parser.base import get_singular_name
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
+    JsonSchemaParser,
     json_schema_data_formats,
-    parse_ref,
 )
 from datamodel_code_generator.types import DataType
 from prance import BaseParser
@@ -37,7 +18,7 @@ from ..model.base import DataModel, DataModelField
 
 
 @snooper_to_methods(max_variable_length=None)
-class OpenAPIParser(Parser):
+class OpenAPIParser(JsonSchemaParser):
     def __init__(
         self,
         data_model_type: Type[DataModel],
@@ -337,7 +318,7 @@ class OpenAPIParser(Parser):
         self.append_result(enum)
         return enum
 
-    def parse_raw(self, name: str, raw: Dict) -> None:
+    def parse_raw_obj(self, name: str, raw: Dict) -> None:
         obj = JsonSchemaObject.parse_obj(raw)
         if obj.is_object:
             self.parse_object(name, obj)
@@ -350,75 +331,10 @@ class OpenAPIParser(Parser):
         else:
             self.parse_root_type(name, obj)
 
-        parse_ref(obj, self)
+        self.parse_ref(obj)
 
-    def parse(
-        self, with_import: Optional[bool] = True, format_: Optional[bool] = True
-    ) -> Union[str, Dict[Tuple[str, ...], str]]:
+    def parse_raw(self) -> None:
         for obj_name, raw_obj in self.base_parser.specification['components'][
             'schemas'
         ].items():  # type: str, Dict
-            self.parse_raw(obj_name, raw_obj)
-
-        if with_import:
-            if self.target_python_version == PythonVersion.PY_37:
-                self.imports.append(IMPORT_ANNOTATIONS)
-
-        _, sorted_data_models, require_update_action_models = sort_data_models(
-            self.results
-        )
-
-        results: Dict[Tuple[str, ...], str] = {}
-
-        module_key = lambda x: (*x.name.split('.')[:-1],)
-
-        grouped_models = groupby(
-            sorted(sorted_data_models.values(), key=module_key), key=module_key
-        )
-        for module, models in ((k, [*v]) for k, v in grouped_models):
-            module_path = '.'.join(module)
-
-            result: List[str] = []
-            imports = Imports()
-            models_to_update: List[str] = []
-
-            for model in models:
-                if model.name in require_update_action_models:
-                    models_to_update += [model.name]
-                imports.append(model.imports)
-                for ref_name in model.reference_classes:
-                    if '.' not in ref_name:
-                        continue
-                    ref_path = ref_name.rsplit('.', 1)[0]
-                    if ref_path == module_path:
-                        continue
-                    imports.append(Import(from_='.', import_=ref_path))
-
-            if with_import:
-                result += [imports.dump(), self.imports.dump(), '\n']
-
-            code = dump_templates(models)
-            result += [code]
-
-            if self.dump_resolve_reference_action is not None:
-                result += ['\n', self.dump_resolve_reference_action(models_to_update)]
-
-            body = '\n'.join(result)
-            if format_:
-                body = format_code(body, self.target_python_version)
-
-            if module:
-                module = (*module[:-1], f'{module[-1]}.py')
-                parent = (*module[:-1], '__init__.py')
-                if parent not in results:
-                    results[parent] = ''
-            else:
-                module = ('__init__.py',)
-
-            results[module] = body
-
-        # retain existing behaviour
-        if [*results] == [('__init__.py',)]:
-            return results[('__init__.py',)]
-
-        return results
+            self.parse_raw_obj(obj_name, raw_obj)

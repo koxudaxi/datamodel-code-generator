@@ -1,17 +1,25 @@
-import json
 from pathlib import Path
 from typing import Dict
 from unittest.mock import Mock, call
 
 import pytest
+from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import Parser
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
+    JsonSchemaParser,
     get_model_by_path,
-    parse_ref,
 )
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data'
+
+
+class Parser(JsonSchemaParser):
+    def parse_raw_obj(self, name: str, raw: Dict) -> None:
+        pass
+
+    def parse_raw(self) -> None:
+        pass
 
 
 @pytest.mark.parametrize(
@@ -27,15 +35,17 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
     assert get_model_by_path(schema, path.split('/')) == model
 
 
-def test_parse_ref():
-    mock_parser = Mock(spec=Parser)
+def test_json_schema_parser_parse_ref():
+    parser = Parser(BaseModel, CustomRootType)
+    parser.parse_raw_obj = Mock()
     external_parent_path = Path(DATA_PATH / 'external_parent.json')
-    mock_parser.base_path = external_parent_path.parent
-    mock_parser.excludes_ref_path = set()
+    parser.base_path = external_parent_path.parent
+    parser.excludes_ref_path = set()
     external_parent = external_parent_path.read_text()
     obj = JsonSchemaObject.parse_raw(external_parent)
-    parse_ref(obj, mock_parser)
-    mock_parser.parse_raw.assert_has_calls(
+
+    parser.parse_ref(obj)
+    parser.parse_raw_obj.assert_has_calls(
         [
             call(
                 'Yaml',
@@ -50,7 +60,7 @@ def test_parse_ref():
 
 
 def test_json_schema_object_ref_url():
-    mock_parser = Mock(spec=Parser)
+    parser = Parser(BaseModel, CustomRootType)
     obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.org'})
     with pytest.raises(NotImplementedError):
-        parse_ref(obj, mock_parser)
+        parser.parse_ref(obj)
