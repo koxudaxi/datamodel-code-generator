@@ -7,21 +7,25 @@ Main function.
 import contextlib
 import json
 import os
+import signal
 import sys
 from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from datetime import datetime, timezone
 from enum import IntEnum
+from json import JSONDecodeError
 from pathlib import Path
-from typing import IO, Any, DefaultDict, Dict, Iterator, Mapping, Optional, Sequence
+from typing import IO, Any, DefaultDict, Dict, Iterator, Optional, Sequence, Type
 
 import argcomplete
+import yaml
 from datamodel_code_generator import PythonVersion, enable_debug_message
 from datamodel_code_generator.model.pydantic import (
     BaseModel,
     CustomRootType,
     dump_resolve_reference_action,
 )
+from datamodel_code_generator.parser.base import Parser
 
 
 class Exit(IntEnum):
@@ -29,6 +33,14 @@ class Exit(IntEnum):
 
     OK = 0
     ERROR = 1
+    KeyboardInterrupt = 2
+
+
+def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
+    exit(Exit.OK)
+
+
+signal.signal(signal.SIGINT, sig_int_handler)
 
 
 @contextlib.contextmanager
@@ -46,12 +58,26 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
             os.chdir(prev_cwd)
 
 
+def is_openapi(text: str) -> bool:
+    try:
+        spec = json.loads(text)
+    except JSONDecodeError:
+        spec = yaml.safe_load(text)
+    return 'openapi' in spec
+
+
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
     '--input',
     help='Open API YAML file (default: stdin)',
     type=FileType('rt'),
     default=sys.stdin,
+)
+arg_parser.add_argument(
+    '--input-file-type',
+    help='Input file type (default: auto)',
+    choices=['auto', 'openapi', 'jsonschema'],
+    default='auto',
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 arg_parser.add_argument(
@@ -96,8 +122,6 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if namespace.debug:  # pragma: no cover
         enable_debug_message()
 
-    from datamodel_code_generator.parser.openapi import OpenAPIParser
-
     extra_template_data: Optional[DefaultDict[str, Dict]]
     if namespace.extra_template_data is not None:
         with namespace.extra_template_data as data:
@@ -107,14 +131,34 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     else:
         extra_template_data = None
 
-    parser = OpenAPIParser(
+    text: str = namespace.input.read()
+
+    input_file_type: str = namespace.input_file_type
+
+    if input_file_type == 'auto':
+        try:
+            input_file_type = 'openapi' if is_openapi(text) else 'jsonschema'
+        except:
+            print('Invalid file format')
+            return Exit.ERROR
+
+    if input_file_type == 'openapi':
+        from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+        parser_class: Type[Parser] = OpenAPIParser
+    else:
+        from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+        parser_class = JsonSchemaParser
+
+    parser = parser_class(
         BaseModel,
         CustomRootType,
         base_class=namespace.base_class,
         custom_template_dir=namespace.custom_template_dir,
         extra_template_data=extra_template_data,
         target_python_version=PythonVersion(namespace.target_python_version),
-        text=namespace.input.read(),
+        text=text,
         dump_resolve_reference_action=dump_resolve_reference_action,
     )
 

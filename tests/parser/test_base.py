@@ -24,11 +24,10 @@ class C(Parser):
 
 
 def test_parser():
-    c = C(A, B, DataModelField, 'abc.yaml', 'Base')
+    c = C(A, B, DataModelField, 'Base')
     assert c.data_model_type == A
     assert c.data_model_root_type == B
     assert c.data_model_field_type == DataModelField
-    assert c.filename == 'abc.yaml'
     assert c.base_class == 'Base'
 
 

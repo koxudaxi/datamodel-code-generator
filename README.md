@@ -14,10 +14,10 @@ This code generator creates pydantic model from an openapi file.
 
 ## Supported file formats
 - OpenAPI 3 (yaml/json)
-
+- JsonSchema
 
 ## Implemented list
-### OpenAPI 3
+### OpenAPI 3 and JsonSchema
 #### DataType
 - string (include patter/minLength/maxLenght)
 - number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
@@ -63,6 +63,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
 optional arguments:
   -h, --help            show this help message and exit
   --input INPUT         Open API YAML file (default: stdin)
+  --input-file-type {auto,openapi,jsonschema}
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
