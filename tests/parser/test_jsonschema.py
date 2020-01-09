@@ -4,22 +4,14 @@ from unittest.mock import Mock, call
 
 import pytest
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
-from datamodel_code_generator.parser.base import Parser
+from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     get_model_by_path,
 )
 
-DATA_PATH: Path = Path(__file__).parents[1] / 'data'
-
-
-class Parser(JsonSchemaParser):
-    def parse_raw_obj(self, name: str, raw: Dict) -> None:
-        pass
-
-    def parse_raw(self) -> None:
-        pass
+DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
 
 
 @pytest.mark.parametrize(
@@ -36,7 +28,7 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
 
 
 def test_json_schema_parser_parse_ref():
-    parser = Parser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(BaseModel, CustomRootType)
     parser.parse_raw_obj = Mock()
     external_parent_path = Path(DATA_PATH / 'external_parent.json')
     parser.base_path = external_parent_path.parent
@@ -60,7 +52,45 @@ def test_json_schema_parser_parse_ref():
 
 
 def test_json_schema_object_ref_url():
-    parser = Parser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(BaseModel, CustomRootType)
     obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.org'})
     with pytest.raises(NotImplementedError):
         parser.parse_ref(obj)
+
+
+@pytest.mark.parametrize(
+    'source_obj,generated_classes',
+    [
+        (
+            {
+                "$id": "https://example.com/person.schema.json",
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "Person",
+                "type": "object",
+                "properties": {
+                    "firstName": {
+                        "type": "string",
+                        "description": "The person's first name.",
+                    },
+                    "lastName": {
+                        "type": "string",
+                        "description": "The person's last name.",
+                    },
+                    "age": {
+                        "description": "Age in years which must be equal to or greater than zero.",
+                        "type": "integer",
+                        "minimum": 0,
+                    },
+                },
+            },
+            """class Pets(BaseModel):
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    age: Optional[conint(lt=0.0)] = None""",
+        )
+    ],
+)
+def test_parse_object(source_obj, generated_classes):
+    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj))
+    assert dump_templates(list(parser.results)) == generated_classes

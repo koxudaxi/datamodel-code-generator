@@ -1,8 +1,19 @@
 from abc import ABC, abstractmethod
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from itertools import groupby
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import inflect
 from datamodel_code_generator.format import format_code
@@ -84,8 +95,9 @@ class Parser(ABC):
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelField] = DataModelField,
-        filename: Optional[str] = None,
         base_class: Optional[str] = None,
+        custom_template_dir: Optional[str] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,
         result: Optional[List[DataModel]] = None,
@@ -95,7 +107,6 @@ class Parser(ABC):
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelField] = data_model_field_type
-        self.filename: Optional[str] = filename
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
         self.created_model_names: Set[str] = set()
@@ -111,11 +122,20 @@ class Parser(ABC):
         else:
             self.data_type = DataType
 
-        if filename:
-            self.base_path: Path = Path(filename).absolute().parent
-        else:
-            self.base_path = Path.cwd()
+        # if filename:
+        #     self.base_path: Path = Path(filename).absolute().parent
+        # else:
+        self.base_path = Path.cwd()
         self.excludes_ref_path: Set[str] = set()
+
+        self.custom_template_dir = (
+            Path(custom_template_dir).expanduser().resolve()
+            if custom_template_dir is not None
+            else None
+        )
+        self.extra_template_data: DefaultDict[
+            str, Any
+        ] = extra_template_data or defaultdict(dict)
 
     def append_result(self, data_model: DataModel) -> None:
         self.created_model_names.add(data_model.name)

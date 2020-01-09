@@ -11,7 +11,7 @@ from datamodel_code_generator.parser.base import DataType, dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 
-DATA_PATH: Path = Path(__file__).parents[1] / 'data'
+DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 
 
 class A(TemplateBase):
@@ -482,7 +482,7 @@ def test_openapi_parser_parse(with_import, format_, base_class, result):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'api.yaml'),
+        text=Path(DATA_PATH / 'api.yaml').read_text(),
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
@@ -511,7 +511,9 @@ def test_parse_root_type(source_obj, generated_classes):
 
 def test_openapi_parser_parse_duplicate_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'duplicate_models.yaml')
+        BaseModel,
+        CustomRootType,
+        text=Path(DATA_PATH / 'duplicate_models.yaml').read_text(),
     )
     assert (
         parser.parse()
@@ -577,7 +579,9 @@ class DuplicateObject3(BaseModel):
 
 def test_openapi_parser_parse_resolved_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'resolved_models.yaml')
+        BaseModel,
+        CustomRootType,
+        text=Path(DATA_PATH / 'resolved_models.yaml').read_text(),
     )
     assert (
         parser.parse()
@@ -611,7 +615,9 @@ class Resolved(BaseModel):
 
 def test_openapi_parser_parse_lazy_resolved_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'lazy_resolved_models.yaml')
+        BaseModel,
+        CustomRootType,
+        text=Path(DATA_PATH / 'lazy_resolved_models.yaml').read_text(),
     )
     assert (
         parser.parse()
@@ -655,7 +661,7 @@ class Results(BaseModel):
 
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'enum_models.yaml')
+        BaseModel, CustomRootType, text=Path(DATA_PATH / 'enum_models.yaml').read_text()
     )
     assert (
         parser.parse()
@@ -711,7 +717,7 @@ class AliasEnum(Enum):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'enum_models.yaml'),
+        text=Path(DATA_PATH / 'enum_models.yaml').read_text(),
         target_python_version=PythonVersion.PY_36,
     )
     assert (
@@ -766,7 +772,7 @@ class AliasEnum(Enum):
 
 def test_openapi_parser_parse_anyof():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'anyof.yaml')
+        BaseModel, CustomRootType, text=Path(DATA_PATH / 'anyof.yaml').read_text()
     )
     assert (
         parser.parse()
@@ -824,7 +830,7 @@ class Error(BaseModel):
 
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'allof.yaml')
+        BaseModel, CustomRootType, text=Path(DATA_PATH / 'allof.yaml').read_text()
     )
     assert (
         parser.parse()
@@ -894,7 +900,7 @@ class Error(BaseModel):
 
 def test_openapi_parser_parse_alias():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, filename=str(DATA_PATH / 'alias.yaml')
+        BaseModel, CustomRootType, text=Path(DATA_PATH / 'alias.yaml').read_text()
     )
     assert (
         parser.parse()
@@ -1047,7 +1053,7 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'modular.yaml'),
+        text=Path(DATA_PATH / 'modular.yaml').read_text(),
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
@@ -1275,7 +1281,7 @@ def test_openapi_parser_parse_additional_properties(
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
-        filename=str(DATA_PATH / 'additional_properties.yaml'),
+        text=Path(DATA_PATH / 'additional_properties.yaml').read_text(),
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
