@@ -16,7 +16,6 @@ from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.enum import Enum
-from jsonschema import Draft7Validator
 from pydantic import BaseModel, Field
 
 from ..parser.base import Parser, get_singular_name

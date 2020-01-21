@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, DefaultDict, Dict, List, Mapping, Optional, Set, Union
+from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
 
 from datamodel_code_generator.imports import (
     IMPORT_LIST,

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Union
+from typing import Any, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelField
