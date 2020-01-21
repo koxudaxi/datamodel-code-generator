@@ -1,16 +1,7 @@
-from collections import defaultdict
-from pathlib import Path
-from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Tuple, Type
+from typing import Dict
 
-from datamodel_code_generator import PythonVersion, snooper_to_methods
-from datamodel_code_generator.imports import Import
-from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser.base import get_singular_name
-from datamodel_code_generator.parser.jsonschema import (
-    JsonSchemaObject,
-    JsonSchemaParser,
-    json_schema_data_formats,
-)
+from datamodel_code_generator import snooper_to_methods
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from prance import BaseParser
 
 
