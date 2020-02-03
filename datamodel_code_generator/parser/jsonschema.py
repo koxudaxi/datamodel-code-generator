@@ -238,6 +238,10 @@ class JsonSchemaParser(Parser):
                 )
                 field_types = array_fields[0].data_types
                 is_list = True
+            elif field.anyOf:
+                field_types = self.parse_any_of(field_name, field)
+            elif field.allOf:
+                field_types = self.parse_all_of(field_name, field)
             elif field.is_object:
                 if field.properties:
                     class_name = self.get_class_name(field_name)
@@ -262,10 +266,6 @@ class JsonSchemaParser(Parser):
                 field_types = [
                     self.data_type(type=enum.name, ref=True, version_compatible=True)
                 ]
-            elif field.anyOf:
-                field_types = self.parse_any_of(field_name, field)
-            elif field.allOf:
-                field_types = self.parse_all_of(field_name, field)
             else:
                 data_type = self.get_data_type(field)
                 field_types = [data_type]
