@@ -301,7 +301,7 @@ from pydantic import BaseModel, conint
 class Person(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
-    age: Optional[conint(lt=0.0)] = None
+    age: Optional[conint(ge=0.0)] = None
 '''
         )
 
@@ -364,7 +364,7 @@ from pydantic import BaseModel, conint
 class Person(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
-    age: Optional[conint(lt=0.0)] = None
+    age: Optional[conint(ge=0.0)] = None
 '''
         )
 

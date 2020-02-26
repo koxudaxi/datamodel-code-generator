@@ -21,28 +21,28 @@ from datamodel_code_generator.types import DataType, Types
             Types.integer,
             {'maximum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'gt': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'le': 10}, imports_=[IMPORT_CONINT]
             ),
         ),
         (
             Types.integer,
             {'exclusiveMaximum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'ge': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'lt': 10}, imports_=[IMPORT_CONINT]
             ),
         ),
         (
             Types.integer,
             {'minimum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'lt': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'ge': 10}, imports_=[IMPORT_CONINT]
             ),
         ),
         (
             Types.integer,
             {'exclusiveMinimum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'le': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'gt': 10}, imports_=[IMPORT_CONINT]
             ),
         ),
         (
@@ -73,7 +73,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'gt': 10},
+                kwargs={'le': 10},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
@@ -83,7 +83,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'ge': 10},
+                kwargs={'lt': 10},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
@@ -93,7 +93,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'lt': 10},
+                kwargs={'ge': 10},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
@@ -103,7 +103,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'le': 10},
+                kwargs={'gt': 10},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
