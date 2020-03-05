@@ -12,7 +12,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.types import DataType, Types
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, validator
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
@@ -43,6 +43,7 @@ class DataModelField(BaseModel):
     alias: Optional[str]
     example: Optional[str]
     description: Optional[str]
+    title: Optional[str]
     data_types: List[DataType] = []
     is_list: bool = False
     is_union: bool = False
@@ -90,8 +91,10 @@ class DataModelField(BaseModel):
 class TemplateBase(ABC):
     def __init__(self, template_file_path: Path) -> None:
         self.template_file_path: Path = template_file_path
-        self._template: Template = Template(
-            (TEMPLATE_DIR / self.template_file_path).read_text()
+        loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
+        self.environment: Environment = Environment(loader=loader)
+        self._template: Template = self.environment.get_template(
+            template_file_path.name
         )
 
     @property
@@ -107,6 +110,10 @@ class TemplateBase(ABC):
 
     def __str__(self) -> str:
         return self.render()
+
+
+class Config(BaseModel):
+    extra: Optional[str] = None
 
 
 class DataModel(TemplateBase, ABC):

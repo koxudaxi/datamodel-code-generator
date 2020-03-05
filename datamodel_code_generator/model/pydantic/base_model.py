@@ -1,15 +1,10 @@
 from pathlib import Path
-from typing import Any, DefaultDict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
-from pydantic import BaseModel as _BaseModel
-
-
-class Config(_BaseModel):
-    extra: Optional[str] = None
 
 
 class BaseModel(DataModel):
@@ -43,9 +38,16 @@ class BaseModel(DataModel):
             imports=imports,
         )
 
+        config_parameters: Dict[str, Any] = {}
+
         if 'additionalProperties' in self.extra_template_data:
-            self.extra_template_data['config'] = Config(extra='Extra.allow')
+            config_parameters['extra'] = 'Extra.allow'
             self.imports.append(Import(from_='pydantic', import_='Extra'))
+
+        if config_parameters:
+            from datamodel_code_generator.model.pydantic import Config
+
+            self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:

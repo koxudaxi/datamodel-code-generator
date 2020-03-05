@@ -1,3 +1,4 @@
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
@@ -46,8 +47,8 @@ def test_template_base():
     with NamedTemporaryFile('w') as dummy_template:
         dummy_template.write('abc')
         dummy_template.seek(0)
-        a: TemplateBase = A(dummy_template.name)
-    assert a.template_file_path == dummy_template.name
+        a: TemplateBase = A(Path(dummy_template.name))
+    assert str(a.template_file_path) == dummy_template.name
     assert a._render() == 'abc'
     assert str(a) == ''
 

@@ -5,11 +5,8 @@ class {{ class_name }}({{ base_class }}):
 {%- if not fields %}
     pass
 {%- endif %}
-{%-  if config %}
-    class Config:
-    {%- if config.extra  %}
-        extra = {{ config.extra }}
-    {%- endif %}
+{%- if config %}
+    {% include 'Config.jinja2' %}
 {%- endif %}
 {%- for field in fields -%}
     {%- if field.required %}
