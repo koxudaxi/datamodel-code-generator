@@ -2,6 +2,9 @@
 {{ decorator }}
 {% endfor -%}
 class {{ class_name }}({{ base_class }}):
+{%- if config %}
+{% include 'Config.jinja2' %}
+{%- endif %}
 {%- if not fields %}
     pass
 {%- else %}

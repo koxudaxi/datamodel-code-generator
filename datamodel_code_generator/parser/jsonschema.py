@@ -84,6 +84,8 @@ class JsonSchemaObject(BaseModel):
     x_enum_varnames: List[str] = Field(  # type: ignore
         default=[], alias='x-enum-varnames'
     )
+    description: Optional[str]
+    title: Optional[str]
 
     @property
     def is_object(self) -> bool:
@@ -157,6 +159,12 @@ class JsonSchemaParser(Parser):
         self.extra_template_data[name][
             'additionalProperties'
         ] = obj.additionalProperties
+
+    def set_title(self, name: str, obj: JsonSchemaObject) -> None:
+        if not obj.title:
+            return
+
+        self.extra_template_data[name]['title'] = obj.title
 
     def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
         any_of_data_types: List[DataType] = []
@@ -297,6 +305,7 @@ class JsonSchemaParser(Parser):
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
         fields = self.parse_object_fields(obj)
 
+        self.set_title(name, obj)
         self.set_additional_properties(name, obj)
         data_model_type = self.data_model_type(
             name,

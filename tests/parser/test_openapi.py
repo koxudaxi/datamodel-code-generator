@@ -17,7 +17,7 @@ DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 class A(TemplateBase):
     def __init__(self, filename: str, data: str):
         self._data = data
-        super().__init__(filename)
+        super().__init__(Path(filename))
 
     def render(self) -> str:
         return self._data
