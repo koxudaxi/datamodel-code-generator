@@ -3,8 +3,9 @@ from typing import Dict
 
 import black
 import toml
-from datamodel_code_generator import PythonVersion
 from isort import SortImports
+
+from datamodel_code_generator import PythonVersion
 
 BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
     PythonVersion.PY_36: black.TargetVersion.PY36,

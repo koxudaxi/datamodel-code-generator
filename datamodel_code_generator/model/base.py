@@ -5,6 +5,9 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
 
+from jinja2 import Environment, FileSystemLoader, Template
+from pydantic import BaseModel, validator
+
 from datamodel_code_generator.imports import (
     IMPORT_LIST,
     IMPORT_OPTIONAL,
@@ -12,8 +15,6 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.types import DataType, Types
-from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel, validator
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 

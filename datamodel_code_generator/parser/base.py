@@ -16,6 +16,7 @@ from typing import (
 )
 
 import inflect
+
 from datamodel_code_generator.format import format_code
 
 from .. import PythonVersion

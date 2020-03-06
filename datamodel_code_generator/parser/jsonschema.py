@@ -12,11 +12,12 @@ from typing import (
     Union,
 )
 
+from pydantic import BaseModel, Field
+
 from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.enum import Enum
-from pydantic import BaseModel, Field
 
 from ..parser.base import Parser, get_singular_name
 from ..types import DataType, Types

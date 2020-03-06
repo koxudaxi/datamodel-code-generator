@@ -19,6 +19,7 @@ from typing import IO, Any, DefaultDict, Dict, Iterator, Optional, Sequence, Typ
 
 import argcomplete
 import yaml
+
 from datamodel_code_generator import PythonVersion, enable_debug_message
 from datamodel_code_generator.model.pydantic import (
     BaseModel,

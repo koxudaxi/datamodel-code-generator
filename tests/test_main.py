@@ -6,8 +6,9 @@ from typing import Mapping
 import pytest
 from _pytest.capture import CaptureFixture
 from _pytest.tmpdir import TempdirFactory
-from datamodel_code_generator.__main__ import Exit, main
 from freezegun import freeze_time
+
+from datamodel_code_generator.__main__ import Exit, main
 
 DATA_PATH: Path = Path(__file__).parent / 'data'
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
