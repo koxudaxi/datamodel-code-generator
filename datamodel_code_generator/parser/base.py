@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
@@ -90,6 +91,35 @@ def sort_data_models(
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
+def relative(current_module: str, reference: str) -> Tuple[str, str]:
+    """Find relative module path."""
+
+    current_module_path = current_module.split('.') if current_module else []
+    *reference_path, name = reference.split('.')
+
+    if current_module_path == reference_path:
+        return '', ''
+
+    i = 0
+    for x, y in zip(current_module_path, reference_path):
+        if x != y:
+            break
+        i += 1
+
+    left = '.' * (len(current_module_path) - i)
+    right = '.'.join(reference_path[i:])
+
+    if not left:
+        left = '.'
+    if not right:
+        right = name
+    elif '.' in right:
+        extra, right = right.rsplit('.', 1)
+        left += extra
+
+    return left, right
+
+
 class Parser(ABC):
     def __init__(
         self,
@@ -178,8 +208,10 @@ class Parser(ABC):
 
         module_key = lambda x: (*x.name.split('.')[:-1],)
 
+        # process in reverse order to correctly establish module levels
         grouped_models = groupby(
-            sorted(sorted_data_models.values(), key=module_key), key=module_key
+            sorted(sorted_data_models.values(), key=module_key, reverse=True),
+            key=module_key,
         )
         for module, models in ((k, [*v]) for k, v in grouped_models):
             module_path = '.'.join(module)
@@ -192,13 +224,27 @@ class Parser(ABC):
                 if model.name in require_update_action_models:
                     models_to_update += [model.name]
                 imports.append(model.imports)
+                for field in model.fields:
+                    type_hint = field.type_hint
+                    if type_hint is None:  # pragma: no cover
+                        continue
+                    for data_type in field.data_types:
+                        if '.' not in data_type.type:
+                            continue
+                        from_, import_ = relative(module_path, data_type.type)
+                        name = data_type.type.rsplit('.', 1)[-1]
+                        pattern = re.compile(rf'\b{re.escape(data_type.type)}\b')
+                        if from_ and import_:
+                            type_hint = pattern.sub(rf'{import_}.{name}', type_hint)
+                        else:
+                            type_hint = pattern.sub(name, type_hint)
+
+                    field.type_hint = type_hint
+
                 for ref_name in model.reference_classes:
-                    if '.' not in ref_name:
-                        continue
-                    ref_path = ref_name.rsplit('.', 1)[0]
-                    if ref_path == module_path:
-                        continue
-                    imports.append(Import(from_='.', import_=ref_path))
+                    from_, import_ = relative(module_path, ref_name)
+                    if from_ and import_:
+                        imports.append(Import(from_=from_, import_=import_))
 
             if with_import:
                 result += [imports.dump(), self.imports.dump(), '\n']
@@ -214,10 +260,13 @@ class Parser(ABC):
                 body = format_code(body, self.target_python_version)
 
             if module:
-                module = (*module[:-1], f'{module[-1]}.py')
                 parent = (*module[:-1], '__init__.py')
                 if parent not in results:
                     results[parent] = ''
+                if (*module, '__init__.py') in results:
+                    module = (*module, '__init__.py')
+                else:
+                    module = (*module[:-1], f'{module[-1]}.py')
             else:
                 module = ('__init__.py',)
 

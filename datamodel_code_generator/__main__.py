@@ -181,7 +181,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         if output.suffix:
             print('Modular references require an output directory, not a file')
             return Exit.ERROR
-        modules = {output.joinpath(*name): body for name, body in result.items()}
+        modules = {
+            output.joinpath(*name): body for name, body in sorted(result.items())
+        }
 
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     header = f'''\

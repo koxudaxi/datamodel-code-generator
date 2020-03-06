@@ -966,6 +966,10 @@ class Error(BaseModel):
 
 class Result(BaseModel):
     event: Optional[models.Event] = None
+
+
+class Source(BaseModel):
+    country: Optional[str] = None
 ''',
                 (
                     'models.py',
@@ -1034,7 +1038,24 @@ class api(BaseModel):
 class apis(BaseModel):
     __root__: List[api]
 ''',
-                ('foo', '__init__.py'): '',
+                (
+                    'foo',
+                    '__init__.py',
+                ): '''\
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class Tea(BaseModel):
+    flavour: Optional[str] = None
+
+
+class Cocoa(BaseModel):
+    quality: Optional[int] = None
+''',
                 (
                     'foo',
                     'bar.py',
@@ -1057,6 +1078,25 @@ class Thang(BaseModel):
 class Clone(Thing):
     pass
 ''',
+                ('woo', '__init__.py'): '',
+                (
+                    'woo',
+                    'boo.py',
+                ): '''\
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel
+
+from .. import Source, foo
+
+
+class Chocolate(BaseModel):
+    flavour: Optional[str] = None
+    source: Optional[Source] = None
+    cocoa: Optional[foo.Cocoa] = None
+''',
             },
         )
     ],
@@ -1068,7 +1108,8 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
         text=Path(DATA_PATH / 'modular.yaml').read_text(),
         base_class=base_class,
     )
-    assert parser.parse(with_import=with_import, format_=format_) == result
+    modules = parser.parse(with_import=with_import, format_=format_)
+    assert modules == result
 
 
 @pytest.mark.parametrize(

@@ -185,10 +185,6 @@ class DataModel(TemplateBase, ABC):
             prefix = f'{module}.'
             if self.base_class.startswith(prefix):
                 self.base_class = self.base_class.replace(prefix, '', 1)
-            for field in self.fields:
-                type_hint = field.type_hint
-                if type_hint is not None and prefix in type_hint:
-                    field.type_hint = type_hint.replace(prefix, '', 1)
         else:
             class_name = name
 

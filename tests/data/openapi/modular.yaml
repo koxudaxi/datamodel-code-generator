@@ -205,3 +205,23 @@ components:
     foo.bar.Clone:
       allOf:
         - $ref: '#/components/schemas/foo.bar.Thing'
+    foo.Tea:
+      properties:
+        flavour:
+          type: string
+    Source:
+      properties:
+        country:
+          type: string
+    foo.Cocoa:
+      properties:
+        quality:
+          type: integer
+    woo.boo.Chocolate:
+      properties:
+        flavour:
+          type: string
+        source:
+          $ref: '#/components/schemas/Source'
+        cocoa:
+          $ref: '#/components/schemas/foo.Cocoa'
