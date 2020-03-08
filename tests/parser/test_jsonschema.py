@@ -3,6 +3,7 @@ from typing import Dict
 from unittest.mock import Mock, call
 
 import pytest
+
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (

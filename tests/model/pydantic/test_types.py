@@ -1,4 +1,5 @@
 import pytest
+
 from datamodel_code_generator.imports import (
     IMPORT_CONFLOAT,
     IMPORT_CONINT,

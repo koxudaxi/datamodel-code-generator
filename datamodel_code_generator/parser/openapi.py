@@ -1,8 +1,9 @@
 from typing import Dict
 
+from prance import BaseParser
+
 from datamodel_code_generator import snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
-from prance import BaseParser
 
 
 @snooper_to_methods(max_variable_length=None)

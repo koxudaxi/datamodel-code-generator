@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Dict
 
 import pytest
+
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, sort_data_models

@@ -3,6 +3,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 import pytest
+
 from datamodel_code_generator.model.base import DataModel, DataModelField, TemplateBase
 from datamodel_code_generator.types import DataType, Types
 
