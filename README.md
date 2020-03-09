@@ -273,7 +273,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, UrlStr
+from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
@@ -298,10 +298,10 @@ class api(BaseModel):
     apiVersionNumber: Optional[str] = Field(
         None, description='To be used as a version parameter value'
     )
-    apiUrl: Optional[UrlStr] = Field(
+    apiUrl: Optional[AnyUrl] = Field(
         None, description="The URL describing the dataset's fields"
     )
-    apiDocumentationUrl: Optional[UrlStr] = Field(
+    apiDocumentationUrl: Optional[AnyUrl] = Field(
         None, description='A URL to the API console for each API'
     )
 
