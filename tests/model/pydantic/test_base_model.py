@@ -1,4 +1,5 @@
 import pytest
+
 from datamodel_code_generator.model.pydantic.base_model import BaseModel, DataModelField
 from datamodel_code_generator.types import DataType, Types
 
