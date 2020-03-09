@@ -37,7 +37,7 @@ def apply_black(code: str, python_version: PythonVersion) -> str:
         mode=black.FileMode(
             target_versions={BLACK_PYTHON_VERSION[python_version]},
             line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
-            string_normalization=config.get("string-normalization", False),
+            string_normalization=not config.get("skip-string-normalization", True),
         ),
     )
 
