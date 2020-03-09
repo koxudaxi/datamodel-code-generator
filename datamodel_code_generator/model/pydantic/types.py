@@ -48,7 +48,7 @@ type_map: Dict[Types, DataType] = {
         type='UUID5', imports_=[Import(from_='pydantic', import_='UUID5')]
     ),
     Types.uri: DataType(
-        type='UrlStr', imports_=[Import(from_='pydantic', import_='UrlStr')]
+        type='AnyUrl', imports_=[Import(from_='pydantic', import_='AnyUrl')]
     ),
     Types.ipv4: DataType(
         type='IPv4Address', imports_=[Import(from_='pydantic', import_='IPv4Address')]
