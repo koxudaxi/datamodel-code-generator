@@ -39,10 +39,11 @@ def optional(func: Callable) -> Callable:
 
 class DataModelField(BaseModel):
     name: Optional[str]
-    default: Optional[str]
+    default: Optional[Any]
     required: bool = False
     alias: Optional[str]
-    example: Optional[str]
+    example: Any
+    examples: Any
     description: Optional[str]
     title: Optional[str]
     data_types: List[DataType] = []
@@ -51,6 +52,7 @@ class DataModelField(BaseModel):
     imports: List[Import] = []
     type_hint: Optional[str] = None
     unresolved_types: List[str] = []
+    field: Optional[str]
 
     @optional
     def _get_type_hint(self) -> Optional[str]:
@@ -80,8 +82,6 @@ class DataModelField(BaseModel):
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
-        if not self.alias and 'name' in values:
-            self.alias = values['name']
         for data_type in self.data_types:
             self.unresolved_types.extend(data_type.unresolved_types)
             if data_type.imports_:

@@ -87,6 +87,9 @@ class JsonSchemaObject(BaseModel):
     )
     description: Optional[str]
     title: Optional[str]
+    example: Any
+    examples: Any
+    default: Any
 
     @property
     def is_object(self) -> bool:
@@ -296,6 +299,10 @@ class JsonSchemaParser(Parser):
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
+                    example=field.examples,
+                    description=field.description,
+                    default=field.default,
+                    title=field.title,
                     data_types=field_types,
                     required=required,
                     is_list=is_list,
@@ -352,6 +359,10 @@ class JsonSchemaParser(Parser):
 
         field = self.data_model_field_type(
             data_types=item_obj_data_types,
+            example=obj.examples,
+            default=obj.default,
+            description=obj.default,
+            title=obj.title,
             required=True,
             is_list=True,
             is_union=is_union,
@@ -384,7 +395,15 @@ class JsonSchemaParser(Parser):
 
         data_model_root_type = self.data_model_root_type(
             name,
-            [self.data_model_field_type(data_types=types, required=not obj.nullable)],
+            [
+                self.data_model_field_type(
+                    data_types=types,
+                    description=obj.description,
+                    example=obj.examples,
+                    default=obj.default,
+                    required=not obj.nullable,
+                )
+            ],
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,

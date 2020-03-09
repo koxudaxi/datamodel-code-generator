@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import BaseModel, Field, UrlStr
 
 
 class Pet(BaseModel):
@@ -76,10 +76,18 @@ class Error(BaseModel):
 
 
 class api(BaseModel):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: Optional[UrlStr] = Field(
+        None, description="The URL describing the dataset\'s fields"
+    )
+    apiDocumentationUrl: Optional[UrlStr] = Field(
+        None, description='A URL to the API console for each API'
+    )
 
 
 class apis(BaseModel):
@@ -124,7 +132,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import UrlStr
+from pydantic import Field, UrlStr
 
 from custom_module import Base
 
@@ -163,10 +171,18 @@ class Error(Base):
 
 
 class api(Base):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: Optional[UrlStr] = Field(
+        None, description="The URL describing the dataset\'s fields"
+    )
+    apiDocumentationUrl: Optional[UrlStr] = Field(
+        None, description='A URL to the API console for each API'
+    )
 
 
 class apis(Base):
@@ -209,7 +225,7 @@ def test_target_python_version():
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import BaseModel, Field, UrlStr
 
 
 class Pet(BaseModel):
@@ -246,10 +262,18 @@ class Error(BaseModel):
 
 
 class api(BaseModel):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: Optional[UrlStr] = Field(
+        None, description="The URL describing the dataset\'s fields"
+    )
+    apiDocumentationUrl: Optional[UrlStr] = Field(
+        None, description='A URL to the API console for each API'
+    )
 
 
 class apis(BaseModel):
@@ -349,7 +373,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import BaseModel, Field, UrlStr
 
 from . import models
 
@@ -367,10 +391,18 @@ class Rules(BaseModel):
 
 
 class api(BaseModel):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: Optional[UrlStr] = Field(
+        None, description="The URL describing the dataset\'s fields"
+    )
+    apiDocumentationUrl: Optional[UrlStr] = Field(
+        None, description='A URL to the API console for each API'
+    )
 
 
 class apis(BaseModel):
@@ -465,7 +497,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import BaseModel, Field, UrlStr
 
 
 class Pet(BaseModel):
@@ -502,10 +534,18 @@ class Error(BaseModel):
 
 
 class api(BaseModel):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: Optional[UrlStr] = Field(
+        None, description="The URL describing the dataset\'s fields"
+    )
+    apiDocumentationUrl: Optional[UrlStr] = Field(
+        None, description='A URL to the API console for each API'
+    )
 
 
 class apis(BaseModel):
@@ -546,7 +586,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import BaseModel, Field, UrlStr
 
 
 class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
@@ -659,6 +699,7 @@ from typing import (
 
 from pydantic import (
     BaseModel,
+    Field,
     UrlStr,
 )
 
@@ -699,16 +740,28 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[
         str
-    ] = None
+    ] = Field(
+        None,
+        description="To be used as a dataset parameter value",
+    )
     apiVersionNumber: Optional[
         str
-    ] = None
+    ] = Field(
+        None,
+        description="To be used as a version parameter value",
+    )
     apiUrl: Optional[
         UrlStr
-    ] = None
+    ] = Field(
+        None,
+        description="The URL describing the dataset\'s fields",
+    )
     apiDocumentationUrl: Optional[
         UrlStr
-    ] = None
+    ] = Field(
+        None,
+        description="A URL to the API console for each API",
+    )
 
 
 class apis(BaseModel):
