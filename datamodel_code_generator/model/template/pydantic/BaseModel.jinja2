@@ -9,7 +9,9 @@ class {{ class_name }}({{ base_class }}):
     {% include 'Config.jinja2' %}
 {%- endif %}
 {%- for field in fields -%}
-    {%- if field.required %}
+    {%- if field.field %}
+    {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
+    {%- elif field.required %}
     {{ field.name }}: {{ field.type_hint }}
     {%- else %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.default }}

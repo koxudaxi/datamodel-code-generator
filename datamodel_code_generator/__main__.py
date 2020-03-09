@@ -26,6 +26,7 @@ from datamodel_code_generator.model.pydantic import (
     CustomRootType,
     dump_resolve_reference_action,
 )
+from datamodel_code_generator.model.pydantic.base_model import DataModelField
 from datamodel_code_generator.parser.base import Parser
 
 
@@ -155,6 +156,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     parser = parser_class(
         BaseModel,
         CustomRootType,
+        DataModelField,
         base_class=namespace.base_class,
         custom_template_dir=namespace.custom_template_dir,
         extra_template_data=extra_template_data,
