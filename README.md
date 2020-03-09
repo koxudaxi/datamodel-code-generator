@@ -87,7 +87,7 @@ some parent of the output directory).
 Example `pyproject.toml`:
 ```toml
 [tool.black]
-string-normalization = true
+skip-string-normalization = true
 line-length = 100
 
 [tool.isort]
