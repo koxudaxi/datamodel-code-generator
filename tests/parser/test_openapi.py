@@ -40,7 +40,7 @@ class A(TemplateBase):
         ('string', 'date-time', 'datetime', 'datetime', 'datetime'),
         ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
         ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
-        ('string', 'uri', 'UrlStr', 'pydantic', 'UrlStr'),
+        ('string', 'uri', 'AnyUrl', 'pydantic', 'AnyUrl'),
         ('string', 'uuid', 'UUID', 'uuid', 'UUID'),
         ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1'),
         ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2'),
@@ -241,7 +241,7 @@ def test_parse_root_type(source_obj, generated_classes):
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import AnyUrl, BaseModel
 
 
 class Pet(BaseModel):
@@ -280,8 +280,8 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiUrl: Optional[AnyUrl] = None
+    apiDocumentationUrl: Optional[AnyUrl] = None
 
 
 class apis(BaseModel):
@@ -336,8 +336,8 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiUrl: Optional[AnyUrl] = None
+    apiDocumentationUrl: Optional[AnyUrl] = None
 
 
 class apis(BaseModel):
@@ -356,7 +356,7 @@ class Result(BaseModel):
             True,
             False,
             None,
-            '''from pydantic import BaseModel, UrlStr
+            '''from pydantic import AnyUrl, BaseModel
 from typing import List, Optional
 from __future__ import annotations
 
@@ -397,8 +397,8 @@ class Error(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiUrl: Optional[AnyUrl] = None
+    apiDocumentationUrl: Optional[AnyUrl] = None
 
 
 class apis(BaseModel):
@@ -420,7 +420,7 @@ class Result(BaseModel):
 
 from typing import List, Optional
 
-from pydantic import UrlStr
+from pydantic import AnyUrl
 
 from custom_module import Base
 
@@ -461,8 +461,8 @@ class Error(Base):
 class api(Base):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiUrl: Optional[AnyUrl] = None
+    apiDocumentationUrl: Optional[AnyUrl] = None
 
 
 class apis(Base):
@@ -996,7 +996,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, UrlStr
+from pydantic import AnyUrl, BaseModel
 
 from . import models
 
@@ -1016,8 +1016,8 @@ class Rules(BaseModel):
 class api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[UrlStr] = None
-    apiDocumentationUrl: Optional[UrlStr] = None
+    apiUrl: Optional[AnyUrl] = None
+    apiDocumentationUrl: Optional[AnyUrl] = None
 
 
 class apis(BaseModel):
