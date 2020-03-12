@@ -60,7 +60,7 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
     parser = OpenAPIParser(BaseModel, CustomRootType)
     assert parser.get_data_type(
         JsonSchemaObject(type=schema_type, format=schema_format)
-    ) == DataType(type=result_type, imports_=imports_)
+    ) == [DataType(type=result_type, imports_=imports_)]
 
 
 def test_get_data_type_invalid_obj():
