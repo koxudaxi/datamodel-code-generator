@@ -63,7 +63,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
 class JsonSchemaObject(BaseModel):
     items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
     uniqueItem: Optional[bool]
-    type: Optional[str]
+    type: Union[str, List[str], None]
     format: Optional[str]
     pattern: Optional[str]
     minLength: Optional[int]
@@ -135,14 +135,22 @@ class JsonSchemaParser(Parser):
             dump_resolve_reference_action,
         )
 
-    def get_data_type(self, obj: JsonSchemaObject) -> DataType:
-        format_ = obj.format or 'default'
+    def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
         if obj.type is None:
             raise ValueError(f'invalid schema object {obj}')
+        if isinstance(obj.type, list):
+            types: List[str] = [t for t in obj.type if t != 'null']
+            format_ = 'default'
+        else:
+            types = [obj.type]
+            format_ = obj.format or 'default'
 
-        return self.data_model_type.get_data_type(
-            json_schema_data_formats[obj.type][format_], **obj.dict()
-        )
+        return [
+            self.data_model_type.get_data_type(
+                json_schema_data_formats[t][format_], **obj.dict()
+            )
+            for t in types
+        ]
 
     def get_class_name(self, field_name: str) -> str:
         if '.' in field_name:
@@ -183,7 +191,7 @@ class JsonSchemaParser(Parser):
                 )
             elif not any(v for k, v in vars(any_of_item).items() if k != 'type'):
                 # trivial types
-                any_of_data_types.append(self.get_data_type(any_of_item))
+                any_of_data_types.extend(self.get_data_type(any_of_item))
             elif (
                 any_of_item.is_array
                 and isinstance(any_of_item.items, JsonSchemaObject)
@@ -194,7 +202,7 @@ class JsonSchemaParser(Parser):
                 # trivial item types
                 any_of_data_types.append(
                     self.data_type(
-                        type=f"List[{self.get_data_type(any_of_item.items).type_hint}]",
+                        type=f"List[{', '.join([t.type_hint for t in self.get_data_type(any_of_item.items)])}]",
                         imports_=[Import(from_='typing', import_='List')],
                     )
                 )
@@ -293,8 +301,7 @@ class JsonSchemaParser(Parser):
                     self.data_type(type=enum.name, ref=True, version_compatible=True)
                 ]
             else:
-                data_type = self.get_data_type(field)
-                field_types = [data_type]
+                field_types = self.get_data_type(field)
             required: bool = field_name in requires
             fields.append(
                 self.data_model_field_type(
@@ -355,7 +362,7 @@ class JsonSchemaParser(Parser):
                 singular_name = get_singular_name(name)
                 item_obj_data_types.extend(self.parse_all_of(singular_name, item))
             else:
-                item_obj_data_types.append(self.get_data_type(item))
+                item_obj_data_types.extend(self.get_data_type(item))
 
         field = self.data_model_field_type(
             data_types=item_obj_data_types,
@@ -383,7 +390,7 @@ class JsonSchemaParser(Parser):
 
     def parse_root_type(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.type:
-            types: List[DataType] = [self.get_data_type(obj)]
+            types: List[DataType] = self.get_data_type(obj)
         elif obj.anyOf:
             types = self.parse_any_of(name, obj)
         else:
