@@ -145,9 +145,12 @@ class JsonSchemaParser(Parser):
             types = [obj.type]
             format_ = obj.format or 'default'
 
-        return [self.data_model_type.get_data_type(
-            json_schema_data_formats[t][format_], **obj.dict()
-        ) for t in types]
+        return [
+            self.data_model_type.get_data_type(
+                json_schema_data_formats[t][format_], **obj.dict()
+            )
+            for t in types
+        ]
 
     def get_class_name(self, field_name: str) -> str:
         if '.' in field_name:

@@ -65,16 +65,13 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
 
 @pytest.mark.parametrize(
     'schema_types,result_types',
-    [
-        (['integer', 'number'], ['int', 'float']),
-        (['integer', 'null'], ['int']),
-    ],
+    [(['integer', 'number'], ['int', 'float']), (['integer', 'null'], ['int']),],
 )
 def test_get_data_type_array(schema_types, result_types):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    assert parser.get_data_type(
-        JsonSchemaObject(type=schema_types)
-    ) == [DataType(type=r) for r in result_types]
+    assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == [
+        DataType(type=r) for r in result_types
+    ]
 
 
 def test_get_data_type_invalid_obj():
