@@ -136,13 +136,14 @@ class JsonSchemaParser(Parser):
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
-        format_ = obj.format or 'default'
         if obj.type is None:
             raise ValueError(f'invalid schema object {obj}')
         if isinstance(obj.type, list):
             types: List[str] = [t for t in obj.type if t != 'null']
+            format_ = 'default'
         else:
             types = [obj.type]
+            format_ = obj.format or 'default'
 
         return [self.data_model_type.get_data_type(
             json_schema_data_formats[t][format_], **obj.dict()
