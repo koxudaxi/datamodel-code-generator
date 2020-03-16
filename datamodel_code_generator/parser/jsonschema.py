@@ -24,7 +24,9 @@ from ..types import DataType, Types
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict:
-    if len(keys) == 1:
+    if len(keys) == 0:
+        return schema
+    elif len(keys) == 1:
         return schema[keys[0]]
     return get_model_by_path(schema[keys[0]], keys[1:])
 
@@ -399,7 +401,6 @@ class JsonSchemaParser(Parser):
                     type=obj.ref_object_name, ref=True, version_compatible=True
                 )
             ]
-
         data_model_root_type = self.data_model_root_type(
             name,
             [
@@ -465,11 +466,12 @@ class JsonSchemaParser(Parser):
 
                         ref_body = yaml.safe_load(f)
                     object_parents = object_path.split('/')
-                    ref_path = str(full_path) + '#/' + object_path
+                    ref_path = str(full_path) + '#/' + '/'.join(object_parents[:-1])
                     if ref_path not in self.excludes_ref_path:
-                        self.excludes_ref_path.add(str(full_path) + '#/' + object_path)
-                        model = get_model_by_path(ref_body, object_parents)
-                        self.parse_raw_obj(object_parents[-1], model)
+                        self.excludes_ref_path.add(ref_path)
+                        models = get_model_by_path(ref_body, object_parents[:-1])
+                        for model_name, model in models.items():
+                            self.parse_raw_obj(model_name, model)
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
@@ -506,3 +508,6 @@ class JsonSchemaParser(Parser):
         raw_obj: Dict[str, Any] = json.loads(self.text)  # type: ignore
         obj_name = raw_obj.get('title', 'Model')
         self.parse_raw_obj(obj_name, raw_obj)
+        definitions = raw_obj.get('definitions', {})
+        for key, model in definitions.items():
+            self.parse_raw_obj(key, model)
