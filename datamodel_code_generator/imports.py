@@ -21,11 +21,11 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
     @classmethod
     def create_line(cls, from_: Optional[str], imports: Set[str]) -> str:
-        line: str = ''
-        if from_:  # pragma: no cover
+        if from_:
             line = f'from {from_} '
-        line += f"import {', '.join(sorted(imports))}"
-        return line
+            line += f"import {', '.join(sorted(imports))}"
+            return line
+        return '\n'.join(f'import {i}\n' for i in sorted(imports))
 
     def dump(self) -> str:
         return '\n'.join(
@@ -37,7 +37,10 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             if isinstance(imports, Import):
                 imports = [imports]
             for import_ in imports:
-                self[import_.from_].add(import_.import_)
+                if import_.import_.count('.') >= 1:
+                    self[None].add(import_.import_)
+                else:
+                    self[import_.from_].add(import_.import_)
 
 
 IMPORT_ANY = Import(import_='Any', from_='typing')

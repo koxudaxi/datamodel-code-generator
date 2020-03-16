@@ -69,7 +69,7 @@ def sort_data_models(
             sorted_data_models[model.name] = model
             require_update_action_models.append(model.name)
         elif (
-            not set(model.reference_classes) - set(model.name) - set(sorted_data_models)
+            not set(model.reference_classes) - {model.name} - set(sorted_data_models)
         ):  # reference classes have been resolved
             sorted_data_models[model.name] = model
             if model.name in model.reference_classes:
