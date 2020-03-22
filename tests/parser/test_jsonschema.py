@@ -95,3 +95,24 @@ def test_parse_object(source_obj, generated_classes):
     parser = JsonSchemaParser(BaseModel, CustomRootType)
     parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj))
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+@pytest.mark.parametrize(
+    'source_obj,generated_classes',
+    [
+        (
+            {
+                "$id": "https://example.com/person.schema.json",
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "AnyJson",
+                "description": "This field accepts any object",
+            },
+            """class AnyObject(BaseModel):
+    __root__: Any""",
+        )
+    ],
+)
+def test_parse_any_root_object(source_obj, generated_classes):
+    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser.parse_root_type('AnyObject', JsonSchemaObject.parse_obj(source_obj))
+    assert dump_templates(list(parser.results)) == generated_classes
