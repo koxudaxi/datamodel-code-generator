@@ -26,8 +26,8 @@ def test_base_model_optional():
     assert base_model.fields == [field]
     assert base_model.decorators == []
     assert (
-            base_model.render() == 'class test_model(BaseModel):\n'
-                                   '    a: Optional[str] = \'abc\''
+        base_model.render() == 'class test_model(BaseModel):\n'
+        '    a: Optional[str] = \'abc\''
     )
 
 
@@ -48,9 +48,9 @@ def test_base_model_decorator():
     assert base_model.base_class == 'Base'
     assert base_model.decorators == ['@validate']
     assert (
-            base_model.render() == '@validate\n'
-                                   'class test_model(Base):\n'
-                                   '    a: Optional[str] = \'abc\''
+        base_model.render() == '@validate\n'
+        'class test_model(Base):\n'
+        '    a: Optional[str] = \'abc\''
     )
 
 
@@ -69,8 +69,8 @@ def test_base_model_reserved_name():
     assert base_model.fields == [field]
     assert base_model.decorators == []
     assert (
-            base_model.render()
-            == """class test_model(BaseModel):
+        base_model.render()
+        == """class test_model(BaseModel):
     except_: str = Field(..., alias='except')"""
     )
 
@@ -84,8 +84,8 @@ def test_base_model_reserved_name():
     assert base_model.fields == [field]
     assert base_model.decorators == []
     assert (
-            base_model.render()
-            == """class test_model(BaseModel):
+        base_model.render()
+        == """class test_model(BaseModel):
     def_: str = Field(..., alias='def-field')"""
     )
 
@@ -97,12 +97,12 @@ def test_base_model_reserved_name():
         ({'required': True, 'example': 'example'}, "Field(..., example='example')"),
         ({'example': 'example'}, "Field(None, example='example')"),
         (
-                {'required': True, 'default': 123, 'example': 'example'},
-                "Field(..., example='example')",
+            {'required': True, 'default': 123, 'example': 'example'},
+            "Field(..., example='example')",
         ),
         (
-                {'required': False, 'default': 123, 'example': 'example'},
-                "Field(123, example='example')",
+            {'required': False, 'default': 123, 'example': 'example'},
+            "Field(123, example='example')",
         ),
         ({'description': 'description'}, "Field(None, description='description')"),
         ({'title': 'title'}, "Field(None, title='title')"),
@@ -110,18 +110,18 @@ def test_base_model_reserved_name():
         ({'example': True}, "Field(None, example=True)"),
         ({'examples': True}, "Field(None, examples=True)"),
         (
-                {
-                    'example': True,
-                    'description': 'description',
-                    'title': 'title',
-                    'alias': 'alias',
-                },
-                "Field(None, alias='alias',example=True,description='description',title='title')",
+            {
+                'example': True,
+                'description': 'description',
+                'title': 'title',
+                'alias': 'alias',
+            },
+            "Field(None, alias='alias',example=True,description='description',title='title')",
         ),
         ({'examples': [1, 2, 3]}, "Field(None, examples=[1, 2, 3])"),
         (
-                {'examples': {'name': 'dog', 'age': 1}},
-                'Field(None, examples={"\'name\'": "\'dog\'", "\'age\'": 1})',
+            {'examples': {'name': 'dog', 'age': 1}},
+            'Field(None, examples={"\'name\'": "\'dog\'", "\'age\'": 1})',
         ),
     ],
 )
