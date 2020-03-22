@@ -15,7 +15,7 @@ from typing import (
 from pydantic import BaseModel, Field
 
 from datamodel_code_generator import PythonVersion, snooper_to_methods
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.enum import Enum
 
@@ -395,10 +395,16 @@ class JsonSchemaParser(Parser):
             types: List[DataType] = self.get_data_type(obj)
         elif obj.anyOf:
             types = self.parse_any_of(name, obj)
-        else:
+        elif obj.ref:
             types = [
                 self.data_type(
                     type=obj.ref_object_name, ref=True, version_compatible=True
+                )
+            ]
+        else:
+            types = [
+                self.data_type(
+                    type='Any', version_compatible=True, imports_=[IMPORT_ANY]
                 )
             ]
         data_model_root_type = self.data_model_root_type(
