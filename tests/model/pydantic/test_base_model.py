@@ -26,8 +26,8 @@ def test_base_model_optional():
     assert base_model.fields == [field]
     assert base_model.decorators == []
     assert (
-        base_model.render() == 'class test_model(BaseModel):\n'
-        '    a: Optional[str] = \'abc\''
+            base_model.render() == 'class test_model(BaseModel):\n'
+                                   '    a: Optional[str] = \'abc\''
     )
 
 
@@ -48,14 +48,46 @@ def test_base_model_decorator():
     assert base_model.base_class == 'Base'
     assert base_model.decorators == ['@validate']
     assert (
-        base_model.render() == '@validate\n'
-        'class test_model(Base):\n'
-        '    a: Optional[str] = \'abc\''
+            base_model.render() == '@validate\n'
+                                   'class test_model(Base):\n'
+                                   '    a: Optional[str] = \'abc\''
     )
 
 
 def test_base_model_get_data_type():
     assert BaseModel.get_data_type(Types.integer) == DataType(type='int')
+
+
+def test_base_model_reserved_name():
+    field = DataModelField(
+        name='except', data_types=[DataType(type='str')], required=True
+    )
+
+    base_model = BaseModel(name='test_model', fields=[field])
+
+    assert base_model.name == 'test_model'
+    assert base_model.fields == [field]
+    assert base_model.decorators == []
+    assert (
+            base_model.render()
+            == """class test_model(BaseModel):
+    except_: str = Field(..., alias='except')"""
+    )
+
+    field = DataModelField(
+        name='def', data_types=[DataType(type='str')], required=True, alias='def-field'
+    )
+
+    base_model = BaseModel(name='test_model', fields=[field])
+
+    assert base_model.name == 'test_model'
+    assert base_model.fields == [field]
+    assert base_model.decorators == []
+    assert (
+            base_model.render()
+            == """class test_model(BaseModel):
+    def_: str = Field(..., alias='def-field')"""
+    )
 
 
 @pytest.mark.parametrize(
@@ -65,12 +97,12 @@ def test_base_model_get_data_type():
         ({'required': True, 'example': 'example'}, "Field(..., example='example')"),
         ({'example': 'example'}, "Field(None, example='example')"),
         (
-            {'required': True, 'default': 123, 'example': 'example'},
-            "Field(..., example='example')",
+                {'required': True, 'default': 123, 'example': 'example'},
+                "Field(..., example='example')",
         ),
         (
-            {'required': False, 'default': 123, 'example': 'example'},
-            "Field(123, example='example')",
+                {'required': False, 'default': 123, 'example': 'example'},
+                "Field(123, example='example')",
         ),
         ({'description': 'description'}, "Field(None, description='description')"),
         ({'title': 'title'}, "Field(None, title='title')"),
@@ -78,18 +110,18 @@ def test_base_model_get_data_type():
         ({'example': True}, "Field(None, example=True)"),
         ({'examples': True}, "Field(None, examples=True)"),
         (
-            {
-                'example': True,
-                'description': 'description',
-                'title': 'title',
-                'alias': 'alias',
-            },
-            "Field(None, alias='alias',example=True,description='description',title='title')",
+                {
+                    'example': True,
+                    'description': 'description',
+                    'title': 'title',
+                    'alias': 'alias',
+                },
+                "Field(None, alias='alias',example=True,description='description',title='title')",
         ),
         ({'examples': [1, 2, 3]}, "Field(None, examples=[1, 2, 3])"),
         (
-            {'examples': {'name': 'dog', 'age': 1}},
-            'Field(None, examples={"\'name\'": "\'dog\'", "\'age\'": 1})',
+                {'examples': {'name': 'dog', 'age': 1}},
+                'Field(None, examples={"\'name\'": "\'dog\'", "\'age\'": 1})',
         ),
     ],
 )

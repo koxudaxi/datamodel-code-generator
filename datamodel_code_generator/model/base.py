@@ -1,3 +1,4 @@
+import keyword
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -6,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
 
 from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, root_validator
 
 from datamodel_code_generator.imports import (
     IMPORT_LIST,
@@ -76,9 +77,22 @@ class DataModelField(BaseModel):
         self.imports.append(IMPORT_UNION)
         return f'{UNION}[{type_hint}]'
 
-    @validator('name')
-    def validate_name(cls, name: Any) -> Any:
-        return re.sub(r'\W', '_', name)
+    @root_validator
+    def validate_root(cls, values: Any) -> Dict[str, Any]:
+        name = values.get('name')
+        if name:
+            if keyword.iskeyword(name):
+                alias = name
+                name += '_'
+            elif re.search(r'\W', name):
+                alias = name
+                name = re.sub(r'\W', '_', name)
+            else:
+                return values
+            if not values.get('alias'):
+                values['alias'] = alias
+            values['name'] = name
+        return values
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
