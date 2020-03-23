@@ -5,7 +5,6 @@ from json import JSONDecodeError
 from typing import Callable, Dict, Optional, Type, TypeVar
 
 import pysnooper
-
 import yaml
 
 T = TypeVar('T')
