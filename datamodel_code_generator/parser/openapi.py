@@ -1,19 +1,21 @@
-from typing import Dict
+from typing import Any, Dict
 
-from prance import BaseParser
-
-from datamodel_code_generator import snooper_to_methods
+from datamodel_code_generator import load_json_or_yaml, snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
     def parse_raw(self) -> None:
-        base_parser = BaseParser(
-            spec_string=self.text, backend='openapi-spec-validator'
-        )
+        if self.validation:
+            from prance import BaseParser
 
-        for obj_name, raw_obj in base_parser.specification['components'][
-            'schemas'
-        ].items():  # type: str, Dict
+            base_parser = BaseParser(
+                spec_string=self.text, backend='openapi-spec-validator'
+            )
+            components: Dict[str, Any] = base_parser.specification['components']
+        else:
+            components = load_json_or_yaml(self.text)['components']  # type: ignore
+
+        for obj_name, raw_obj in components['schemas'].items():  # type: str, Dict
             self.parse_raw_obj(obj_name, raw_obj)

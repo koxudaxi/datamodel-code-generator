@@ -13,14 +13,16 @@ from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from datetime import datetime, timezone
 from enum import IntEnum
-from json import JSONDecodeError
 from pathlib import Path
 from typing import IO, Any, DefaultDict, Dict, Iterator, Optional, Sequence, Type
 
 import argcomplete
-import yaml
 
-from datamodel_code_generator import PythonVersion, enable_debug_message
+from datamodel_code_generator import (
+    PythonVersion,
+    enable_debug_message,
+    load_json_or_yaml,
+)
 from datamodel_code_generator.model.pydantic import (
     BaseModel,
     CustomRootType,
@@ -61,11 +63,7 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
 
 
 def is_openapi(text: str) -> bool:
-    try:
-        spec = json.loads(text)
-    except JSONDecodeError:
-        spec = yaml.safe_load(text)
-    return 'openapi' in spec
+    return 'openapi' in load_json_or_yaml(text)
 
 
 arg_parser = ArgumentParser()
@@ -99,6 +97,9 @@ arg_parser.add_argument(
     help='target python version (default: 3.7)',
     choices=['3.6', '3.7'],
     default='3.7',
+)
+arg_parser.add_argument(
+    '--validation', help='Enable validation (Only OpenAPI)', action='store_true'
 )
 arg_parser.add_argument('--debug', help='show debug message', action='store_true')
 arg_parser.add_argument('--version', help='show version', action='store_true')
@@ -163,6 +164,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         target_python_version=PythonVersion(namespace.target_python_version),
         text=text,
         dump_resolve_reference_action=dump_resolve_reference_action,
+        validation=namespace.validation,
     )
 
     output = Path(namespace.output) if namespace.output is not None else None

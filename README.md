@@ -58,6 +58,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--target-python-version {3.6,3.7}] [--debug]
+                         [--validation Enable validation (Only OpenAPI)]
                          [--version]
 
 optional arguments:
@@ -73,6 +74,7 @@ optional arguments:
                         Extra Template Data
   --target-python-version {3.6,3.7}
                         target python version (default: 3.7)
+  --validation          Enable validation (Only OpenAPI)
   --debug               show debug message
   --version             show version
 ```
