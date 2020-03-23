@@ -1,8 +1,12 @@
 import inspect
+import json
 from enum import Enum
-from typing import Callable, Type, TypeVar
+from json import JSONDecodeError
+from typing import Callable, Dict, Optional, Type, TypeVar
 
 import pysnooper
+
+import yaml
 
 T = TypeVar('T')
 
@@ -48,3 +52,11 @@ def snooper_to_methods(  # type: ignore
         return cls
 
     return inner
+
+
+def load_json_or_yaml(text: str) -> Dict:
+    try:
+        data = json.loads(text)
+    except JSONDecodeError:
+        data = yaml.safe_load(text)
+    return data

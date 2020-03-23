@@ -123,6 +123,7 @@ class JsonSchemaParser(Parser):
         text: Optional[str] = None,
         result: Optional[List[DataModel]] = None,
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
+        validation: bool = False,
     ):
         super().__init__(
             data_model_type,
@@ -135,6 +136,7 @@ class JsonSchemaParser(Parser):
             text,
             result,
             dump_resolve_reference_action,
+            validation,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
