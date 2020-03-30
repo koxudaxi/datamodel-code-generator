@@ -1,11 +1,11 @@
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, Tuple
 
 import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelField
 from datamodel_code_generator.model.pydantic import BaseModel
-from datamodel_code_generator.parser.base import Parser, sort_data_models
+from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
 
 
 class A(DataModel):
@@ -61,3 +61,19 @@ def test_sort_data_models_unresolved():
 
     with pytest.raises(Exception):
         sort_data_models(reference)
+
+
+@pytest.mark.parametrize(
+    'current_module,reference,val',
+    [
+        ('', 'Foo', ('', '')),
+        ('a', 'a.Foo', ('', '')),
+        ('a', 'a.b.Foo', ('.', 'b')),
+        ('a.b', 'a.Foo', ('.', 'Foo')),
+        ('a.b.c', 'a.Foo', ('..', 'Foo')),
+        ('a.b.c', 'Foo', ('...', 'Foo')),
+    ],
+)
+def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
+
+    assert relative(current_module, reference) == val

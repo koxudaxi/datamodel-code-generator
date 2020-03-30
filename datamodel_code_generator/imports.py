@@ -25,7 +25,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             line = f'from {from_} '
             line += f"import {', '.join(sorted(imports))}"
             return line
-        return '\n'.join(f'import {i}\n' for i in sorted(imports))
+        return '\n'.join(f'import {i}' for i in sorted(imports))
 
     def dump(self) -> str:
         return '\n'.join(
