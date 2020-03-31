@@ -1,6 +1,6 @@
 [run]
 branch = True
-source=datamodel_code_generator
+source = datamodel_code_generator
 
 [report]
 exclude_lines =
