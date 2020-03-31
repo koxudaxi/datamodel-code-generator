@@ -7,6 +7,8 @@ from typing import Callable, Dict, Optional, Type, TypeVar
 import pysnooper
 import yaml
 
+from .version import version as __version__
+
 T = TypeVar('T')
 
 pysnooper.tracer.DISABLED = True
