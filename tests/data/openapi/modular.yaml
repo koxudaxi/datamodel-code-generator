@@ -209,6 +209,8 @@ components:
       properties:
         flavour:
           type: string
+        id:
+          $ref: '#/components/schemas/Id'
     Source:
       properties:
         country:
