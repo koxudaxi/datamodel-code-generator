@@ -216,6 +216,19 @@ class Parser(ABC):
         for module, models in ((k, [*v]) for k, v in grouped_models):
             module_path = '.'.join(module)
 
+            init = False
+            if module:
+                parent = (*module[:-1], '__init__.py')
+                if parent not in results:
+                    results[parent] = ''
+                if (*module, '__init__.py') in results:
+                    module = (*module, '__init__.py')
+                    init = True
+                else:
+                    module = (*module[:-1], f'{module[-1]}.py')
+            else:
+                module = ('__init__.py',)
+
             result: List[str] = []
             imports = Imports()
             models_to_update: List[str] = []
@@ -243,6 +256,8 @@ class Parser(ABC):
 
                 for ref_name in model.reference_classes:
                     from_, import_ = relative(module_path, ref_name)
+                    if init:
+                        from_ += "."
                     if from_ and import_:
                         imports.append(Import(from_=from_, import_=import_))
 
@@ -258,17 +273,6 @@ class Parser(ABC):
             body = '\n'.join(result)
             if format_:
                 body = format_code(body, self.target_python_version)
-
-            if module:
-                parent = (*module[:-1], '__init__.py')
-                if parent not in results:
-                    results[parent] = ''
-                if (*module, '__init__.py') in results:
-                    module = (*module, '__init__.py')
-                else:
-                    module = (*module[:-1], f'{module[-1]}.py')
-            else:
-                module = ('__init__.py',)
 
             results[module] = body
 
