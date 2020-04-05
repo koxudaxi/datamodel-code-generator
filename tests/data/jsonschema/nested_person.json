@@ -6,10 +6,21 @@
   "properties": {
     "nested_deep_childJson": {
       "$ref": "#/definitions/nested.deep.Json"
+    },
+    "empty_parent_nested_deep_childJson": {
+      "$ref": "#/definitions/empty_parent.nested.deep.Json"
     }
   },
   "definitions": {
     "nested.deep.Json": {
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string"
+        }
+      }
+    },
+    "empty_parent.nested.deep.Json": {
       "type": "object",
       "properties": {
         "firstName": {
