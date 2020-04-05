@@ -1,4 +1,5 @@
-from typing import DefaultDict, List, Optional, Set, Union
+from collections import defaultdict
+from typing import DefaultDict, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel
 
@@ -6,6 +7,7 @@ from pydantic import BaseModel
 class Import(BaseModel):
     from_: Optional[str] = None
     import_: str
+    alias: Optional[str]
 
     @classmethod
     def from_full_path(cls, class_path: str) -> 'Import':
@@ -18,14 +20,20 @@ class Import(BaseModel):
 class Imports(DefaultDict[Optional[str], Set[str]]):
     def __init__(self) -> None:
         super().__init__(set)
+        self.alias: DefaultDict[Optional[str], Dict[str, str]] = defaultdict(dict)
 
-    @classmethod
-    def create_line(cls, from_: Optional[str], imports: Set[str]) -> str:
+    def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
+        return [
+            f'{i} as {self.alias[from_][i]}' if i in self.alias[from_] else i
+            for i in sorted(imports)
+        ]
+
+    def create_line(self, from_: Optional[str], imports: Set[str]) -> str:
         if from_:
             line = f'from {from_} '
-            line += f"import {', '.join(sorted(imports))}"
+            line += f"import {', '.join(self._set_alias(from_, imports))}"
             return line
-        return '\n'.join(f'import {i}' for i in sorted(imports))
+        return '\n'.join(f'import {i}' for i in self._set_alias(from_, imports))
 
     def dump(self) -> str:
         return '\n'.join(
@@ -41,6 +49,8 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                     self[None].add(import_.import_)
                 else:
                     self[import_.from_].add(import_.import_)
+                    if import_.alias:
+                        self.alias[import_.from_][import_.import_] = import_.alias
 
 
 IMPORT_ANY = Import(import_='Any', from_='typing')

@@ -120,6 +120,15 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
+def get_uniq_name(name: str, excludes: Set[str]) -> str:
+    uniq_name: str = name
+    count: int = 1
+    while uniq_name in excludes:
+        uniq_name = f'{name}_{count}'
+        count += 1
+    return uniq_name
+
+
 class Parser(ABC):
     def __init__(
         self,
@@ -176,15 +185,7 @@ class Parser(ABC):
 
     def get_class_name(self, field_name: str) -> str:
         upper_camel_name = snake_to_upper_camel(field_name)
-        return self.get_uniq_name(upper_camel_name)
-
-    def get_uniq_name(self, name: str) -> str:
-        uniq_name: str = name
-        count: int = 1
-        while uniq_name in self.created_model_names:
-            uniq_name = f'{name}_{count}'
-            count += 1
-        return uniq_name
+        return get_uniq_name(upper_camel_name, self.created_model_names)
 
     @abstractmethod
     def parse_raw(self) -> None:
@@ -234,6 +235,8 @@ class Parser(ABC):
             models_to_update: List[str] = []
 
             for model in models:
+                used_import_names: Set[str] = set()
+                alias_map: Dict[str, str] = {}
                 if model.name in require_update_action_models:
                     models_to_update += [model.name]
                 imports.append(model.imports)
@@ -245,10 +248,14 @@ class Parser(ABC):
                         if '.' not in data_type.type:
                             continue
                         from_, import_ = relative(module_path, data_type.type)
+                        alias = get_uniq_name(import_, used_import_names)
+                        used_import_names.add(import_)
+                        if alias != import_:
+                            alias_map[f'{from_}/{import_}'] = alias
                         name = data_type.type.rsplit('.', 1)[-1]
                         pattern = re.compile(rf'\b{re.escape(data_type.type)}\b')
                         if from_ and import_:
-                            type_hint = pattern.sub(rf'{import_}.{name}', type_hint)
+                            type_hint = pattern.sub(rf'{alias}.{name}', type_hint)
                         else:
                             type_hint = pattern.sub(name, type_hint)
 
@@ -259,7 +266,13 @@ class Parser(ABC):
                     if init:
                         from_ += "."
                     if from_ and import_:
-                        imports.append(Import(from_=from_, import_=import_))
+                        imports.append(
+                            Import(
+                                from_=from_,
+                                import_=import_,
+                                alias=alias_map.get(f'{from_}/{import_}'),
+                            )
+                        )
 
             if with_import:
                 result += [imports.dump(), self.imports.dump(), '\n']

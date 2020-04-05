@@ -195,7 +195,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     for path, body in modules.items():
         if path is not None:
             if not path.parent.exists():
-                path.parent.mkdir()
+                path.parent.mkdir(parents=True)
             file = path.open('wt')
         else:
             file = None
