@@ -71,3 +71,4 @@ class Types(Enum):
     ipv6 = auto()
     boolean = auto()
     object = auto()
+    null = auto()

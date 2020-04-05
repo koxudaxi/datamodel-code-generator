@@ -64,6 +64,7 @@ type_map: Dict[Types, DataType] = {
             Import(from_='typing', import_='Dict'),
         ],
     ),
+    Types.null: DataType(type='Any', imports_=[Import(from_='typing', import_='Any')]),
 }
 
 kwargs_schema_to_model = {
