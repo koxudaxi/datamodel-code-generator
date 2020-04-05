@@ -16,6 +16,12 @@
       "description": "Age in years which must be equal to or greater than zero.",
       "type": "integer",
       "minimum": 0
+    },
+    "friends": {
+      "type": "array"
+    },
+    "comment": {
+      "type": "null"
     }
   }
 }

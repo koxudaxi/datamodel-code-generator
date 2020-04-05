@@ -59,6 +59,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
     },
     'boolean': {'default': Types.boolean},
     'object': {'default': Types.object},
+    'null': {'default': Types.null},
 }
 
 
@@ -341,7 +342,7 @@ class JsonSchemaParser(Parser):
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
-            items = obj.items  # type: ignore
+            items = obj.items or []  # type: ignore
         item_obj_data_types: List[DataType] = []
         is_union: bool = False
         for item in items:
