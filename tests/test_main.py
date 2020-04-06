@@ -447,6 +447,7 @@ from .nested import deep
 
 class NestedPerson(BaseModel):
     nested_deep_childJson: Optional[deep.Json] = None
+    nested_deep_childAnother: Optional[deep.Another] = None
     empty_parent_nested_deep_childJson: Optional[deep_1.Json] = None
 '''
         )
@@ -465,6 +466,10 @@ from pydantic import BaseModel
 
 
 class Json(BaseModel):
+    firstName: Optional[str] = None
+
+
+class Another(BaseModel):
     firstName: Optional[str] = None
 '''
         )

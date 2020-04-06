@@ -431,7 +431,9 @@ class JsonSchemaParser(Parser):
         enum_fields = []
 
         for i, enum_part in enumerate(obj.enum):  # type: ignore
-            if obj.type == 'string':
+            if obj.type == 'string' or (
+                isinstance(obj.type, list) and 'string' in obj.type
+            ):
                 default = f"'{enum_part}'"
                 field_name = enum_part
             else:
