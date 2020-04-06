@@ -575,12 +575,12 @@ class DuplicateObject1(BaseModel):
     event: Optional[List[Event]] = None
 
 
-class Event_1(BaseModel):
+class Event1(BaseModel):
     event: Optional[Event] = None
 
 
 class DuplicateObject2(BaseModel):
-    event: Optional[Event_1] = None
+    event: Optional[Event1] = None
 
 
 class DuplicateObject3(BaseModel):

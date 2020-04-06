@@ -120,11 +120,14 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
-def get_uniq_name(name: str, excludes: Set[str]) -> str:
+def get_uniq_name(name: str, excludes: Set[str], camel: bool = False) -> str:
     uniq_name: str = name
     count: int = 1
     while uniq_name in excludes:
-        uniq_name = f'{name}_{count}'
+        if camel:
+            uniq_name = f'{name}{count}'
+        else:
+            uniq_name = f'{name}_{count}'
         count += 1
     return uniq_name
 
@@ -185,7 +188,7 @@ class Parser(ABC):
 
     def get_class_name(self, field_name: str) -> str:
         upper_camel_name = snake_to_upper_camel(field_name)
-        return get_uniq_name(upper_camel_name, self.created_model_names)
+        return get_uniq_name(upper_camel_name, self.created_model_names, camel=True)
 
     @abstractmethod
     def parse_raw(self) -> None:
@@ -236,7 +239,7 @@ class Parser(ABC):
 
             for model in models:
                 used_import_names: Set[str] = set()
-                alias_map: Dict[str, str] = {}
+                alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
                     models_to_update += [model.name]
                 imports.append(model.imports)
@@ -248,10 +251,13 @@ class Parser(ABC):
                         if '.' not in data_type.type:
                             continue
                         from_, import_ = relative(module_path, data_type.type)
-                        alias = get_uniq_name(import_, used_import_names)
-                        used_import_names.add(import_)
-                        if alias != import_:
-                            alias_map[f'{from_}/{import_}'] = alias
+                        full_path = f'{from_}/{import_}'
+                        if full_path in alias_map:
+                            alias = alias_map[full_path] or import_
+                        else:
+                            alias = get_uniq_name(import_, used_import_names)
+                            used_import_names.add(import_)
+                            alias_map[full_path] = None if alias == import_ else alias
                         name = data_type.type.rsplit('.', 1)[-1]
                         pattern = re.compile(rf'\b{re.escape(data_type.type)}\b')
                         if from_ and import_:
