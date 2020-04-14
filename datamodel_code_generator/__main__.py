@@ -12,7 +12,7 @@ import sys
 from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from datetime import datetime, timezone
-from enum import IntEnum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import IO, Any, DefaultDict, Dict, Iterator, Optional, Sequence, Type
 
@@ -38,6 +38,14 @@ class Exit(IntEnum):
     OK = 0
     ERROR = 1
     KeyboardInterrupt = 2
+
+
+class InputFileType(Enum):
+    Auto = 'auto'
+    OpenAPI = 'openapi'
+    JsonSchema = 'jsonschema'
+    Json = 'json'
+    Yaml = 'yaml'
 
 
 def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
@@ -69,14 +77,14 @@ def is_openapi(text: str) -> bool:
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
     '--input',
-    help='Open API YAML file (default: stdin)',
+    help='Input file (default: stdin)',
     type=FileType('rt'),
     default=sys.stdin,
 )
 arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
-    choices=['auto', 'openapi', 'jsonschema'],
+    choices=[i.value for i in InputFileType],
     default='auto',
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
@@ -136,16 +144,18 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     text: str = namespace.input.read()
 
-    input_file_type: str = namespace.input_file_type
+    input_file_type = InputFileType(namespace.input_file_type)
 
-    if input_file_type == 'auto':
+    if input_file_type == InputFileType.Auto:
         try:
-            input_file_type = 'openapi' if is_openapi(text) else 'jsonschema'
+            input_file_type = (
+                InputFileType.OpenAPI if is_openapi(text) else InputFileType.JsonSchema
+            )
         except:
             print('Invalid file format')
             return Exit.ERROR
 
-    if input_file_type == 'openapi':
+    if input_file_type == InputFileType.OpenAPI:
         from datamodel_code_generator.parser.openapi import OpenAPIParser
 
         parser_class: Type[Parser] = OpenAPIParser
@@ -153,6 +163,23 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
         parser_class = JsonSchemaParser
+
+        if input_file_type in [InputFileType.Json, InputFileType.Yaml]:
+            try:
+                if input_file_type == InputFileType.Json:
+                    obj: Dict = json.loads(text)
+                else:
+                    import yaml
+
+                    obj = yaml.safe_load(text)
+            except:
+                print('Invalid file format')
+                return Exit.ERROR
+            from genson import SchemaBuilder
+
+            builder = SchemaBuilder()
+            builder.add_object(obj)
+            text = json.dumps(builder.to_schema())
 
     parser = parser_class(
         BaseModel,
