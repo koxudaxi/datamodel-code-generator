@@ -77,7 +77,7 @@ def is_openapi(text: str) -> bool:
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
     '--input',
-    help='Open API YAML file (default: stdin)',
+    help='Input file (default: stdin)',
     type=FileType('rt'),
     default=sys.stdin,
 )

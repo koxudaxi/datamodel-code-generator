@@ -63,8 +63,8 @@ usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input INPUT         Open API YAML file (default: stdin)
-  --input-file-type {auto,openapi,jsonschema}
+  --input INPUT         Input file (default: stdin)
+  --input-file-type {auto,openapi,jsonscehma,json,yaml}
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
