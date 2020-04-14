@@ -15,6 +15,7 @@ This code generator creates pydantic model from an openapi file.
 ## Supported file formats
 - OpenAPI 3 (yaml/json)
 - JsonSchema
+- Json/Yaml Data (it will be converted to JsonSchema)
 
 ## Implemented list
 ### OpenAPI 3 and JsonSchema
