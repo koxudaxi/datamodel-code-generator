@@ -126,6 +126,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         return Exit.ERROR
     except Exception:
         import traceback
+
         print(traceback.format_exc(), file=sys.stderr)
         return Exit.ERROR
 
