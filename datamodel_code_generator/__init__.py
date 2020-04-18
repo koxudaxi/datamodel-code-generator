@@ -22,8 +22,12 @@ import pysnooper
 import yaml
 
 from .format import PythonVersion
-from .model import DataModelField
-from .model.pydantic import BaseModel, CustomRootType, dump_resolve_reference_action
+from .model.pydantic import (
+    BaseModel,
+    CustomRootType,
+    DataModelField,
+    dump_resolve_reference_action,
+)
 from .parser.base import Parser
 from .version import version as __version__
 

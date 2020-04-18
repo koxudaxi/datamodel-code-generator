@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from datamodel_code_generator import PythonVersion, snooper_to_methods
 from datamodel_code_generator.imports import IMPORT_ANY, Import
-from datamodel_code_generator.model import DataModel, DataModelField
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
 from ..parser.base import Parser, get_singular_name
@@ -116,7 +116,7 @@ class JsonSchemaParser(Parser):
         self,
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
-        data_model_field_type: Type[DataModelField] = DataModelField,
+        data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[str] = None,
         extra_template_data: Optional[DefaultDict[str, Dict]] = None,
@@ -222,7 +222,7 @@ class JsonSchemaParser(Parser):
         return any_of_data_types
 
     def parse_all_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
-        fields: List[DataModelField] = []
+        fields: List[DataModelFieldBase] = []
         base_classes: List[DataType] = []
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
@@ -254,12 +254,12 @@ class JsonSchemaParser(Parser):
 
         return [self.data_type(type=name, ref=True, version_compatible=True)]
 
-    def parse_object_fields(self, obj: JsonSchemaObject) -> List[DataModelField]:
+    def parse_object_fields(self, obj: JsonSchemaObject) -> List[DataModelFieldBase]:
         properties: Dict[str, JsonSchemaObject] = (
             obj.properties if obj.properties is not None else {}
         )
         requires: Set[str] = {*obj.required} if obj.required is not None else {*()}
-        fields: List[DataModelField] = []
+        fields: List[DataModelFieldBase] = []
 
         for field_name, field in properties.items():  # type: ignore
             is_list = False
@@ -338,7 +338,7 @@ class JsonSchemaParser(Parser):
 
     def parse_array_fields(
         self, name: str, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelField], List[DataType]]:
+    ) -> Tuple[List[DataModelFieldBase], List[DataType]]:
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:

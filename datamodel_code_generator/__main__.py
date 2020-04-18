@@ -118,7 +118,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             base_class=namespace.base_class,
             custom_template_dir=namespace.custom_template_dir,
             extra_template_data=extra_template_data,
-            validation=namespace.validation
+            validation=namespace.validation,
         )
         return Exit.OK
     except Error as e:

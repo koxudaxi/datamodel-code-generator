@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel as _BaseModel
 
-from .base_model import BaseModel
+from .base_model import BaseModel, DataModelField
 from .custom_root_type import CustomRootType
 from .dataclass import DataClass
 
@@ -16,3 +16,12 @@ def dump_resolve_reference_action(class_names: List[str]) -> str:
 class Config(_BaseModel):
     extra: Optional[str] = None
     title: Optional[str] = None
+
+
+__all__ = [
+    'BaseModel',
+    'DataModelField',
+    'CustomRootType',
+    'DataClass',
+    'dump_resolve_reference_action',
+]

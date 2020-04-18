@@ -26,7 +26,7 @@ LIST: str = 'List'
 
 def optional(func: Callable) -> Callable:
     @wraps(func)
-    def inner(self: 'DataModelField', *args: Any, **kwargs: Any) -> Optional[str]:
+    def inner(self: 'DataModelFieldBase', *args: Any, **kwargs: Any) -> Optional[str]:
         type_hint: Optional[str] = func(self, *args, **kwargs)
         if self.required:
             return type_hint
@@ -38,7 +38,7 @@ def optional(func: Callable) -> Callable:
     return inner
 
 
-class DataModelField(BaseModel):
+class DataModelFieldBase(BaseModel):
     name: Optional[str]
     default: Optional[Any]
     required: bool = False
@@ -138,7 +138,7 @@ class DataModel(TemplateBase, ABC):
     def __init__(
         self,
         name: str,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[str]] = None,
         custom_base_class: Optional[str] = None,
@@ -158,7 +158,7 @@ class DataModel(TemplateBase, ABC):
                 template_file_path = custom_template_file_path
 
         self.name: str = name
-        self.fields: List[DataModelField] = fields or []
+        self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None

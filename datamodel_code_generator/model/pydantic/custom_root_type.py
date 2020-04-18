@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
-from datamodel_code_generator.model.base import DataModel, DataModelField
+from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
 
@@ -14,7 +14,7 @@ class CustomRootType(DataModel):
     def __init__(
         self,
         name: str,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[str]] = None,
         custom_base_class: Optional[str] = None,

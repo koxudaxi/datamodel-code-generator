@@ -1230,8 +1230,8 @@ class Result(BaseModel):
 def test_validation_failed():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
-        with pytest.raises(ValidationError):
-            return_code: Exit = main(
+        assert (
+            main(
                 [
                     '--input',
                     str(OPEN_API_DATA_PATH / 'invalid.yaml'),
@@ -1242,3 +1242,5 @@ def test_validation_failed():
                     '--validation',
                 ]
             )
+            == Exit.ERROR
+        )

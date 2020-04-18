@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 from datamodel_code_generator.imports import IMPORT_ENUM
-from datamodel_code_generator.model import DataModel, DataModelField
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.types import DataType, Types
 
 
@@ -12,7 +12,7 @@ class Enum(DataModel):
     def __init__(
         self,
         name: str,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
     ):
         super().__init__(

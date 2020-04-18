@@ -22,7 +22,7 @@ from datamodel_code_generator.format import format_code
 
 from .. import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
-from ..model.base import DataModel, DataModelField, TemplateBase
+from ..model.base import DataModel, DataModelFieldBase, TemplateBase
 from ..types import DataType, DataTypePy36
 
 inflect_engine = inflect.engine()
@@ -137,7 +137,7 @@ class Parser(ABC):
         self,
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
-        data_model_field_type: Type[DataModelField] = DataModelField,
+        data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[str] = None,
         extra_template_data: Optional[DefaultDict[str, Dict]] = None,
@@ -150,7 +150,7 @@ class Parser(ABC):
 
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
-        self.data_model_field_type: Type[DataModelField] = data_model_field_type
+        self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
         self.created_model_names: Set[str] = set()
