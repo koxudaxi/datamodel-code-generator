@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 
 import pytest
 
-from datamodel_code_generator.model import DataModel, DataModelField
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
 
@@ -25,10 +25,10 @@ class C(Parser):
 
 
 def test_parser():
-    c = C(A, B, DataModelField, 'Base')
+    c = C(A, B, DataModelFieldBase, 'Base')
     assert c.data_model_type == A
     assert c.data_model_root_type == B
-    assert c.data_model_field_type == DataModelField
+    assert c.data_model_field_type == DataModelFieldBase
     assert c.base_class == 'Base'
 
 

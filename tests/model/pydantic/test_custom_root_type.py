@@ -1,4 +1,4 @@
-from datamodel_code_generator.model import DataModelField
+from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic.custom_root_type import CustomRootType
 from datamodel_code_generator.types import DataType, Types
 
@@ -7,7 +7,7 @@ def test_custom_root_type():
     custom_root_type = CustomRootType(
         name='test_model',
         fields=[
-            DataModelField(
+            DataModelFieldBase(
                 name='a',
                 data_types=[DataType(type='str')],
                 default="'abc'",
@@ -18,7 +18,7 @@ def test_custom_root_type():
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [
-        DataModelField(
+        DataModelFieldBase(
             name='a', data_types=[DataType(type='str')], default="'abc'", required=False
         )
     ]
@@ -31,12 +31,12 @@ def test_custom_root_type():
 def test_custom_root_type_required():
     custom_root_type = CustomRootType(
         name='test_model',
-        fields=[DataModelField(data_types=[DataType(type='str')], required=True)],
+        fields=[DataModelFieldBase(data_types=[DataType(type='str')], required=True)],
     )
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [
-        DataModelField(data_types=[DataType(type='str')], required=True)
+        DataModelFieldBase(data_types=[DataType(type='str')], required=True)
     ]
 
     assert custom_root_type.render() == (
@@ -47,14 +47,14 @@ def test_custom_root_type_required():
 def test_custom_root_type_decorator():
     custom_root_type = CustomRootType(
         name='test_model',
-        fields=[DataModelField(data_types=[DataType(type='str')], required=True)],
+        fields=[DataModelFieldBase(data_types=[DataType(type='str')], required=True)],
         decorators=['@validate'],
         base_classes=['Base'],
     )
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [
-        DataModelField(data_types=[DataType(type='str')], required=True)
+        DataModelFieldBase(data_types=[DataType(type='str')], required=True)
     ]
     assert custom_root_type.base_class == 'Base'
     assert (

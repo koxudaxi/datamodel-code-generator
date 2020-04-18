@@ -1,3 +1,4 @@
+from enum import Enum
 from pathlib import Path
 from typing import Dict
 
@@ -5,7 +6,12 @@ import black
 import toml
 from isort import SortImports
 
-from datamodel_code_generator import PythonVersion
+
+class PythonVersion(Enum):
+    PY_36 = '3.6'
+    PY_37 = '3.7'
+    PY_38 = '3.8'
+
 
 BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
     PythonVersion.PY_36: black.TargetVersion.PY36,

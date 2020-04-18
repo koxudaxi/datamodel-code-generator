@@ -2,13 +2,12 @@ from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
 
 from datamodel_code_generator.imports import Import
-from datamodel_code_generator.model import DataModel
-from datamodel_code_generator.model import DataModelField as _DataModelField
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
 
 
-class DataModelField(_DataModelField):
+class DataModelField(DataModelFieldBase):
     _FIELDS_KEYS: Set[str] = {'alias', 'example', 'examples', 'description', 'title'}
     field: Optional[str] = None
 
