@@ -124,7 +124,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     except Error as e:
         print(str(e), file=sys.stderr)
         return Exit.ERROR
-    except:
+    except Exception:
+        import traceback
+        print(traceback.format_exc(), file=sys.stderr)
         return Exit.ERROR
 
 
