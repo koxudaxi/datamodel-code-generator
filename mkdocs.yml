@@ -1,5 +1,5 @@
 site_name: datamodel-code-generator
-site_description: This generator creates pydantic mode from an openapi file.
+site_description: This code generator creates pydantic model from an openapi file and others.
 
 theme:
     name: 'material'
@@ -9,6 +9,7 @@ theme:
 
 markdown_extensions:
   - codehilite
+  - admonition
 
 repo_name: koxudaxi/datamodel-code-generator
 repo_url: https://github.com/koxudaxi/datamodel-code-generator
@@ -18,4 +19,14 @@ google_analytics:
     - 'auto'
 
 nav:
-    - datamodel-code-generator: 'index.md'
+    - Overview: index.md
+    - Support data types: support-data-types.md
+    - Usage:
+      - Generate from OpenAPI: openapi.md
+      - Generate from JsonSchema: jsonschema.md
+      - Generate from JsonData: jsondata.md
+      - Formatting: formatting.md
+    - Development-Contributing: development-contributing.md
+
+plugins:
+  - search

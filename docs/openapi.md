@@ -1,89 +1,11 @@
-# datamodel-code-generator
+# Generate from OpenAPI
 
-This code generator creates pydantic model from an openapi file and others.
-
-[![Build Status](https://travis-ci.org/koxudaxi/datamodel-code-generator.svg?branch=master)](https://travis-ci.org/koxudaxi/datamodel-code-generator)
-[![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
-![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
-
-## Help
-See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
-
-
-## Supported file formats
-- OpenAPI 3 (yaml/json)
-- JsonSchema
-- Json/Yaml Data (it will be converted to JsonSchema)
-
-## Implemented list
-### OpenAPI 3 and JsonSchema
-#### DataType
-- string (include patter/minLength/maxLenght)
-- number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
-- integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
-- boolean
-- array
-- object
-
-##### String Format 
-- date
-- datetime
-- password
-- email
-- uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
-- ipv4
-- ipv6
-
-#### Other schema
-- enum
-- allOf (as Multiple inheritance)
-- anyOf (as Union)
-- $ref (exclude URL Reference)
-
-
-## Installation
-
-To install `datamodel-code-generator`:
-```sh
-$ pip install datamodel-code-generator
-```
-
-## Usage
-
-The `datamodel-codegen` command:
-```
-usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
-                         [--base-class BASE_CLASS]
-                         [--custom-template-dir CUSTOM_TEMPLATE_DIR]
-                         [--extra-template-data EXTRA_TEMPLATE_DATA]
-                         [--target-python-version {3.6,3.7}] [--debug]
-                         [--validation Enable validation (Only OpenAPI)]
-                         [--version]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --input INPUT         Input file (default: stdin)
-  --input-file-type {auto,openapi,jsonscehma,json,yaml}
-  --output OUTPUT       Output file (default: stdout)
-  --base-class BASE_CLASS
-                        Base Class (default: pydantic.BaseModel)
-  --custom-template-dir CUSTOM_TEMPLATE_DIR
-                        Custom Template Directory
-  --extra-template-data EXTRA_TEMPLATE_DATA
-                        Extra Template Data
-  --target-python-version {3.6,3.7}
-                        target python version (default: 3.7)
-  --validation          Enable validation (Only OpenAPI)
-  --debug               show debug message
-  --version             show version
-```
+The codegen generate pydantic models from OpenAPI
 
 ## Example
-### OpenAPI
-```sh
-$ datamodel-codegen --input api.yaml --output model.py
+
+```bash
+$ datamodel-codegen --input api.yaml --input-file-type openapi --output model.py
 ```
 
 <details>
@@ -288,15 +210,3 @@ class api(BaseModel):
 class apis(BaseModel):
     __root__: List[api]
 ```
-
-
-## PyPi 
-
-[https://pypi.org/project/datamodel-code-generator](https://pypi.org/project/datamodel-code-generator)
-
-## License
-
-datamodel-code-generator is released under the MIT License. http://www.opensource.org/licenses/mit-license
-
-
-## This project is an experimental phase.

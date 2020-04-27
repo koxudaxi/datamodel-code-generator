@@ -8,40 +8,11 @@ This code generator creates pydantic model from an openapi file and others.
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
 
-## Help
-See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
-
 
 ## Supported file formats
 - OpenAPI 3 (yaml/json)
 - JsonSchema
 - Json/Yaml Data (it will be converted to JsonSchema)
-
-## Implemented list
-### OpenAPI 3 and JsonSchema
-#### DataType
-- string (include patter/minLength/maxLenght)
-- number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
-- integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
-- boolean
-- array
-- object
-
-##### String Format 
-- date
-- datetime
-- password
-- email
-- uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
-- ipv4
-- ipv6
-
-#### Other schema
-- enum
-- allOf (as Multiple inheritance)
-- anyOf (as Union)
-- $ref (exclude URL Reference)
-
 
 ## Installation
 
@@ -289,14 +260,16 @@ class apis(BaseModel):
     __root__: List[api]
 ```
 
-
 ## PyPi 
 
 [https://pypi.org/project/datamodel-code-generator](https://pypi.org/project/datamodel-code-generator)
 
+## Source Code
+
+[https://github.com/koxudaxi/datamodel-code-generator](https://github.com/koxudaxi/datamodel-code-generator)
+
 ## License
 
 datamodel-code-generator is released under the MIT License. http://www.opensource.org/licenses/mit-license
-
 
 ## This project is an experimental phase.
