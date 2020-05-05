@@ -134,6 +134,8 @@ def get_data_float_type(types: Types, **kwargs: Any) -> DataType:
 def get_data_str_type(types: Types, **kwargs: Any) -> DataType:
     data_type_kwargs = transform_kwargs(kwargs, string_kwargs)
     if data_type_kwargs:
+        if 'regex' in data_type_kwargs.keys():
+            data_type_kwargs['regex'] = f'\'{data_type_kwargs["regex"]}\''
         return DataType(
             type='constr',
             is_func=True,
