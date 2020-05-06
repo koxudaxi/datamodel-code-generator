@@ -136,7 +136,7 @@ def test_get_data_float_type(types, params, data_type):
             DataType(
                 type='constr',
                 is_func=True,
-                kwargs={'regex': '^abc'},
+                kwargs={'regex': "'^abc'"},
                 imports_=[IMPORT_CONSTR],
             ),
         ),
