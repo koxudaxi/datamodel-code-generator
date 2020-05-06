@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import Import
 
 

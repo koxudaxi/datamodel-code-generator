@@ -11,7 +11,7 @@ class DataModelField(DataModelFieldBase):
     _FIELDS_KEYS: Set[str] = {'alias', 'example', 'examples', 'description', 'title'}
     field: Optional[str] = None
 
-    def get_valid_argument(self, value: Any) -> Union[str, List, Dict]:
+    def get_valid_argument(self, value: Any) -> Union[str, List[Any], Dict[Any, Any]]:
         if isinstance(value, str):
             return repr(value)
         elif isinstance(value, list):

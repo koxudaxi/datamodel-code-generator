@@ -52,7 +52,7 @@ def snooper_to_methods(  # type: ignore
     thread_info=False,
     custom_repr=(),
     max_variable_length=100,
-) -> Callable:
+) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
@@ -73,7 +73,7 @@ def snooper_to_methods(  # type: ignore
     return inner
 
 
-def load_json_or_yaml(text: str) -> Dict:
+def load_json_or_yaml(text: str) -> Dict[Any, Any]:
     try:
         data = json.loads(text)
     except JSONDecodeError:
@@ -124,7 +124,7 @@ def generate(
     target_python_version: PythonVersion,
     base_class: str = DEFAULT_BASE_CLASS,
     custom_template_dir: Optional[str] = None,
-    extra_template_data: Optional[DefaultDict[str, Dict]] = None,
+    extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
     validation: bool = False,
 ) -> None:
     if input_file_type == InputFileType.Auto:
@@ -149,7 +149,7 @@ def generate(
         if input_file_type in [InputFileType.Json, InputFileType.Yaml]:
             try:
                 if input_file_type == InputFileType.Json:
-                    obj: Dict = json.loads(input_text)
+                    obj: Dict[Any, Any] = json.loads(input_text)
                 else:
                     import yaml
 

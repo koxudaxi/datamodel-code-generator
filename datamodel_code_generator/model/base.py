@@ -24,7 +24,7 @@ OPTIONAL: str = 'Optional'
 LIST: str = 'List'
 
 
-def optional(func: Callable) -> Callable:
+def optional(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
     def inner(self: 'DataModelFieldBase', *args: Any, **kwargs: Any) -> Optional[str]:
         type_hint: Optional[str] = func(self, *args, **kwargs)
@@ -43,8 +43,8 @@ class DataModelFieldBase(BaseModel):
     default: Optional[Any]
     required: bool = False
     alias: Optional[str]
-    example: Any
-    examples: Any
+    example: Any = None
+    examples: Any = None
     description: Optional[str]
     title: Optional[str]
     data_types: List[DataType] = []
@@ -143,7 +143,7 @@ class DataModel(TemplateBase, ABC):
         base_classes: Optional[List[str]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict]] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
