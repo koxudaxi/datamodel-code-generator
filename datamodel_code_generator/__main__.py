@@ -19,10 +19,11 @@ from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
     Error,
     InputFileType,
-    PythonVersion,
     enable_debug_message,
     generate,
 )
+
+from .format import PythonVersion
 
 
 class Exit(IntEnum):
@@ -99,7 +100,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if namespace.debug:  # pragma: no cover
         enable_debug_message()
 
-    extra_template_data: Optional[DefaultDict[str, Dict]]
+    extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]]
     if namespace.extra_template_data is not None:
         with namespace.extra_template_data as data:
             extra_template_data = json.load(

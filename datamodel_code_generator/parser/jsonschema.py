@@ -14,7 +14,8 @@ from typing import (
 
 from pydantic import BaseModel, Field
 
-from datamodel_code_generator import PythonVersion, snooper_to_methods
+from datamodel_code_generator import snooper_to_methods
+from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
@@ -23,7 +24,7 @@ from ..parser.base import Parser, get_singular_name
 from ..types import DataType, Types
 
 
-def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict:
+def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
     if len(keys) == 0:
         return schema
     elif len(keys) == 1:
@@ -83,11 +84,9 @@ class JsonSchemaObject(BaseModel):
     writeOnly: Optional[bool]
     properties: Optional[Dict[str, 'JsonSchemaObject']]
     required: List[str] = []
-    ref: Optional[str] = Field(default=None, alias='$ref')  # type: ignore
+    ref: Optional[str] = Field(default=None, alias='$ref')
     nullable: Optional[bool] = False
-    x_enum_varnames: List[str] = Field(  # type: ignore
-        default=[], alias='x-enum-varnames'
-    )
+    x_enum_varnames: List[str] = Field(default=[], alias='x-enum-varnames')
     description: Optional[str]
     title: Optional[str]
     example: Any
@@ -119,7 +118,7 @@ class JsonSchemaParser(Parser):
         data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[str] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict]] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,
         result: Optional[List[DataModel]] = None,
@@ -261,7 +260,7 @@ class JsonSchemaParser(Parser):
         requires: Set[str] = {*obj.required} if obj.required is not None else {*()}
         fields: List[DataModelFieldBase] = []
 
-        for field_name, field in properties.items():  # type: ignore
+        for field_name, field in properties.items():
             is_list = False
             field_types: List[DataType]
             if field.ref:
@@ -342,7 +341,7 @@ class JsonSchemaParser(Parser):
         if isinstance(obj.items, JsonSchemaObject):
             items: List[JsonSchemaObject] = [obj.items]
         else:
-            items = obj.items or []  # type: ignore
+            items = obj.items or []
         item_obj_data_types: List[DataType] = []
         is_union: bool = False
         for item in items:
@@ -428,9 +427,9 @@ class JsonSchemaParser(Parser):
         self.append_result(data_model_root_type)
 
     def parse_enum(self, name: str, obj: JsonSchemaObject) -> DataModel:
-        enum_fields = []
+        enum_fields: List[DataModelFieldBase] = []
 
-        for i, enum_part in enumerate(obj.enum):  # type: ignore
+        for i, enum_part in enumerate(obj.enum):
             if obj.type == 'string' or (
                 isinstance(obj.type, list) and 'string' in obj.type
             ):
@@ -462,8 +461,8 @@ class JsonSchemaParser(Parser):
                 raise NotImplementedError(f'URL Reference is not supported. $ref:{ref}')
 
             else:
-                # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in the same location.
-                # TODO treat edge case
+                # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
+                # the same location. TODO treat edge case
                 relative_path, object_path = ref.split('#/')
                 full_path = self.base_path / relative_path
                 with full_path.open() as f:
@@ -500,7 +499,7 @@ class JsonSchemaParser(Parser):
             for value in obj.properties.values():
                 self.parse_ref(value)
 
-    def parse_raw_obj(self, name: str, raw: Dict) -> None:
+    def parse_raw_obj(self, name: str, raw: Dict[str, Any]) -> None:
         obj = JsonSchemaObject.parse_obj(raw)
         if obj.is_object:
             self.parse_object(name, obj)
@@ -516,7 +515,7 @@ class JsonSchemaParser(Parser):
         self.parse_ref(obj)
 
     def parse_raw(self) -> None:
-        raw_obj: Dict[str, Any] = json.loads(self.text)  # type: ignore
+        raw_obj: Dict[Any, Any] = json.loads(self.text)  # type: ignore
         obj_name = raw_obj.get('title', 'Model')
         self.parse_raw_obj(obj_name, raw_obj)
         definitions = raw_obj.get('definitions', {})

@@ -17,5 +17,7 @@ class OpenAPIParser(JsonSchemaParser):
         else:
             components = load_json_or_yaml(self.text)['components']  # type: ignore
 
-        for obj_name, raw_obj in components['schemas'].items():  # type: str, Dict
+        for obj_name, raw_obj in components[
+            'schemas'
+        ].items():  # type: str, Dict[Any, Any]
             self.parse_raw_obj(obj_name, raw_obj)
