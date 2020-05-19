@@ -109,7 +109,7 @@ def get_data_int_type(types: Types, **kwargs: Any) -> DataType:
         return DataType(
             type='conint',
             is_func=True,
-            kwargs=data_type_kwargs,
+            kwargs={k: int(v) for k, v in data_type_kwargs.items()},
             imports_=[IMPORT_CONINT],
         )
     return type_map[types]
@@ -125,7 +125,7 @@ def get_data_float_type(types: Types, **kwargs: Any) -> DataType:
         return DataType(
             type='confloat',
             is_func=True,
-            kwargs=data_type_kwargs,
+            kwargs={k: float(v) for k, v in data_type_kwargs.items()},
             imports_=[IMPORT_CONFLOAT],
         )
     return type_map[types]

@@ -5,7 +5,7 @@ The codegen generate pydantic models from JsonSchema
 ## Example
 
 ```bash
-$ datamodel-codegen  --input person.json --input-file-type jsonshema --output model.py
+$ datamodel-codegen  --input person.json --input-file-type jsonschema --output model.py
 ```
 
 `person.json`:
