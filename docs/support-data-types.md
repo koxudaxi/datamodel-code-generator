@@ -1,6 +1,6 @@
 # Implemented list
 
-This codegen supports major data types to OpenAPI/JsonSchema
+This codegen supports major data types to OpenAPI/JSON Schema
 
 ## OpenAPI 3 and JsonSchema
 ### DataType

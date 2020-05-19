@@ -1,6 +1,6 @@
 # Generate from JsonSchema
 
-The codegen generate pydantic models from JsonSchema
+The codegen generate pydantic models from JSON Schema
 
 ## Example
 

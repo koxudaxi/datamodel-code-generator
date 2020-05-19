@@ -1,6 +1,6 @@
 # Generate from JsonData
 
-The codegen generate pydantic models from JsonData
+The codegen generate pydantic models from JSON Data
 
 ## Example
 
