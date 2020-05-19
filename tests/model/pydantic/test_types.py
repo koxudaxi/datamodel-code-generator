@@ -84,7 +84,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'lt': 10},
+                kwargs={'lt': 10.0},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
@@ -94,7 +94,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'ge': 10},
+                kwargs={'ge': 10.0},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
@@ -104,7 +104,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'gt': 10},
+                kwargs={'gt': 10.0},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
@@ -114,7 +114,7 @@ def test_get_data_int_type(types, params, data_type):
             DataType(
                 type='confloat',
                 is_func=True,
-                kwargs={'multiple_of': 10},
+                kwargs={'multiple_of': 10.0},
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),

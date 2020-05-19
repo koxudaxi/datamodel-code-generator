@@ -875,7 +875,7 @@ class AllOfobj(BaseModel):
 
 class AllOfCombine(Pet):
     birthdate: Optional[date] = None
-    size: Optional[conint(ge=1.0)] = None
+    size: Optional[conint(ge=1)] = None
 
 
 class AnyOfCombine(Pet, Car):

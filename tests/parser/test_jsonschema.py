@@ -87,7 +87,7 @@ def test_json_schema_object_ref_url():
             """class Pets(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
-    age: Optional[conint(ge=0.0)] = None""",
+    age: Optional[conint(ge=0)] = None""",
         )
     ],
 )
