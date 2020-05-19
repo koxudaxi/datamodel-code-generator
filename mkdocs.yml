@@ -23,8 +23,8 @@ nav:
     - Support data types: support-data-types.md
     - Usage:
       - Generate from OpenAPI: openapi.md
-      - Generate from JsonSchema: jsonschema.md
-      - Generate from JsonData: jsondata.md
+      - Generate from JSON Schema: jsonschema.md
+      - Generate from JSON Data: jsondata.md
       - Formatting: formatting.md
     - Development-Contributing: development-contributing.md
 

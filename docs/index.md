@@ -10,10 +10,10 @@ This code generator creates pydantic model from an openapi file and others.
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
 
 
-## Supported file formats
-- OpenAPI 3 (yaml/json)
-- JsonSchema
-- Json/Yaml Data (it will be converted to JsonSchema)
+## Supported source types
+- OpenAPI 3 (YAML/JSON)
+- JSON Schema
+- JSON/YAML Data (it will be converted to JSON Schema)
 
 ## Installation
 

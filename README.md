@@ -14,10 +14,10 @@ This code generator creates pydantic model from an openapi file and others.
 See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
 
 
-## Supported file formats
-- OpenAPI 3 (yaml/json)
-- JsonSchema
-- Json/Yaml Data (it will be converted to JsonSchema)
+## Supported source types
+- OpenAPI 3 (YAML/JSON)
+- JSON Schema
+- JSON/YAML Data (it will be converted to JSON Schema)
 
 ## Implemented list
 ### OpenAPI 3 and JsonSchema
