@@ -137,6 +137,16 @@ def get_uniq_name(name: str, excludes: Set[str], camel: bool = False) -> str:
     return uniq_name
 
 
+def get_valid_name(name: str) -> str:
+    # TODO: convert invalid python name char to valid name char
+    return name.replace('-', '_')
+
+
+def get_valid_field_name_and_alias(field_name: str) -> Tuple[str, Optional[str]]:
+    valid_name = get_valid_name(field_name)
+    return valid_name, None if field_name == valid_name else field_name
+
+
 class Parser(ABC):
     def __init__(
         self,
@@ -191,9 +201,11 @@ class Parser(ABC):
         self.created_model_names.add(data_model.name)
         self.results.append(data_model)
 
-    def get_class_name(self, field_name: str) -> str:
+    def get_class_name(self, field_name: str, unique: bool = True) -> str:
         upper_camel_name = snake_to_upper_camel(field_name)
-        return get_uniq_name(upper_camel_name, self.created_model_names, camel=True)
+        if unique:
+            return get_uniq_name(upper_camel_name, self.created_model_names, camel=True)
+        return upper_camel_name
 
     @abstractmethod
     def parse_raw(self) -> None:

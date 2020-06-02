@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import pytest
 
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator import DataModelField, PythonVersion
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
@@ -288,15 +288,15 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -344,15 +344,15 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -405,15 +405,15 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -469,15 +469,15 @@ class Error(Base):
     message: str
 
 
-class api(Base):
+class Api(Base):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class apis(Base):
-    __root__: List[api]
+class Apis(Base):
+    __root__: List[Api]
 
 
 class Event(Base):
@@ -816,12 +816,12 @@ class AnyOfItem(BaseModel):
     __root__: Union[Pet, Car, AnyOfItemItem]
 
 
-class itemItem(BaseModel):
+class ItemItem(BaseModel):
     name: Optional[str] = None
 
 
 class AnyOfobj(BaseModel):
-    item: Optional[Union[Pet, Car, itemItem]] = None
+    item: Optional[Union[Pet, Car, ItemItem]] = None
 
 
 class AnyOfArrayItem(BaseModel):
@@ -882,12 +882,12 @@ class AnyOfCombine(Pet, Car):
     age: Optional[str] = None
 
 
-class item(Pet, Car):
+class Item(Pet, Car):
     age: Optional[str] = None
 
 
 class AnyOfCombineInObject(BaseModel):
-    item: Optional[item] = None
+    item: Optional[Item] = None
 
 
 class AnyOfCombineInArrayItem(Pet, Car):
@@ -912,27 +912,210 @@ class Error(BaseModel):
 
 def test_openapi_parser_parse_alias():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, text=Path(DATA_PATH / 'alias.yaml').read_text()
+        BaseModel,
+        CustomRootType,
+        data_model_field_type=DataModelField,
+        text=Path(DATA_PATH / 'alias.yaml').read_text(),
     )
-    assert (
-        parser.parse()
-        == '''from __future__ import annotations
-
-from enum import Enum
-
-from pydantic import BaseModel
-
-
-class Pet(Enum):
-    ca_t = 'ca-t'
-    dog_ = 'dog*'
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-'''
-    )
+    assert parser.parse() == {
+        ('wo_o', '__init__.py'): '',
+        ('wo_o', 'bo_o.py',): "from __future__ import annotations\n"
+        "\n"
+        "from typing import Optional\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "from .. import Source, fo_o\n"
+        "\n"
+        "\n"
+        "class ChocolatE(BaseModel):\n"
+        "    flavour_name: Optional[str] = Field(None, alias='flavour-name')\n"
+        "    sourc_e: Optional[Source] = Field(None, alias='sourc-e')\n"
+        "    coco_a: Optional[fo_o.CocoA] = Field(None, alias='coco-a')\n",
+        ('__init__.py',): "from __future__ import annotations\n"
+        "\n"
+        "from datetime import date, datetime\n"
+        "from enum import Enum\n"
+        "from typing import List, Optional\n"
+        "\n"
+        "from pydantic import BaseModel, Field, conint\n"
+        "\n"
+        "from . import model_s\n"
+        "\n"
+        "\n"
+        "class Pet(Enum):\n"
+        "    ca_t = 'ca-t'\n"
+        "    dog_ = 'dog*'\n"
+        "\n"
+        "\n"
+        "class Error(BaseModel):\n"
+        "    code: int\n"
+        "    message: str\n"
+        "\n"
+        "\n"
+        "class HomeAddress(BaseModel):\n"
+        "    address_1: Optional[str] = Field(None, alias='address-1')\n"
+        "\n"
+        "\n"
+        "class TeamMembers(BaseModel):\n"
+        "    __root__: List[str]\n"
+        "\n"
+        "\n"
+        "class AllOfObj(BaseModel):\n"
+        "    name: Optional[str] = None\n"
+        "    number: Optional[str] = None\n"
+        "\n"
+        "\n"
+        "class Id(BaseModel):\n"
+        "    __root__: str\n"
+        "\n"
+        "\n"
+        "class Result(BaseModel):\n"
+        "    event: Optional[model_s.EvenT] = None\n"
+        "\n"
+        "\n"
+        "class Source(BaseModel):\n"
+        "    country_name: Optional[str] = Field(None, alias='country-name')\n"
+        "\n"
+        "\n"
+        "class UserName(BaseModel):\n"
+        "    first_name: Optional[str] = Field(None, alias='first-name')\n"
+        "    home_address: Optional[HomeAddress] = Field(None, alias='home-address')\n"
+        "\n"
+        "\n"
+        "class AllOfRef(UserName, HomeAddress):\n"
+        "    pass\n"
+        "\n"
+        "\n"
+        "class AllOfCombine(UserName):\n"
+        "    birth_date: Optional[date] = Field(None, alias='birth-date')\n"
+        "    size: Optional[conint(ge=1)] = None\n"
+        "\n"
+        "\n"
+        "class AnyOfCombine(HomeAddress, UserName):\n"
+        "    age: Optional[str] = None\n"
+        "\n"
+        "\n"
+        "class Item(HomeAddress, UserName):\n"
+        "    age: Optional[str] = None\n"
+        "\n"
+        "\n"
+        "class AnyOfCombineInObject(BaseModel):\n"
+        "    item: Optional[Item] = None\n"
+        "\n"
+        "\n"
+        "class AnyOfCombineInArrayItem(HomeAddress, UserName):\n"
+        "    age: Optional[str] = None\n"
+        "\n"
+        "\n"
+        "class AnyOfCombineInArray(BaseModel):\n"
+        "    __root__: List[AnyOfCombineInArrayItem]\n"
+        "\n"
+        "\n"
+        "class AnyOfCombineInRoot(HomeAddress, UserName):\n"
+        "    age: Optional[str] = None\n"
+        "    birth_date: Optional[datetime] = Field(None, alias='birth-date')\n",
+        ('model_s.py',): "from __future__ import annotations\n"
+        "\n"
+        "from enum import Enum\n"
+        "from typing import Any, Dict, List, Optional, Union\n"
+        "\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "\n"
+        "class SpecieS(Enum):\n"
+        "    dog = 'dog'\n"
+        "    cat = 'cat'\n"
+        "    snake = 'snake'\n"
+        "\n"
+        "\n"
+        "class PeT(BaseModel):\n"
+        "    id: int\n"
+        "    name: str\n"
+        "    tag: Optional[str] = None\n"
+        "    species: Optional[SpecieS] = None\n"
+        "\n"
+        "\n"
+        "class UseR(BaseModel):\n"
+        "    id: int\n"
+        "    name: str\n"
+        "    tag: Optional[str] = None\n"
+        "\n"
+        "\n"
+        "class EvenT(BaseModel):\n"
+        "    name: Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]] = None\n",
+        ('fo_o', '__init__.py',): "from __future__ import annotations\n"
+        "\n"
+        "from typing import Optional\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "from .. import Id\n"
+        "\n"
+        "\n"
+        "class TeA(BaseModel):\n"
+        "    flavour_name: Optional[str] = Field(None, alias='flavour-name')\n"
+        "    id: Optional[Id] = None\n"
+        "\n"
+        "\n"
+        "class CocoA(BaseModel):\n"
+        "    quality: Optional[int] = None\n",
+        ('fo_o', 'ba_r.py',): "from __future__ import annotations\n"
+        "\n"
+        "from typing import Any, Dict, List, Optional\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class ThinG(BaseModel):\n"
+        "    attribute_s: Optional[Dict[str, Any]] = Field(None, alias='attribute-s')\n"
+        "\n"
+        "\n"
+        "class ThanG(BaseModel):\n"
+        "    attributes: Optional[List[Dict[str, Any]]] = None\n"
+        "\n"
+        "\n"
+        "class ClonE(ThinG):\n"
+        "    pass\n",
+        ('collection_s.py',): 'from __future__ import annotations\n'
+        '\n'
+        'from typing import List, Optional\n'
+        '\n'
+        'from pydantic import AnyUrl, BaseModel, Field\n'
+        '\n'
+        'from . import model_s\n'
+        '\n'
+        '\n'
+        'class PetS(BaseModel):\n'
+        '    __root__: List[model_s.PeT]\n'
+        '\n'
+        '\n'
+        'class UserS(BaseModel):\n'
+        '    __root__: List[model_s.UseR]\n'
+        '\n'
+        '\n'
+        'class RuleS(BaseModel):\n'
+        '    __root__: List[str]\n'
+        '\n'
+        '\n'
+        'class Api(BaseModel):\n'
+        '    apiKey: Optional[str] = Field(\n'
+        '        None, description=\'To be used as a dataset parameter value\'\n'
+        '    )\n'
+        '    apiVersionNumber: Optional[str] = Field(\n'
+        '        None, description=\'To be used as a version parameter value\'\n'
+        '    )\n'
+        '    apiUrl: Optional[AnyUrl] = Field(\n'
+        '        None, description="The URL describing the dataset\'s fields"\n'
+        '    )\n'
+        '    apiDocumentationUrl: Optional[AnyUrl] = Field(\n'
+        '        None, description=\'A URL to the API console for each API\'\n'
+        '    )\n'
+        '\n'
+        '\n'
+        'class ApiS(BaseModel):\n'
+        '    __root__: List[Api]\n',
+    }
 
 
 @pytest.mark.parametrize(
@@ -1028,15 +1211,15 @@ class Rules(BaseModel):
     __root__: List[str]
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 ''',
                 (
                     'foo',

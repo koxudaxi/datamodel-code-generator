@@ -20,7 +20,12 @@ from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
-from ..parser.base import Parser, get_singular_name
+from ..parser.base import (
+    Parser,
+    get_singular_name,
+    get_valid_field_name_and_alias,
+    get_valid_name,
+)
 from ..types import DataType, Types
 
 
@@ -156,14 +161,15 @@ class JsonSchemaParser(Parser):
             for t in types
         ]
 
-    def get_class_name(self, field_name: str) -> str:
+    def get_class_name(self, field_name: str, unique: bool = True) -> str:
+        field_name = get_valid_name(field_name)
         if '.' in field_name:
             prefix, field_name = field_name.rsplit('.', 1)
             prefix += '.'
         else:
             prefix = ''
 
-        class_name = super().get_class_name(field_name)
+        class_name = super().get_class_name(field_name, unique)
 
         return f'{prefix}{class_name}'
 
@@ -188,7 +194,9 @@ class JsonSchemaParser(Parser):
             if any_of_item.ref:  # $ref
                 any_of_data_types.append(
                     self.data_type(
-                        type=any_of_item.ref_object_name,
+                        type=self.get_class_name(
+                            any_of_item.ref_object_name, unique=False
+                        ),
                         ref=True,
                         version_compatible=True,
                     )
@@ -211,6 +219,7 @@ class JsonSchemaParser(Parser):
                     )
                 )
             else:
+                name = self.get_class_name(name, unique=False)
                 singular_name = get_singular_name(name)
                 self.parse_object(singular_name, any_of_item)
                 any_of_data_types.append(
@@ -227,7 +236,9 @@ class JsonSchemaParser(Parser):
             if all_of_item.ref:  # $ref
                 base_classes.append(
                     self.data_type(
-                        type=all_of_item.ref_object_name,
+                        type=self.get_class_name(
+                            all_of_item.ref_object_name, unique=False
+                        ),
                         ref=True,
                         version_compatible=True,
                     )
@@ -263,10 +274,13 @@ class JsonSchemaParser(Parser):
         for field_name, field in properties.items():
             is_list = False
             field_types: List[DataType]
+            field_name, alias = get_valid_field_name_and_alias(field_name)
             if field.ref:
                 field_types = [
                     self.data_type(
-                        type=field.ref_object_name, ref=True, version_compatible=True
+                        type=self.get_class_name(field.ref_object_name, unique=False),
+                        ref=True,
+                        version_compatible=True,
                     )
                 ]
             elif field.is_array:
@@ -279,7 +293,8 @@ class JsonSchemaParser(Parser):
             elif field.anyOf:
                 field_types = self.parse_any_of(field_name, field)
             elif field.allOf:
-                field_types = self.parse_all_of(field_name, field)
+                class_name = self.get_class_name(field_name)
+                field_types = self.parse_all_of(class_name, field)
             elif field.is_object:
                 if field.properties:
                     class_name = self.get_class_name(field_name)
@@ -317,13 +332,14 @@ class JsonSchemaParser(Parser):
                     data_types=field_types,
                     required=required,
                     is_list=is_list,
+                    alias=alias,
                 )
             )
         return fields
 
     def parse_object(self, name: str, obj: JsonSchemaObject) -> None:
         fields = self.parse_object_fields(obj)
-
+        name = self.get_class_name(name, unique=False)
         self.set_title(name, obj)
         self.set_additional_properties(name, obj)
         data_model_type = self.data_model_type(
@@ -348,7 +364,9 @@ class JsonSchemaParser(Parser):
             if item.ref:
                 item_obj_data_types.append(
                     self.data_type(
-                        type=item.ref_object_name, ref=True, version_compatible=True
+                        type=self.get_class_name(item.ref_object_name, unique=False),
+                        ref=True,
+                        version_compatible=True,
                     )
                 )
             elif isinstance(item, JsonSchemaObject) and item.properties:
@@ -501,6 +519,7 @@ class JsonSchemaParser(Parser):
 
     def parse_raw_obj(self, name: str, raw: Dict[str, Any]) -> None:
         obj = JsonSchemaObject.parse_obj(raw)
+        name = self.get_class_name(name)
         if obj.is_object:
             self.parse_object(name, obj)
         elif obj.is_array:
@@ -517,6 +536,7 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         raw_obj: Dict[Any, Any] = json.loads(self.text)  # type: ignore
         obj_name = raw_obj.get('title', 'Model')
+        obj_name = self.get_class_name(obj_name, unique=False)
         self.parse_raw_obj(obj_name, raw_obj)
         definitions = raw_obj.get('definitions', {})
         for key, model in definitions.items():
