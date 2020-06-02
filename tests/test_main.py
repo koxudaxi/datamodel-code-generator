@@ -80,7 +80,7 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -95,8 +95,8 @@ class api(BaseModel):
     )
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -175,7 +175,7 @@ class Error(Base):
     message: str
 
 
-class api(Base):
+class Api(Base):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -190,8 +190,8 @@ class api(Base):
     )
 
 
-class apis(Base):
-    __root__: List[api]
+class Apis(Base):
+    __root__: List[Api]
 
 
 class Event(Base):
@@ -266,7 +266,7 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -281,8 +281,8 @@ class api(BaseModel):
     )
 
 
-class apis(BaseModel):
-    __root__: List['api']
+class Apis(BaseModel):
+    __root__: List['Api']
 
 
 class Event(BaseModel):
@@ -694,7 +694,7 @@ class Rules(BaseModel):
     __root__: List[str]
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -709,8 +709,8 @@ class api(BaseModel):
     )
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 ''',
             (
                 'foo',
@@ -884,7 +884,7 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -899,8 +899,8 @@ class api(BaseModel):
     )
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -973,15 +973,15 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -1088,7 +1088,7 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[
         str
     ] = Field(
@@ -1115,8 +1115,8 @@ class api(BaseModel):
     )
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -1194,7 +1194,7 @@ class Error(BaseModel):
     message: str
 
 
-class api(BaseModel):
+class Api(BaseModel):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -1209,8 +1209,8 @@ class api(BaseModel):
     )
 
 
-class apis(BaseModel):
-    __root__: List[api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):

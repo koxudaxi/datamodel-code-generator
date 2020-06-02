@@ -84,16 +84,45 @@ def test_json_schema_object_ref_url():
                     },
                 },
             },
-            """class Pets(BaseModel):
+            """class Person(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
     age: Optional[conint(ge=0)] = None""",
-        )
+        ),
+        (
+            {
+                "$id": "https://example.com/person.schema.json",
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "person-object",
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "The person's name.",},
+                    "home-address": {
+                        "$ref": "#/definitions/home-address",
+                        "description": "The person's home address.",
+                    },
+                },
+                "definitions": {
+                    "home-address": {
+                        "type": "object",
+                        "properties": {
+                            "street-address": {"type": "string"},
+                            "city": {"type": "string"},
+                            "state": {"type": "string"},
+                        },
+                        "required": ["street_address", "city", "state"],
+                    }
+                },
+            },
+            """class Person(BaseModel):
+    name: Optional[str] = None
+    home_address: Optional[HomeAddress] = None""",
+        ),
     ],
 )
 def test_parse_object(source_obj, generated_classes):
     parser = JsonSchemaParser(BaseModel, CustomRootType)
-    parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj))
+    parser.parse_object('Person', JsonSchemaObject.parse_obj(source_obj))
     assert dump_templates(list(parser.results)) == generated_classes
 
 
