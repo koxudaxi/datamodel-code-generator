@@ -38,6 +38,7 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 - ipv4
 - ipv6
 - hostname
+- decimal
 
 #### Other schema
 - enum

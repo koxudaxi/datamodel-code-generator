@@ -1,11 +1,14 @@
 import pytest
 
 from datamodel_code_generator.imports import (
+    IMPORT_CONDECIMAL,
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
     IMPORT_CONSTR,
+    Import,
 )
 from datamodel_code_generator.model.pydantic.types import (
+    get_data_decimal_type,
     get_data_float_type,
     get_data_int_type,
     get_data_str_type,
@@ -129,6 +132,72 @@ def test_get_data_float_type(types, params, data_type):
 @pytest.mark.parametrize(
     'types,params,data_type',
     [
+        (
+            Types.decimal,
+            {},
+            DataType(
+                type='Decimal', imports_=[Import(from_='decimal', import_='Decimal')]
+            ),
+        ),
+        (
+            Types.decimal,
+            {'maximum': 10},
+            DataType(
+                type='condecimal',
+                is_func=True,
+                kwargs={'le': 10},
+                imports_=[IMPORT_CONDECIMAL],
+            ),
+        ),
+        (
+            Types.decimal,
+            {'exclusiveMaximum': 10},
+            DataType(
+                type='condecimal',
+                is_func=True,
+                kwargs={'lt': 10},
+                imports_=[IMPORT_CONDECIMAL],
+            ),
+        ),
+        (
+            Types.decimal,
+            {'minimum': 10},
+            DataType(
+                type='condecimal',
+                is_func=True,
+                kwargs={'ge': 10},
+                imports_=[IMPORT_CONDECIMAL],
+            ),
+        ),
+        (
+            Types.decimal,
+            {'exclusiveMinimum': 10},
+            DataType(
+                type='condecimal',
+                is_func=True,
+                kwargs={'gt': 10},
+                imports_=[IMPORT_CONDECIMAL],
+            ),
+        ),
+        (
+            Types.decimal,
+            {'multipleOf': 10},
+            DataType(
+                type='condecimal',
+                is_func=True,
+                kwargs={'multiple_of': 10},
+                imports_=[IMPORT_CONDECIMAL],
+            ),
+        ),
+    ],
+)
+def test_get_data_decimal_type(types, params, data_type):
+    assert get_data_decimal_type(types, **params) == data_type
+
+
+@pytest.mark.parametrize(
+    'types,params,data_type',
+    [
         (Types.string, {}, DataType(type='str')),
         (
             Types.string,
@@ -173,6 +242,13 @@ def test_get_data_str_type(types, params, data_type):
         (Types.integer, {}, DataType(type='int')),
         (Types.float, {}, DataType(type='float')),
         (Types.boolean, {}, DataType(type='bool')),
+        (
+            Types.decimal,
+            {},
+            DataType(
+                type='Decimal', imports_=[Import(from_='decimal', import_='Decimal')]
+            ),
+        ),
     ],
 )
 def test_get_data_type(types, params, data_type):

@@ -1,6 +1,8 @@
+from decimal import Decimal
 from typing import Any, Dict, Set
 
 from datamodel_code_generator.imports import (
+    IMPORT_CONDECIMAL,
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
     IMPORT_CONSTR,
@@ -15,6 +17,9 @@ type_map: Dict[Types, DataType] = {
     Types.number: DataType(type='float'),
     Types.float: DataType(type='float'),
     Types.double: DataType(type='float'),
+    Types.decimal: DataType(
+        type='Decimal', imports_=[Import(from_='decimal', import_='Decimal')]
+    ),
     Types.time: DataType(type='time'),
     Types.string: DataType(type='str'),
     Types.byte: DataType(type='str'),  # base64 encoded string
@@ -140,6 +145,18 @@ def get_data_float_type(types: Types, **kwargs: Any) -> DataType:
     return type_map[types]
 
 
+def get_data_decimal_type(types: Types, **kwargs: Any) -> DataType:
+    data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+    if data_type_kwargs:
+        return DataType(
+            type='condecimal',
+            is_func=True,
+            kwargs={k: Decimal(v) for k, v in data_type_kwargs.items()},
+            imports_=[IMPORT_CONDECIMAL],
+        )
+    return type_map[types]
+
+
 def get_data_str_type(types: Types, **kwargs: Any) -> DataType:
     data_type_kwargs = transform_kwargs(kwargs, string_kwargs)
     if data_type_kwargs:
@@ -161,4 +178,6 @@ def get_data_type(types: Types, **kwargs: Any) -> DataType:
         return get_data_int_type(types, **kwargs)
     elif types in (Types.float, Types.double, Types.number, Types.time):
         return get_data_float_type(types, **kwargs)
+    elif types == Types.decimal:
+        return get_data_decimal_type(types, **kwargs)
     return type_map[types]
