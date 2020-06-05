@@ -52,6 +52,7 @@ class Types(Enum):
     number = auto()
     float = auto()
     double = auto()
+    decimal = auto()
     time = auto()
     string = auto()
     byte = auto()

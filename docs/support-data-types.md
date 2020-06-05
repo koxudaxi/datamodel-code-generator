@@ -20,6 +20,7 @@ This codegen supports major data types to OpenAPI/JSON Schema
 - ipv4
 - ipv6
 - hostname
+- decimal
 
 ### Other schema
 - enum
