@@ -12,7 +12,7 @@ from typing import (
     Union,
 )
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from datamodel_code_generator import snooper_to_methods
 from datamodel_code_generator.format import PythonVersion
@@ -109,6 +109,12 @@ class JsonSchemaObject(BaseModel):
     @property
     def ref_object_name(self) -> str:
         return self.ref.rsplit('/', 1)[-1]  # type: ignore
+
+    @validator('items', pre=True)
+    def validate_items(cls, values: Any) -> Any:
+        if not values:  # this condition expects empty dict
+            return None
+        return values
 
 
 JsonSchemaObject.update_forward_refs()
@@ -355,7 +361,7 @@ class JsonSchemaParser(Parser):
         self, name: str, obj: JsonSchemaObject
     ) -> Tuple[List[DataModelFieldBase], List[DataType]]:
         if isinstance(obj.items, JsonSchemaObject):
-            items: List[JsonSchemaObject] = [obj.items]
+            items = [obj.items]
         else:
             items = obj.items or []
         item_obj_data_types: List[DataType] = []

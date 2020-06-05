@@ -210,6 +210,11 @@ class Pets(BaseModel):
 class Pets(BaseModel):
     __root__: List[Pet]''',
         ),
+        (
+            {'type': 'array', 'items': {},},
+            '''class Pets(BaseModel):
+    __root__: List''',
+        ),
     ],
 )
 def test_parse_array(source_obj, generated_classes):
