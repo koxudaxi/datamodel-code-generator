@@ -50,6 +50,15 @@ type_map: Dict[Types, DataType] = {
     Types.uri: DataType(
         type='AnyUrl', imports_=[Import(from_='pydantic', import_='AnyUrl')]
     ),
+    Types.hostname: DataType(
+        type='constr',
+        imports_=[Import(from_='pydantic', import_='constr')],
+        is_func=True,
+        # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
+        kwargs={
+            'regex': "'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'"
+        },
+    ),
     Types.ipv4: DataType(
         type='IPv4Address', imports_=[Import(from_='pydantic', import_='IPv4Address')]
     ),

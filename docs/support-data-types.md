@@ -19,6 +19,7 @@ This codegen supports major data types to OpenAPI/JSON Schema
 - uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 - ipv4
 - ipv6
+- hostname
 
 ### Other schema
 - enum
