@@ -53,7 +53,11 @@ class DataModelFieldBase(BaseModel):
     imports: List[Import] = []
     type_hint: Optional[str] = None
     unresolved_types: List[str] = []
-    field: Optional[str]
+
+    @property
+    def field(self) -> Optional[str]:
+        """for backwards compatibility"""
+        return None
 
     @optional
     def _get_type_hint(self) -> Optional[str]:
