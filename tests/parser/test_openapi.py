@@ -845,6 +845,35 @@ class Error(BaseModel):
     )
 
 
+def test_openapi_parser_parse_nested_anyof():
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        text=Path(DATA_PATH / 'nested_anyof.yaml').read_text(),
+    )
+    assert (
+        parser.parse()
+        == '''from __future__ import annotations
+
+from typing import List, Optional, Union
+
+from pydantic import BaseModel
+
+
+class Type1(BaseModel):
+    prop: Optional[str] = None
+
+
+class Type2(BaseModel):
+    prop: Optional[str] = None
+
+
+class Container(BaseModel):
+    contents: List[Union[Type1, Type2]]
+'''
+    )
+
+
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, text=Path(DATA_PATH / 'allof.yaml').read_text()
