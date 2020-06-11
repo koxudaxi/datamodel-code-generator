@@ -849,6 +849,7 @@ def test_openapi_parser_parse_nested_anyof():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        data_model_field_type=DataModelField,
         text=Path(DATA_PATH / 'nested_anyof.yaml').read_text(),
     )
     assert (

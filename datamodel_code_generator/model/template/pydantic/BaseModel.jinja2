@@ -16,4 +16,7 @@ class {{ class_name }}({{ base_class }}):
     {%- else %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
     {%- endif %}
+{%- for method in methods -%}
+    {{ method }}
+{%- endfor -%}
 {%- endfor -%}

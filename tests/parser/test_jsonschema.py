@@ -4,6 +4,8 @@ from unittest.mock import Mock, call
 
 import pytest
 
+from datamodel_code_generator import DataModelField
+from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
@@ -29,7 +31,9 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
 
 
 def test_json_schema_parser_parse_ref():
-    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
     parser.parse_raw_obj = Mock()
     external_parent_path = Path(DATA_PATH / 'external_parent.json')
     parser.base_path = external_parent_path.parent
@@ -53,7 +57,9 @@ def test_json_schema_parser_parse_ref():
 
 
 def test_json_schema_object_ref_url():
-    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
     obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.org'})
     with pytest.raises(NotImplementedError):
         parser.parse_ref(obj)
@@ -142,6 +148,62 @@ def test_parse_object(source_obj, generated_classes):
     ],
 )
 def test_parse_any_root_object(source_obj, generated_classes):
-    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
     parser.parse_root_type('AnyObject', JsonSchemaObject.parse_obj(source_obj))
+    assert dump_templates(list(parser.results)) == generated_classes
+
+
+@pytest.mark.parametrize(
+    'source_obj,generated_classes',
+    [
+        (
+            {
+                "properties": {
+                    "item": {
+                        "properties": {
+                            "timeout": {
+                                "oneOf": [{"type": "string"}, {"type": "integer"}]
+                            }
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            """class Item(BaseModel):
+    timeout: Optional[Union[str, int]] = None
+
+    @validator(timeout)
+    def validate_timeout(self, value: Any) -> Any:
+        fields: List = [
+            ModelField(
+                name=str(type_), type_=type_, class_validators=None, model_config=BaseConfig
+            )
+            for type_ in [str,int]
+        ]
+        valid_item: Any = None
+        match: bool = False
+        for field in fields:  # type: ModelField
+            value, errors = field.validate(value, values={}, loc=(), cls=None)
+            if not errors:
+                if valid_item:
+                    raise ValueError(f'oneOf accept only one type. {value}')
+                valid_item = value
+                match = True
+        if match:
+            return valid_item
+        raise ValueError(f'oneOf accept only one type. {value}')
+
+
+class OnOfObject(BaseModel):
+    item: Optional[Item] = None""",
+        )
+    ],
+)
+def test_parse_one_of_object(source_obj, generated_classes):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+    parser.parse_raw_obj('onOfObject', source_obj)
     assert dump_templates(list(parser.results)) == generated_classes

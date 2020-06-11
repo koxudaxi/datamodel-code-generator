@@ -86,6 +86,7 @@ class JsonSchemaObject(BaseModel):
     exclusiveMaximum: Optional[bool]
     exclusiveMinimum: Optional[bool]
     additionalProperties: Union['JsonSchemaObject', bool, None]
+    oneOf: List['JsonSchemaObject'] = []
     anyOf: List['JsonSchemaObject'] = []
     allOf: List['JsonSchemaObject'] = []
     enum: List[str] = []
@@ -197,46 +198,50 @@ class JsonSchemaParser(Parser):
 
         self.extra_template_data[name]['title'] = obj.title
 
-    def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
-        any_of_data_types: List[DataType] = []
-        for any_of_item in obj.anyOf:
-            if any_of_item.ref:  # $ref
-                any_of_data_types.append(
+    def parse_list_item(
+        self, name: str, target_items: List[JsonSchemaObject]
+    ) -> List[DataType]:
+        data_types: List[DataType] = []
+        for item in target_items:
+            if item.ref:  # $ref
+                data_types.append(
                     self.data_type(
-                        type=self.get_class_name(
-                            any_of_item.ref_object_name, unique=False
-                        ),
+                        type=self.get_class_name(item.ref_object_name, unique=False),
                         ref=True,
                         version_compatible=True,
                     )
                 )
-            elif not any(v for k, v in vars(any_of_item).items() if k != 'type'):
+            elif not any(v for k, v in vars(item).items() if k != 'type'):
                 # trivial types
-                any_of_data_types.extend(self.get_data_type(any_of_item))
+                data_types.extend(self.get_data_type(item))
             elif (
-                any_of_item.is_array
-                and isinstance(any_of_item.items, JsonSchemaObject)
-                and not any(
-                    v for k, v in vars(any_of_item.items).items() if k != 'type'
-                )
+                item.is_array
+                and isinstance(item.items, JsonSchemaObject)
+                and not any(v for k, v in vars(item.items).items() if k != 'type')
             ):
                 # trivial item types
-                any_of_data_types.append(
+                data_types.append(
                     self.data_type(
-                        type=f"List[{', '.join([t.type_hint for t in self.get_data_type(any_of_item.items)])}]",
+                        type=f"List[{', '.join([t.type_hint for t in self.get_data_type(item.items)])}]",
                         imports_=[Import(from_='typing', import_='List')],
                     )
                 )
             else:
                 name = self.get_class_name(name, unique=False)
                 singular_name = get_singular_name(name)
-                self.parse_object(singular_name, any_of_item)
-                any_of_data_types.append(
+                self.parse_object(singular_name, item)
+                data_types.append(
                     self.data_type(
                         type=singular_name, ref=True, version_compatible=True
                     )
                 )
-        return any_of_data_types
+        return data_types
+
+    def parse_any_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
+        return self.parse_list_item(name, obj.anyOf)
+
+    def parse_one_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
+        return self.parse_list_item(name, obj.oneOf)
 
     def parse_all_of(self, name: str, obj: JsonSchemaObject) -> List[DataType]:
         fields: List[DataModelFieldBase] = []
@@ -283,6 +288,7 @@ class JsonSchemaParser(Parser):
         for field_name, field in properties.items():
             is_list: bool = False
             is_union: bool = False
+            is_one_of: bool = False
             field_types: List[DataType]
             field_name, alias = get_valid_field_name_and_alias(field_name)
             if field.ref:
@@ -303,6 +309,9 @@ class JsonSchemaParser(Parser):
                 is_union = True
             elif field.anyOf:
                 field_types = self.parse_any_of(field_name, field)
+            elif field.oneOf:
+                field_types = self.parse_one_of(field_name, field)
+                is_one_of = True
             elif field.allOf:
                 class_name = self.get_class_name(field_name)
                 field_types = self.parse_all_of(class_name, field)
@@ -344,6 +353,7 @@ class JsonSchemaParser(Parser):
                     required=required,
                     is_list=is_list,
                     is_union=is_union,
+                    is_one_of=is_one_of,
                     alias=alias,
                 )
             )

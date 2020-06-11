@@ -50,6 +50,7 @@ class DataModelFieldBase(BaseModel):
     data_types: List[DataType] = []
     is_list: bool = False
     is_union: bool = False
+    is_one_of: bool = False
     imports: List[Import] = []
     type_hint: Optional[str] = None
     unresolved_types: List[str] = []
@@ -80,6 +81,10 @@ class DataModelFieldBase(BaseModel):
             return f'{LIST}[{type_hint}]'
         self.imports.append(IMPORT_UNION)
         return f'{UNION}[{type_hint}]'
+
+    @property
+    def method(self) -> Optional[str]:
+        return None
 
     @root_validator
     def validate_root(cls, values: Any) -> Dict[str, Any]:
@@ -151,6 +156,8 @@ class DataModel(TemplateBase, ABC):
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
+        methods: Optional[List[str]] = None,
+        is_one_of: bool = False,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -210,6 +217,9 @@ class DataModel(TemplateBase, ABC):
             for field in self.fields:
                 self.imports.extend(field.imports)
 
+        self.methods: List[str] = methods or []
+
+        self.is_one_of: bool = is_one_of
         super().__init__(template_file_path=template_file_path)
 
     def render(self) -> str:
@@ -218,6 +228,7 @@ class DataModel(TemplateBase, ABC):
             fields=self.fields,
             decorators=self.decorators,
             base_class=self.base_class,
+            methods=self.methods,
             **self.extra_template_data,
         )
         return response
