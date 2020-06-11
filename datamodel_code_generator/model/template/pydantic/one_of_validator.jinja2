@@ -1,6 +1,6 @@
 
 
-    @validator('{{ field_name }}')
+    @validator('{{ field_name }}', pre=True)
     def validate_{{ field_name }}(self, value: Any) -> Any:
         fields: List = [
             ModelField(
