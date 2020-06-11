@@ -9,7 +9,6 @@ from datamodel_code_generator.types import DataType, Types
 
 class DataModelField(DataModelFieldBase):
     _FIELDS_KEYS: Set[str] = {'alias', 'example', 'examples', 'description', 'title'}
-    field: Optional[str] = None
 
     def get_valid_argument(self, value: Any) -> Union[str, List[Any], Dict[Any, Any]]:
         if isinstance(value, str):
@@ -25,13 +24,28 @@ class DataModelField(DataModelFieldBase):
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
+
+    @property
+    def field(self) -> Optional[str]:
+        """for backwards compatibility"""
+        result = str(self)
+        if result == "":
+            return None
+
+        return result
+
+    def __str__(self) -> str:
         field_arguments = [
             f"{k}={self.get_valid_argument(v)}"
             for k, v in self.dict(include=self._FIELDS_KEYS).items()
             if v is not None
         ]
-        if field_arguments:
-            self.field = f'Field({"..." if self.required else self.get_valid_argument(self.default)}, {",".join(field_arguments)})'
+        if not field_arguments:
+            return ""
+
+        value_arg = "..." if self.required else self.get_valid_argument(self.default)
+        kwargs = ",".join(field_arguments)
+        return f'Field({value_arg}, {kwargs})'
 
 
 class BaseModel(DataModel):
