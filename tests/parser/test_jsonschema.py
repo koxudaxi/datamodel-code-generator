@@ -174,7 +174,7 @@ def test_parse_any_root_object(source_obj, generated_classes):
             """class Item(BaseModel):
     timeout: Optional[Union[str, int]] = None
 
-    @validator(timeout)
+    @validator('timeout', pre=True)
     def validate_timeout(self, value: Any) -> Any:
         fields: List = [
             ModelField(
