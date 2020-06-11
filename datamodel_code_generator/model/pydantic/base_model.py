@@ -31,7 +31,7 @@ class DataModelField(DataModelFieldBase):
         result = str(self)
         if result == "":
             return None
-        
+
         return result
 
     def __str__(self) -> str:
@@ -46,6 +46,7 @@ class DataModelField(DataModelFieldBase):
         value_arg = "..." if self.required else self.get_valid_argument(self.default)
         kwargs = ",".join(field_arguments)
         return f'Field({value_arg}, {kwargs})'
+
 
 class BaseModel(DataModel):
     TEMPLATE_FILE_PATH = 'pydantic/BaseModel.jinja2'
