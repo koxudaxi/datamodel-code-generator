@@ -28,10 +28,10 @@ from ..types import DataType, DataTypePy36
 inflect_engine = inflect.engine()
 
 
-def get_singular_name(name: str) -> str:
+def get_singular_name(name: str, suffix: str = 'Item') -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
-        singular_name = f'{name}Item'
+        singular_name = f'{name}{suffix}'
     return singular_name
 
 
