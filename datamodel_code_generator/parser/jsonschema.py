@@ -395,6 +395,13 @@ class JsonSchemaParser(Parser):
             elif item.allOf:
                 singular_name = get_singular_name(name)
                 item_obj_data_types.extend(self.parse_all_of(singular_name, item))
+            elif item.enum:
+                singular_name = get_singular_name(name, 'Enum')
+                enum = self.parse_enum(singular_name, item)
+                item_obj_data_types.append(
+                    self.data_type(type=enum.name, ref=True, version_compatible=True)
+                )
+
             else:
                 item_obj_data_types.extend(self.get_data_type(item))
 
