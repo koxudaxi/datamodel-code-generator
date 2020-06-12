@@ -221,9 +221,12 @@ class JsonSchemaParser(Parser):
                 )
             ):
                 # trivial item types
+                types = [t.type_hint for t in self.get_data_type(any_of_item.items)]
                 any_of_data_types.append(
                     self.data_type(
-                        type=f"List[{', '.join([t.type_hint for t in self.get_data_type(any_of_item.items)])}]",
+                        type=f"List[Union[{', '.join(types)}]]"
+                        if len(types) > 1
+                        else f"List[{types[0]}]",
                         imports_=[Import(from_='typing', import_='List')],
                     )
                 )
