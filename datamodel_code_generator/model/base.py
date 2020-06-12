@@ -75,10 +75,8 @@ class DataModelFieldBase(BaseModel):
             return type_hint
         if self.is_list:
             self.imports.append(IMPORT_LIST)
-            if self.is_union:
-                self.imports.append(IMPORT_UNION)
-                return f'{LIST}[{UNION}[{type_hint}]]'
-            return f'{LIST}[{type_hint}]'
+            self.imports.append(IMPORT_UNION)
+            return f'{LIST}[{UNION}[{type_hint}]]'
         self.imports.append(IMPORT_UNION)
         return f'{UNION}[{type_hint}]'
 

@@ -239,7 +239,7 @@ def test_data_field():
         is_list=True,
         is_union=False,
     )
-    assert field.type_hint == 'List[str, int]'
+    assert field.type_hint == 'List[Union[str, int]]'
     field = DataModelFieldBase(
         name='a',
         data_types=[DataType(type='str'), DataType(type='int')],
@@ -277,7 +277,7 @@ def test_data_field():
         is_list=True,
         is_union=False,
     )
-    assert field.type_hint == 'Optional[List[str, int]]'
+    assert field.type_hint == 'Optional[List[Union[str, int]]]'
 
     field = DataModelFieldBase(
         name='a', data_types=[], required=False, is_list=True, is_union=False

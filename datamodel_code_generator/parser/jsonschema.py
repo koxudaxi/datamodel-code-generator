@@ -220,9 +220,12 @@ class JsonSchemaParser(Parser):
                 and not any(v for k, v in vars(item.items).items() if k != 'type')
             ):
                 # trivial item types
+                types = [t.type_hint for t in self.get_data_type(item.items)]
                 data_types.append(
                     self.data_type(
-                        type=f"List[{', '.join([t.type_hint for t in self.get_data_type(item.items)])}]",
+                        type=f"List[Union[{', '.join(types)}]]"
+                        if len(types) > 1
+                        else f"List[{types[0]}]",
                         imports_=[Import(from_='typing', import_='List')],
                     )
                 )
@@ -405,6 +408,13 @@ class JsonSchemaParser(Parser):
             elif item.allOf:
                 singular_name = get_singular_name(name)
                 item_obj_data_types.extend(self.parse_all_of(singular_name, item))
+            elif item.enum:
+                singular_name = get_singular_name(name, 'Enum')
+                enum = self.parse_enum(singular_name, item)
+                item_obj_data_types.append(
+                    self.data_type(type=enum.name, ref=True, version_compatible=True)
+                )
+
             else:
                 item_obj_data_types.extend(self.get_data_type(item))
 

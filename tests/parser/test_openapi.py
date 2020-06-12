@@ -1559,3 +1559,44 @@ def test_openapi_parser_parse_additional_properties(
         base_class=base_class,
     )
     assert parser.parse(with_import=with_import, format_=format_) == result
+
+
+@pytest.mark.parametrize(
+    'with_import, format_, base_class, result',
+    [
+        (
+            True,
+            True,
+            None,
+            '''from __future__ import annotations
+
+from enum import Enum
+from typing import List
+
+from pydantic import BaseModel
+
+
+class Type1Enum(Enum):
+    enumOne = 'enumOne'
+    enumTwo = 'enumTwo'
+
+
+class Type1(BaseModel):
+    __root__: List[Type1Enum]
+
+
+class Type2(Enum):
+    enumFour = 'enumFour'
+    enumFive = 'enumFive'
+''',
+        ),
+    ],
+)
+def test_openapi_parser_parse_array_enum(with_import, format_, base_class, result):
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        text=Path(DATA_PATH / 'array_enum.yaml').read_text(),
+        base_class=base_class,
+    )
+    assert parser.parse(with_import=with_import, format_=format_) == result
