@@ -44,6 +44,7 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 - enum
 - allOf (as Multiple inheritance)
 - anyOf (as Union)
+- oneOf (as Union)
 - $ref (exclude URL Reference)
 
 

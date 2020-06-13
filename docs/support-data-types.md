@@ -26,4 +26,5 @@ This codegen supports major data types to OpenAPI/JSON Schema
 - enum
 - allOf (as Multiple inheritance)
 - anyOf (as Union)
+- oneOf (as Union)
 - $ref (exclude URL Reference)
