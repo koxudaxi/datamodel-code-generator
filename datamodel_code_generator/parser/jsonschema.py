@@ -291,7 +291,6 @@ class JsonSchemaParser(Parser):
         for field_name, field in properties.items():
             is_list: bool = False
             is_union: bool = False
-            is_one_of: bool = False
             field_types: List[DataType]
             field_name, alias = get_valid_field_name_and_alias(field_name)
             if field.ref:
@@ -314,7 +313,6 @@ class JsonSchemaParser(Parser):
                 field_types = self.parse_any_of(field_name, field)
             elif field.oneOf:
                 field_types = self.parse_one_of(field_name, field)
-                is_one_of = True
             elif field.allOf:
                 class_name = self.get_class_name(field_name)
                 field_types = self.parse_all_of(class_name, field)
@@ -356,7 +354,6 @@ class JsonSchemaParser(Parser):
                     required=required,
                     is_list=is_list,
                     is_union=is_union,
-                    is_one_of=is_one_of,
                     alias=alias,
                 )
             )

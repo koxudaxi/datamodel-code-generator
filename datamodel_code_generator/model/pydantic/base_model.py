@@ -33,14 +33,13 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def validator(self) -> Optional[str]:
+        return None
         # TODO refactor this method for other validation logic
-        if not self.is_one_of:
-            return None
-        from datamodel_code_generator.model.pydantic import VALIDATOR_TEMPLATE
-
-        return VALIDATOR_TEMPLATE.render(
-            field_name=self.name, types=','.join([t.type_hint for t in self.data_types])
-        )
+        # from datamodel_code_generator.model.pydantic import VALIDATOR_TEMPLATE
+        #
+        # return VALIDATOR_TEMPLATE.render(
+        #     field_name=self.name, types=','.join([t.type_hint for t in self.data_types])
+        # )
 
     @property
     def field(self) -> Optional[str]:

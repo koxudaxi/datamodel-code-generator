@@ -174,27 +174,6 @@ def test_parse_any_root_object(source_obj, generated_classes):
             """class Item(BaseModel):
     timeout: Optional[Union[str, int]] = None
 
-    @validator('timeout', pre=True)
-    def validate_timeout(self, value: Any) -> Any:
-        fields: List = [
-            ModelField(
-                name=str(type_), type_=type_, class_validators=None, model_config=BaseConfig
-            )
-            for type_ in [str,int]
-        ]
-        valid_item: Any = None
-        match: bool = False
-        for field in fields:  # type: ModelField
-            value, errors = field.validate(value, values={}, loc=(), cls=None)
-            if not errors:
-                if valid_item:
-                    raise ValueError(f'oneOf accept only one type. {value}')
-                valid_item = value
-                match = True
-        if match:
-            return valid_item
-        raise ValueError(f'oneOf accept only one type. {value}')
-
 
 class OnOfObject(BaseModel):
     item: Optional[Item] = None""",

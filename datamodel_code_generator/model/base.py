@@ -50,7 +50,6 @@ class DataModelFieldBase(BaseModel):
     data_types: List[DataType] = []
     is_list: bool = False
     is_union: bool = False
-    is_one_of: bool = False
     imports: List[Import] = []
     type_hint: Optional[str] = None
     unresolved_types: List[str] = []
@@ -155,7 +154,6 @@ class DataModel(TemplateBase, ABC):
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
         methods: Optional[List[str]] = None,
-        is_one_of: bool = False,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -217,7 +215,6 @@ class DataModel(TemplateBase, ABC):
 
         self.methods: List[str] = methods or []
 
-        self.is_one_of: bool = is_one_of
         super().__init__(template_file_path=template_file_path)
 
     def render(self) -> str:
