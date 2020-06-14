@@ -298,7 +298,7 @@ class Parser(ABC):
                         )
 
             if with_import:
-                result += [imports.dump(), self.imports.dump(), '\n']
+                result += [str(imports), str(self.imports), '\n']
 
             code = dump_templates(models)
             result += [code]

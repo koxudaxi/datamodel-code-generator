@@ -23,4 +23,4 @@ def test_dump(inputs: Sequence[Tuple[Optional[str], str]], value):
     imports = Imports()
     imports.append([Import(from_=from_, import_=import_) for from_, import_ in inputs])
 
-    assert imports.dump() == value
+    assert str(imports) == value
