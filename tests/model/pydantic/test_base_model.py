@@ -123,6 +123,8 @@ def test_base_model_reserved_name():
             {'examples': {'name': 'dog', 'age': 1}},
             'Field(None, examples={"\'name\'": "\'dog\'", "\'age\'": 1})',
         ),
+        ({'default': 'abc', 'title': 'title'}, 'Field(\'abc\', title=\'title\')'),
+        ({'default': 123, 'title': 'title'}, 'Field(123, title=\'title\')'),
     ],
 )
 def test_data_model_field(kwargs, expected):
