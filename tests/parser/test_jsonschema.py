@@ -186,3 +186,18 @@ def test_parse_one_of_object(source_obj, generated_classes):
     )
     parser.parse_raw_obj('onOfObject', source_obj)
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+@pytest.mark.parametrize(
+    'type_,default,expected',
+    [
+        ('string', 'abc', "'abc'"),
+        ('number', 123, 123),
+        ('boolean', 'true', True),
+        ('boolean', 'false', False),
+        ('null', 'null', None),
+        ('object', {'abc': 123, 'efg': 'hij'}, {'abc': 123, 'efg': 'hij'}),
+    ],
+)
+def test_typed_default(type_, default, expected):
+    assert JsonSchemaObject(type=type_, default=default).typed_default == expected
