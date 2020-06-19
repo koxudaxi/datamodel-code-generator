@@ -122,7 +122,7 @@ class JsonSchemaObject(BaseModel):
 
     @property
     def typed_default(self) -> Union[str, bool, Dict[Any, Any], None]:
-        if self.default and self.type:
+        if self.default is not None and self.type:
             type_ = self.type[0] if isinstance(self.type, list) else self.type
             return self._get_typed_default(type_, self.default)
         return None
