@@ -192,7 +192,9 @@ def test_parse_one_of_object(source_obj, generated_classes):
     'type_,default,expected',
     [
         ('string', 'abc', "'abc'"),
+        ('string', '', "''"),
         ('number', 123, 123),
+        ('number', 0, 0),
         ('boolean', 'true', True),
         ('boolean', 'false', False),
         ('null', 'null', None),
