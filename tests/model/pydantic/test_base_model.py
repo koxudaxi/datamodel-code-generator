@@ -17,7 +17,7 @@ def test_base_model():
 
 def test_base_model_optional():
     field = DataModelField(
-        name='a', data_types=[DataType(type='str')], default="'abc'", required=False
+        name='a', data_types=[DataType(type='str')], default='abc', required=False
     )
 
     base_model = BaseModel(name='test_model', fields=[field])
@@ -33,7 +33,7 @@ def test_base_model_optional():
 
 def test_base_model_decorator():
     field = DataModelField(
-        name='a', data_types=[DataType(type='str')], default="'abc'", required=False
+        name='a', data_types=[DataType(type='str')], default='abc', required=False
     )
 
     base_model = BaseModel(
@@ -121,7 +121,7 @@ def test_base_model_reserved_name():
         ({'examples': [1, 2, 3]}, "Field(None, examples=[1, 2, 3])"),
         (
             {'examples': {'name': 'dog', 'age': 1}},
-            'Field(None, examples={"\'name\'": "\'dog\'", "\'age\'": 1})',
+            'Field(None, examples={\'name\': \'dog\', \'age\': 1})',
         ),
         ({'default': 'abc', 'title': 'title'}, 'Field(\'abc\', title=\'title\')'),
         ({'default': 123, 'title': 'title'}, 'Field(123, title=\'title\')'),

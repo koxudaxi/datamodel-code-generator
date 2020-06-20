@@ -120,29 +120,6 @@ class JsonSchemaObject(BaseModel):
             return None
         return values
 
-    @property
-    def typed_default(self) -> Union[str, bool, Dict[Any, Any], None]:
-        if self.default is not None and self.type:
-            type_ = self.type[0] if isinstance(self.type, list) else self.type
-            return self._get_typed_default(type_, self.default)
-        return None
-
-    @classmethod
-    def _get_typed_default(
-        cls, type_: str, default_value: Any
-    ) -> Union[str, bool, Dict[Any, Any], None]:
-        if type_ == 'integer' or type_ == 'number':
-            return default_value
-        elif type_ == 'boolean':
-            if default_value == 'true':
-                return True
-            return False
-        elif type_ == 'object' and isinstance(default_value, dict):
-            return default_value
-        elif type_ == 'null':
-            return None
-        return f"'{default_value}'"
-
 
 JsonSchemaObject.update_forward_refs()
 

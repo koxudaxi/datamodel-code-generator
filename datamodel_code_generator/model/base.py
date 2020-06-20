@@ -108,21 +108,9 @@ class DataModelFieldBase(BaseModel):
                 self.imports.extend(data_type.imports_)
         self.type_hint = self._get_type_hint()
 
-    def get_valid_argument(self, value: Any) -> Union[str, List[Any], Dict[Any, Any]]:
-        if isinstance(value, str):
-            return repr(value)
-        elif isinstance(value, list):
-            return [self.get_valid_argument(i) for i in value]
-        elif isinstance(value, dict):
-            return {
-                self.get_valid_argument(k): self.get_valid_argument(v)
-                for k, v in value.items()
-            }
-        return value
-
     @property
-    def typed_default(self) -> str:
-        return self.get_valid_argument(self.default)
+    def represented_default(self) -> str:
+        return repr(self.default)
 
 
 class TemplateBase(ABC):
