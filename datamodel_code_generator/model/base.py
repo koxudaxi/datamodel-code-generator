@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
+from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Union
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
@@ -107,6 +107,10 @@ class DataModelFieldBase(BaseModel):
             if data_type.imports_:
                 self.imports.extend(data_type.imports_)
         self.type_hint = self._get_type_hint()
+
+    @property
+    def represented_default(self) -> str:
+        return repr(self.default)
 
 
 class TemplateBase(ABC):

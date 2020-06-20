@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
 
-from jinja2 import Environment, FileSystemLoader, Template
-
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.types import get_data_type
@@ -11,18 +9,6 @@ from datamodel_code_generator.types import DataType, Types
 
 class DataModelField(DataModelFieldBase):
     _FIELDS_KEYS: Set[str] = {'alias', 'example', 'examples', 'description', 'title'}
-
-    def get_valid_argument(self, value: Any) -> Union[str, List[Any], Dict[Any, Any]]:
-        if isinstance(value, str):
-            return repr(value)
-        elif isinstance(value, list):
-            return [self.get_valid_argument(i) for i in value]
-        elif isinstance(value, dict):
-            return {
-                self.get_valid_argument(k): self.get_valid_argument(v)
-                for k, v in value.items()
-            }
-        return value
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
@@ -52,14 +38,14 @@ class DataModelField(DataModelFieldBase):
 
     def __str__(self) -> str:
         field_arguments = [
-            f"{k}={self.get_valid_argument(v)}"
+            f"{k}={repr(v)}"
             for k, v in self.dict(include=self._FIELDS_KEYS).items()
             if v is not None
         ]
         if not field_arguments:
             return ""
 
-        value_arg = "..." if self.required else self.get_valid_argument(self.default)
+        value_arg = "..." if self.required else repr(self.default)
         kwargs = ",".join(field_arguments)
         return f'Field({value_arg}, {kwargs})'
 

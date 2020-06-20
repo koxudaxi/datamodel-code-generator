@@ -14,7 +14,7 @@ class {{ class_name }}({{ base_class }}):
     {%- elif field.required %}
     {{ field.name }}: {{ field.type_hint }}
     {%- else %}
-    {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
+    {{ field.name }}: {{ field.type_hint }} = {{ field.represented_default }}
     {%- endif %}
 {%- for method in methods -%}
     {{ method }}

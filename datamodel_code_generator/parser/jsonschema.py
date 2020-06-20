@@ -120,29 +120,6 @@ class JsonSchemaObject(BaseModel):
             return None
         return values
 
-    @property
-    def typed_default(self) -> Union[str, bool, Dict[Any, Any], None]:
-        if self.default is not None and self.type:
-            type_ = self.type[0] if isinstance(self.type, list) else self.type
-            return self._get_typed_default(type_, self.default)
-        return None
-
-    @classmethod
-    def _get_typed_default(
-        cls, type_: str, default_value: Any
-    ) -> Union[str, bool, Dict[Any, Any], None]:
-        if type_ == 'integer' or type_ == 'number':
-            return default_value
-        elif type_ == 'boolean':
-            if default_value == 'true':
-                return True
-            return False
-        elif type_ == 'object' and isinstance(default_value, dict):
-            return default_value
-        elif type_ == 'null':
-            return None
-        return f"'{default_value}'"
-
 
 JsonSchemaObject.update_forward_refs()
 
@@ -371,7 +348,7 @@ class JsonSchemaParser(Parser):
                     name=field_name,
                     example=field.examples,
                     description=field.description,
-                    default=field.typed_default,
+                    default=field.default,
                     title=field.title,
                     data_types=field_types,
                     required=required,
@@ -441,7 +418,7 @@ class JsonSchemaParser(Parser):
         field = self.data_model_field_type(
             data_types=item_obj_data_types,
             example=obj.examples,
-            default=obj.typed_default,
+            default=obj.default,
             description=obj.description,
             title=obj.title,
             required=True,
@@ -486,7 +463,7 @@ class JsonSchemaParser(Parser):
                     data_types=types,
                     description=obj.description,
                     example=obj.examples,
-                    default=obj.typed_default,
+                    default=obj.default,
                     required=not obj.nullable,
                 )
             ],

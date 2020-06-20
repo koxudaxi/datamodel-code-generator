@@ -5,7 +5,6 @@ from unittest.mock import Mock, call
 import pytest
 
 from datamodel_code_generator import DataModelField
-from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
@@ -189,17 +188,46 @@ def test_parse_one_of_object(source_obj, generated_classes):
 
 
 @pytest.mark.parametrize(
-    'type_,default,expected',
+    'source_obj,generated_classes',
     [
-        ('string', 'abc', "'abc'"),
-        ('string', '', "''"),
-        ('number', 123, 123),
-        ('number', 0, 0),
-        ('boolean', 'true', True),
-        ('boolean', 'false', False),
-        ('null', 'null', None),
-        ('object', {'abc': 123, 'efg': 'hij'}, {'abc': 123, 'efg': 'hij'}),
+        (
+            {
+                "$id": "https://example.com/person.schema.json",
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "defaults",
+                "type": "object",
+                "properties": {
+                    "string": {"type": "string", "default": "default string",},
+                    "string_on_field": {
+                        "type": "string",
+                        "default": "default string",
+                        "description": "description",
+                    },
+                    "number": {"type": "number", "default": 123},
+                    "number_on_field": {
+                        "type": "number",
+                        "default": 123,
+                        "description": "description",
+                    },
+                    "number_array": {"type": "array", "default": [1, 2, 3]},
+                    "string_array": {"type": "array", "default": ["a", "b", "c"]},
+                    "object": {"type": "object", "default": {"key": "value"}},
+                },
+            },
+            """class Defaults(BaseModel):
+    string: Optional[str] = 'default string'
+    string_on_field: Optional[str] = Field('default string', description='description')
+    number: Optional[float] = 123
+    number_on_field: Optional[float] = Field(123, description='description')
+    number_array: Optional[List] = [1, 2, 3]
+    string_array: Optional[List] = ['a', 'b', 'c']
+    object: Optional[Dict[str, Any]] = {'key': 'value'}""",
+        )
     ],
 )
-def test_typed_default(type_, default, expected):
-    assert JsonSchemaObject(type=type_, default=default).typed_default == expected
+def test_parse_default(source_obj, generated_classes):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+    parser.parse_raw_obj('Defaults', source_obj)
+    assert dump_templates(list(parser.results)) == generated_classes
