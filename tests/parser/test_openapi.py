@@ -954,7 +954,10 @@ def test_openapi_parser_parse_alias():
     )
     parsed = parser.parse()
     assert parsed[('wo_o', '__init__.py')] == ''
-    assert parsed[('wo_o', 'bo_o.py')] == """from __future__ import annotations
+    assert (
+        parsed[('wo_o', 'bo_o.py')]
+        == """\
+from __future__ import annotations
 
 from typing import Optional
 
@@ -968,8 +971,11 @@ class ChocolatE(BaseModel):
     sourc_e: Optional[Source] = Field(None, alias='sourc-e')
     coco_a: Optional[fo_o.CocoA] = Field(None, alias='coco-a')
 """
+    )
 
-    assert parsed[('__init__.py',)] == '''\
+    assert (
+        parsed[('__init__.py',)]
+        == '''\
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -1054,8 +1060,11 @@ class AnyOfCombineInRoot(HomeAddress, UserName):
     age: Optional[str] = None
     birth_date: Optional[datetime] = Field(None, alias='birth-date')
 '''
+    )
 
-    assert parsed[('model_s.py',)] == '''\
+    assert (
+        parsed[('model_s.py',)]
+        == '''\
 from __future__ import annotations
 
 from enum import Enum
@@ -1086,8 +1095,11 @@ class UseR(BaseModel):
 class EvenT(BaseModel):
     name: Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]] = None
 '''
+    )
 
-    assert parsed[('fo_o', '__init__.py',)] == '''\
+    assert (
+        parsed[('fo_o', '__init__.py',)]
+        == '''\
 from __future__ import annotations
 
 from typing import Optional
@@ -1105,8 +1117,11 @@ class TeA(BaseModel):
 class CocoA(BaseModel):
     quality: Optional[int] = None
 '''
+    )
 
-    assert parsed[('fo_o', 'ba_r.py',)] == '''\
+    assert (
+        parsed[('fo_o', 'ba_r.py',)]
+        == '''\
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -1125,7 +1140,10 @@ class ThanG(BaseModel):
 class ClonE(ThinG):
     pass
 '''
-    assert parsed[('collection_s.py',)] == '''\
+    )
+    assert (
+        parsed[('collection_s.py',)]
+        == '''\
 from __future__ import annotations
 
 from typing import List, Optional
@@ -1165,6 +1183,7 @@ class Api(BaseModel):
 class ApiS(BaseModel):
     __root__: List[Api]
 '''
+    )
 
 
 @pytest.mark.parametrize(
