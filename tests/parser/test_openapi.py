@@ -952,205 +952,219 @@ def test_openapi_parser_parse_alias():
         data_model_field_type=DataModelField,
         text=Path(DATA_PATH / 'alias.yaml').read_text(),
     )
-    assert parser.parse() == {
-        ('wo_o', '__init__.py'): '',
-        ('wo_o', 'bo_o.py',): "from __future__ import annotations\n"
-        "\n"
-        "from typing import Optional\n"
-        "\n"
-        "from pydantic import BaseModel, Field\n"
-        "\n"
-        "from .. import Source, fo_o\n"
-        "\n"
-        "\n"
-        "class ChocolatE(BaseModel):\n"
-        "    flavour_name: Optional[str] = Field(None, alias='flavour-name')\n"
-        "    sourc_e: Optional[Source] = Field(None, alias='sourc-e')\n"
-        "    coco_a: Optional[fo_o.CocoA] = Field(None, alias='coco-a')\n",
-        ('__init__.py',): "from __future__ import annotations\n"
-        "\n"
-        "from datetime import date, datetime\n"
-        "from enum import Enum\n"
-        "from typing import List, Optional\n"
-        "\n"
-        "from pydantic import BaseModel, Field, conint\n"
-        "\n"
-        "from . import model_s\n"
-        "\n"
-        "\n"
-        "class Pet(Enum):\n"
-        "    ca_t = 'ca-t'\n"
-        "    dog_ = 'dog*'\n"
-        "\n"
-        "\n"
-        "class Error(BaseModel):\n"
-        "    code: int\n"
-        "    message: str\n"
-        "\n"
-        "\n"
-        "class HomeAddress(BaseModel):\n"
-        "    address_1: Optional[str] = Field(None, alias='address-1')\n"
-        "\n"
-        "\n"
-        "class TeamMembers(BaseModel):\n"
-        "    __root__: List[str]\n"
-        "\n"
-        "\n"
-        "class AllOfObj(BaseModel):\n"
-        "    name: Optional[str] = None\n"
-        "    number: Optional[str] = None\n"
-        "\n"
-        "\n"
-        "class Id(BaseModel):\n"
-        "    __root__: str\n"
-        "\n"
-        "\n"
-        "class Result(BaseModel):\n"
-        "    event: Optional[model_s.EvenT] = None\n"
-        "\n"
-        "\n"
-        "class Source(BaseModel):\n"
-        "    country_name: Optional[str] = Field(None, alias='country-name')\n"
-        "\n"
-        "\n"
-        "class UserName(BaseModel):\n"
-        "    first_name: Optional[str] = Field(None, alias='first-name')\n"
-        "    home_address: Optional[HomeAddress] = Field(None, alias='home-address')\n"
-        "\n"
-        "\n"
-        "class AllOfRef(UserName, HomeAddress):\n"
-        "    pass\n"
-        "\n"
-        "\n"
-        "class AllOfCombine(UserName):\n"
-        "    birth_date: Optional[date] = Field(None, alias='birth-date')\n"
-        "    size: Optional[conint(ge=1)] = None\n"
-        "\n"
-        "\n"
-        "class AnyOfCombine(HomeAddress, UserName):\n"
-        "    age: Optional[str] = None\n"
-        "\n"
-        "\n"
-        "class Item(HomeAddress, UserName):\n"
-        "    age: Optional[str] = None\n"
-        "\n"
-        "\n"
-        "class AnyOfCombineInObject(BaseModel):\n"
-        "    item: Optional[Item] = None\n"
-        "\n"
-        "\n"
-        "class AnyOfCombineInArrayItem(HomeAddress, UserName):\n"
-        "    age: Optional[str] = None\n"
-        "\n"
-        "\n"
-        "class AnyOfCombineInArray(BaseModel):\n"
-        "    __root__: List[AnyOfCombineInArrayItem]\n"
-        "\n"
-        "\n"
-        "class AnyOfCombineInRoot(HomeAddress, UserName):\n"
-        "    age: Optional[str] = None\n"
-        "    birth_date: Optional[datetime] = Field(None, alias='birth-date')\n",
-        ('model_s.py',): "from __future__ import annotations\n"
-        "\n"
-        "from enum import Enum\n"
-        "from typing import Any, Dict, List, Optional, Union\n"
-        "\n"
-        "from pydantic import BaseModel\n"
-        "\n"
-        "\n"
-        "class SpecieS(Enum):\n"
-        "    dog = 'dog'\n"
-        "    cat = 'cat'\n"
-        "    snake = 'snake'\n"
-        "\n"
-        "\n"
-        "class PeT(BaseModel):\n"
-        "    id: int\n"
-        "    name: str\n"
-        "    tag: Optional[str] = None\n"
-        "    species: Optional[SpecieS] = None\n"
-        "\n"
-        "\n"
-        "class UseR(BaseModel):\n"
-        "    id: int\n"
-        "    name: str\n"
-        "    tag: Optional[str] = None\n"
-        "\n"
-        "\n"
-        "class EvenT(BaseModel):\n"
-        "    name: Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]] = None\n",
-        ('fo_o', '__init__.py',): "from __future__ import annotations\n"
-        "\n"
-        "from typing import Optional\n"
-        "\n"
-        "from pydantic import BaseModel, Field\n"
-        "\n"
-        "from .. import Id\n"
-        "\n"
-        "\n"
-        "class TeA(BaseModel):\n"
-        "    flavour_name: Optional[str] = Field(None, alias='flavour-name')\n"
-        "    id: Optional[Id] = None\n"
-        "\n"
-        "\n"
-        "class CocoA(BaseModel):\n"
-        "    quality: Optional[int] = None\n",
-        ('fo_o', 'ba_r.py',): "from __future__ import annotations\n"
-        "\n"
-        "from typing import Any, Dict, List, Optional\n"
-        "\n"
-        "from pydantic import BaseModel, Field\n"
-        "\n"
-        "\n"
-        "class ThinG(BaseModel):\n"
-        "    attribute_s: Optional[Dict[str, Any]] = Field(None, alias='attribute-s')\n"
-        "\n"
-        "\n"
-        "class ThanG(BaseModel):\n"
-        "    attributes: Optional[List[Dict[str, Any]]] = None\n"
-        "\n"
-        "\n"
-        "class ClonE(ThinG):\n"
-        "    pass\n",
-        ('collection_s.py',): 'from __future__ import annotations\n'
-        '\n'
-        'from typing import List, Optional\n'
-        '\n'
-        'from pydantic import AnyUrl, BaseModel, Field\n'
-        '\n'
-        'from . import model_s\n'
-        '\n'
-        '\n'
-        'class PetS(BaseModel):\n'
-        '    __root__: List[model_s.PeT]\n'
-        '\n'
-        '\n'
-        'class UserS(BaseModel):\n'
-        '    __root__: List[model_s.UseR]\n'
-        '\n'
-        '\n'
-        'class RuleS(BaseModel):\n'
-        '    __root__: List[str]\n'
-        '\n'
-        '\n'
-        'class Api(BaseModel):\n'
-        '    apiKey: Optional[str] = Field(\n'
-        '        None, description=\'To be used as a dataset parameter value\'\n'
-        '    )\n'
-        '    apiVersionNumber: Optional[str] = Field(\n'
-        '        None, description=\'To be used as a version parameter value\'\n'
-        '    )\n'
-        '    apiUrl: Optional[AnyUrl] = Field(\n'
-        '        None, description="The URL describing the dataset\'s fields"\n'
-        '    )\n'
-        '    apiDocumentationUrl: Optional[AnyUrl] = Field(\n'
-        '        None, description=\'A URL to the API console for each API\'\n'
-        '    )\n'
-        '\n'
-        '\n'
-        'class ApiS(BaseModel):\n'
-        '    __root__: List[Api]\n',
-    }
+    parsed = parser.parse()
+    assert parsed[('wo_o', '__init__.py')] == ''
+    assert parsed[('wo_o', 'bo_o.py')] == """from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+from .. import Source, fo_o
+
+
+class ChocolatE(BaseModel):
+    flavour_name: Optional[str] = Field(None, alias='flavour-name')
+    sourc_e: Optional[Source] = Field(None, alias='sourc-e')
+    coco_a: Optional[fo_o.CocoA] = Field(None, alias='coco-a')
+"""
+
+    assert parsed[('__init__.py',)] == '''\
+from __future__ import annotations
+
+from datetime import date, datetime
+from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, conint
+
+from . import model_s
+
+
+class Pet(Enum):
+    ca_t = 'ca-t'
+    dog_ = 'dog*'
+
+
+class Error(BaseModel):
+    code: int
+    message: str
+
+
+class HomeAddress(BaseModel):
+    address_1: Optional[str] = Field(None, alias='address-1')
+
+
+class TeamMembers(BaseModel):
+    __root__: List[str]
+
+
+class AllOfObj(BaseModel):
+    name: Optional[str] = None
+    number: Optional[str] = None
+
+
+class Id(BaseModel):
+    __root__: str
+
+
+class Result(BaseModel):
+    event: Optional[model_s.EvenT] = None
+
+
+class Source(BaseModel):
+    country_name: Optional[str] = Field(None, alias='country-name')
+
+
+class UserName(BaseModel):
+    first_name: Optional[str] = Field(None, alias='first-name')
+    home_address: Optional[HomeAddress] = Field(None, alias='home-address')
+
+
+class AllOfRef(UserName, HomeAddress):
+    pass
+
+
+class AllOfCombine(UserName):
+    birth_date: Optional[date] = Field(None, alias='birth-date')
+    size: Optional[conint(ge=1)] = None
+
+
+class AnyOfCombine(HomeAddress, UserName):
+    age: Optional[str] = None
+
+
+class Item(HomeAddress, UserName):
+    age: Optional[str] = None
+
+
+class AnyOfCombineInObject(BaseModel):
+    item: Optional[Item] = None
+
+
+class AnyOfCombineInArrayItem(HomeAddress, UserName):
+    age: Optional[str] = None
+
+
+class AnyOfCombineInArray(BaseModel):
+    __root__: List[AnyOfCombineInArrayItem]
+
+
+class AnyOfCombineInRoot(HomeAddress, UserName):
+    age: Optional[str] = None
+    birth_date: Optional[datetime] = Field(None, alias='birth-date')
+'''
+
+    assert parsed[('model_s.py',)] == '''\
+from __future__ import annotations
+
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel
+
+
+class SpecieS(Enum):
+    dog = 'dog'
+    cat = 'cat'
+    snake = 'snake'
+
+
+class PeT(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+    species: Optional[SpecieS] = None
+
+
+class UseR(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+
+
+class EvenT(BaseModel):
+    name: Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]] = None
+'''
+
+    assert parsed[('fo_o', '__init__.py',)] == '''\
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+from .. import Id
+
+
+class TeA(BaseModel):
+    flavour_name: Optional[str] = Field(None, alias='flavour-name')
+    id: Optional[Id] = None
+
+
+class CocoA(BaseModel):
+    quality: Optional[int] = None
+'''
+
+    assert parsed[('fo_o', 'ba_r.py',)] == '''\
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
+
+class ThinG(BaseModel):
+    attribute_s: Optional[Dict[str, Any]] = Field(None, alias='attribute-s')
+
+
+class ThanG(BaseModel):
+    attributes: Optional[List[Dict[str, Any]]] = None
+
+
+class ClonE(ThinG):
+    pass
+'''
+    assert parsed[('collection_s.py',)] == '''\
+from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import AnyUrl, BaseModel, Field
+
+from . import model_s
+
+
+class PetS(BaseModel):
+    __root__: List[model_s.PeT]
+
+
+class UserS(BaseModel):
+    __root__: List[model_s.UseR]
+
+
+class RuleS(BaseModel):
+    __root__: List[str]
+
+
+class Api(BaseModel):
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: Optional[AnyUrl] = Field(
+        None, description="The URL describing the dataset's fields"
+    )
+    apiDocumentationUrl: Optional[AnyUrl] = Field(
+        None, description='A URL to the API console for each API'
+    )
+
+
+class ApiS(BaseModel):
+    __root__: List[Api]
+'''
 
 
 @pytest.mark.parametrize(
