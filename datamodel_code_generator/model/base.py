@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
+from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Union
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
@@ -107,6 +107,22 @@ class DataModelFieldBase(BaseModel):
             if data_type.imports_:
                 self.imports.extend(data_type.imports_)
         self.type_hint = self._get_type_hint()
+
+    def get_valid_argument(self, value: Any) -> Union[str, List[Any], Dict[Any, Any]]:
+        if isinstance(value, str):
+            return repr(value)
+        elif isinstance(value, list):
+            return [self.get_valid_argument(i) for i in value]
+        elif isinstance(value, dict):
+            return {
+                self.get_valid_argument(k): self.get_valid_argument(v)
+                for k, v in value.items()
+            }
+        return value
+
+    @property
+    def typed_default(self) -> str:
+        return self.get_valid_argument(self.default)
 
 
 class TemplateBase(ABC):
