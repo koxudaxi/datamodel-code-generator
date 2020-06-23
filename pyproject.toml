@@ -1,6 +1,7 @@
 [tool.black]
 line-length = 88
 skip-string-normalization = true
+exclude = '(tests/data|\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|.*\/models\.py.*|.*\/models\/.*)'
 
 [tool.isort]
 multi_line_output = 3
@@ -8,6 +9,7 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 line_length = 88
+skip = "tests/data"
 
 [tool.pydantic-pycharm-plugin.parsable-types]
 # str field may parse int and float
