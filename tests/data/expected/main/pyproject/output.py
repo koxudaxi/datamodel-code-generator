@@ -68,7 +68,7 @@ class Api(BaseModel):
         AnyUrl
     ] = Field(
         None,
-        description="The URL describing the dataset\'s fields",
+        description="The URL describing the dataset's fields",
     )
     apiDocumentationUrl: Optional[
         AnyUrl
