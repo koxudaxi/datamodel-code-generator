@@ -1,7 +1,6 @@
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Mapping
 
 import pytest
 from _pytest.capture import CaptureFixture

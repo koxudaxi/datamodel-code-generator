@@ -14,6 +14,27 @@ from datamodel_code_generator.parser.openapi import OpenAPIParser
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 
+EXPECTED_OPEN_API_PATH = Path(__file__).parents[1] / 'data' / 'expected' / 'openapi'
+
+
+def get_expected_file(
+    test_name: str,
+    with_import: bool,
+    format_: bool,
+    base_class: str,
+    prefix: Optional[str] = None,
+) -> Path:
+    params: List[str] = []
+    if with_import:
+        params.append('with_import')
+    if format_:
+        params.append('format')
+    if base_class:
+        params.append(base_class)
+    file_name = '_'.join(params or 'output')
+
+    return EXPECTED_OPEN_API_PATH / test_name / (prefix or '') / f'{file_name}.py'
+
 
 class A(TemplateBase):
     def __init__(self, filename: str, data: str):
@@ -680,55 +701,10 @@ def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
         BaseModel, CustomRootType, text=Path(DATA_PATH / 'enum_models.yaml').read_text()
     )
+    expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_enum_models'
     assert (
         parser.parse()
-        == '''from __future__ import annotations
-
-from enum import Enum
-from typing import List, Optional
-
-from pydantic import BaseModel
-
-
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class Type(Enum):
-    a = 'a'
-    b = 'b'
-
-
-class EnumObject(BaseModel):
-    type: Optional[Type] = None
-
-
-class EnumRoot(Enum):
-    a = 'a'
-    b = 'b'
-
-
-class IntEnum(Enum):
-    number_1 = 1
-    number_2 = 2
-
-
-class AliasEnum(Enum):
-    a = 1
-    b = 2
-    c = 3
-'''
+        == (expected_dir / 'output_py37.py').read_text()
     )
 
     parser = OpenAPIParser(
@@ -739,51 +715,7 @@ class AliasEnum(Enum):
     )
     assert (
         parser.parse()
-        == '''from enum import Enum
-from typing import List, Optional
-
-from pydantic import BaseModel
-
-
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Pets(BaseModel):
-    __root__: List['Pet']
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class Type(Enum):
-    a = 'a'
-    b = 'b'
-
-
-class EnumObject(BaseModel):
-    type: Optional['Type'] = None
-
-
-class EnumRoot(Enum):
-    a = 'a'
-    b = 'b'
-
-
-class IntEnum(Enum):
-    number_1 = 1
-    number_2 = 2
-
-
-class AliasEnum(Enum):
-    a = 1
-    b = 2
-    c = 3
-'''
+        == (expected_dir / 'output_py36.py').read_text()
     )
 
 
@@ -793,55 +725,7 @@ def test_openapi_parser_parse_anyof():
     )
     assert (
         parser.parse()
-        == '''from __future__ import annotations
-
-from datetime import date
-from typing import List, Optional, Union
-
-from pydantic import BaseModel
-
-
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Car(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class AnyOfItemItem(BaseModel):
-    name: Optional[str] = None
-
-
-class AnyOfItem(BaseModel):
-    __root__: Union[Pet, Car, AnyOfItemItem]
-
-
-class ItemItem(BaseModel):
-    name: Optional[str] = None
-
-
-class AnyOfobj(BaseModel):
-    item: Optional[Union[Pet, Car, ItemItem]] = None
-
-
-class AnyOfArrayItem(BaseModel):
-    name: Optional[str] = None
-    birthday: Optional[date] = None
-
-
-class AnyOfArray(BaseModel):
-    __root__: List[Union[Pet, Car, AnyOfArrayItem]]
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-'''
+        == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_anyof' / 'output.py').read_text()
     )
 
 
@@ -1187,175 +1071,16 @@ class ApiS(BaseModel):
 
 
 @pytest.mark.parametrize(
-    'with_import, format_, base_class, result',
+    'with_import, format_, base_class',
     [
         (
             True,
             True,
-            None,
-            {
-                (
-                    '__init__.py',
-                ): '''\
-from __future__ import annotations
-
-from typing import Optional
-
-from pydantic import BaseModel
-
-from . import models
-
-
-class Id(BaseModel):
-    __root__: str
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class Result(BaseModel):
-    event: Optional[models.Event] = None
-
-
-class Source(BaseModel):
-    country: Optional[str] = None
-''',
-                (
-                    'models.py',
-                ): '''\
-from __future__ import annotations
-
-from enum import Enum
-from typing import Any, Dict, List, Optional, Union
-
-from pydantic import BaseModel
-
-
-class Species(Enum):
-    dog = 'dog'
-    cat = 'cat'
-    snake = 'snake'
-
-
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-    species: Optional[Species] = None
-
-
-class User(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Event(BaseModel):
-    name: Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]] = None
-''',
-                (
-                    'collections.py',
-                ): '''\
-from __future__ import annotations
-
-from typing import List, Optional
-
-from pydantic import AnyUrl, BaseModel
-
-from . import models
-
-
-class Pets(BaseModel):
-    __root__: List[models.Pet]
-
-
-class Users(BaseModel):
-    __root__: List[models.User]
-
-
-class Rules(BaseModel):
-    __root__: List[str]
-
-
-class Api(BaseModel):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[AnyUrl] = None
-    apiDocumentationUrl: Optional[AnyUrl] = None
-
-
-class Apis(BaseModel):
-    __root__: List[Api]
-''',
-                (
-                    'foo',
-                    '__init__.py',
-                ): '''\
-from __future__ import annotations
-
-from typing import Optional
-
-from pydantic import BaseModel
-
-from .. import Id
-
-
-class Tea(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-
-
-class Cocoa(BaseModel):
-    quality: Optional[int] = None
-''',
-                (
-                    'foo',
-                    'bar.py',
-                ): '''\
-from __future__ import annotations
-
-from typing import Any, Dict, List, Optional
-
-from pydantic import BaseModel
-
-
-class Thing(BaseModel):
-    attributes: Optional[Dict[str, Any]] = None
-
-
-class Thang(BaseModel):
-    attributes: Optional[List[Dict[str, Any]]] = None
-
-
-class Clone(Thing):
-    pass
-''',
-                ('woo', '__init__.py'): '',
-                (
-                    'woo',
-                    'boo.py',
-                ): '''\
-from __future__ import annotations
-
-from typing import Optional
-
-from pydantic import BaseModel
-
-from .. import Source, foo
-
-
-class Chocolate(BaseModel):
-    flavour: Optional[str] = None
-    source: Optional[Source] = None
-    cocoa: Optional[foo.Cocoa] = None
-''',
-            },
+            None
         )
     ],
 )
-def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
+def test_openapi_parser_parse_modular(with_import, format_, base_class):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
@@ -1363,235 +1088,39 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class, result):
         base_class=base_class,
     )
     modules = parser.parse(with_import=with_import, format_=format_)
-    assert modules == result
+    main_modular_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_modular'
+
+    for paths, result in modules.items():
+        expected = main_modular_dir.joinpath(*paths).read_text()
+        assert result == expected
 
 
 @pytest.mark.parametrize(
-    'with_import, format_, base_class, result',
+    'with_import, format_, base_class',
     [
-        (
-            True,
-            True,
-            None,
-            '''from __future__ import annotations
-
-from typing import List, Optional
-
-from pydantic import BaseModel, Extra
-
-
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-
-
-class User(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Users(BaseModel):
-    __root__: List[User]
-
-
-class Id(BaseModel):
-    __root__: str
-
-
-class Rules(BaseModel):
-    __root__: List[str]
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class Event(BaseModel):
-    name: Optional[str] = None
-
-
-class Result(BaseModel):
-    event: Optional[Event] = None
-''',
-        ),
-        (
-            False,
-            True,
-            None,
-            '''class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-
-
-class User(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Users(BaseModel):
-    __root__: List[User]
-
-
-class Id(BaseModel):
-    __root__: str
-
-
-class Rules(BaseModel):
-    __root__: List[str]
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class Event(BaseModel):
-    name: Optional[str] = None
-
-
-class Result(BaseModel):
-    event: Optional[Event] = None
-''',
-        ),
-        (
-            True,
-            False,
-            None,
-            '''from pydantic import BaseModel, Extra
-from typing import List, Optional
-from __future__ import annotations
-
-
-class Pet(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-
-
-class User(BaseModel):
-    class Config:
-        extra = Extra.allow
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Users(BaseModel):
-    __root__: List[User]
-
-
-class Id(BaseModel):
-    __root__: str
-
-
-class Rules(BaseModel):
-    __root__: List[str]
-
-
-class Error(BaseModel):
-    code: int
-    message: str
-
-
-class Event(BaseModel):
-    name: Optional[str] = None
-
-
-class Result(BaseModel):
-    event: Optional[Event] = None''',
-        ),
-        (
-            True,
-            True,
-            'custom_module.Base',
-            '''from __future__ import annotations
-
-from typing import List, Optional
-
-from pydantic import Extra
-
-from custom_module import Base
-
-
-class Pet(Base):
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Pets(Base):
-    __root__: List[Pet]
-
-
-class User(Base):
-    class Config:
-        extra = Extra.allow
-
-    id: int
-    name: str
-    tag: Optional[str] = None
-
-
-class Users(Base):
-    __root__: List[User]
-
-
-class Id(Base):
-    __root__: str
-
-
-class Rules(Base):
-    __root__: List[str]
-
-
-class Error(Base):
-    code: int
-    message: str
-
-
-class Event(Base):
-    name: Optional[str] = None
-
-
-class Result(Base):
-    event: Optional[Event] = None
-''',
-        ),
+        (True, True, None,),
+        (False, True, None,),
+        (True, False, None,),
+        (True, True, 'custom_module.Base',),
     ],
 )
-def test_openapi_parser_parse_additional_properties(
-    with_import, format_, base_class, result
-):
+def test_openapi_parser_parse_additional_properties(with_import, format_, base_class):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
         text=Path(DATA_PATH / 'additional_properties.yaml').read_text(),
         base_class=base_class,
     )
-    assert parser.parse(with_import=with_import, format_=format_) == result
+
+    assert (
+        parser.parse(with_import=with_import, format_=format_)
+        == get_expected_file(
+            'openapi_parser_parse_additional_properties',
+            with_import,
+            format_,
+            base_class,
+        ).read_text()
+    )
 
 
 @pytest.mark.parametrize(
