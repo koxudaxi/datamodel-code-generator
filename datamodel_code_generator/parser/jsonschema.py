@@ -303,10 +303,10 @@ class JsonSchemaParser(Parser):
                 ]
             elif field.is_array:
                 class_name = self.get_class_name(field_name)
-                array_fields, array_field_classes = self.parse_array_fields(
+                array_field, array_field_classes = self.parse_array_fields(
                     class_name, field
                 )
-                field_types = array_fields[0].data_types
+                field_types = array_field.data_types
                 is_list = True
                 is_union = True
             elif field.anyOf:
@@ -375,7 +375,7 @@ class JsonSchemaParser(Parser):
 
     def parse_array_fields(
         self, name: str, obj: JsonSchemaObject
-    ) -> Tuple[List[DataModelFieldBase], List[DataType]]:
+    ) -> Tuple[DataModelFieldBase, List[DataType]]:
         if isinstance(obj.items, JsonSchemaObject):
             items = [obj.items]
         else:
@@ -411,7 +411,12 @@ class JsonSchemaParser(Parser):
                 item_obj_data_types.append(
                     self.data_type(type=enum.name, ref=True, version_compatible=True)
                 )
-
+            elif item.is_array:
+                class_name = self.get_class_name(name)
+                array_field, array_field_classes = self.parse_array_fields(
+                    class_name, item
+                )
+                item_obj_data_types.extend(array_field.data_types)
             else:
                 item_obj_data_types.extend(self.get_data_type(item))
 
@@ -425,13 +430,13 @@ class JsonSchemaParser(Parser):
             is_list=True,
             is_union=is_union,
         )
-        return [field], item_obj_data_types
+        return field, item_obj_data_types
 
     def parse_array(self, name: str, obj: JsonSchemaObject) -> None:
-        fields, item_obj_names = self.parse_array_fields(name, obj)
+        field, item_obj_names = self.parse_array_fields(name, obj)
         data_model_root = self.data_model_root_type(
             name,
-            fields,
+            [field],
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,

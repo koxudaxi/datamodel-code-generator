@@ -231,3 +231,25 @@ def test_parse_default(source_obj, generated_classes):
     )
     parser.parse_raw_obj('Defaults', source_obj)
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+def test_parse_nested_array():
+    parser = JsonSchemaParser(
+        BaseModel,
+        CustomRootType,
+        data_model_field_type=DataModelField,
+        text=(DATA_PATH / 'nested_array.json').read_text(),
+    )
+    parser.parse()
+    assert (
+        dump_templates(list(parser.results))
+        == """\
+class BoundingBox(BaseModel):
+    type: str
+    coordinates: List[Union[float, str]]
+
+
+class Model(BaseModel):
+    bounding_box: Optional[BoundingBox] = None
+    attributes: Optional[Dict[str, Any]] = None"""
+    )
