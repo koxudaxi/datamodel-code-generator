@@ -141,8 +141,9 @@ def get_uniq_name(name: str, excludes: Set[str], camel: bool = False) -> str:
 def get_valid_name(name: str, excludes: Set[str], camel: bool = False) -> str:
     replaced_name = re.sub(r'\W', '_', name)
     if replaced_name.isidentifier() and not iskeyword(replaced_name):
-        return get_uniq_name(replaced_name, excludes, camel)
-    return replaced_name
+        return replaced_name
+    return get_uniq_name(replaced_name, excludes, camel)
+
 
 
 def get_valid_field_name_and_alias(
