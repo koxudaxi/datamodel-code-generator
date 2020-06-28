@@ -237,6 +237,31 @@ def test_main_json():
 
 
 @freeze_time('2019-07-26')
+def test_space_and_special_characters_json():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_DATA_PATH / 'space_and_special_characters.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'json',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_json_failed():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
