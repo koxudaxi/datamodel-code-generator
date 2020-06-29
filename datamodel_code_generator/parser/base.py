@@ -2,6 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
+from keyword import iskeyword
 from pathlib import Path
 from typing import (
     Any,
@@ -137,13 +138,17 @@ def get_uniq_name(name: str, excludes: Set[str], camel: bool = False) -> str:
     return uniq_name
 
 
-def get_valid_name(name: str) -> str:
-    # TODO: convert invalid python name char to valid name char
-    return name.replace('-', '_')
+def get_valid_name(name: str, excludes: Set[str], camel: bool = False) -> str:
+    replaced_name = re.sub(r'\W', '_', name)
+    if replaced_name.isidentifier() and not iskeyword(replaced_name):
+        return get_uniq_name(replaced_name, excludes, camel)
+    return replaced_name
 
 
-def get_valid_field_name_and_alias(field_name: str) -> Tuple[str, Optional[str]]:
-    valid_name = get_valid_name(field_name)
+def get_valid_field_name_and_alias(
+    field_name: str, excludes: Set[str]
+) -> Tuple[str, Optional[str]]:
+    valid_name = get_valid_name(field_name, excludes)
     return valid_name, None if field_name == valid_name else field_name
 
 
@@ -202,6 +207,7 @@ class Parser(ABC):
         self.results.append(data_model)
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
+        field_name = get_valid_name(field_name, set())
         upper_camel_name = snake_to_upper_camel(field_name)
         if unique:
             return get_uniq_name(upper_camel_name, self.created_model_names, camel=True)

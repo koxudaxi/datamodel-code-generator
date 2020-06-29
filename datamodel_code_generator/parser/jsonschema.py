@@ -172,9 +172,9 @@ class JsonSchemaParser(Parser):
         ]
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
-        field_name = get_valid_name(field_name)
         if '.' in field_name:
-            prefix, field_name = field_name.rsplit('.', 1)
+            split_name = [get_valid_name(n, set()) for n in field_name.split('.')]
+            prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
             prefix += '.'
         else:
             prefix = ''
@@ -292,7 +292,7 @@ class JsonSchemaParser(Parser):
             is_list: bool = False
             is_union: bool = False
             field_types: List[DataType]
-            field_name, alias = get_valid_field_name_and_alias(field_name)
+            field_name, alias = get_valid_field_name_and_alias(field_name, set())
             if field.ref:
                 field_types = [
                     self.data_type(
