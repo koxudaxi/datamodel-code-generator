@@ -145,8 +145,6 @@ def get_valid_name(name: str, excludes: Set[str], camel: bool = False) -> str:
     return replaced_name
 
 
-
-
 def get_valid_field_name_and_alias(
     field_name: str, excludes: Set[str]
 ) -> Tuple[str, Optional[str]]:
