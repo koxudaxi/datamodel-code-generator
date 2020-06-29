@@ -9,6 +9,7 @@
         "Initial parameters": {
             "V1": 123,
             "V2": 456
-        }
+        },
+        "class": "Unknown"
     }
 }

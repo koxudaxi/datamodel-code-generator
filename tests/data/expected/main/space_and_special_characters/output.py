@@ -24,6 +24,7 @@ class Data(BaseModel):
     Initial_parameters: Optional[InitialParameters] = Field(
         None, alias='Initial parameters'
     )
+    class_: str = Field(..., alias='class')
 
 
 class Model(BaseModel):
