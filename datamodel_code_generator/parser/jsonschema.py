@@ -292,6 +292,7 @@ class JsonSchemaParser(Parser):
             is_list: bool = False
             is_union: bool = False
             field_types: List[DataType]
+            original_field_name: str = field_name
             field_name, alias = get_valid_field_name_and_alias(field_name, set())
             if field.ref:
                 field_types = [
@@ -342,7 +343,7 @@ class JsonSchemaParser(Parser):
                 ]
             else:
                 field_types = self.get_data_type(field)
-            required: bool = field_name in requires
+            required: bool = original_field_name in requires
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
