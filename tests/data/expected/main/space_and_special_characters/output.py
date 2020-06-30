@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -15,19 +13,15 @@ class InitialParameters(BaseModel):
 
 
 class Data(BaseModel):
-    Length__m_: Optional[float] = Field(None, alias='Length (m)')
-    Symmetric_deviation____: Optional[float] = Field(
-        None, alias='Symmetric deviation (%)'
-    )
-    Total_running_time__s_: Optional[int] = Field(None, alias='Total running time (s)')
-    Mass__kg_: Optional[float] = Field(None, alias='Mass (kg)')
-    Initial_parameters: Optional[InitialParameters] = Field(
-        None, alias='Initial parameters'
-    )
+    Length__m_: float = Field(..., alias='Length (m)')
+    Symmetric_deviation____: float = Field(..., alias='Symmetric deviation (%)')
+    Total_running_time__s_: int = Field(..., alias='Total running time (s)')
+    Mass__kg_: float = Field(..., alias='Mass (kg)')
+    Initial_parameters: InitialParameters = Field(..., alias='Initial parameters')
     class_: str = Field(..., alias='class')
 
 
 class Model(BaseModel):
-    Serial_Number: Optional[str] = Field(None, alias='Serial Number')
+    Serial_Number: str = Field(..., alias='Serial Number')
     Timestamp: str
     Data: Data
