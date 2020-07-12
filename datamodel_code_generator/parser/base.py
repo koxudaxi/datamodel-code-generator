@@ -18,6 +18,7 @@ from typing import (
 )
 
 import inflect
+from pydantic import BaseModel
 
 from datamodel_code_generator.format import format_code
 
@@ -126,30 +127,110 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
-def get_uniq_name(name: str, excludes: Set[str], camel: bool = False) -> str:
-    uniq_name: str = name
-    count: int = 1
-    while uniq_name in excludes:
-        if camel:
-            uniq_name = f'{name}{count}'
+class Reference(BaseModel):
+    parents: List[str]
+    original_name: str
+    name: str
+
+
+class ModelResolver:
+    def __init__(self) -> None:
+        self.references: Dict[str, Reference] = {}
+
+    @staticmethod
+    def _get_path(parents: List[str], name: str) -> str:
+
+        return '/'.join([*parents, name])
+
+    def add_ref(self, ref: str, singular_name: bool = False) -> Reference:
+        if not ref:
+            raise ValueError()
+        if ref in self.references:
+            return self.references[ref]
+        parents, original_name = ref.rsplit('/', 1)
+
+        name = self.get_class_name(original_name, unique=False)
+        if singular_name:
+            name = get_singular_name(name)
+        reference = Reference(
+            parents=parents.split('/'), original_name=original_name, name=name
+        )
+        self.references[ref] = reference
+        return reference
+
+    def add(
+        self,
+        parents: List[str],
+        original_name: str,
+        *,
+        class_name: bool = False,
+        singular_name: bool = False,
+        unique: bool = False,
+        singular_name_suffix: str = 'Item',
+    ) -> Reference:
+        path: str = self._get_path(parents, original_name)
+        if path in self.references:
+            return self.references[path]
+        if class_name:
+            name = self.get_class_name(original_name, unique)
+            if singular_name:
+                name = get_singular_name(name, singular_name_suffix)
+        elif singular_name:
+            name = get_singular_name(original_name, singular_name_suffix)
+            if unique:
+                name = self.get_uniq_name(name)
+        elif unique:
+            name = self.get_uniq_name(original_name)
         else:
-            uniq_name = f'{name}_{count}'
-        count += 1
-    return uniq_name
+            name = original_name
+        reference = Reference(parents=parents, original_name=original_name, name=name)
+        self.references[path] = reference
+        return reference
 
+    def get(self, parents: List[str], name: str) -> Reference:
+        path: str = self._get_path(parents, name)
+        return self.references[path]
 
-def get_valid_name(name: str, excludes: Set[str], camel: bool = False) -> str:
-    replaced_name = re.sub(r'\W', '_', name)
-    if replaced_name.isidentifier() and not iskeyword(replaced_name):
-        return get_uniq_name(replaced_name, excludes, camel)
-    return replaced_name
+    def get_class_name(self, field_name: str, unique: bool = True) -> str:
+        if '.' in field_name:
+            split_name = [self.get_valid_name(n) for n in field_name.split('.')]
+            prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
+            prefix += '.'
+        else:
+            prefix = ''
 
+        field_name = self.get_valid_name(field_name)
+        upper_camel_name = snake_to_upper_camel(field_name)
+        if unique:
+            class_name = self.get_uniq_name(upper_camel_name, camel=True)
+        else:
+            class_name = upper_camel_name
 
-def get_valid_field_name_and_alias(
-    field_name: str, excludes: Set[str]
-) -> Tuple[str, Optional[str]]:
-    valid_name = get_valid_name(field_name, excludes)
-    return valid_name, None if field_name == valid_name else field_name
+        return f'{prefix}{class_name}'
+
+    def get_uniq_name(self, name: str, camel: bool = False) -> str:
+        uniq_name: str = name
+        count: int = 1
+        while uniq_name in self.references:
+            if camel:
+                uniq_name = f'{name}{count}'
+            else:
+                uniq_name = f'{name}_{count}'
+            count += 1
+        return uniq_name
+
+    def get_valid_name(self, name: str, camel: bool = False) -> str:
+        # TODO: when first character is a number
+        replaced_name = re.sub(r'\W', '_', name)
+        # if replaced_name.isidentifier() and not iskeyword(replaced_name):
+            # return self.get_uniq_name(replaced_name, camel)
+        return replaced_name
+
+    def get_valid_field_name_and_alias(
+        self, field_name: str
+    ) -> Tuple[str, Optional[str]]:
+        valid_name = self.get_valid_name(field_name)
+        return valid_name, None if field_name == valid_name else field_name
 
 
 class Parser(ABC):
@@ -204,16 +285,11 @@ class Parser(ABC):
             str, Any
         ] = extra_template_data or defaultdict(dict)
 
+        self.model_resolver = ModelResolver()
+
     def append_result(self, data_model: DataModel) -> None:
         self.created_model_names.add(data_model.name)
         self.results.append(data_model)
-
-    def get_class_name(self, field_name: str, unique: bool = True) -> str:
-        field_name = get_valid_name(field_name, set())
-        upper_camel_name = snake_to_upper_camel(field_name)
-        if unique:
-            return get_uniq_name(upper_camel_name, self.created_model_names, camel=True)
-        return upper_camel_name
 
     @abstractmethod
     def parse_raw(self) -> None:
@@ -280,7 +356,9 @@ class Parser(ABC):
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_
                         else:
-                            alias = get_uniq_name(import_, used_import_names)
+                            alias = self.model_resolver.get_uniq_name(
+                                import_
+                            )  # used_import_names)
                             used_import_names.add(import_)
                             alias_map[full_path] = None if alias == import_ else alias
                         name = data_type.type.rsplit('.', 1)[-1]

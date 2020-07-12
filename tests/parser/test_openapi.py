@@ -200,7 +200,7 @@ class Pets(BaseModel):
 )
 def test_parse_object(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj))
+    parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
@@ -242,7 +242,7 @@ class Pets(BaseModel):
 )
 def test_parse_array(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj))
+    parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
@@ -311,7 +311,7 @@ def test_openapi_parser_parse(with_import, format_, base_class):
 )
 def test_parse_root_type(source_obj, generated_classes):
     parser = OpenAPIParser(BaseModel, CustomRootType)
-    parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj))
+    parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 

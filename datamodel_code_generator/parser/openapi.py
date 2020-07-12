@@ -20,4 +20,4 @@ class OpenAPIParser(JsonSchemaParser):
         for obj_name, raw_obj in components[
             'schemas'
         ].items():  # type: str, Dict[Any, Any]
-            self.parse_raw_obj(obj_name, raw_obj)
+            self.parse_raw_obj(obj_name, raw_obj, ['components'])
