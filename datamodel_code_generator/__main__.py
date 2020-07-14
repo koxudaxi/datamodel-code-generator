@@ -62,6 +62,11 @@ arg_parser.add_argument(
     default=DEFAULT_BASE_CLASS,
 )
 arg_parser.add_argument(
+    '--field-constraints',
+    help='Use field constraints and not con* annotations',
+    action='store_true',
+)
+arg_parser.add_argument(
     '--custom-template-dir', help='Custom Template Directory', type=str
 )
 arg_parser.add_argument(
@@ -120,6 +125,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             custom_template_dir=namespace.custom_template_dir,
             extra_template_data=extra_template_data,
             validation=namespace.validation,
+            field_constraints=namespace.field_constraints,
         )
         return Exit.OK
     except Error as e:

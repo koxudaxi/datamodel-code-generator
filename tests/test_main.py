@@ -449,3 +449,52 @@ def test_validation_failed():
             )
             == Exit.ERROR
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_with_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
+                '--output',
+                str(output_file),
+                '--field-constraints',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_with_field_constraints' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_without_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
+                '--output',
+                str(output_file),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_without_field_constraints' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()

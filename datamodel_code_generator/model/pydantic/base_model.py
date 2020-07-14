@@ -1,17 +1,37 @@
+from collections import ChainMap
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Optional, Set, Union
+from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Set
+
+from pydantic import Field
 
 from datamodel_code_generator.imports import Import
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import (
+    ConstraintsBase,
+    DataModel,
+    DataModelFieldBase,
+)
 from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
+
+
+class Constraints(ConstraintsBase):
+
+    gt: Optional[float] = Field(None, alias='exclusiveMinimum')
+    ge: Optional[float] = Field(None, alias='minimum')
+    lt: Optional[float] = Field(None, alias='exclusiveMaximum')
+    le: Optional[float] = Field(None, alias='maximum')
+    multiple_of: Optional[float] = Field(None, alias='multipleOf')
+    min_items: Optional[int] = Field(None, alias='minItems')
+    max_items: Optional[int] = Field(None, alias='maxItems')
+    min_length: Optional[int] = Field(None, alias='minLength')
+    max_length: Optional[int] = Field(None, alias='maxLength')
+    regex: Optional[str] = Field(None, alias='pattern')
 
 
 class DataModelField(DataModelFieldBase):
     _FIELDS_KEYS: Set[str] = {'alias', 'example', 'examples', 'description', 'title'}
 
-    def __init__(self, **values: Any) -> None:
-        super().__init__(**values)
+    constraints: Optional[Constraints] = None
 
     @property
     def method(self) -> Optional[str]:
@@ -37,11 +57,10 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def __str__(self) -> str:
-        field_arguments = [
-            f"{k}={repr(v)}"
-            for k, v in self.dict(include=self._FIELDS_KEYS).items()
-            if v is not None
-        ]
+        data: Mapping[str, Any] = self.dict(include=self._FIELDS_KEYS)
+        if self.constraints is not None:
+            data = ChainMap(data, self.constraints.dict())
+        field_arguments = [f"{k}={repr(v)}" for k, v in data.items() if v is not None]
         if not field_arguments:
             return ""
 
