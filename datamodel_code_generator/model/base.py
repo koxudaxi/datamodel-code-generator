@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Union
+from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
@@ -38,6 +38,10 @@ def optional(func: Callable[..., Any]) -> Callable[..., Any]:
     return inner
 
 
+class ConstraintsBase(BaseModel):
+    ...
+
+
 class DataModelFieldBase(BaseModel):
     name: Optional[str]
     default: Optional[Any]
@@ -53,6 +57,7 @@ class DataModelFieldBase(BaseModel):
     imports: List[Import] = []
     type_hint: Optional[str] = None
     unresolved_types: List[str] = []
+    constraints: Any = None
 
     @property
     def field(self) -> Optional[str]:

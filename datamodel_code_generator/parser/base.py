@@ -166,6 +166,7 @@ class Parser(ABC):
         result: Optional[List[DataModel]] = None,
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
+        field_constraints: bool = False,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -181,6 +182,7 @@ class Parser(ABC):
             Callable[[List[str]], str]
         ] = dump_resolve_reference_action
         self.validation: bool = validation
+        self.field_constraints: bool = field_constraints
 
         if self.target_python_version == PythonVersion.PY_36:
             self.data_type: Type[DataType] = DataTypePy36

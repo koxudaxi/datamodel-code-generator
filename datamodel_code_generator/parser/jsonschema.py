@@ -5,6 +5,7 @@ from typing import (
     DefaultDict,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -139,6 +140,7 @@ class JsonSchemaParser(Parser):
         result: Optional[List[DataModel]] = None,
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
+        field_constraints: bool = False,
     ):
         super().__init__(
             data_model_type,
@@ -152,6 +154,7 @@ class JsonSchemaParser(Parser):
             result,
             dump_resolve_reference_action,
             validation,
+            field_constraints,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
@@ -166,7 +169,8 @@ class JsonSchemaParser(Parser):
 
         return [
             self.data_model_type.get_data_type(
-                json_schema_data_formats[t][format_], **obj.dict()
+                json_schema_data_formats[t][format_],
+                **obj.dict() if not self.field_constraints else {},
             )
             for t in types
         ]
@@ -294,6 +298,7 @@ class JsonSchemaParser(Parser):
             field_types: List[DataType]
             original_field_name: str = field_name
             field_name, alias = get_valid_field_name_and_alias(field_name, set())
+            constraints: Optional[Mapping[str, Any]] = None
             if field.ref:
                 field_types = [
                     self.data_type(
@@ -343,6 +348,8 @@ class JsonSchemaParser(Parser):
                 ]
             else:
                 field_types = self.get_data_type(field)
+                if self.field_constraints:
+                    constraints = field.dict()
             required: bool = original_field_name in requires
             fields.append(
                 self.data_model_field_type(
@@ -356,6 +363,7 @@ class JsonSchemaParser(Parser):
                     is_list=is_list,
                     is_union=is_union,
                     alias=alias,
+                    constraints=constraints,
                 )
             )
         return fields

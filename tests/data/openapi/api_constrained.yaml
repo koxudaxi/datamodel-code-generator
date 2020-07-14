@@ -21,6 +21,8 @@ paths:
           schema:
             type: integer
             format: int32
+            minimum: 0
+            maximum: 100
       responses:
         '200':
           description: A paged array of pets
@@ -107,10 +109,13 @@ components:
         id:
           type: integer
           format: int64
+          minumum: 0
         name:
           type: string
+          maxLength: 256
         tag:
           type: string
+          maxLength: 64
     Pets:
       type: array
       items:
@@ -125,10 +130,13 @@ components:
           id:
             type: integer
             format: int64
+            minumum: 0
           name:
             type: string
+            maxLength: 256
           tag:
             type: string
+            maxLength: 64
     Id:
       type: string
     Rules:
