@@ -42,7 +42,7 @@ def snake_to_upper_camel(word: str) -> str:
         prefix = '_'
         word = word[1:]
 
-    return prefix + ''.join(x[0].upper() + x[1:] for x in word.split('_'))
+    return prefix + ''.join(x[0].upper() + x[1:] for x in word.split('_') if x)
 
 
 def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
