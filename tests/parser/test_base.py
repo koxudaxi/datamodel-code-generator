@@ -6,6 +6,7 @@ import pytest
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
+from datamodel_code_generator.parser.base import snake_to_upper_camel
 
 
 class A(DataModel):
@@ -77,3 +78,18 @@ def test_sort_data_models_unresolved():
 def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
 
     assert relative(current_module, reference) == val
+
+
+@pytest.mark.parametrize('word,expected', [
+    ('_hello', '_Hello'),  # In case a name starts with a underline, we should keep it.
+    ('hello_again', 'HelloAgain'),  # regular snake case
+    ('hello__again', 'HelloAgain'),  # handles double underscores
+    ('hello___again_again', 'HelloAgainAgain'),  # handles double and single underscores
+    ('hello_again_', 'HelloAgain'),  # handles trailing underscores
+    ('hello', 'Hello'),  # no underscores
+    ('____', '_'),  # degenerate case, but this is the current expected behavior
+])
+def test_snake_to_upper_camel(word, expected):
+    """Tests the snake to upper camel function."""
+    actual = snake_to_upper_camel(word)
+    assert actual == expected
