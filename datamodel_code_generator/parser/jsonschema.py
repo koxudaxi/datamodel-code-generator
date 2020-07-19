@@ -329,7 +329,7 @@ class JsonSchemaParser(Parser):
             elif field.is_object:
                 if field.properties:
                     class_name = self.model_resolver.add(parents,
-                        field_name, class_name=True
+                        field_name, class_name=True, unique=True
                     ).name
                     self.parse_object(class_name, field, [*parents, field_name])
                     field_types = [

@@ -2,7 +2,6 @@ import re
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
-from keyword import iskeyword
 from pathlib import Path
 from typing import (
     Any,
@@ -178,9 +177,9 @@ class ModelResolver:
         elif singular_name:
             name = get_singular_name(original_name, singular_name_suffix)
             if unique:
-                name = self.get_uniq_name(name)
+                name = self._get_uniq_name(name)
         elif unique:
-            name = self.get_uniq_name(original_name)
+            name = self._get_uniq_name(original_name)
         else:
             name = original_name
         reference = Reference(parents=parents, original_name=original_name, name=name)
@@ -202,16 +201,16 @@ class ModelResolver:
         field_name = self.get_valid_name(field_name)
         upper_camel_name = snake_to_upper_camel(field_name)
         if unique:
-            class_name = self.get_uniq_name(upper_camel_name, camel=True)
+            class_name = self._get_uniq_name(upper_camel_name, camel=True)
         else:
             class_name = upper_camel_name
 
         return f'{prefix}{class_name}'
 
-    def get_uniq_name(self, name: str, camel: bool = False) -> str:
+    def _get_uniq_name(self, name: str, camel: bool = False) -> str:
         uniq_name: str = name
         count: int = 1
-        while uniq_name in self.references:
+        while uniq_name in [r.name for r in self.references.values()]:
             if camel:
                 uniq_name = f'{name}{count}'
             else:
@@ -223,7 +222,7 @@ class ModelResolver:
         # TODO: when first character is a number
         replaced_name = re.sub(r'\W', '_', name)
         # if replaced_name.isidentifier() and not iskeyword(replaced_name):
-            # return self.get_uniq_name(replaced_name, camel)
+        # return self.get_uniq_name(replaced_name, camel)
         return replaced_name
 
     def get_valid_field_name_and_alias(
@@ -337,9 +336,8 @@ class Parser(ABC):
             result: List[str] = []
             imports = Imports()
             models_to_update: List[str] = []
-
+            scoped_model_resolver = ModelResolver()
             for model in models:
-                used_import_names: Set[str] = set()
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
                     models_to_update += [model.name]
@@ -356,10 +354,9 @@ class Parser(ABC):
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_
                         else:
-                            alias = self.model_resolver.get_uniq_name(
-                                import_
-                            )  # used_import_names)
-                            used_import_names.add(import_)
+                            alias = scoped_model_resolver.add(
+                                from_.split('.'), import_, unique=True
+                            ).name
                             alias_map[full_path] = None if alias == import_ else alias
                         name = data_type.type.rsplit('.', 1)[-1]
                         pattern = re.compile(rf'\b{re.escape(data_type.type)}\b')
