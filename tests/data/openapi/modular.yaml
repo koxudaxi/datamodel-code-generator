@@ -227,3 +227,16 @@ components:
           $ref: '#/components/schemas/Source'
         cocoa:
           $ref: '#/components/schemas/foo.Cocoa'
+    differentTea:
+      type: object
+      properties:
+        foo:
+          $ref: '#/components/schemas/foo.Tea'
+        nested:
+          $ref: '#/components/schemas/nested.foo.Tea'
+    nested.foo.Tea:
+      properties:
+        flavour:
+          type: string
+        id:
+          $ref: '#/components/schemas/Id'
