@@ -217,6 +217,8 @@ class ModelResolver:
     def get_valid_name(self, name: str, camel: bool = False) -> str:
         # TODO: when first character is a number
         replaced_name = re.sub(r'\W', '_', name)
+        if re.match(r'^[0-9]', replaced_name):
+            replaced_name = f'field_{replaced_name}'
         # if replaced_name.isidentifier() and not iskeyword(replaced_name):
         # return self.get_uniq_name(replaced_name, camel)
         return replaced_name
