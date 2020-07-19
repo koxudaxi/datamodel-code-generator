@@ -15,5 +15,12 @@
     "values": {
         "1 Step": "42",
         "2 Step": "23"
+    },
+    "recursive": {
+        "sub": {
+            "recursive": {
+                "value": 42.23
+            }
+        }
     }
 }
