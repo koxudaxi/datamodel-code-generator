@@ -21,7 +21,13 @@ class Data(BaseModel):
     class_: str = Field(..., alias='class')
 
 
+class Values(BaseModel):
+    field_1_Step: str = Field(..., alias='1 Step')
+    field_2_Step: str = Field(..., alias='2 Step')
+
+
 class Model(BaseModel):
     Serial_Number: str = Field(..., alias='Serial Number')
     Timestamp: str
     Data: Data
+    values: Values

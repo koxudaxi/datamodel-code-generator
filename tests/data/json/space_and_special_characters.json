@@ -11,5 +11,9 @@
             "V2": 456
         },
         "class": "Unknown"
+    },
+    "values": {
+        "1 Step": "42",
+        "2 Step": "23"
     }
 }
