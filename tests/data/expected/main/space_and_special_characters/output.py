@@ -26,8 +26,21 @@ class Values(BaseModel):
     field_2_Step: str = Field(..., alias='2 Step')
 
 
+class Recursive1(BaseModel):
+    value: float
+
+
+class Sub(BaseModel):
+    recursive: Recursive1
+
+
+class Recursive(BaseModel):
+    sub: Sub
+
+
 class Model(BaseModel):
     Serial_Number: str = Field(..., alias='Serial Number')
     Timestamp: str
     Data: Data
     values: Values
+    recursive: Recursive
