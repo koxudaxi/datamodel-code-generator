@@ -141,16 +141,12 @@ class ModelResolver:
 
         return '/'.join([*parents, name])
 
-    def add_ref(self, ref: str, singular_name: bool = False) -> Reference:
-        if not ref:
-            raise ValueError()
+    def add_ref(self, ref: str) -> Reference:
         if ref in self.references:
             return self.references[ref]
         parents, original_name = ref.rsplit('/', 1)
 
         name = self.get_class_name(original_name, unique=False)
-        if singular_name:
-            name = get_singular_name(name)
         reference = Reference(
             parents=parents.split('/'), original_name=original_name, name=name
         )
@@ -172,11 +168,11 @@ class ModelResolver:
             return self.references[path]
         if class_name:
             name = self.get_class_name(original_name, unique)
-            if singular_name:
+            if singular_name:  # pragma: no cover
                 name = get_singular_name(name, singular_name_suffix)
         elif singular_name:
             name = get_singular_name(original_name, singular_name_suffix)
-            if unique:
+            if unique:  # pragma: no cover
                 name = self._get_uniq_name(name)
         elif unique:
             name = self._get_uniq_name(original_name)
@@ -186,7 +182,7 @@ class ModelResolver:
         self.references[path] = reference
         return reference
 
-    def get(self, parents: List[str], name: str) -> Reference:
+    def get(self, parents: List[str], name: str) -> Reference:  # pragma: no cover
         path: str = self._get_path(parents, name)
         return self.references[path]
 

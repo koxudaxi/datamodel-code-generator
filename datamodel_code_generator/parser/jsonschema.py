@@ -107,7 +107,7 @@ class JsonSchemaObject(BaseModel):
         return self.items is not None or self.type == 'array'
 
     @property
-    def ref_object_name(self) -> str:
+    def ref_object_name(self) -> str:  # pragma: no cover
         return self.ref.rsplit('/', 1)[-1]  # type: ignore
 
     @validator('items', pre=True)
@@ -569,7 +569,7 @@ class JsonSchemaParser(Parser):
                             self.parse_raw_obj(
                                 model_name,
                                 model,
-                                [str(full_path), '#/', object_parents[:-1]],
+                                [str(full_path), '#/', *object_parents[:-1]],
                             )
 
         if obj.items:
