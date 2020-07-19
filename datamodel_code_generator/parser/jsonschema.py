@@ -224,7 +224,7 @@ class JsonSchemaParser(Parser):
                 self.parse_object(singular_name, item, [*parents, name])
                 data_types.append(
                     self.data_type(
-                        type=singular_name, ref=True, version_compatible=True
+                        type=self.results[-1].name, ref=True, version_compatible=True
                     )
                 )
         return data_types
