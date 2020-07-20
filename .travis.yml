@@ -10,7 +10,7 @@ cache: pip
 script:
 -  ./scripts/test.sh
 -  ./scripts/lint.sh
-- cp README.md docs/index.md && mkdocs build --verbose --clean --strict
+- mkdocs build --verbose --clean --strict
 after_success:
 - codecov
 deploy:

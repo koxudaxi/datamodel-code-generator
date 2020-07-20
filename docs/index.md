@@ -8,7 +8,7 @@ This code generator creates pydantic model from an openapi file and others.
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
-
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## Supported source types
 - OpenAPI 3 (YAML/JSON)
@@ -26,13 +26,13 @@ $ pip install datamodel-code-generator
 
 The `datamodel-codegen` command:
 ```
-usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
-                         [--base-class BASE_CLASS]
+usage: datamodel-codegen [-h] [--input INPUT]
+                         [--input-file-type {auto,openapi,jsonschema,json,yaml}]
+                         [--output OUTPUT] [--base-class BASE_CLASS]
+                         [--field-constraints]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
-                         [--target-python-version {3.6,3.7}] [--debug]
-                         [--validation Enable validation (Only OpenAPI)]
-                         [--version]
+                         [--target-python-version {3.6,3.7}] [--validation]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -41,6 +41,7 @@ optional arguments:
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
+  --field-constraints   Use field constraints and not con* annotations
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom Template Directory
   --extra-template-data EXTRA_TEMPLATE_DATA

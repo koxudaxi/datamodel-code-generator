@@ -26,6 +26,7 @@ nav:
       - Generate from JSON Schema: jsonschema.md
       - Generate from JSON Data: jsondata.md
       - Formatting: formatting.md
+      - Field Constraints: field-constraints.md
     - Development-Contributing: development-contributing.md
 
 plugins:
