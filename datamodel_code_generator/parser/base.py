@@ -187,6 +187,9 @@ class ModelResolver:
     def get(self, path: List[str]) -> Reference:  # pragma: no cover
         return self.references[self._get_path(path)]
 
+    def get_by_path(self, path: str) -> Optional[Reference]:
+        return self.references.get(path)
+
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
         if '.' in field_name:
             split_name = [self.get_valid_name(n) for n in field_name.split('.')]
@@ -275,7 +278,6 @@ class Parser(ABC):
         #     self.base_path: Path = Path(filename).absolute().parent
         # else:
         self.base_path = Path.cwd()
-        self.excludes_ref_path: Set[str] = set()
 
         self.custom_template_dir = (
             Path(custom_template_dir).expanduser().resolve()

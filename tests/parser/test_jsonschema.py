@@ -1,8 +1,10 @@
+import json
 from pathlib import Path
 from typing import Dict
 from unittest.mock import Mock, call
 
 import pytest
+import yaml
 
 from datamodel_code_generator import DataModelField
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
@@ -55,13 +57,60 @@ def test_json_schema_parser_parse_ref():
     # )
 
 
-def test_json_schema_object_ref_url():
+def test_json_schema_object_ref_url_json(mocker):
     parser = JsonSchemaParser(
         BaseModel, CustomRootType, data_model_field_type=DataModelField
     )
-    obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.org'})
-    with pytest.raises(NotImplementedError):
-        parser.parse_ref(obj, [])
+    obj = JsonSchemaObject.parse_obj(
+        {'$ref': 'https://example.org/schema.json#/definitions/User'}
+    )
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = json.dumps(
+        {
+            "$id": "https://example.com/person.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {
+                "User": {"type": "object", "properties": {"name": {"type": "string",}},}
+            },
+        },
+    )
+
+    parser.parse_ref(obj, [])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    parser.parse_ref(obj, [])
+    mock_get.assert_called_once_with('https://example.org/schema.json',)
+
+
+def test_json_schema_object_ref_url_yaml(mocker):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+    obj = JsonSchemaObject.parse_obj(
+        {'$ref': 'https://example.org/schema.yaml#/definitions/User'}
+    )
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = yaml.safe_dump(
+        {
+            "$id": "https://example.com/person.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {
+                "User": {"type": "object", "properties": {"name": {"type": "string",}},}
+            },
+        },
+    )
+
+    parser.parse_ref(obj, [])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    parser.parse_ref(obj, [])
+    mock_get.assert_called_once_with('https://example.org/schema.yaml',)
 
 
 @pytest.mark.parametrize(

@@ -549,42 +549,54 @@ class JsonSchemaParser(Parser):
         return enum
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
-        if obj.ref:
+        if obj.ref and not self.model_resolver.get_by_path(obj.ref):
             ref: str = obj.ref
             # https://swagger.io/docs/specification/using-ref/
-            if obj.ref.startswith('#'):
+            if ref.startswith('#'):
                 # Local Reference – $ref: '#/definitions/myElement'
                 pass
-            elif '://' in ref:
-                # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-                raise NotImplementedError(f'URL Reference is not supported. $ref:{ref}')
-
             else:
-                # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
-                # the same location. TODO treat edge case
                 relative_path, object_path = ref.split('#/')
-                full_path = self.base_path / relative_path
-                with full_path.open() as f:
-                    if full_path.suffix.lower() == '.json':
+                if ref.startswith('https://') or ref.startswith('http://'):
+                    # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+                    try:
+                        import httpx
+                    except ImportError:  # pragma: no cover
+                        raise Exception(
+                            f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
+                        )
+                    raw_body: str = httpx.get(relative_path).text
+                    if relative_path.lower().endswith('.json'):
                         import json
 
-                        ref_body: Dict[str, Any] = json.load(f)
+                        ref_body: Dict[str, Any] = json.loads(raw_body)
                     else:
                         # expect yaml
                         import yaml
 
-                        ref_body = yaml.safe_load(f)
-                    object_parents = object_path.split('/')
-                    ref_path = str(full_path) + '#/' + '/'.join(object_parents[:-1])
-                    if ref_path not in self.excludes_ref_path:
-                        self.excludes_ref_path.add(ref_path)
-                        models = get_model_by_path(ref_body, object_parents[:-1])
-                        for model_name, model in models.items():
-                            self.parse_raw_obj(
-                                model_name,
-                                model,
-                                [str(full_path), '#/', *object_parents[:-1]],
-                            )
+                        ref_body = yaml.safe_load(raw_body)
+                    full_path = relative_path
+                else:
+                    # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
+                    # the same location. TODO treat edge case
+                    full_path = self.base_path / relative_path
+                    with full_path.open() as f:
+                        if full_path.suffix.lower() == '.json':
+                            import json
+
+                            ref_body: Dict[str, Any] = json.load(f)
+                        else:
+                            # expect yaml
+                            import yaml
+
+                            ref_body = yaml.safe_load(f)
+                object_parents = object_path.split('/')
+                self.model_resolver.add_ref(ref)
+                models = get_model_by_path(ref_body, object_parents[:-1])
+                for model_name, model in models.items():
+                    self.parse_raw_obj(
+                        model_name, model, [str(full_path), '#/', *object_parents[:-1]],
+                    )
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
