@@ -59,13 +59,13 @@ $ pip install datamodel-code-generator
 
 The `datamodel-codegen` command:
 ```
-usage: datamodel-codegen [-h] [--input INPUT] [--output OUTPUT]
-                         [--base-class BASE_CLASS]
+usage: datamodel-codegen [-h] [--input INPUT]
+                         [--input-file-type {auto,openapi,jsonschema,json,yaml}]
+                         [--output OUTPUT] [--base-class BASE_CLASS]
+                         [--field-constraints]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
-                         [--target-python-version {3.6,3.7}] [--debug]
-                         [--validation Enable validation (Only OpenAPI)]
-                         [--version]
+                         [--target-python-version {3.6,3.7}] [--validation]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -74,6 +74,7 @@ optional arguments:
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
+  --field-constraints   Use field constraints and not con* annotations
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom Template Directory
   --extra-template-data EXTRA_TEMPLATE_DATA
