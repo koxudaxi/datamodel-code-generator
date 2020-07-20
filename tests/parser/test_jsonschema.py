@@ -113,6 +113,40 @@ def test_json_schema_object_ref_url_yaml(mocker):
     mock_get.assert_called_once_with('https://example.org/schema.yaml',)
 
 
+def test_json_schema_ref_url_json(mocker):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+    obj = {
+        "type": "object",
+        "properties": {
+            "user": {'$ref': 'https://example.org/schema.json#/definitions/User'}
+        },
+    }
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = json.dumps(
+        {
+            "$id": "https://example.com/person.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {
+                "User": {"type": "object", "properties": {"name": {"type": "string",}},}
+            },
+        },
+    )
+
+    parser.parse_raw_obj('Model', obj, [])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class Model(BaseModel):
+    user: Optional[User] = None
+
+
+class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    mock_get.assert_called_once_with('https://example.org/schema.json',)
+
+
 @pytest.mark.parametrize(
     'source_obj,generated_classes',
     [

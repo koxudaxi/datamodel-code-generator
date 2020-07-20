@@ -45,7 +45,7 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 - allOf (as Multiple inheritance)
 - anyOf (as Union)
 - oneOf (as Union)
-- $ref (exclude URL Reference)
+- $ref (http extra is required. `$ pip install datamodel_code_generator[http]`)
 
 
 ## Installation
