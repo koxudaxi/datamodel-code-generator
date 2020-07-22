@@ -337,7 +337,9 @@ class JsonSchemaParser(Parser):
                         )
                     ]
             elif field.enum:
-                enum = self.parse_enum(field_name, field, [*path, field_name])
+                enum = self.parse_enum(
+                    field_name, field, [*path, field_name], unique=True
+                )
                 field_types = [
                     self.data_type(type=enum.name, ref=True, version_compatible=True)
                 ]
@@ -436,7 +438,9 @@ class JsonSchemaParser(Parser):
                 )
             elif item.is_array:
                 array_field, array_field_classes = self.parse_array_fields(
-                    self.model_resolver.add(path, name, class_name=True).name, item, path
+                    self.model_resolver.add(path, name, class_name=True).name,
+                    item,
+                    path,
                 )
                 item_obj_data_types.extend(array_field.data_types)
             else:
@@ -511,6 +515,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: List[str],
         singular_name: bool = False,
+        unique: bool = False,
     ) -> DataModel:
         enum_fields: List[DataModelFieldBase] = []
 
@@ -535,6 +540,7 @@ class JsonSchemaParser(Parser):
             class_name=True,
             singular_name=singular_name,
             singular_name_suffix='Enum',
+            unique=unique,
         ).name
         enum = Enum(enum_name, fields=enum_fields)
         self.append_result(enum)

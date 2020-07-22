@@ -4,14 +4,29 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
+class Kind(Enum):
+    dog = 'dog'
+    cat = 'cat'
+
+
 class Pet(BaseModel):
     id: int
     name: str
     tag: Optional[str] = None
+    kind: Optional['Kind'] = None
 
 
 class Pets(BaseModel):
     __root__: List['Pet']
+
+
+class Kind1(Enum):
+    snake = 'snake'
+    rabbit = 'rabbit'
+
+
+class Animal(BaseModel):
+    kind: Optional['Kind1'] = None
 
 
 class Error(BaseModel):

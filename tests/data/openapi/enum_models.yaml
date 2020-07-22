@@ -59,10 +59,19 @@ components:
           type: string
         tag:
           type: string
+        kind:
+          type: string
+          enum: ['dog', 'cat']
     Pets:
       type: array
       items:
         $ref: "#/components/schemas/Pet"
+    animal:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: ['snake', 'rabbit']
     Error:
       required:
         - code
