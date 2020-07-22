@@ -421,7 +421,7 @@ class JsonSchemaParser(Parser):
             elif item.allOf:
                 item_obj_data_types.extend(
                     self.parse_all_of(
-                        self.parse_object(name, item, path, singular_name=True).name,
+                        self.model_resolver.add(path, name, singular_name=True).name,
                         item,
                         path,
                     )
