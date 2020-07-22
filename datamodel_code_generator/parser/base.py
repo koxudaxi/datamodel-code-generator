@@ -127,7 +127,7 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
 
 
 class Reference(BaseModel):
-    parents: List[str]
+    path: List[str]
     original_name: str
     name: str
 
@@ -137,9 +137,9 @@ class ModelResolver:
         self.references: Dict[str, Reference] = {}
 
     @staticmethod
-    def _get_path(parents: List[str], name: str) -> str:
+    def _get_path(path: List[str]) -> str:
 
-        return '/'.join([*parents, name])
+        return '/'.join(path)
 
     def add_ref(self, ref: str) -> Reference:
         if ref in self.references:
@@ -148,14 +148,14 @@ class ModelResolver:
 
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
-            parents=parents.split('/'), original_name=original_name, name=name
+            path=parents.split('/'), original_name=original_name, name=name
         )
         self.references[ref] = reference
         return reference
 
     def add(
         self,
-        parents: List[str],
+        path: List[str],
         original_name: str,
         *,
         class_name: bool = False,
@@ -163,9 +163,9 @@ class ModelResolver:
         unique: bool = False,
         singular_name_suffix: str = 'Item',
     ) -> Reference:
-        path: str = self._get_path(parents, original_name)
-        if path in self.references:
-            return self.references[path]
+        joined_path: str = self._get_path(path)
+        if joined_path in self.references:
+            return self.references[joined_path]
         if class_name:
             name = self.get_class_name(original_name, unique)
             if singular_name:  # pragma: no cover
@@ -178,13 +178,12 @@ class ModelResolver:
             name = self._get_uniq_name(original_name)
         else:
             name = original_name
-        reference = Reference(parents=parents, original_name=original_name, name=name)
-        self.references[path] = reference
+        reference = Reference(path=path, original_name=original_name, name=name)
+        self.references[joined_path] = reference
         return reference
 
-    def get(self, parents: List[str], name: str) -> Reference:  # pragma: no cover
-        path: str = self._get_path(parents, name)
-        return self.references[path]
+    def get(self, path: List[str]) -> Reference:  # pragma: no cover
+        return self.references[self._get_path(path)]
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
         if '.' in field_name:
@@ -353,7 +352,7 @@ class Parser(ABC):
                             alias = alias_map[full_path] or import_
                         else:
                             alias = scoped_model_resolver.add(
-                                from_.split('.'), import_, unique=True
+                                full_path.split('/'), import_, unique=True
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
                         name = data_type.type.rsplit('.', 1)[-1]
