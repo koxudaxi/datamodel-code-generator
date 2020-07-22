@@ -186,7 +186,7 @@ class JsonSchemaParser(Parser):
         self.extra_template_data[name]['title'] = obj.title
 
     def parse_list_item(
-        self, name: str, target_items: List[JsonSchemaObject], parents: List[str]
+        self, name: str, target_items: List[JsonSchemaObject], path: List[str]
     ) -> List[DataType]:
         data_types: List[DataType] = []
         for item in target_items:
@@ -217,27 +217,29 @@ class JsonSchemaParser(Parser):
                     )
                 )
             else:
-                singular_name: str = get_singular_name(name)
-                self.parse_object(singular_name, item, [*parents, name])
                 data_types.append(
                     self.data_type(
-                        type=self.results[-1].name, ref=True, version_compatible=True
+                        type=self.parse_object(
+                            name, item, path, singular_name=True
+                        ).name,
+                        ref=True,
+                        version_compatible=True,
                     )
                 )
         return data_types
 
     def parse_any_of(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
+        self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        return self.parse_list_item(name, obj.anyOf, [*parents, name])
+        return self.parse_list_item(name, obj.anyOf, path)
 
     def parse_one_of(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
+        self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        return self.parse_list_item(name, obj.oneOf, [*parents, name])
+        return self.parse_list_item(name, obj.oneOf, path)
 
     def parse_all_of(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
+        self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
         fields: List[DataModelFieldBase] = []
         base_classes: List[DataType] = []
@@ -252,12 +254,14 @@ class JsonSchemaParser(Parser):
                 )
 
             else:
-                fields_ = self.parse_object_fields(all_of_item, [*parents, name])
+                fields_ = self.parse_object_fields(all_of_item, path)
                 fields.extend(fields_)
-        self.set_additional_properties(name, obj)
-        self.model_resolver.add(parents, name)
+        class_name = self.model_resolver.add(
+            path, name, class_name=True, unique=True
+        ).name
+        self.set_additional_properties(class_name, obj)
         data_model_type = self.data_model_type(
-            name,
+            class_name,
             fields=fields,
             base_classes=[b.type for b in base_classes],
             auto_import=False,
@@ -270,10 +274,10 @@ class JsonSchemaParser(Parser):
             data_model_type.imports.extend(f.imports)
         self.append_result(data_model_type)
 
-        return [self.data_type(type=name, ref=True, version_compatible=True)]
+        return [self.data_type(type=class_name, ref=True, version_compatible=True)]
 
     def parse_object_fields(
-        self, obj: JsonSchemaObject, parents: List[str]
+        self, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataModelFieldBase]:
         properties: Dict[str, JsonSchemaObject] = (
             obj.properties if obj.properties is not None else {}
@@ -299,39 +303,27 @@ class JsonSchemaParser(Parser):
                     )
                 ]
             elif field.is_array:
-                class_name: str = self.model_resolver.add(
-                    parents, field_name, class_name=True
-                ).name
                 array_field, array_field_classes = self.parse_array_fields(
-                    class_name, field, [*parents, field_name]
+                    field_name, field, [*path, field_name]
                 )
                 field_types = array_field.data_types
                 is_list = True
                 is_union = True
             elif field.anyOf:
-                field_types = self.parse_any_of(
-                    field_name, field, [*parents, field_name]
-                )
+                field_types = self.parse_any_of(field_name, field, [*path, field_name])
             elif field.oneOf:
-                field_types = self.parse_one_of(
-                    field_name, field, [*parents, field_name]
-                )
+                field_types = self.parse_one_of(field_name, field, [*path, field_name])
             elif field.allOf:
-                class_name = self.model_resolver.add(
-                    parents, field_name, class_name=True
-                ).name
-                field_types = self.parse_all_of(
-                    class_name, field, [*parents, field_name]
-                )
+                field_types = self.parse_all_of(field_name, field, [*path, field_name])
             elif field.is_object:
                 if field.properties:
-                    class_name = self.model_resolver.add(
-                        parents, field_name, class_name=True, unique=True
-                    ).name
-                    self.parse_object(class_name, field, [*parents, field_name])
                     field_types = [
                         self.data_type(
-                            type=class_name, ref=True, version_compatible=True
+                            type=self.parse_object(
+                                field_name, field, [*path, field_name], unique=True
+                            ).name,
+                            ref=True,
+                            version_compatible=True,
                         )
                     ]
                 else:
@@ -345,7 +337,7 @@ class JsonSchemaParser(Parser):
                         )
                     ]
             elif field.enum:
-                enum = self.parse_enum(field_name, field, [*parents, field_name])
+                enum = self.parse_enum(field_name, field, [*path, field_name])
                 field_types = [
                     self.data_type(type=enum.name, ref=True, version_compatible=True)
                 ]
@@ -372,12 +364,19 @@ class JsonSchemaParser(Parser):
         return fields
 
     def parse_object(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
-    ) -> None:
-        fields = self.parse_object_fields(obj, [*parents, name])
-        class_name = self.model_resolver.add(parents, name, class_name=True).name
-        self.set_title(name, obj)
-        self.set_additional_properties(name, obj)
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        singular_name: bool = False,
+        unique: bool = False,
+    ) -> DataModel:
+        class_name = self.model_resolver.add(
+            path, name, class_name=True, singular_name=singular_name, unique=unique
+        ).name
+        fields = self.parse_object_fields(obj, path)
+        self.set_title(class_name, obj)
+        self.set_additional_properties(class_name, obj)
         data_model_type = self.data_model_type(
             class_name,
             fields=fields,
@@ -386,9 +385,10 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
         )
         self.append_result(data_model_type)
+        return data_model_type
 
     def parse_array_fields(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
+        self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> Tuple[DataModelFieldBase, List[DataType]]:
         if isinstance(obj.items, JsonSchemaObject):
             items = [obj.items]
@@ -406,41 +406,37 @@ class JsonSchemaParser(Parser):
                     )
                 )
             elif isinstance(item, JsonSchemaObject) and item.properties:
-                singular_name = self.model_resolver.add(
-                    parents, name, singular_name=True
-                ).name
-                self.parse_object(singular_name, item, [*parents, name])
                 item_obj_data_types.append(
                     self.data_type(
-                        type=singular_name, ref=True, version_compatible=True
+                        type=self.parse_object(
+                            name, item, path, singular_name=True
+                        ).name,
+                        ref=True,
+                        version_compatible=True,
                     )
                 )
             elif item.anyOf:
-                item_obj_data_types.extend(
-                    self.parse_any_of(name, item, [*parents, name])
-                )
+                item_obj_data_types.extend(self.parse_any_of(name, item, path))
                 is_union = True
             elif item.allOf:
-                singular_name = self.model_resolver.add(
-                    parents, name, singular_name=True
-                ).name
                 item_obj_data_types.extend(
-                    self.parse_all_of(singular_name, item, [*parents, name])
+                    self.parse_all_of(
+                        self.parse_object(name, item, path, singular_name=True).name,
+                        item,
+                        path,
+                    )
                 )
             elif item.enum:
-                singular_name = self.model_resolver.add(
-                    parents, name, singular_name=True, singular_name_suffix='Enum'
-                ).name
-                enum = self.parse_enum(singular_name, item, [*parents, name])
                 item_obj_data_types.append(
-                    self.data_type(type=enum.name, ref=True, version_compatible=True)
+                    self.data_type(
+                        type=self.parse_enum(name, item, path, singular_name=True).name,
+                        ref=True,
+                        version_compatible=True,
+                    )
                 )
             elif item.is_array:
-                class_name = self.model_resolver.add(
-                    parents, name, class_name=True
-                ).name
                 array_field, array_field_classes = self.parse_array_fields(
-                    class_name, item, [*parents, name]
+                    self.model_resolver.add(path, name, class_name=True).name, item, path
                 )
                 item_obj_data_types.extend(array_field.data_types)
             else:
@@ -458,9 +454,9 @@ class JsonSchemaParser(Parser):
         )
         return field, item_obj_data_types
 
-    def parse_array(self, name: str, obj: JsonSchemaObject, parents: List[str]) -> None:
-        field, item_obj_names = self.parse_array_fields(name, obj, [*parents, name])
-        self.model_resolver.add(parents, name)
+    def parse_array(self, name: str, obj: JsonSchemaObject, path: List[str]) -> None:
+        field, item_obj_names = self.parse_array_fields(name, obj, [*path, name])
+        self.model_resolver.add(path, name)
         data_model_root = self.data_model_root_type(
             name,
             [field],
@@ -472,12 +468,12 @@ class JsonSchemaParser(Parser):
         self.append_result(data_model_root)
 
     def parse_root_type(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
+        self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> None:
         if obj.type:
             types: List[DataType] = self.get_data_type(obj)
         elif obj.anyOf:
-            types = self.parse_any_of(name, obj, [*parents, name])
+            types = self.parse_any_of(name, obj, [*path, name])
         elif obj.ref:
             types = [
                 self.data_type(
@@ -510,7 +506,11 @@ class JsonSchemaParser(Parser):
         self.append_result(data_model_root_type)
 
     def parse_enum(
-        self, name: str, obj: JsonSchemaObject, parents: List[str]
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        singular_name: bool = False,
     ) -> DataModel:
         enum_fields: List[DataModelFieldBase] = []
 
@@ -529,12 +529,18 @@ class JsonSchemaParser(Parser):
             enum_fields.append(
                 self.data_model_field_type(name=field_name, default=default)
             )
-        enum_name = self.model_resolver.add(parents, name, class_name=True).name
+        enum_name = self.model_resolver.add(
+            path,
+            name,
+            class_name=True,
+            singular_name=singular_name,
+            singular_name_suffix='Enum',
+        ).name
         enum = Enum(enum_name, fields=enum_fields)
         self.append_result(enum)
         return enum
 
-    def parse_ref(self, obj: JsonSchemaObject, parents: List[str]) -> None:
+    def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
             ref: str = obj.ref
             # https://swagger.io/docs/specification/using-ref/
@@ -574,36 +580,35 @@ class JsonSchemaParser(Parser):
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
-                self.parse_ref(obj.items, parents)
+                self.parse_ref(obj.items, path)
             else:
                 for item in obj.items:
-                    self.parse_ref(item, parents)
+                    self.parse_ref(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
-            self.parse_ref(obj.additionalProperties, parents)
+            self.parse_ref(obj.additionalProperties, path)
         for item in obj.anyOf:
-            self.parse_ref(item, parents)
+            self.parse_ref(item, path)
         for item in obj.allOf:
-            self.parse_ref(item, parents)
+            self.parse_ref(item, path)
         if obj.properties:
             for value in obj.properties.values():
-                self.parse_ref(value, parents)
+                self.parse_ref(value, path)
 
-    def parse_raw_obj(self, name: str, raw: Dict[str, Any], parents: List[str]) -> None:
-        current: str = name
+    def parse_raw_obj(self, name: str, raw: Dict[str, Any], path: List[str]) -> None:
         obj = JsonSchemaObject.parse_obj(raw)
-        name = self.model_resolver.add(parents, name, class_name=True).name
+        name = self.model_resolver.add(path, name, class_name=True).name
         if obj.is_object:
-            self.parse_object(name, obj, [*parents, current])
+            self.parse_object(name, obj, path)
         elif obj.is_array:
-            self.parse_array(name, obj, [*parents, current])
+            self.parse_array(name, obj, path)
         elif obj.enum:
-            self.parse_enum(name, obj, [*parents, current])
+            self.parse_enum(name, obj, path)
         elif obj.allOf:
-            self.parse_all_of(name, obj, [*parents, current])
+            self.parse_all_of(name, obj, path)
         else:
-            self.parse_root_type(name, obj, [*parents, current])
+            self.parse_root_type(name, obj, path)
 
-        self.parse_ref(obj, [*parents, current])
+        self.parse_ref(obj, path)
 
     def parse_raw(self) -> None:
         raw_obj: Dict[Any, Any] = json.loads(self.text)  # type: ignore
@@ -612,4 +617,4 @@ class JsonSchemaParser(Parser):
         self.parse_raw_obj(obj_name, raw_obj, [])
         definitions = raw_obj.get('definitions', {})
         for key, model in definitions.items():
-            self.parse_raw_obj(key, model, [])
+            self.parse_raw_obj(key, model, ['#/definitions', key])
