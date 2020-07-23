@@ -108,6 +108,38 @@ def test_json_schema_object_ref_url_yaml(mocker):
     mock_get.assert_called_once_with('https://example.org/schema.yaml',)
 
 
+def test_json_schema_object_cached_ref_url_yaml(mocker):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+
+    obj = JsonSchemaObject.parse_obj(
+        {
+            'type': 'object',
+            'properties': {
+                'pet': {'$ref': 'https://example.org/schema.yaml#/definitions/Pet'},
+                'user': {'$ref': 'https://example.org/schema.yaml#/definitions/User'},
+            },
+        }
+    )
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = yaml.safe_dump(
+        json.load((DATA_PATH / 'user.json').open())
+    )
+
+    parser.parse_ref(obj, [])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class Pet(BaseModel):
+    name: Optional[str] = None
+
+
+class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    mock_get.assert_called_once_with('https://example.org/schema.yaml',)
+
+
 def test_json_schema_ref_url_json(mocker):
     parser = JsonSchemaParser(
         BaseModel, CustomRootType, data_model_field_type=DataModelField

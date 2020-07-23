@@ -155,6 +155,8 @@ class JsonSchemaParser(Parser):
             aliases,
         )
 
+        self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
+
     def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
         if obj.type is None:
             raise ValueError(f'invalid schema object {obj}')
@@ -559,39 +561,50 @@ class JsonSchemaParser(Parser):
                     pass
                 else:
                     relative_path, object_path = obj.ref.split('#/')
+                    remote_object: Optional[
+                        Dict[str, Any]
+                    ] = self.remote_object_cache.get(relative_path)
                     if obj.ref.startswith(('https://', 'http://')):
-                        # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-                        try:
-                            import httpx
-                        except ImportError:  # pragma: no cover
-                            raise Exception(
-                                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={obj.ref}'
-                            )
-                        raw_body: str = httpx.get(relative_path).text
-                        if relative_path.lower().endswith('.json'):
-                            import json
-
-                            ref_body: Dict[str, Any] = json.loads(raw_body)
-                        else:
-                            # expect yaml
-                            import yaml
-
-                            ref_body = yaml.safe_load(raw_body)
                         full_path: Union[Path, str] = relative_path
-                    else:
-                        # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
-                        # the same location. TODO treat edge case
-                        full_path = self.base_path / relative_path
-                        with full_path.open() as f:
-                            if full_path.suffix.lower() == '.json':
+                        if remote_object:
+                            ref_body: Dict[str, Any] = remote_object
+                        else:
+                            # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+                            try:
+                                import httpx
+                            except ImportError:  # pragma: no cover
+                                raise Exception(
+                                    f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={obj.ref}'
+                                )
+                            raw_body: str = httpx.get(relative_path).text
+                            if relative_path.lower().endswith('.json'):
                                 import json
 
-                                ref_body = json.load(f)
+                                ref_body = json.loads(raw_body)
                             else:
                                 # expect yaml
                                 import yaml
 
-                                ref_body = yaml.safe_load(f)
+                                ref_body = yaml.safe_load(raw_body)
+                            self.remote_object_cache[relative_path] = ref_body
+                    else:
+                        # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
+                        # the same location. TODO treat edge case
+                        full_path = self.base_path / relative_path
+                        if remote_object:  # pragma: no cover
+                            ref_body = remote_object
+                        else:
+                            with full_path.open() as f:
+                                if full_path.suffix.lower() == '.json':
+                                    import json
+
+                                    ref_body = json.load(f)
+                                else:
+                                    # expect yaml
+                                    import yaml
+
+                                    ref_body = yaml.safe_load(f)
+                            self.remote_object_cache[relative_path] = ref_body
                     object_paths = object_path.split('/')
                     models = get_model_by_path(ref_body, object_paths)
                     self.parse_raw_obj(
