@@ -32,20 +32,24 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--field-constraints]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
+                         [--aliases ALIASES]
                          [--target-python-version {3.6,3.7}] [--validation]
+                         [--debug] [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
   --input INPUT         Input file (default: stdin)
-  --input-file-type {auto,openapi,jsonscehma,json,yaml}
+  --input-file-type {auto,openapi,jsonschema,json,yaml}
+                        Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
   --field-constraints   Use field constraints and not con* annotations
   --custom-template-dir CUSTOM_TEMPLATE_DIR
-                        Custom Template Directory
+                        Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA
-                        Extra Template Data
+                        Extra template data
+  --aliases ALIASES     Alias mapping file
   --target-python-version {3.6,3.7}
                         target python version (default: 3.7)
   --validation          Enable validation (Only OpenAPI)

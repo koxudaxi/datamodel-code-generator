@@ -13,6 +13,7 @@ from typing import (
     DefaultDict,
     Dict,
     Iterator,
+    Mapping,
     Optional,
     Type,
     TypeVar,
@@ -127,6 +128,7 @@ def generate(
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
     validation: bool = False,
     field_constraints: bool = False,
+    aliases: Optional[Mapping[str, str]] = None,
 ) -> None:
     if input_file_type == InputFileType.Auto:
         try:
@@ -175,6 +177,7 @@ def generate(
         dump_resolve_reference_action=dump_resolve_reference_action,
         validation=validation,
         field_constraints=field_constraints,
+        aliases=aliases,
     )
 
     with chdir(output):

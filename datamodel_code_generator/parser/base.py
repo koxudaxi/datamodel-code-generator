@@ -9,6 +9,7 @@ from typing import (
     DefaultDict,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -133,8 +134,9 @@ class Reference(BaseModel):
 
 
 class ModelResolver:
-    def __init__(self) -> None:
+    def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
+        self.aliases = {**aliases} if aliases is not None else {}
 
     @staticmethod
     def _get_path(path: List[str]) -> str:
@@ -225,6 +227,8 @@ class ModelResolver:
     def get_valid_field_name_and_alias(
         self, field_name: str
     ) -> Tuple[str, Optional[str]]:
+        if field_name in self.aliases:
+            return self.aliases[field_name], field_name
         valid_name = self.get_valid_name(field_name)
         return valid_name, None if field_name == valid_name else field_name
 
@@ -244,6 +248,7 @@ class Parser(ABC):
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
+        aliases: Optional[Mapping[str, str]] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -281,7 +286,7 @@ class Parser(ABC):
             str, Any
         ] = extra_template_data or defaultdict(dict)
 
-        self.model_resolver = ModelResolver()
+        self.model_resolver = ModelResolver(aliases=aliases)
 
     def append_result(self, data_model: DataModel) -> None:
         self.created_model_names.add(data_model.name)
