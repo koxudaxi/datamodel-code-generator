@@ -190,11 +190,10 @@ class ModelResolver:
         self.references[joined_path] = reference
         return reference
 
-    def get(self, path: List[str]) -> Reference:  # pragma: no cover
+    def get(self, path: Union[List[str], str]) -> Reference:  # pragma: no cover
+        if isinstance(path, str):
+            return self.references.get(path)
         return self.references[self._get_path(path)]
-
-    def get_by_path(self, path: str) -> Optional[Reference]:
-        return self.references.get(path)
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
         if '.' in field_name:

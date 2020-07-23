@@ -551,7 +551,7 @@ class JsonSchemaParser(Parser):
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
-            reference = self.model_resolver.get_by_path(obj.ref)
+            reference = self.model_resolver.get(obj.ref)
             if not reference or not reference.loaded:
                 # https://swagger.io/docs/specification/using-ref/
                 if obj.ref.startswith('#'):
