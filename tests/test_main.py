@@ -498,3 +498,84 @@ def test_main_without_field_constraints():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_with_aliases():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--aliases',
+                str(OPEN_API_DATA_PATH / 'aliases.json'),
+                '--output',
+                str(output_file),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_main_with_bad_aliases():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--aliases',
+                str(OPEN_API_DATA_PATH / 'not.json'),
+                '--output',
+                str(output_file),
+            ]
+        )
+        assert return_code == Exit.ERROR
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_main_with_more_bad_aliases():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--aliases',
+                str(OPEN_API_DATA_PATH / 'list.json'),
+                '--output',
+                str(output_file),
+            ]
+        )
+        assert return_code == Exit.ERROR
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_main_with_bad_extra_data():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--extra-template-data',
+                str(OPEN_API_DATA_PATH / 'not.json'),
+                '--output',
+                str(output_file),
+            ]
+        )
+        assert return_code == Exit.ERROR
+
+    with pytest.raises(SystemExit):
+        main()

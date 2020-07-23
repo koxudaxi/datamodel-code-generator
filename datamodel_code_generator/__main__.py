@@ -67,11 +67,12 @@ arg_parser.add_argument(
     action='store_true',
 )
 arg_parser.add_argument(
-    '--custom-template-dir', help='Custom Template Directory', type=str
+    '--custom-template-dir', help='Custom template directory', type=str
 )
 arg_parser.add_argument(
-    '--extra-template-data', help='Extra Template Data', type=FileType('rt')
+    '--extra-template-data', help='Extra template data', type=FileType('rt')
 )
+arg_parser.add_argument('--aliases', help='Alias mapping file', type=FileType('rt'))
 arg_parser.add_argument(
     '--target-python-version',
     help='target python version (default: 3.7)',
@@ -108,11 +109,33 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]]
     if namespace.extra_template_data is not None:
         with namespace.extra_template_data as data:
-            extra_template_data = json.load(
-                data, object_hook=lambda d: defaultdict(dict, **d)
-            )
+            try:
+                extra_template_data = json.load(
+                    data, object_hook=lambda d: defaultdict(dict, **d)
+                )
+            except json.JSONDecodeError as e:
+                print(f"Unable to load extra template data: {e}", file=sys.stderr)
+                return Exit.ERROR
     else:
         extra_template_data = None
+
+    if namespace.aliases is not None:
+        with namespace.aliases as data:
+            try:
+                aliases = json.load(data)
+            except json.JSONDecodeError as e:
+                print(f"Unable to load alias mapping: {e}", file=sys.stderr)
+                return Exit.ERROR
+        if not isinstance(aliases, Dict) or not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+        ):
+            print(
+                'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
+                file=sys.stderr,
+            )
+            return Exit.ERROR
+    else:
+        aliases = None
 
     try:
         generate(
@@ -126,6 +149,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             extra_template_data=extra_template_data,
             validation=namespace.validation,
             field_constraints=namespace.field_constraints,
+            aliases=aliases,
         )
         return Exit.OK
     except Error as e:
