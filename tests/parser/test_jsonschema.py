@@ -95,13 +95,7 @@ def test_json_schema_object_ref_url_yaml(mocker):
     )
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = yaml.safe_dump(
-        {
-            "$id": "https://example.com/person.schema.json",
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "definitions": {
-                "User": {"type": "object", "properties": {"name": {"type": "string",}},}
-            },
-        },
+       json.load((DATA_PATH / 'user.json').open())
     )
 
     parser.parse_ref(obj, ['User'])
@@ -126,13 +120,7 @@ def test_json_schema_ref_url_json(mocker):
     }
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = json.dumps(
-        {
-            "$id": "https://example.com/person.schema.json",
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "definitions": {
-                "User": {"type": "object", "properties": {"name": {"type": "string",}},}
-            },
-        },
+        json.load((DATA_PATH / 'user.json').open())
     )
 
     parser.parse_raw_obj('Model', obj, ['Model'])
