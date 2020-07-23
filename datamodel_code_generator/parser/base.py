@@ -140,11 +140,11 @@ class ModelResolver:
         self.aliases = {**aliases} if aliases is not None else {}
 
     @staticmethod
-    def _get_path(path: List[str], name: str) -> str:
+    def _get_path(path: List[str]) -> str:
         if '#' in path:  # remote
             delimiter = path.index('#')
-            return f"{''.join(path[:delimiter])}#/{''.join(path[delimiter + 1:])}/{name}"
-        return '/'.join([*path, name])
+            return f"{''.join(path[:delimiter])}#/{''.join(path[delimiter + 1:])}"
+        return '/'.join(path)
 
     def add_ref(self, ref: str) -> Reference:
         if ref in self.references:
@@ -153,7 +153,7 @@ class ModelResolver:
 
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
-            path=parents.split('/'),
+            path=ref.split('/'),
             original_name=original_name,
             name=name,
             loaded=not (ref.startswith('https://') or ref.startswith('http://'))
@@ -171,7 +171,7 @@ class ModelResolver:
         unique: bool = False,
         singular_name_suffix: str = 'Item',
     ) -> Reference:
-        joined_path: str = self._get_path(path, original_name)
+        joined_path: str = self._get_path(path)
         if joined_path in self.references:
             return self.references[joined_path]
         if class_name:

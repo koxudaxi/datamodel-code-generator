@@ -75,13 +75,13 @@ def test_json_schema_object_ref_url_json(mocker):
         },
     )
 
-    parser.parse_ref(obj, [])
+    parser.parse_ref(obj, ['Model'])
     assert (
         dump_templates(list(parser.results))
         == '''class User(BaseModel):
     name: Optional[str] = None'''
     )
-    parser.parse_ref(obj, [])
+    parser.parse_ref(obj, ['Model'])
     mock_get.assert_called_once_with('https://example.org/schema.json',)
 
 
@@ -103,7 +103,7 @@ def test_json_schema_object_ref_url_yaml(mocker):
         },
     )
 
-    parser.parse_ref(obj, [])
+    parser.parse_ref(obj, ['User'])
     assert (
         dump_templates(list(parser.results))
         == '''class User(BaseModel):
@@ -134,7 +134,7 @@ def test_json_schema_ref_url_json(mocker):
         },
     )
 
-    parser.parse_raw_obj('Model', obj, [])
+    parser.parse_raw_obj('Model', obj, ['Model'])
     assert (
         dump_templates(list(parser.results))
         == '''class Model(BaseModel):

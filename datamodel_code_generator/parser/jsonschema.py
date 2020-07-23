@@ -552,7 +552,6 @@ class JsonSchemaParser(Parser):
         if obj.ref:
             reference = self.model_resolver.get_by_path(obj.ref)
             if not reference or not reference.loaded:
-
                 # https://swagger.io/docs/specification/using-ref/
                 if obj.ref.startswith('#'):
                     # Local Reference – $ref: '#/definitions/myElement'
@@ -592,17 +591,16 @@ class JsonSchemaParser(Parser):
                                 import yaml
 
                                 ref_body = yaml.safe_load(f)
-                    object_parents = object_path.split('/')
-                    # self.model_resolver.add_ref(ref)
-                    models = get_model_by_path(ref_body, object_parents[:-1])
-                    for model_name, model in models.items():
-                        self.parse_raw_obj(
-                            model_name,
-                            model,
-                            [str(full_path), '#', *object_parents[:-1]],
-                        )
-                        if reference:
-                            reference.loaded = True
+                    object_paths = object_path.split('/')
+                    models = get_model_by_path(ref_body, object_paths)
+                    self.parse_raw_obj(
+                        object_paths[-1],
+                        models,
+                        [str(full_path), '#', *object_paths],
+                    )
+                    self.model_resolver.add_ref(obj.ref)
+                    self.model_resolver.get_by_path(obj.ref).loaded = True
+
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
