@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -558,13 +559,13 @@ class JsonSchemaParser(Parser):
                     pass
                 else:
                     relative_path, object_path = obj.ref.split('#/')
-                    if obj.ref.startswith('https://') or obj.ref.startswith('http://'):
+                    if obj.ref.startswith(('https://', 'http://')):
                         # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
                         try:
                             import httpx
                         except ImportError:  # pragma: no cover
                             raise Exception(
-                                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
+                                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={obj.ref}'
                             )
                         raw_body: str = httpx.get(relative_path).text
                         if relative_path.lower().endswith('.json'):
@@ -576,7 +577,7 @@ class JsonSchemaParser(Parser):
                             import yaml
 
                             ref_body = yaml.safe_load(raw_body)
-                        full_path = relative_path
+                        full_path: Union[Path, str] = relative_path
                     else:
                         # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
                         # the same location. TODO treat edge case
@@ -585,7 +586,7 @@ class JsonSchemaParser(Parser):
                             if full_path.suffix.lower() == '.json':
                                 import json
 
-                                ref_body: Dict[str, Any] = json.load(f)
+                                ref_body = json.load(f)
                             else:
                                 # expect yaml
                                 import yaml
@@ -594,13 +595,9 @@ class JsonSchemaParser(Parser):
                     object_paths = object_path.split('/')
                     models = get_model_by_path(ref_body, object_paths)
                     self.parse_raw_obj(
-                        object_paths[-1],
-                        models,
-                        [str(full_path), '#', *object_paths],
+                        object_paths[-1], models, [str(full_path), '#', *object_paths],
                     )
-                    self.model_resolver.add_ref(obj.ref)
-                    self.model_resolver.get_by_path(obj.ref).loaded = True
-
+                    self.model_resolver.add_ref(obj.ref).loaded = True
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):

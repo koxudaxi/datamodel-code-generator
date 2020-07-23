@@ -21,6 +21,7 @@ DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
 @pytest.mark.parametrize(
     'schema,path,model',
     [
+        ({'foo': 'bar'}, None, {'foo': 'bar'}),
         ({'a': {'foo': 'bar'}}, 'a', {'foo': 'bar'}),
         ({'a': {'b': {'foo': 'bar'}}}, 'a/b', {'foo': 'bar'}),
         ({'a': {'b': {'c': {'foo': 'bar'}}}}, 'a/b', {'c': {'foo': 'bar'}}),
@@ -28,7 +29,7 @@ DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
     ],
 )
 def test_get_model_by_path(schema: Dict, path: str, model: Dict):
-    assert get_model_by_path(schema, path.split('/')) == model
+    assert get_model_by_path(schema, path.split('/') if path else []) == model
 
 
 def test_json_schema_parser_parse_ref():

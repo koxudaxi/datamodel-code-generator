@@ -156,7 +156,7 @@ class ModelResolver:
             path=ref.split('/'),
             original_name=original_name,
             name=name,
-            loaded=not (ref.startswith('https://') or ref.startswith('http://'))
+            loaded=not ref.startswith(('https://', 'http://')),
         )
         self.references[ref] = reference
         return reference
