@@ -560,6 +560,8 @@ class JsonSchemaParser(Parser):
                     # Local Reference – $ref: '#/definitions/myElement'
                     pass
                 else:
+                    import yaml
+
                     relative_path, object_path = obj.ref.split('#/')
                     remote_object: Optional[
                         Dict[str, Any]
@@ -577,15 +579,8 @@ class JsonSchemaParser(Parser):
                                     f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={obj.ref}'
                                 )
                             raw_body: str = httpx.get(relative_path).text
-                            if relative_path.lower().endswith('.json'):
-                                import json
-
-                                ref_body = json.loads(raw_body)
-                            else:
-                                # expect yaml
-                                import yaml
-
-                                ref_body = yaml.safe_load(raw_body)
+                            # yaml loader can parse json data.
+                            ref_body = yaml.safe_load(raw_body)
                             self.remote_object_cache[relative_path] = ref_body
                     else:
                         # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
@@ -594,16 +589,9 @@ class JsonSchemaParser(Parser):
                         if remote_object:  # pragma: no cover
                             ref_body = remote_object
                         else:
+                            # yaml loader can parse json data.
                             with full_path.open() as f:
-                                if full_path.suffix.lower() == '.json':
-                                    import json
-
-                                    ref_body = json.load(f)
-                                else:
-                                    # expect yaml
-                                    import yaml
-
-                                    ref_body = yaml.safe_load(f)
+                                ref_body = yaml.safe_load(f)
                             self.remote_object_cache[relative_path] = ref_body
                     object_paths = object_path.split('/')
                     models = get_model_by_path(ref_body, object_paths)
