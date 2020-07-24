@@ -131,6 +131,7 @@ class Reference(BaseModel):
     path: List[str]
     original_name: str
     name: str
+    loaded: bool = True
 
 
 class ModelResolver:
@@ -140,7 +141,9 @@ class ModelResolver:
 
     @staticmethod
     def _get_path(path: List[str]) -> str:
-
+        if '#' in path:  # remote
+            delimiter = path.index('#')
+            return f"{''.join(path[:delimiter])}#/{''.join(path[delimiter + 1:])}"
         return '/'.join(path)
 
     def add_ref(self, ref: str) -> Reference:
@@ -150,7 +153,10 @@ class ModelResolver:
 
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
-            path=parents.split('/'), original_name=original_name, name=name
+            path=ref.split('/'),
+            original_name=original_name,
+            name=name,
+            loaded=not ref.startswith(('https://', 'http://')),
         )
         self.references[ref] = reference
         return reference
@@ -184,7 +190,11 @@ class ModelResolver:
         self.references[joined_path] = reference
         return reference
 
-    def get(self, path: List[str]) -> Reference:  # pragma: no cover
+    def get(
+        self, path: Union[List[str], str]
+    ) -> Optional[Reference]:  # pragma: no cover
+        if isinstance(path, str):
+            return self.references.get(path)
         return self.references[self._get_path(path)]
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
@@ -275,7 +285,6 @@ class Parser(ABC):
         #     self.base_path: Path = Path(filename).absolute().parent
         # else:
         self.base_path = Path.cwd()
-        self.excludes_ref_path: Set[str] = set()
 
         self.custom_template_dir = (
             Path(custom_template_dir).expanduser().resolve()

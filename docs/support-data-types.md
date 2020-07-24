@@ -27,4 +27,4 @@ This codegen supports major data types to OpenAPI/JSON Schema
 - allOf (as Multiple inheritance)
 - anyOf (as Union)
 - oneOf (as Union)
-- $ref (exclude URL Reference)
+- $ref ([http extra](../#http-extra-option) is required when resolving $ref for remote files.)

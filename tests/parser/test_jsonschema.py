@@ -1,8 +1,10 @@
+import json
 from pathlib import Path
 from typing import Dict
 from unittest.mock import Mock, call
 
 import pytest
+import yaml
 
 from datamodel_code_generator import DataModelField
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
@@ -19,6 +21,7 @@ DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
 @pytest.mark.parametrize(
     'schema,path,model',
     [
+        ({'foo': 'bar'}, None, {'foo': 'bar'}),
         ({'a': {'foo': 'bar'}}, 'a', {'foo': 'bar'}),
         ({'a': {'b': {'foo': 'bar'}}}, 'a/b', {'foo': 'bar'}),
         ({'a': {'b': {'c': {'foo': 'bar'}}}}, 'a/b', {'c': {'foo': 'bar'}}),
@@ -26,7 +29,7 @@ DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
     ],
 )
 def test_get_model_by_path(schema: Dict, path: str, model: Dict):
-    assert get_model_by_path(schema, path.split('/')) == model
+    assert get_model_by_path(schema, path.split('/') if path else []) == model
 
 
 def test_json_schema_parser_parse_ref():
@@ -55,13 +58,112 @@ def test_json_schema_parser_parse_ref():
     # )
 
 
-def test_json_schema_object_ref_url():
+def test_json_schema_object_ref_url_json(mocker):
     parser = JsonSchemaParser(
         BaseModel, CustomRootType, data_model_field_type=DataModelField
     )
-    obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.org'})
-    with pytest.raises(NotImplementedError):
-        parser.parse_ref(obj, [])
+    obj = JsonSchemaObject.parse_obj(
+        {'$ref': 'https://example.org/schema.json#/definitions/User'}
+    )
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = json.dumps(
+        {
+            "$id": "https://example.com/person.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {
+                "User": {"type": "object", "properties": {"name": {"type": "string",}},}
+            },
+        },
+    )
+
+    parser.parse_ref(obj, ['Model'])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    parser.parse_ref(obj, ['Model'])
+    mock_get.assert_called_once_with('https://example.org/schema.json',)
+
+
+def test_json_schema_object_ref_url_yaml(mocker):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+    obj = JsonSchemaObject.parse_obj(
+        {'$ref': 'https://example.org/schema.yaml#/definitions/User'}
+    )
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = yaml.safe_dump(
+        json.load((DATA_PATH / 'user.json').open())
+    )
+
+    parser.parse_ref(obj, ['User'])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    parser.parse_ref(obj, [])
+    mock_get.assert_called_once_with('https://example.org/schema.yaml',)
+
+
+def test_json_schema_object_cached_ref_url_yaml(mocker):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+
+    obj = JsonSchemaObject.parse_obj(
+        {
+            'type': 'object',
+            'properties': {
+                'pet': {'$ref': 'https://example.org/schema.yaml#/definitions/Pet'},
+                'user': {'$ref': 'https://example.org/schema.yaml#/definitions/User'},
+            },
+        }
+    )
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = yaml.safe_dump(
+        json.load((DATA_PATH / 'user.json').open())
+    )
+
+    parser.parse_ref(obj, [])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class Pet(BaseModel):
+    name: Optional[str] = None
+
+
+class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    mock_get.assert_called_once_with('https://example.org/schema.yaml',)
+
+
+def test_json_schema_ref_url_json(mocker):
+    parser = JsonSchemaParser(
+        BaseModel, CustomRootType, data_model_field_type=DataModelField
+    )
+    obj = {
+        "type": "object",
+        "properties": {
+            "user": {'$ref': 'https://example.org/schema.json#/definitions/User'}
+        },
+    }
+    mock_get = mocker.patch('httpx.get')
+    mock_get.return_value.text = json.dumps(json.load((DATA_PATH / 'user.json').open()))
+
+    parser.parse_raw_obj('Model', obj, ['Model'])
+    assert (
+        dump_templates(list(parser.results))
+        == '''class Model(BaseModel):
+    user: Optional[User] = None
+
+
+class User(BaseModel):
+    name: Optional[str] = None'''
+    )
+    mock_get.assert_called_once_with('https://example.org/schema.json',)
 
 
 @pytest.mark.parametrize(

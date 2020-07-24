@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -153,6 +154,8 @@ class JsonSchemaParser(Parser):
             field_constraints,
             aliases,
         )
+
+        self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
 
     def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
         if obj.type is None:
@@ -550,41 +553,52 @@ class JsonSchemaParser(Parser):
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
-            ref: str = obj.ref
-            # https://swagger.io/docs/specification/using-ref/
-            if obj.ref.startswith('#'):
-                # Local Reference – $ref: '#/definitions/myElement'
-                pass
-            elif '://' in ref:
-                # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-                raise NotImplementedError(f'URL Reference is not supported. $ref:{ref}')
+            reference = self.model_resolver.get(obj.ref)
+            if not reference or not reference.loaded:
+                # https://swagger.io/docs/specification/using-ref/
+                if obj.ref.startswith('#'):
+                    # Local Reference – $ref: '#/definitions/myElement'
+                    pass
+                else:
+                    import yaml
 
-            else:
-                # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
-                # the same location. TODO treat edge case
-                relative_path, object_path = ref.split('#/')
-                full_path = self.base_path / relative_path
-                with full_path.open() as f:
-                    if full_path.suffix.lower() == '.json':
-                        import json
-
-                        ref_body: Dict[str, Any] = json.load(f)
+                    relative_path, object_path = obj.ref.split('#/')
+                    remote_object: Optional[
+                        Dict[str, Any]
+                    ] = self.remote_object_cache.get(relative_path)
+                    if obj.ref.startswith(('https://', 'http://')):
+                        full_path: Union[Path, str] = relative_path
+                        if remote_object:
+                            ref_body: Dict[str, Any] = remote_object
+                        else:
+                            # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+                            try:
+                                import httpx
+                            except ImportError:  # pragma: no cover
+                                raise Exception(
+                                    f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={obj.ref}'
+                                )
+                            raw_body: str = httpx.get(relative_path).text
+                            # yaml loader can parse json data.
+                            ref_body = yaml.safe_load(raw_body)
+                            self.remote_object_cache[relative_path] = ref_body
                     else:
-                        # expect yaml
-                        import yaml
-
-                        ref_body = yaml.safe_load(f)
-                    object_parents = object_path.split('/')
-                    ref_path = str(full_path) + '#/' + '/'.join(object_parents[:-1])
-                    if ref_path not in self.excludes_ref_path:
-                        self.excludes_ref_path.add(ref_path)
-                        models = get_model_by_path(ref_body, object_parents[:-1])
-                        for model_name, model in models.items():
-                            self.parse_raw_obj(
-                                model_name,
-                                model,
-                                [str(full_path), '#/', *object_parents[:-1]],
-                            )
+                        # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
+                        # the same location. TODO treat edge case
+                        full_path = self.base_path / relative_path
+                        if remote_object:  # pragma: no cover
+                            ref_body = remote_object
+                        else:
+                            # yaml loader can parse json data.
+                            with full_path.open() as f:
+                                ref_body = yaml.safe_load(f)
+                            self.remote_object_cache[relative_path] = ref_body
+                    object_paths = object_path.split('/')
+                    models = get_model_by_path(ref_body, object_paths)
+                    self.parse_raw_obj(
+                        object_paths[-1], models, [str(full_path), '#', *object_paths],
+                    )
+                    self.model_resolver.add_ref(obj.ref).loaded = True
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
