@@ -22,6 +22,7 @@ To install `datamodel-code-generator`:
 $ pip install datamodel-code-generator
 ```
 
+### `http` extra option
 If you want to resolve `$ref` for remote files then you should specify `http` extra option.
 ```bash
 $ pip install datamodel-code-generator[http]
