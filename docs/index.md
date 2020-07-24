@@ -18,8 +18,13 @@ This code generator creates pydantic model from an openapi file and others.
 ## Installation
 
 To install `datamodel-code-generator`:
-```sh
+```bash
 $ pip install datamodel-code-generator
+```
+
+If you want to resolve `$ref` for remote files then you should specify `http` extra option.
+```bash
+$ pip install datamodel-code-generator[http]
 ```
 
 ## Usage

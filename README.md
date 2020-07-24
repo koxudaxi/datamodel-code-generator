@@ -45,14 +45,19 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 - allOf (as Multiple inheritance)
 - anyOf (as Union)
 - oneOf (as Union)
-- $ref (http extra is required. `$ pip install datamodel_code_generator[http]`)
+- $ref (http extra is required when resolving $ref for remote files. `$ pip install datamodel-code-generator[http]`)
 
 
 ## Installation
 
 To install `datamodel-code-generator`:
-```sh
+```bash
 $ pip install datamodel-code-generator
+```
+
+If you want to resolve `$ref` for remote files then you should specify `http` extra option.
+```bash
+$ pip install datamodel-code-generator[http]
 ```
 
 ## Usage
