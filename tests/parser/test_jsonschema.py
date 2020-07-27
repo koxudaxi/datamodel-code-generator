@@ -260,24 +260,8 @@ def test_parse_any_root_object(source_obj, generated_classes):
     'source_obj,generated_classes',
     [
         (
-            {
-                "properties": {
-                    "item": {
-                        "properties": {
-                            "timeout": {
-                                "oneOf": [{"type": "string"}, {"type": "integer"}]
-                            }
-                        },
-                        "type": "object",
-                    }
-                }
-            },
-            """class Item(BaseModel):
-    timeout: Optional[Union[str, int]] = None
-
-
-class OnOfObject(BaseModel):
-    item: Optional[Item] = None""",
+            yaml.safe_load((DATA_PATH / 'oneof.json').read_text()),
+            (DATA_PATH / 'oneof.json.snapshot').read_text(),
         )
     ],
 )
@@ -345,13 +329,5 @@ def test_parse_nested_array():
     parser.parse()
     assert (
         dump_templates(list(parser.results))
-        == """\
-class BoundingBox(BaseModel):
-    type: str
-    coordinates: List[Union[float, str]]
-
-
-class Model(BaseModel):
-    bounding_box: Optional[BoundingBox] = None
-    attributes: Optional[Dict[str, Any]] = None"""
+        == (DATA_PATH / 'nested_array.json.snapshot').read_text()
     )

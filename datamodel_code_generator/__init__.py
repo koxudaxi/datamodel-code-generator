@@ -74,14 +74,6 @@ def snooper_to_methods(  # type: ignore
     return inner
 
 
-def load_json_or_yaml(text: str) -> Dict[Any, Any]:
-    try:
-        data = json.loads(text)
-    except JSONDecodeError:
-        data = yaml.safe_load(text)
-    return data
-
-
 @contextlib.contextmanager
 def chdir(path: Optional[Path]) -> Iterator[None]:
     """Changes working directory and returns to previous on exit."""
@@ -98,7 +90,7 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
 
 
 def is_openapi(text: str) -> bool:
-    return 'openapi' in load_json_or_yaml(text)
+    return 'openapi' in yaml.safe_load(text)
 
 
 class InputFileType(Enum):

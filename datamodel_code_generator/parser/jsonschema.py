@@ -14,6 +14,7 @@ from typing import (
     Union,
 )
 
+import yaml
 from pydantic import BaseModel, Field, validator
 
 from datamodel_code_generator import snooper_to_methods
@@ -560,8 +561,6 @@ class JsonSchemaParser(Parser):
                     # Local Reference – $ref: '#/definitions/myElement'
                     pass
                 else:
-                    import yaml
-
                     relative_path, object_path = obj.ref.split('#/')
                     remote_object: Optional[
                         Dict[str, Any]
@@ -633,7 +632,7 @@ class JsonSchemaParser(Parser):
         self.parse_ref(obj, path)
 
     def parse_raw(self) -> None:
-        raw_obj: Dict[Any, Any] = json.loads(self.text)  # type: ignore
+        raw_obj: Dict[Any, Any] = yaml.safe_load(self.text)  # type: ignore
         obj_name = raw_obj.get('title', 'Model')
         obj_name = self.model_resolver.add([], obj_name, unique=False).name
         self.parse_raw_obj(obj_name, raw_obj, [])

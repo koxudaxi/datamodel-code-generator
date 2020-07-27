@@ -527,3 +527,23 @@ def test_openapi_parser_parse_array_enum(with_import, format_, base_class):
         parser.parse(with_import=with_import, format_=format_)
         == expected_file.read_text()
     )
+
+
+@pytest.mark.parametrize(
+    'with_import, format_, base_class', [(True, True, None,),],
+)
+def test_openapi_parser_parse_remote_ref(with_import, format_, base_class):
+    parser = OpenAPIParser(
+        BaseModel,
+        CustomRootType,
+        base_class=base_class,
+        text=(DATA_PATH / 'refs.yaml').read_text(),
+    )
+    expected_file = get_expected_file(
+        'openapi_parser_parse_remote_ref', with_import, format_, base_class
+    )
+
+    assert (
+        parser.parse(with_import=with_import, format_=format_)
+        == expected_file.read_text()
+    )

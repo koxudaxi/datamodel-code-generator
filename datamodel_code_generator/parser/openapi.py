@@ -1,6 +1,8 @@
 from typing import Any, Dict
 
-from datamodel_code_generator import load_json_or_yaml, snooper_to_methods
+import yaml
+
+from datamodel_code_generator import snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 
@@ -15,7 +17,7 @@ class OpenAPIParser(JsonSchemaParser):
             )
             components: Dict[str, Any] = base_parser.specification['components']
         else:
-            components = load_json_or_yaml(self.text)['components']  # type: ignore
+            components = yaml.safe_load(self.text)['components']  # type: ignore
 
         for obj_name, raw_obj in components[
             'schemas'
