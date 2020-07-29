@@ -120,6 +120,7 @@ def generate(
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
     validation: bool = False,
     field_constraints: bool = False,
+    snake_case_field: bool = False,
     aliases: Optional[Mapping[str, str]] = None,
 ) -> None:
     if input_file_type == InputFileType.Auto:
@@ -169,6 +170,7 @@ def generate(
         dump_resolve_reference_action=dump_resolve_reference_action,
         validation=validation,
         field_constraints=field_constraints,
+        snake_case_field=snake_case_field,
         aliases=aliases,
     )
 

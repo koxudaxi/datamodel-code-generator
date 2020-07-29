@@ -29,6 +29,9 @@ from ..types import DataType, DataTypePy36
 
 inflect_engine = inflect.engine()
 
+_UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
+_UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
+
 
 def get_singular_name(name: str, suffix: str = 'Item') -> str:
     singular_name = inflect_engine.singular_noun(name)
@@ -44,6 +47,20 @@ def snake_to_upper_camel(word: str) -> str:
         word = word[1:]
 
     return prefix + ''.join(x[0].upper() + x[1:] for x in word.split('_') if x)
+
+
+def camel_to_snake(string: str) -> str:
+    subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
+    return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
+
+
+def snakify_field(field: DataModelFieldBase) -> None:
+    if not field.name:
+        return
+    original_name = field.name
+    field.name = camel_to_snake(original_name)
+    if field.name != original_name:
+        field.alias = original_name
 
 
 def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
@@ -258,6 +275,7 @@ class Parser(ABC):
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
+        snake_case_field: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
     ):
 
@@ -266,7 +284,6 @@ class Parser(ABC):
         self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
-        self.created_model_names: Set[str] = set()
         self.target_python_version: PythonVersion = target_python_version
         self.text: Optional[str] = text
         self.results: List[DataModel] = result or []
@@ -275,6 +292,7 @@ class Parser(ABC):
         ] = dump_resolve_reference_action
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
+        self.snake_case_field: bool = snake_case_field
 
         if self.target_python_version == PythonVersion.PY_36:
             self.data_type: Type[DataType] = DataTypePy36
@@ -298,7 +316,9 @@ class Parser(ABC):
         self.model_resolver = ModelResolver(aliases=aliases)
 
     def append_result(self, data_model: DataModel) -> None:
-        self.created_model_names.add(data_model.name)
+        if self.snake_case_field:
+            for field in data_model.fields:
+                snakify_field(field)
         self.results.append(data_model)
 
     @abstractmethod
