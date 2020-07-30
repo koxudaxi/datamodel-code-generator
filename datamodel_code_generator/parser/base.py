@@ -63,6 +63,10 @@ def snakify_field(field: DataModelFieldBase) -> None:
         field.alias = original_name
 
 
+def set_strip_default_none(field: DataModelFieldBase) -> None:
+    field.strip_default_none = True
+
+
 def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
     if isinstance(templates, TemplateBase):
         templates = [templates]
@@ -276,6 +280,7 @@ class Parser(ABC):
         validation: bool = False,
         field_constraints: bool = False,
         snake_case_field: bool = False,
+        strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
     ):
 
@@ -293,6 +298,7 @@ class Parser(ABC):
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
+        self.strip_default_none: bool = strip_default_none
 
         if self.target_python_version == PythonVersion.PY_36:
             self.data_type: Type[DataType] = DataTypePy36
@@ -314,11 +320,16 @@ class Parser(ABC):
         ] = extra_template_data or defaultdict(dict)
 
         self.model_resolver = ModelResolver(aliases=aliases)
+        self.field_preprocessors: List[Callable[[DataModelFieldBase], None]] = []
+        if self.snake_case_field:
+            self.field_preprocessors.append(snakify_field)
+        if self.strip_default_none:
+            self.field_preprocessors.append(set_strip_default_none)
 
     def append_result(self, data_model: DataModel) -> None:
-        if self.snake_case_field:
+        for field_preprocessor in self.field_preprocessors:
             for field in data_model.fields:
-                snakify_field(field)
+                field_preprocessor(field)
         self.results.append(data_model)
 
     @abstractmethod

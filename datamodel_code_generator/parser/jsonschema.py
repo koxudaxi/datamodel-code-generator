@@ -139,6 +139,7 @@ class JsonSchemaParser(Parser):
         validation: bool = False,
         field_constraints: bool = False,
         snake_case_field: bool = False,
+        strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
     ):
         super().__init__(
@@ -155,6 +156,7 @@ class JsonSchemaParser(Parser):
             validation,
             field_constraints,
             snake_case_field,
+            strip_default_none,
             aliases,
         )
 
