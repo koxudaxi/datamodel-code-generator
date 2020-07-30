@@ -36,6 +36,7 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--input-file-type {auto,openapi,jsonschema,json,yaml}]
                          [--output OUTPUT] [--base-class BASE_CLASS]
                          [--field-constraints] [--snake-case-field]
+                         [--strip-default-none]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
@@ -52,6 +53,7 @@ optional arguments:
                         Base Class (default: pydantic.BaseModel)
   --field-constraints   Use field constraints and not con* annotations
   --snake-case-field    Change camel-case field name to snake-case
+  --strip-default-none  Strip default None on fields
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA
