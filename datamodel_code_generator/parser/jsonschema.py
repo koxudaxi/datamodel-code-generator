@@ -138,6 +138,7 @@ class JsonSchemaParser(Parser):
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
+        snake_case_field: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
     ):
         super().__init__(
@@ -153,6 +154,7 @@ class JsonSchemaParser(Parser):
             dump_resolve_reference_action,
             validation,
             field_constraints,
+            snake_case_field,
             aliases,
         )
 

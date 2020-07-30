@@ -67,6 +67,11 @@ arg_parser.add_argument(
     action='store_true',
 )
 arg_parser.add_argument(
+    '--snake-case-field',
+    help='Change camel-case field name to snake-case',
+    action='store_true',
+)
+arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
 )
 arg_parser.add_argument(
@@ -149,6 +154,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             extra_template_data=extra_template_data,
             validation=namespace.validation,
             field_constraints=namespace.field_constraints,
+            snake_case_field=namespace.snake_case_field,
             aliases=aliases,
         )
         return Exit.OK
