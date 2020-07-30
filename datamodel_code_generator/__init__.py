@@ -121,6 +121,7 @@ def generate(
     validation: bool = False,
     field_constraints: bool = False,
     snake_case_field: bool = False,
+    strip_default_none: bool = False,
     aliases: Optional[Mapping[str, str]] = None,
 ) -> None:
     if input_file_type == InputFileType.Auto:
@@ -171,6 +172,7 @@ def generate(
         validation=validation,
         field_constraints=field_constraints,
         snake_case_field=snake_case_field,
+        strip_default_none=strip_default_none,
         aliases=aliases,
     )
 

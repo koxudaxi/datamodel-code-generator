@@ -11,7 +11,7 @@ class {{ class_name }}({{ base_class }}):
 {%- for field in fields -%}
     {%- if field.field %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
-    {%- elif field.required %}
+    {%- elif field.required or (field.represented_default == 'None' and field.strip_default_none)  %}
     {{ field.name }}: {{ field.type_hint }}
     {%- else %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.represented_default }}

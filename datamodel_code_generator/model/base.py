@@ -58,6 +58,7 @@ class DataModelFieldBase(BaseModel):
     type_hint: Optional[str] = None
     unresolved_types: List[str] = []
     constraints: Any = None
+    strip_default_none: bool = False
 
     @property
     def field(self) -> Optional[str]:

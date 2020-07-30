@@ -72,6 +72,9 @@ arg_parser.add_argument(
     action='store_true',
 )
 arg_parser.add_argument(
+    '--strip-default-none', help='Strip default None on fields', action='store_true',
+)
+arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
 )
 arg_parser.add_argument(
@@ -155,6 +158,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             validation=namespace.validation,
             field_constraints=namespace.field_constraints,
             snake_case_field=namespace.snake_case_field,
+            strip_default_none=namespace.strip_default_none,
             aliases=aliases,
         )
         return Exit.OK
