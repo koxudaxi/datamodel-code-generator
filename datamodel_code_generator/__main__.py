@@ -50,20 +50,17 @@ arg_parser.add_argument(
     '--input',
     help='Input file (default: stdin)',
     type=FileType('rt'),
-    # default=sys.stdin,
 )
 arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
     choices=[i.value for i in InputFileType],
-    # default='auto',
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 arg_parser.add_argument(
     '--base-class',
     help='Base Class (default: pydantic.BaseModel)',
     type=str,
-    # default=DEFAULT_BASE_CLASS,
 )
 arg_parser.add_argument(
     '--field-constraints',
@@ -89,7 +86,6 @@ arg_parser.add_argument(
     '--target-python-version',
     help='target python version (default: 3.7)',
     choices=['3.6', '3.7'],
-    # default='3.7',
 )
 arg_parser.add_argument(
     '--validation', help='Enable validation (Only OpenAPI)', action='store_true'
