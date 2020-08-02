@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -385,25 +386,26 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 
 @freeze_time('2019-07-26')
 def test_pyproject():
+    current_dir = os.getcwd()
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
-        pyproject_toml = Path(DATA_PATH) / "project" / "pyproject.toml"
-        shutil.copy(pyproject_toml, output_dir)
         output_file: Path = output_dir / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'api.yaml'),
-                '--output',
-                str(output_file),
-            ]
+        pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
+        pyproject_toml = (
+            pyproject_toml_path.read_text()
+            .replace('INPUT_PATH', str(OPEN_API_DATA_PATH / 'api.yaml'))
+            .replace('OUTPUT_PATH', str(output_file))
         )
+        (output_dir / 'pyproject.toml').write_text(pyproject_toml)
+
+        os.chdir(output_dir)
+        return_code: Exit = main([])
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
         )
-
+    os.chdir(current_dir)
     with pytest.raises(SystemExit):
         main()
 

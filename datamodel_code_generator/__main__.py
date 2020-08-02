@@ -10,10 +10,14 @@ import sys
 from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from enum import IntEnum
+from io import TextIOBase
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Optional, Sequence
+from typing import Any, DefaultDict, Dict, Mapping, Optional, Sequence, TextIO
 
 import argcomplete
+import black
+import toml
+from pydantic import BaseModel
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -46,20 +50,20 @@ arg_parser.add_argument(
     '--input',
     help='Input file (default: stdin)',
     type=FileType('rt'),
-    default=sys.stdin,
+    # default=sys.stdin,
 )
 arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
     choices=[i.value for i in InputFileType],
-    default='auto',
+    # default='auto',
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 arg_parser.add_argument(
     '--base-class',
     help='Base Class (default: pydantic.BaseModel)',
     type=str,
-    default=DEFAULT_BASE_CLASS,
+    # default=DEFAULT_BASE_CLASS,
 )
 arg_parser.add_argument(
     '--field-constraints',
@@ -85,13 +89,39 @@ arg_parser.add_argument(
     '--target-python-version',
     help='target python version (default: 3.7)',
     choices=['3.6', '3.7'],
-    default='3.7',
+    # default='3.7',
 )
 arg_parser.add_argument(
     '--validation', help='Enable validation (Only OpenAPI)', action='store_true'
 )
 arg_parser.add_argument('--debug', help='show debug message', action='store_true')
 arg_parser.add_argument('--version', help='show version', action='store_true')
+
+
+class Config(BaseModel):
+    class Config:
+        validate_assignment = True
+        arbitrary_types_allowed = (TextIOBase,)
+
+    input_file_type: InputFileType = InputFileType.Auto
+    output: Optional[Path]
+    debug: bool = False
+    target_python_version: PythonVersion = PythonVersion.PY_37
+    base_class: str = DEFAULT_BASE_CLASS
+    custom_template_dir: Optional[str]
+    extra_template_data: Optional[TextIOBase]
+    validation: bool = False
+    field_constraints: bool = False
+    snake_case_field: bool = False
+    strip_default_none: bool = False
+    aliases: Optional[TextIOBase]
+
+    def merge_args(self, args: Namespace) -> None:
+        for field_name in self.__fields__:
+            arg = getattr(args, field_name)
+            if arg is None:
+                continue
+            setattr(self, field_name, arg)
 
 
 def main(args: Optional[Sequence[str]] = None) -> Exit:
@@ -111,12 +141,39 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         print(version)
         exit(0)
 
-    if namespace.debug:  # pragma: no cover
+    root = black.find_project_root((Path().resolve(),))
+    pyproject_toml_path = root / "pyproject.toml"
+    if pyproject_toml_path.is_file():
+        pyproject_toml: Dict[str, Any] = {
+            k.replace('-', '_'): v
+            for k, v in toml.load(str(pyproject_toml_path))
+            .get('tool', {})
+            .get('datamodel-codegen', {})
+            .items()
+        }
+    else:
+        pyproject_toml = {}
+    config = Config.parse_obj(pyproject_toml)
+
+    config.merge_args(namespace)
+
+    if namespace.input:
+        input_name: str = namespace.input.name
+        input_text: str = namespace.input.read()
+    elif 'input' in pyproject_toml:
+        input_path = Path(pyproject_toml['input'])
+        input_name = input_path.name
+        input_text = input_path.read_text()
+    else:
+        input_name = 'stdin'
+        input_text = sys.stdin.read()
+
+    if config.debug:  # pragma: no cover
         enable_debug_message()
 
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]]
-    if namespace.extra_template_data is not None:
-        with namespace.extra_template_data as data:
+    if config.extra_template_data is not None:
+        with config.extra_template_data as data:
             try:
                 extra_template_data = json.load(
                     data, object_hook=lambda d: defaultdict(dict, **d)
@@ -127,8 +184,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     else:
         extra_template_data = None
 
-    if namespace.aliases is not None:
-        with namespace.aliases as data:
+    if config.aliases is not None:
+        with config.aliases as data:
             try:
                 aliases = json.load(data)
             except json.JSONDecodeError as e:
@@ -147,18 +204,18 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     try:
         generate(
-            input_name=namespace.input.name,
-            input_text=namespace.input.read(),
-            input_file_type=InputFileType(namespace.input_file_type),
-            output=Path(namespace.output) if namespace.output is not None else None,
-            target_python_version=PythonVersion(namespace.target_python_version),
-            base_class=namespace.base_class,
-            custom_template_dir=namespace.custom_template_dir,
+            input_name=input_name,
+            input_text=input_text,
+            input_file_type=config.input_file_type,
+            output=Path(config.output) if config.output is not None else None,
+            target_python_version=config.target_python_version,
+            base_class=config.base_class,
+            custom_template_dir=config.custom_template_dir,
             extra_template_data=extra_template_data,
-            validation=namespace.validation,
-            field_constraints=namespace.field_constraints,
-            snake_case_field=namespace.snake_case_field,
-            strip_default_none=namespace.strip_default_none,
+            validation=config.validation,
+            field_constraints=config.field_constraints,
+            snake_case_field=config.snake_case_field,
+            strip_default_none=config.strip_default_none,
             aliases=aliases,
         )
         return Exit.OK
