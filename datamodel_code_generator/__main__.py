@@ -165,7 +165,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         input_name = input_path.name
         input_text = input_path.read_text()
     else:
-        input_name = 'stdin'
+        input_name = '<stdin>'
         input_text = sys.stdin.read()
 
     if config.debug:  # pragma: no cover

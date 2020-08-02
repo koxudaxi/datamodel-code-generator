@@ -411,6 +411,44 @@ def test_pyproject():
 
 
 @freeze_time('2019-07-26')
+def test_pyproject_not_found():
+    current_dir = os.getcwd()
+    with TemporaryDirectory() as output_dir:
+        output_dir = Path(output_dir)
+        output_file: Path = output_dir / 'output.py'
+        os.chdir(output_dir)
+        return_code: Exit = main([
+            '--input',
+            str(OPEN_API_DATA_PATH / 'api.yaml'),
+            '--output',
+            str(output_file),
+        ])
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py').read_text()
+        )
+    os.chdir(current_dir)
+
+
+@freeze_time('2019-07-26')
+def test_stdin(monkeypatch):
+    with TemporaryDirectory() as output_dir:
+        output_dir = Path(output_dir)
+        output_file: Path = output_dir / 'output.py'
+        monkeypatch.setattr('sys.stdin', (OPEN_API_DATA_PATH / 'api.yaml').open())
+        return_code: Exit = main([
+            '--output',
+            str(output_file),
+        ])
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
 def test_validation():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
