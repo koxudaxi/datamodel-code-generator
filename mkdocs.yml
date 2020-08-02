@@ -27,6 +27,7 @@ nav:
       - Generate from JSON Data: jsondata.md
       - Formatting: formatting.md
       - Field Constraints: field-constraints.md
+      - pyproject.toml: pyproject_toml.md
     - Development-Contributing: development-contributing.md
 
 plugins:

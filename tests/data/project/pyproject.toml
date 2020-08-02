@@ -1,3 +1,13 @@
 [tool.black]
 skip-string-normalization = false
 line-length = 30
+
+[tool.datamodel-codegen]
+input = "INPUT_PATH"
+output = "OUTPUT_PATH"
+input_file_type = 'openapi'
+validation = true
+field-constraints = true
+snake-case-field = true
+strip-default-none = true
+target-python-version = "3.6"
