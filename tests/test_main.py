@@ -417,12 +417,14 @@ def test_pyproject_not_found():
         output_dir = Path(output_dir)
         output_file: Path = output_dir / 'output.py'
         os.chdir(output_dir)
-        return_code: Exit = main([
-            '--input',
-            str(OPEN_API_DATA_PATH / 'api.yaml'),
-            '--output',
-            str(output_file),
-        ])
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+            ]
+        )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
@@ -437,10 +439,9 @@ def test_stdin(monkeypatch):
         output_dir = Path(output_dir)
         output_file: Path = output_dir / 'output.py'
         monkeypatch.setattr('sys.stdin', (OPEN_API_DATA_PATH / 'api.yaml').open())
-        return_code: Exit = main([
-            '--output',
-            str(output_file),
-        ])
+        return_code: Exit = main(
+            ['--output', str(output_file),]
+        )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()

@@ -47,9 +47,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
-    '--input',
-    help='Input file (default: stdin)',
-    type=FileType('rt'),
+    '--input', help='Input file (default: stdin)', type=FileType('rt'),
 )
 arg_parser.add_argument(
     '--input-file-type',
@@ -58,9 +56,7 @@ arg_parser.add_argument(
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 arg_parser.add_argument(
-    '--base-class',
-    help='Base Class (default: pydantic.BaseModel)',
-    type=str,
+    '--base-class', help='Base Class (default: pydantic.BaseModel)', type=str,
 )
 arg_parser.add_argument(
     '--field-constraints',
