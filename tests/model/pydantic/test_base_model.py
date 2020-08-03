@@ -116,7 +116,7 @@ def test_base_model_reserved_name():
                 'title': 'title',
                 'alias': 'alias',
             },
-            "Field(None, alias='alias',example=True,description='description',title='title')",
+            "Field(None, alias='alias',description='description',example=True,title='title')",
         ),
         ({'examples': [1, 2, 3]}, "Field(None, examples=[1, 2, 3])"),
         (

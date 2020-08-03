@@ -60,7 +60,9 @@ class DataModelField(DataModelFieldBase):
         data: Mapping[str, Any] = self.dict(include=self._FIELDS_KEYS)
         if self.constraints is not None:
             data = ChainMap(data, self.constraints.dict())
-        field_arguments = [f"{k}={repr(v)}" for k, v in data.items() if v is not None]
+        field_arguments = sorted(
+            f"{k}={repr(v)}" for k, v in data.items() if v is not None
+        )
         if not field_arguments:
             return ""
 
