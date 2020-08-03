@@ -1,5 +1,3 @@
-import os
-import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -8,6 +6,7 @@ from _pytest.capture import CaptureFixture
 from _pytest.tmpdir import TempdirFactory
 from freezegun import freeze_time
 
+from datamodel_code_generator import chdir
 from datamodel_code_generator.__main__ import Exit, main
 
 DATA_PATH: Path = Path(__file__).parent / 'data'
@@ -163,9 +162,6 @@ def test_main_jsonschema():
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_nested_deep():
-    import os
-
-    os.chdir(DATA_PATH / 'jsonschema')
     with TemporaryDirectory() as output_dir:
         output_init_file: Path = Path(output_dir) / '__init__.py'
         output_nested_file: Path = Path(output_dir) / 'nested/deep.py'
@@ -386,51 +382,55 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 
 @freeze_time('2019-07-26')
 def test_pyproject():
-    current_dir = os.getcwd()
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
-        output_file: Path = output_dir / 'output.py'
-        pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
-        pyproject_toml = (
-            pyproject_toml_path.read_text()
-            .replace('INPUT_PATH', str(OPEN_API_DATA_PATH / 'api.yaml'))
-            .replace('OUTPUT_PATH', str(output_file))
-        )
-        (output_dir / 'pyproject.toml').write_text(pyproject_toml)
+        with chdir(output_dir):
+            output_file: Path = output_dir / 'output.py'
+            pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
+            pyproject_toml = (
+                pyproject_toml_path.read_text()
+                .replace('INPUT_PATH', str(OPEN_API_DATA_PATH / 'api.yaml'))
+                .replace('OUTPUT_PATH', str(output_file))
+                .replace('ALIASES_PATH', str(OPEN_API_DATA_PATH / 'empty_aliases.json'))
+                .replace(
+                    'EXTRA_TEMPLATE_DATA_PATH',
+                    str(OPEN_API_DATA_PATH / 'empty_data.json'),
+                )
+                .replace('CUSTOM_TEMPLATE_DIR_PATH', str(output_dir))
+            )
+            (output_dir / 'pyproject.toml').write_text(pyproject_toml)
 
-        os.chdir(output_dir)
-        return_code: Exit = main([])
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
-        )
-    os.chdir(current_dir)
+            return_code: Exit = main([])
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
+            )
     with pytest.raises(SystemExit):
         main()
 
 
 @freeze_time('2019-07-26')
 def test_pyproject_not_found():
-    current_dir = os.getcwd()
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
-        output_file: Path = output_dir / 'output.py'
-        os.chdir(output_dir)
-        return_code: Exit = main(
-            [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'api.yaml'),
-                '--output',
-                str(output_file),
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py').read_text()
-        )
-    os.chdir(current_dir)
+        with chdir(output_dir):
+            output_file: Path = output_dir / 'output.py'
+            return_code: Exit = main(
+                [
+                    '--input',
+                    str(OPEN_API_DATA_PATH / 'api.yaml'),
+                    '--output',
+                    str(output_file),
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py'
+                ).read_text()
+            )
 
 
 @freeze_time('2019-07-26')

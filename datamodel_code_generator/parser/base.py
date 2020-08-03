@@ -271,7 +271,7 @@ class Parser(ABC):
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
-        custom_template_dir: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,
@@ -310,11 +310,7 @@ class Parser(ABC):
         # else:
         self.base_path = Path.cwd()
 
-        self.custom_template_dir = (
-            Path(custom_template_dir).expanduser().resolve()
-            if custom_template_dir is not None
-            else None
-        )
+        self.custom_template_dir = custom_template_dir
         self.extra_template_data: DefaultDict[
             str, Any
         ] = extra_template_data or defaultdict(dict)

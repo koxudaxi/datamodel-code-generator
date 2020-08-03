@@ -130,7 +130,7 @@ class JsonSchemaParser(Parser):
         data_model_root_type: Type[DataModel],
         data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
-        custom_template_dir: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
         text: Optional[str] = None,

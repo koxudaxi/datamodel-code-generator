@@ -116,7 +116,7 @@ def generate(
     output: Optional[Path],
     target_python_version: PythonVersion,
     base_class: str = DEFAULT_BASE_CLASS,
-    custom_template_dir: Optional[str] = None,
+    custom_template_dir: Optional[Path] = None,
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
     validation: bool = False,
     field_constraints: bool = False,
