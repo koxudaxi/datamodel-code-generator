@@ -173,7 +173,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     config.merge_args(namespace)
 
     if config.input is not None:
-        input_name: str = config.input.name
+        input_name: str = config.input.name  # type: ignore
         input_text: str = config.input.read()
     else:
         input_name = '<stdin>'
