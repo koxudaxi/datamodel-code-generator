@@ -12,12 +12,12 @@ from collections import defaultdict
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Mapping, Optional, Sequence, TextIO
+from typing import Any, DefaultDict, Dict, Optional, Sequence, cast
 
 import argcomplete
 import black
 import toml
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -62,14 +62,19 @@ arg_parser.add_argument(
     '--field-constraints',
     help='Use field constraints and not con* annotations',
     action='store_true',
+    default=None,
 )
 arg_parser.add_argument(
     '--snake-case-field',
     help='Change camel-case field name to snake-case',
     action='store_true',
+    default=None,
 )
 arg_parser.add_argument(
-    '--strip-default-none', help='Strip default None on fields', action='store_true',
+    '--strip-default-none',
+    help='Strip default None on fields',
+    action='store_true',
+    default=None,
 )
 arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
@@ -84,9 +89,14 @@ arg_parser.add_argument(
     choices=['3.6', '3.7'],
 )
 arg_parser.add_argument(
-    '--validation', help='Enable validation (Only OpenAPI)', action='store_true'
+    '--validation',
+    help='Enable validation (Only OpenAPI)',
+    action='store_true',
+    default=None,
 )
-arg_parser.add_argument('--debug', help='show debug message', action='store_true')
+arg_parser.add_argument(
+    '--debug', help='show debug message', action='store_true', default=None
+)
 arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
@@ -95,12 +105,25 @@ class Config(BaseModel):
         validate_assignment = True
         arbitrary_types_allowed = (TextIOBase,)
 
+    @validator("input", "aliases", "extra_template_data", pre=True)
+    def validate_file(cls, value: Any) -> Optional[TextIOBase]:
+        if value is None or isinstance(value, TextIOBase):
+            return value
+        return cast(TextIOBase, Path(value).expanduser().resolve().open("rt"))
+
+    @validator("output", "custom_template_dir", pre=True)
+    def validate_path(cls, value: Any) -> Optional[Path]:
+        if value is None or isinstance(value, Path):
+            return value  # pragma: no cover
+        return Path(value).expanduser().resolve()
+
+    input: Optional[TextIOBase]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
     debug: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
     base_class: str = DEFAULT_BASE_CLASS
-    custom_template_dir: Optional[str]
+    custom_template_dir: Optional[Path]
     extra_template_data: Optional[TextIOBase]
     validation: bool = False
     field_constraints: bool = False
@@ -145,17 +168,13 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         }
     else:
         pyproject_toml = {}
-    config = Config.parse_obj(pyproject_toml)
 
+    config = Config.parse_obj(pyproject_toml)
     config.merge_args(namespace)
 
-    if namespace.input:
-        input_name: str = namespace.input.name
-        input_text: str = namespace.input.read()
-    elif 'input' in pyproject_toml:
-        input_path = Path(pyproject_toml['input'])
-        input_name = input_path.name
-        input_text = input_path.read_text()
+    if config.input is not None:
+        input_name: str = config.input.name
+        input_text: str = config.input.read()
     else:
         input_name = '<stdin>'
         input_text = sys.stdin.read()
@@ -199,15 +218,15 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             input_name=input_name,
             input_text=input_text,
             input_file_type=config.input_file_type,
-            output=Path(config.output) if config.output is not None else None,
+            output=config.output,
             target_python_version=config.target_python_version,
             base_class=config.base_class,
             custom_template_dir=config.custom_template_dir,
-            extra_template_data=extra_template_data,
             validation=config.validation,
             field_constraints=config.field_constraints,
             snake_case_field=config.snake_case_field,
             strip_default_none=config.strip_default_none,
+            extra_template_data=extra_template_data,
             aliases=aliases,
         )
         return Exit.OK
