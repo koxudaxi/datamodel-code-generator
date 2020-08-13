@@ -1,12 +1,16 @@
 from collections import OrderedDict
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Dict, Tuple
 
 import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import (
     Parser,
+    dump_templates,
     relative,
     snake_to_upper_camel,
     sort_data_models,
@@ -30,8 +34,8 @@ class C(Parser):
 
 
 def test_parser():
-    c = C(A, B, DataModelFieldBase, 'Base')
-    assert c.data_model_type == A
+    c = C(D, B, DataModelFieldBase, 'Base')
+    assert c.data_model_type == D
     assert c.data_model_root_type == B
     assert c.data_model_field_type == DataModelFieldBase
     assert c.base_class == 'Base'
@@ -106,3 +110,23 @@ def test_snake_to_upper_camel(word, expected):
     """Tests the snake to upper camel function."""
     actual = snake_to_upper_camel(word)
     assert actual == expected
+
+
+def test_dump_templates():
+    with NamedTemporaryFile('w') as dummy_template:
+        assert dump_templates(D(dummy_template.name, 'abc')) == 'abc'
+        assert (
+            dump_templates(
+                [D(dummy_template.name, 'abc'), D(dummy_template.name, 'def')]
+            )
+            == 'abc\n\n\ndef'
+        )
+
+
+class D(TemplateBase):
+    def __init__(self, filename: str, data: str):
+        self._data = data
+        super().__init__(Path(filename))
+
+    def render(self) -> str:
+        return self._data
