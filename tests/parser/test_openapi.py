@@ -64,6 +64,7 @@ class A(TemplateBase):
         ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
         ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
         ('string', 'uri', 'AnyUrl', 'pydantic', 'AnyUrl'),
+        ('string', 'uri-reference', 'str', None, None),
         ('string', 'uuid', 'UUID', 'uuid', 'UUID'),
         ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1'),
         ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2'),
