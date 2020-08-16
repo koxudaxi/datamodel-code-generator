@@ -64,6 +64,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'ipv4': Types.ipv4,
         'ipv6': Types.ipv6,
         'decimal': Types.decimal,
+        'integer': Types.integer,
     },
     'boolean': {'default': Types.boolean},
     'object': {'default': Types.object},
