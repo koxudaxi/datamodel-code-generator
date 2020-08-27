@@ -104,6 +104,7 @@ def sort_data_models(
             if model.name in model.reference_classes:
                 require_update_action_models.append(model.name)
         else:
+            sorted_data_models[model.name] = model
             unresolved_references.append(model)
     if unresolved_references:
         try:
