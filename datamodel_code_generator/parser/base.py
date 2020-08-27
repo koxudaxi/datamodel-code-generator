@@ -88,10 +88,17 @@ def sort_data_models(
     if require_update_action_models is None:
         require_update_action_models = []
 
+    deferred_children: List[DataModel] = []
     unresolved_references: List[DataModel] = []
     for model in unsorted_data_models:
         if not model.reference_classes:
             sorted_data_models[model.name] = model
+        elif (
+            model.base_class != model.BASE_CLASS.split('.')[-1] and
+            model.base_class not in sorted_data_models
+        ):
+            # defer until after the superclass has been added.
+            deferred_children.append(model)
         elif (
             model.name in model.reference_classes and len(model.reference_classes) == 1
         ):  # only self-referencing
@@ -106,6 +113,17 @@ def sort_data_models(
         else:
             sorted_data_models[model.name] = model
             unresolved_references.append(model)
+    if deferred_children:
+        try:
+            return sort_data_models(
+                deferred_children, sorted_data_models, require_update_action_models
+            )
+        except RecursionError:
+            unresolved_parents = ', '.join(
+                f"[class: {item.name} subclasses: {item.base_class}]"
+                for item in deferred_children
+            )
+            raise Exception(f'A Parser can not resolve superclasses: {unresolved_parents}.')
     if unresolved_references:
         try:
             return sort_data_models(
