@@ -1,0 +1,49 @@
+name: Test
+
+on:
+  pull_request: {}
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.cfg') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install -e ".[all]"
+    - name: Lint
+      if: matrix.os != 'windows-latest'
+      run: |
+        ./scripts/lint.sh
+    - name: Unit Test
+      if: matrix.os != 'windows-latest'
+      run: |
+        ./scripts/test.sh
+#    - name: Unit Test windows
+#      if: matrix.os == 'windows-latest'
+#      run: |
+#        ./scripts/test.bat
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: unittests
+        fail_ci_if_error: true
