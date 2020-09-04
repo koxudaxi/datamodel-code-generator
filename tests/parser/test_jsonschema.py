@@ -104,7 +104,7 @@ def test_json_schema_object_ref_url_yaml(mocker):
     assert (
         dump_templates(list(parser.results))
         == '''class User(BaseModel):
-    name: Optional[str] = None'''
+    name: Optional[str] = Field(None, example='ken')'''
     )
     parser.parse_ref(obj, [])
     mock_get.assert_called_once_with('https://example.org/schema.yaml',)
@@ -133,11 +133,11 @@ def test_json_schema_object_cached_ref_url_yaml(mocker):
     assert (
         dump_templates(list(parser.results))
         == '''class Pet(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, examples=['dog', 'cat'])
 
 
 class User(BaseModel):
-    name: Optional[str] = None'''
+    name: Optional[str] = Field(None, example='ken')'''
     )
     mock_get.assert_called_once_with('https://example.org/schema.yaml',)
 
@@ -163,7 +163,7 @@ def test_json_schema_ref_url_json(mocker):
 
 
 class User(BaseModel):
-    name: Optional[str] = None'''
+    name: Optional[str] = Field(None, example='ken')'''
     )
     mock_get.assert_called_once_with('https://example.org/schema.json',)
 
