@@ -6,7 +6,8 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "example": "ken"
         }
       }
     },
@@ -14,7 +15,8 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "examples": ["dog", "cat"]
         }
       }
     }

@@ -363,7 +363,8 @@ class JsonSchemaParser(Parser):
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
-                    example=field.examples,
+                    example=field.example,
+                    examples=field.examples,
                     description=field.description,
                     default=field.default,
                     title=field.title,
@@ -460,7 +461,8 @@ class JsonSchemaParser(Parser):
 
         field = self.data_model_field_type(
             data_types=item_obj_data_types,
-            example=obj.examples,
+            example=obj.example,
+            examples=obj.examples,
             default=obj.default,
             description=obj.description,
             title=obj.title,
@@ -510,7 +512,8 @@ class JsonSchemaParser(Parser):
                 self.data_model_field_type(
                     data_types=types,
                     description=obj.description,
-                    example=obj.examples,
+                    example=obj.example,
+                    examples=obj.examples,
                     default=obj.default,
                     required=not obj.nullable,
                 )
