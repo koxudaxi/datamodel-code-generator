@@ -544,3 +544,15 @@ def test_openapi_model_resolver():
             loaded=True,
         ),
     }
+
+
+def test_openapi_parser_parse_any():
+    parser = OpenAPIParser(
+        BaseModel, CustomRootType, text=Path(DATA_PATH / 'any.yaml').read_text()
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_any' / 'output.py'
+        ).read_text()
+    )

@@ -384,9 +384,3 @@ def test_get_data_type_array(schema_types, result_types):
     assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == [
         DataType(type=r) for r in result_types
     ]
-
-
-def test_get_data_type_invalid_obj():
-    with pytest.raises(ValueError, match='invalid schema object'):
-        parser = JsonSchemaParser(BaseModel, CustomRootType)
-        assert parser.get_data_type(JsonSchemaObject())
