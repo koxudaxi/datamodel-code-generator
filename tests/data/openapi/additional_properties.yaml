@@ -156,3 +156,17 @@ components:
         properties:
           event:
             $ref: '#/components/schemas/Event'
+    test:
+      type: object
+      properties:
+        broken:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/broken'
+    broken:
+      type: object
+      properties:
+        foo:
+          type: string
+        bar:
+          type: integer

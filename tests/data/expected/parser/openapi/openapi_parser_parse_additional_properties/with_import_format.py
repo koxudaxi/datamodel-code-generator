@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Extra
 
@@ -47,3 +47,12 @@ class Event(BaseModel):
 
 class Result(BaseModel):
     event: Optional[Event] = None
+
+
+class Broken(BaseModel):
+    foo: Optional[str] = None
+    bar: Optional[int] = None
+
+
+class Test(BaseModel):
+    broken: Optional[Dict[str, Broken]] = None

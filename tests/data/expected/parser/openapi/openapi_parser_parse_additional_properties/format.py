@@ -40,3 +40,12 @@ class Event(BaseModel):
 
 class Result(BaseModel):
     event: Optional[Event] = None
+
+
+class Broken(BaseModel):
+    foo: Optional[str] = None
+    bar: Optional[int] = None
+
+
+class Test(BaseModel):
+    broken: Optional[Dict[str, Broken]] = None
