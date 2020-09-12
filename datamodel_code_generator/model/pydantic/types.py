@@ -6,6 +6,10 @@ from datamodel_code_generator.imports import (
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
     IMPORT_CONSTR,
+    IMPORT_NEGATIVE_FLOAT,
+    IMPORT_NEGATIVE_INT,
+    IMPORT_POSITIVE_FLOAT,
+    IMPORT_POSITIVE_INT,
     Import,
 )
 from datamodel_code_generator.types import DataType, Types
@@ -117,9 +121,9 @@ def get_data_int_type(types: Types, **kwargs: Any) -> DataType:
     data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
     if data_type_kwargs:
         if data_type_kwargs == {'gt': 0}:
-            return DataType(type='PositiveInt')
+            return DataType(type='PositiveInt', imports_=[IMPORT_POSITIVE_INT])
         if data_type_kwargs == {'lt': 0}:
-            return DataType(type='NegativeInt')
+            return DataType(type='NegativeInt', imports_=[IMPORT_NEGATIVE_INT])
         return DataType(
             type='conint',
             is_func=True,
@@ -133,9 +137,9 @@ def get_data_float_type(types: Types, **kwargs: Any) -> DataType:
     data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
     if data_type_kwargs:
         if data_type_kwargs == {'gt': 0}:
-            return DataType(type='PositiveFloat')
+            return DataType(type='PositiveFloat', imports_=[IMPORT_POSITIVE_FLOAT])
         if data_type_kwargs == {'lt': 0}:
-            return DataType(type='NegativeFloat')
+            return DataType(type='NegativeFloat', imports_=[IMPORT_NEGATIVE_FLOAT])
         return DataType(
             type='confloat',
             is_func=True,
