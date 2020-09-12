@@ -347,6 +347,21 @@ class JsonSchemaParser(Parser):
                             version_compatible=True,
                         )
                     ]
+                elif isinstance(field.additionalProperties, JsonSchemaObject):
+                    additional_properties_type = self.parse_object(
+                        field_name,
+                        field.additionalProperties,
+                        [*path, field_name],
+                        unique=True,
+                    ).name
+
+                    field_types = [
+                        self.data_type(
+                            type=f'Dict[str, {additional_properties_type}]',
+                            imports_=[IMPORT_DICT],
+                            unresolved_types=[additional_properties_type],
+                        )
+                    ]
                 else:
                     field_types = [
                         self.data_type(
