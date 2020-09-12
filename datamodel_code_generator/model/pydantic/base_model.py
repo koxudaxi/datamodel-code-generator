@@ -10,6 +10,7 @@ from datamodel_code_generator.model import (
     DataModel,
     DataModelFieldBase,
 )
+from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.model.pydantic.types import get_data_type
 from datamodel_code_generator.types import DataType, Types
 
@@ -109,7 +110,7 @@ class BaseModel(DataModel):
 
         if 'additionalProperties' in self.extra_template_data:
             config_parameters['extra'] = 'Extra.allow'
-            self.imports.append(Import(from_='pydantic', import_='Extra'))
+            self.imports.append(IMPORT_EXTRA)
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config
@@ -118,7 +119,7 @@ class BaseModel(DataModel):
 
         for field in fields:
             if field.field:
-                self.imports.append(Import(from_='pydantic', import_='Field'))
+                self.imports.append(IMPORT_FIELD)
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:

@@ -2,15 +2,33 @@ from decimal import Decimal
 from typing import Any, Dict, Set
 
 from datamodel_code_generator.imports import (
+    IMPORT_ANY,
+    IMPORT_DATE,
+    IMPORT_DATETIME,
+    IMPORT_DECIMAL,
+    IMPORT_DICT,
+    IMPORT_UUID,
+    Import,
+)
+from datamodel_code_generator.model.pydantic.imports import (
+    IMPORT_ANYURL,
     IMPORT_CONDECIMAL,
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
     IMPORT_CONSTR,
+    IMPORT_EMAIL_STR,
+    IMPORT_IPV4ADDRESS,
+    IMPORT_IPV6ADDRESS,
     IMPORT_NEGATIVE_FLOAT,
     IMPORT_NEGATIVE_INT,
     IMPORT_POSITIVE_FLOAT,
     IMPORT_POSITIVE_INT,
-    Import,
+    IMPORT_SECRET_STR,
+    IMPORT_UUID1,
+    IMPORT_UUID2,
+    IMPORT_UUID3,
+    IMPORT_UUID4,
+    IMPORT_UUID5,
 )
 from datamodel_code_generator.types import DataType, Types
 
@@ -21,68 +39,36 @@ type_map: Dict[Types, DataType] = {
     Types.number: DataType(type='float'),
     Types.float: DataType(type='float'),
     Types.double: DataType(type='float'),
-    Types.decimal: DataType(
-        type='Decimal', imports_=[Import(from_='decimal', import_='Decimal')]
-    ),
+    Types.decimal: DataType(type='Decimal', imports_=[IMPORT_DECIMAL]),
     Types.time: DataType(type='time'),
     Types.string: DataType(type='str'),
     Types.byte: DataType(type='str'),  # base64 encoded string
     Types.binary: DataType(type='bytes'),
-    Types.date: DataType(
-        type='date', imports_=[Import(from_='datetime', import_='date')]
-    ),
-    Types.date_time: DataType(
-        type='datetime', imports_=[Import(from_='datetime', import_='datetime')]
-    ),
-    Types.password: DataType(
-        type='SecretStr', imports_=[Import(from_='pydantic', import_='SecretStr')]
-    ),
-    Types.email: DataType(
-        type='EmailStr', imports_=[Import(from_='pydantic', import_='EmailStr')]
-    ),
-    Types.uuid: DataType(type='UUID', imports_=[Import(from_='uuid', import_='UUID')]),
-    Types.uuid1: DataType(
-        type='UUID1', imports_=[Import(from_='pydantic', import_='UUID1')]
-    ),
-    Types.uuid2: DataType(
-        type='UUID2', imports_=[Import(from_='pydantic', import_='UUID2')]
-    ),
-    Types.uuid3: DataType(
-        type='UUID3', imports_=[Import(from_='pydantic', import_='UUID3')]
-    ),
-    Types.uuid4: DataType(
-        type='UUID4', imports_=[Import(from_='pydantic', import_='UUID4')]
-    ),
-    Types.uuid5: DataType(
-        type='UUID5', imports_=[Import(from_='pydantic', import_='UUID5')]
-    ),
-    Types.uri: DataType(
-        type='AnyUrl', imports_=[Import(from_='pydantic', import_='AnyUrl')]
-    ),
+    Types.date: DataType(type='date', imports_=[IMPORT_DATE]),
+    Types.date_time: DataType(type='datetime', imports_=[IMPORT_DATETIME]),
+    Types.password: DataType(type='SecretStr', imports_=[IMPORT_SECRET_STR]),
+    Types.email: DataType(type='EmailStr', imports_=[IMPORT_EMAIL_STR]),
+    Types.uuid: DataType(type='UUID', imports_=[IMPORT_UUID]),
+    Types.uuid1: DataType(type='UUID1', imports_=[IMPORT_UUID1]),
+    Types.uuid2: DataType(type='UUID2', imports_=[IMPORT_UUID2]),
+    Types.uuid3: DataType(type='UUID3', imports_=[IMPORT_UUID3]),
+    Types.uuid4: DataType(type='UUID4', imports_=[IMPORT_UUID4]),
+    Types.uuid5: DataType(type='UUID5', imports_=[IMPORT_UUID5]),
+    Types.uri: DataType(type='AnyUrl', imports_=[IMPORT_ANYURL]),
     Types.hostname: DataType(
         type='constr',
-        imports_=[Import(from_='pydantic', import_='constr')],
+        imports_=[IMPORT_CONSTR],
         is_func=True,
         # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
         kwargs={
             'regex': "'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'"
         },
     ),
-    Types.ipv4: DataType(
-        type='IPv4Address', imports_=[Import(from_='pydantic', import_='IPv4Address')]
-    ),
-    Types.ipv6: DataType(
-        type='IPv6Address', imports_=[Import(from_='pydantic', import_='IPv6Address')]
-    ),
+    Types.ipv4: DataType(type='IPv4Address', imports_=[IMPORT_IPV4ADDRESS]),
+    Types.ipv6: DataType(type='IPv6Address', imports_=[IMPORT_IPV6ADDRESS]),
     Types.boolean: DataType(type='bool'),
-    Types.object: DataType(
-        type='Dict[str, Any]',
-        imports_=[
-            Import(from_='typing', import_='Any'),
-            Import(from_='typing', import_='Dict'),
-        ],
-    ),
-    Types.null: DataType(type='Any', imports_=[Import(from_='typing', import_='Any')]),
+    Types.object: DataType(type='Dict[str, Any]', imports_=[IMPORT_ANY, IMPORT_DICT,],),
+    Types.null: DataType(type='Any', imports_=[IMPORT_ANY]),
 }
 
 kwargs_schema_to_model = {

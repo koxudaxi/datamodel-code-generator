@@ -19,7 +19,12 @@ from pydantic import BaseModel, Field, validator
 
 from datamodel_code_generator import snooper_to_methods
 from datamodel_code_generator.format import PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANY, Import
+from datamodel_code_generator.imports import (
+    IMPORT_ANY,
+    IMPORT_DICT,
+    IMPORT_LIST,
+    Import,
+)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
@@ -229,7 +234,7 @@ class JsonSchemaParser(Parser):
                         type=f"List[Union[{', '.join(types)}]]"
                         if len(types) > 1
                         else f"List[{types[0]}]",
-                        imports_=[Import(from_='typing', import_='List')],
+                        imports_=[IMPORT_LIST],
                     )
                 )
             else:
@@ -345,11 +350,7 @@ class JsonSchemaParser(Parser):
                 else:
                     field_types = [
                         self.data_type(
-                            type='Dict[str, Any]',
-                            imports_=[
-                                Import(from_='typing', import_='Any'),
-                                Import(from_='typing', import_='Dict'),
-                            ],
+                            type='Dict[str, Any]', imports_=[IMPORT_ANY, IMPORT_DICT],
                         )
                     ]
             elif field.enum:
