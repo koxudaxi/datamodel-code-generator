@@ -1,6 +1,7 @@
 import pytest
 
-from datamodel_code_generator.imports import (
+from datamodel_code_generator.imports import Import
+from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_CONDECIMAL,
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
@@ -9,7 +10,6 @@ from datamodel_code_generator.imports import (
     IMPORT_NEGATIVE_INT,
     IMPORT_POSITIVE_FLOAT,
     IMPORT_POSITIVE_INT,
-    Import,
 )
 from datamodel_code_generator.model.pydantic.types import (
     get_data_decimal_type,

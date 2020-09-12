@@ -12,6 +12,7 @@ class DataType(BaseModel):
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]]
     imports_: Optional[List[Import]]
+    import_: Optional[Import]
     python_version: PythonVersion = PythonVersion.PY_37
     unresolved_types: List[str] = []
     ref: bool = False
