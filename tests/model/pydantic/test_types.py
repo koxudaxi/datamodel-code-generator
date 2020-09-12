@@ -5,6 +5,10 @@ from datamodel_code_generator.imports import (
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
     IMPORT_CONSTR,
+    IMPORT_NEGATIVE_FLOAT,
+    IMPORT_NEGATIVE_INT,
+    IMPORT_POSITIVE_FLOAT,
+    IMPORT_POSITIVE_INT,
     Import,
 )
 from datamodel_code_generator.model.pydantic.types import (
@@ -59,8 +63,16 @@ from datamodel_code_generator.types import DataType, Types
                 imports_=[IMPORT_CONINT],
             ),
         ),
-        (Types.integer, {'exclusiveMinimum': 0}, DataType(type='PositiveInt')),
-        (Types.integer, {'exclusiveMaximum': 0}, DataType(type='NegativeInt')),
+        (
+            Types.integer,
+            {'exclusiveMinimum': 0},
+            DataType(type='PositiveInt', imports_=[IMPORT_POSITIVE_INT]),
+        ),
+        (
+            Types.integer,
+            {'exclusiveMaximum': 0},
+            DataType(type='NegativeInt', imports_=[IMPORT_NEGATIVE_INT]),
+        ),
     ],
 )
 def test_get_data_int_type(types, params, data_type):
@@ -121,8 +133,16 @@ def test_get_data_int_type(types, params, data_type):
                 imports_=[IMPORT_CONFLOAT],
             ),
         ),
-        (Types.float, {'exclusiveMinimum': 0}, DataType(type='PositiveFloat')),
-        (Types.float, {'exclusiveMaximum': 0}, DataType(type='NegativeFloat')),
+        (
+            Types.float,
+            {'exclusiveMinimum': 0},
+            DataType(type='PositiveFloat', imports_=[IMPORT_POSITIVE_FLOAT]),
+        ),
+        (
+            Types.float,
+            {'exclusiveMaximum': 0},
+            DataType(type='NegativeFloat', imports_=[IMPORT_NEGATIVE_FLOAT]),
+        ),
     ],
 )
 def test_get_data_float_type(types, params, data_type):
