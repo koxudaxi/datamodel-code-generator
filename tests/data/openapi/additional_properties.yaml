@@ -170,3 +170,19 @@ components:
           type: string
         bar:
           type: integer
+    FileSetUpload:
+      title: FileSetUpload
+      required:
+        - tags
+      type: object
+      properties:
+        task_id:
+            title: 'task id'
+            type: string
+        tags:
+            title: 'Dict of tags, each containing a list of file names'
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string

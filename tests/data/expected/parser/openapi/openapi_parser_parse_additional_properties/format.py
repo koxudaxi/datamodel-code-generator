@@ -49,3 +49,12 @@ class Broken(BaseModel):
 
 class Test(BaseModel):
     broken: Optional[Dict[str, Broken]] = None
+
+
+class Tags(BaseModel):
+    __root__: List[str]
+
+
+class FileSetUpload(BaseModel):
+    task_id: Optional[str] = None
+    tags: Dict[str, Tags]
