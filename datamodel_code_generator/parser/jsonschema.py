@@ -356,7 +356,7 @@ class JsonSchemaParser(Parser):
                     if field.additionalProperties.is_array:
                         parse_method = self.parse_array
                     else:
-                        parse_method = self.parse_object  # type: ignore
+                        parse_method = self.parse_object
                     additional_properties_type = parse_method(
                         field_class_name,
                         field.additionalProperties,
