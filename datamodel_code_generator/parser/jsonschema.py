@@ -348,11 +348,19 @@ class JsonSchemaParser(Parser):
                         )
                     ]
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
-                    additional_properties_type = self.parse_object(
-                        field_name,
+                    field_class_name = self.model_resolver.add(
+                        [*path, field_name], field_name, class_name=True
+                    ).name
+
+                    # TODO: supports other types
+                    if field.additionalProperties.is_array:
+                        parse_method = self.parse_array
+                    else:
+                        parse_method = self.parse_object
+                    additional_properties_type = parse_method(
+                        field_class_name,
                         field.additionalProperties,
                         [*path, field_name],
-                        unique=True,
                     ).name
 
                     field_types = [
@@ -492,7 +500,9 @@ class JsonSchemaParser(Parser):
         )
         return field, item_obj_data_types
 
-    def parse_array(self, name: str, obj: JsonSchemaObject, path: List[str]) -> None:
+    def parse_array(
+        self, name: str, obj: JsonSchemaObject, path: List[str]
+    ) -> DataModel:
         field, item_obj_names = self.parse_array_fields(name, obj, [*path, name])
         self.model_resolver.add(path, name)
         data_model_root = self.data_model_root_type(
@@ -504,6 +514,7 @@ class JsonSchemaParser(Parser):
         )
 
         self.append_result(data_model_root)
+        return data_model_root
 
     def parse_root_type(
         self, name: str, obj: JsonSchemaObject, path: List[str]

@@ -58,3 +58,12 @@ class Broken(Base):
 
 class Test(Base):
     broken: Optional[Dict[str, Broken]] = None
+
+
+class Tags(Base):
+    __root__: List[str]
+
+
+class FileSetUpload(Base):
+    task_id: Optional[str] = None
+    tags: Dict[str, Tags]
