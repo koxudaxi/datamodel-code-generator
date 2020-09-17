@@ -148,6 +148,7 @@ class JsonSchemaParser(Parser):
         snake_case_field: bool = False,
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
+        allow_population_by_field_name: bool = False,
     ):
         super().__init__(
             data_model_type,
@@ -165,6 +166,7 @@ class JsonSchemaParser(Parser):
             snake_case_field,
             strip_default_none,
             aliases,
+            allow_population_by_field_name,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}

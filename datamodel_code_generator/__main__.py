@@ -77,6 +77,14 @@ arg_parser.add_argument(
     default=None,
 )
 
+
+arg_parser.add_argument(
+    '--allow-population-by-field-name',
+    help='Allow population by field name',
+    action='store_true',
+    default=None,
+)
+
 arg_parser.add_argument(
     '--disable-timestamp',
     help='Disable timestamp on file headers',
@@ -139,6 +147,7 @@ class Config(BaseModel):
     strip_default_none: bool = False
     aliases: Optional[TextIOBase]
     disable_timestamp: bool = False
+    allow_population_by_field_name: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -238,6 +247,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             extra_template_data=extra_template_data,
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
+            allow_population_by_field_name=config.allow_population_by_field_name,
         )
         return Exit.OK
     except Error as e:

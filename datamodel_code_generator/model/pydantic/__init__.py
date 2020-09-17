@@ -19,6 +19,7 @@ def dump_resolve_reference_action(class_names: List[str]) -> str:
 class Config(_BaseModel):
     extra: Optional[str] = None
     title: Optional[str] = None
+    allow_population_by_field_name: Optional[bool] = None
 
 
 # def get_validator_template() -> Template:

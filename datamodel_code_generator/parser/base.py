@@ -24,7 +24,7 @@ from datamodel_code_generator.format import format_code
 
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
-from ..model.base import DataModel, DataModelFieldBase, TemplateBase
+from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase, TemplateBase
 from ..types import DataType, DataTypePy36
 
 inflect_engine = inflect.engine()
@@ -282,6 +282,7 @@ class Parser(ABC):
         snake_case_field: bool = False,
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
+        allow_population_by_field_name: bool = False,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -314,6 +315,9 @@ class Parser(ABC):
         self.extra_template_data: DefaultDict[
             str, Any
         ] = extra_template_data or defaultdict(dict)
+
+        if allow_population_by_field_name:
+            self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
 
         self.model_resolver = ModelResolver(aliases=aliases)
         self.field_preprocessors: List[Callable[[DataModelFieldBase], None]] = []
