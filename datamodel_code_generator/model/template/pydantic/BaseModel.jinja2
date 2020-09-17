@@ -6,7 +6,9 @@ class {{ class_name }}({{ base_class }}):
     pass
 {%- endif %}
 {%- if config %}
-    {% include 'Config.jinja2' %}
+{%- filter indent(4) %}
+{% include 'Config.jinja2' %}
+{%- endfilter %}
 {%- endif %}
 {%- for field in fields -%}
     {%- if field.field %}

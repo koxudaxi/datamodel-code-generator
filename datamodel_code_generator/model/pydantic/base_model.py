@@ -112,6 +112,9 @@ class BaseModel(DataModel):
             config_parameters['extra'] = 'Extra.allow'
             self.imports.append(IMPORT_EXTRA)
 
+        if self.extra_template_data.get('allow_population_by_field_name'):
+            config_parameters['allow_population_by_field_name'] = True
+
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config
 

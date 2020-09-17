@@ -23,6 +23,8 @@ UNION: str = 'Union'
 OPTIONAL: str = 'Optional'
 LIST: str = 'List'
 
+ALL_MODEL: str = '#all#'
+
 
 def optional(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
@@ -212,6 +214,10 @@ class DataModel(TemplateBase, ABC):
             if extra_template_data is not None
             else defaultdict(dict)
         )
+        if extra_template_data:
+            all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
+            if all_model_extra_template_data:
+                self.extra_template_data.update(all_model_extra_template_data)
 
         unresolved_types: Set[str] = set()
         for field in self.fields:

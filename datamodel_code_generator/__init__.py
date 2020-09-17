@@ -4,7 +4,6 @@ import json
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from json import JSONDecodeError
 from pathlib import Path
 from typing import (
     IO,
@@ -37,6 +36,8 @@ T = TypeVar('T')
 pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
+
+# ALL_MODEL: str = '#all#'
 
 
 def enable_debug_message() -> None:  # pragma: no cover
@@ -124,6 +125,7 @@ def generate(
     strip_default_none: bool = False,
     aliases: Optional[Mapping[str, str]] = None,
     disable_timestamp: bool = False,
+    allow_population_by_field_name: bool = False,
 ) -> None:
     if input_file_type == InputFileType.Auto:
         try:
@@ -175,6 +177,7 @@ def generate(
         snake_case_field=snake_case_field,
         strip_default_none=strip_default_none,
         aliases=aliases,
+        allow_population_by_field_name=allow_population_by_field_name,
     )
 
     with chdir(output):
