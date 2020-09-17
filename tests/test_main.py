@@ -670,3 +670,25 @@ def test_main_with_strip_default_none():
 
     with pytest.raises(SystemExit):
         main()
+
+
+def test_disable_timestamp():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--disable-timestamp',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()

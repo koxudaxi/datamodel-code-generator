@@ -76,6 +76,14 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+
+arg_parser.add_argument(
+    '--disable-timestamp',
+    help='Disable timestamp on file headers',
+    action='store_true',
+    default=None,
+)
+
 arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
 )
@@ -130,6 +138,7 @@ class Config(BaseModel):
     snake_case_field: bool = False
     strip_default_none: bool = False
     aliases: Optional[TextIOBase]
+    disable_timestamp: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -228,6 +237,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             strip_default_none=config.strip_default_none,
             extra_template_data=extra_template_data,
             aliases=aliases,
+            disable_timestamp=config.disable_timestamp,
         )
         return Exit.OK
     except Error as e:
