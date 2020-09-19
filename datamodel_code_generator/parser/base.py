@@ -170,14 +170,19 @@ class ModelResolver:
     def add_ref(self, ref: str) -> Reference:
         if ref in self.references:
             return self.references[ref]
-        parents, original_name = ref.rsplit('/', 1)
-
+        split_ref = ref.rsplit('/', 1)
+        if len(split_ref) == 1:
+            # TODO Support $id with $ref
+            # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
+            raise NotImplementedError('It is not support to use $id with $ref')
+        parents, original_name = split_ref  # type: str, str
+        loaded: bool = not ref.startswith(('https://', 'http://'))
+        if not original_name:
+            original_name = Path(parents).stem
+            loaded = False
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
-            path=ref.split('/'),
-            original_name=original_name,
-            name=name,
-            loaded=not ref.startswith(('https://', 'http://')),
+            path=ref.split('/'), original_name=original_name, name=name, loaded=loaded,
         )
         self.references[ref] = reference
         return reference
@@ -195,6 +200,8 @@ class ModelResolver:
         joined_path: str = self._get_path(path)
         if joined_path in self.references:
             return self.references[joined_path]
+        if not original_name:
+            original_name = Path(joined_path.split('#')[0]).stem
         if class_name:
             name = self.get_class_name(original_name, unique)
             if singular_name:  # pragma: no cover
@@ -283,6 +290,7 @@ class Parser(ABC):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
+        file_path: Optional[Path] = None,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -306,10 +314,10 @@ class Parser(ABC):
         else:
             self.data_type = DataType
 
-        # if filename:
-        #     self.base_path: Path = Path(filename).absolute().parent
-        # else:
-        self.base_path = Path.cwd()
+        if file_path:
+            self.base_path: Path = file_path.absolute().parent
+        else:
+            self.base_path = Path.cwd()
 
         self.custom_template_dir = custom_template_dir
         self.extra_template_data: DefaultDict[

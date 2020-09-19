@@ -178,6 +178,7 @@ def generate(
         strip_default_none=strip_default_none,
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
+        file_path=Path(input_name),
     )
 
     with chdir(output):
