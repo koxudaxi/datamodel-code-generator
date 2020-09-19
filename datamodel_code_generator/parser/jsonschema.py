@@ -149,6 +149,7 @@ class JsonSchemaParser(Parser):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
+        file_path: Optional[Path] = None,
     ):
         super().__init__(
             data_model_type,
@@ -167,6 +168,7 @@ class JsonSchemaParser(Parser):
             strip_default_none,
             aliases,
             allow_population_by_field_name,
+            file_path,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -635,9 +637,14 @@ class JsonSchemaParser(Parser):
                                 ref_body = yaml.safe_load(f)
                             self.remote_object_cache[relative_path] = ref_body
                     object_paths = object_path.split('/')
-                    models = get_model_by_path(ref_body, object_paths)
+                    if object_path:
+                        models = get_model_by_path(ref_body, object_paths)
+                        model_name = object_paths[-1]
+                    else:
+                        models = ref_body
+                        model_name = Path(object_path).stem
                     self.parse_raw_obj(
-                        object_paths[-1], models, [str(full_path), '#', *object_paths],
+                        model_name, models, [str(full_path), '#', *object_paths],
                     )
                     self.model_resolver.add_ref(obj.ref).loaded = True
 
