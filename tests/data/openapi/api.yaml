@@ -107,6 +107,7 @@ components:
         id:
           type: integer
           format: int64
+          default: 1
         name:
           type: string
         tag:

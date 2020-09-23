@@ -291,6 +291,7 @@ class Parser(ABC):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         file_path: Optional[Path] = None,
+        use_default_on_required_field: bool = False,
     ):
 
         self.data_model_type: Type[DataModel] = data_model_type
@@ -308,6 +309,7 @@ class Parser(ABC):
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
         self.strip_default_none: bool = strip_default_none
+        self.use_default_on_required_field: bool = use_default_on_required_field
 
         if self.target_python_version == PythonVersion.PY_36:
             self.data_type: Type[DataType] = DataTypePy36
