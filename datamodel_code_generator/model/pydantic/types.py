@@ -7,8 +7,8 @@ from datamodel_code_generator.imports import (
     IMPORT_DATETIME,
     IMPORT_DECIMAL,
     IMPORT_DICT,
+    IMPORT_LIST,
     IMPORT_UUID,
-    Import,
 )
 from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_ANYURL,
@@ -69,6 +69,7 @@ type_map: Dict[Types, DataType] = {
     Types.boolean: DataType(type='bool'),
     Types.object: DataType(type='Dict[str, Any]', imports_=[IMPORT_ANY, IMPORT_DICT,],),
     Types.null: DataType(type='Any', imports_=[IMPORT_ANY]),
+    Types.array: DataType(type='List[Any]', imports_=[IMPORT_LIST, IMPORT_ANY]),
 }
 
 kwargs_schema_to_model = {
