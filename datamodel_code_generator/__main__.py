@@ -86,6 +86,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-default',
+    help='Use default value even if a field is required',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--disable-timestamp',
     help='Disable timestamp on file headers',
     action='store_true',
@@ -148,6 +155,7 @@ class Config(BaseModel):
     aliases: Optional[TextIOBase]
     disable_timestamp: bool = False
     allow_population_by_field_name: bool = False
+    use_default: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -248,6 +256,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
             allow_population_by_field_name=config.allow_population_by_field_name,
+            use_default_on_required_field=config.use_default,
         )
         return Exit.OK
     except Error as e:

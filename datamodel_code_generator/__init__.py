@@ -126,6 +126,7 @@ def generate(
     aliases: Optional[Mapping[str, str]] = None,
     disable_timestamp: bool = False,
     allow_population_by_field_name: bool = False,
+    use_default_on_required_field: bool = False,
 ) -> None:
     if input_file_type == InputFileType.Auto:
         try:
@@ -179,6 +180,7 @@ def generate(
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
         file_path=Path(input_name),
+        use_default_on_required_field=use_default_on_required_field,
     )
 
     with chdir(output):

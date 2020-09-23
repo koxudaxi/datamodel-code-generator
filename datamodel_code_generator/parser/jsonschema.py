@@ -125,6 +125,10 @@ class JsonSchemaObject(BaseModel):
             return None
         return values
 
+    @property
+    def has_default(self) -> bool:
+        return 'default' in self.__fields_set__
+
 
 JsonSchemaObject.update_forward_refs()
 
@@ -150,6 +154,7 @@ class JsonSchemaParser(Parser):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         file_path: Optional[Path] = None,
+        use_default_on_required_field: bool = False,
     ):
         super().__init__(
             data_model_type,
@@ -169,6 +174,7 @@ class JsonSchemaParser(Parser):
             aliases,
             allow_population_by_field_name,
             file_path,
+            use_default_on_required_field,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -391,7 +397,10 @@ class JsonSchemaParser(Parser):
                 field_types = self.get_data_type(field)
                 if self.field_constraints:
                     constraints = field.dict()
-            required: bool = original_field_name in requires
+            if self.use_default_on_required_field and field.has_default:
+                required: bool = False
+            else:
+                required = original_field_name in requires
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
@@ -490,7 +499,6 @@ class JsonSchemaParser(Parser):
                 item_obj_data_types.extend(array_field.data_types)
             else:
                 item_obj_data_types.extend(self.get_data_type(item))
-
         field = self.data_model_field_type(
             data_types=item_obj_data_types,
             example=obj.example,
@@ -498,7 +506,8 @@ class JsonSchemaParser(Parser):
             default=obj.default,
             description=obj.description,
             title=obj.title,
-            required=True,
+            required=not obj.nullable
+            and not (obj.has_default and self.use_default_on_required_field),
             is_list=True,
             is_union=is_union,
         )
@@ -550,7 +559,8 @@ class JsonSchemaParser(Parser):
                     example=obj.example,
                     examples=obj.examples,
                     default=obj.default,
-                    required=not obj.nullable,
+                    required=not obj.nullable
+                    and not (obj.has_default and self.use_default_on_required_field),
                 )
             ],
             custom_base_class=self.base_class,

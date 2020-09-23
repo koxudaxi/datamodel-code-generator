@@ -70,6 +70,8 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--output OUTPUT] [--base-class BASE_CLASS]
                          [--field-constraints] [--snake-case-field]
                          [--strip-default-none]
+                         [--allow-population-by-field-name] [--use-default]
+                         [--disable-timestamp]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
@@ -87,6 +89,10 @@ optional arguments:
   --field-constraints   Use field constraints and not con* annotations
   --snake-case-field    Change camel-case field name to snake-case
   --strip-default-none  Strip default None on fields
+  --allow-population-by-field-name
+                        Allow population by field name
+  --use-default         Use default value even if a field is required
+  --disable-timestamp   Disable timestamp on file headers
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA
