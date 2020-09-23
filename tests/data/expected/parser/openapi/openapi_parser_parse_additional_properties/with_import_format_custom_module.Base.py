@@ -56,8 +56,16 @@ class Broken(Base):
     bar: Optional[int] = None
 
 
+class Failing(Base):
+    pass
+
+    class Config:
+        extra = Extra.allow
+
+
 class Test(Base):
     broken: Optional[Dict[str, Broken]] = None
+    failing: Optional[Dict[str, Failing]] = {}
 
 
 class Tags(Base):

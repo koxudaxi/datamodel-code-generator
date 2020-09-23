@@ -163,6 +163,11 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/broken'
+        failing:
+          type: object
+          additionalProperties:
+            type: string
+          default: { }
     broken:
       type: object
       properties:

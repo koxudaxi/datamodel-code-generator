@@ -356,16 +356,23 @@ class JsonSchemaParser(Parser):
                         [*path, field_name], field_name, class_name=True
                     ).name
 
-                    # TODO: supports other types
+                    # TODO: supports other type
                     if field.additionalProperties.is_array:
-                        parse_method = self.parse_array
+                        additional_properties_type = self.parse_array(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                        ).name
                     else:
-                        parse_method = self.parse_object
-                    additional_properties_type = parse_method(
-                        field_class_name,
-                        field.additionalProperties,
-                        [*path, field_name],
-                    ).name
+                        additional_properties_type = self.parse_object(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                            additional_properties=None
+                            if field.additionalProperties.ref
+                            or field.additionalProperties.is_object
+                            else field,
+                        ).name
 
                     field_types = [
                         self.data_type(
@@ -417,13 +424,14 @@ class JsonSchemaParser(Parser):
         path: List[str],
         singular_name: bool = False,
         unique: bool = False,
+        additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataModel:
         class_name = self.model_resolver.add(
             path, name, class_name=True, singular_name=singular_name, unique=unique
         ).name
         fields = self.parse_object_fields(obj, path)
         self.set_title(class_name, obj)
-        self.set_additional_properties(class_name, obj)
+        self.set_additional_properties(class_name, additional_properties or obj)
         data_model_type = self.data_model_type(
             class_name,
             fields=fields,
