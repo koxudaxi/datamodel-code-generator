@@ -17,6 +17,7 @@ class DataType(BaseModel):
     unresolved_types: List[str] = []
     ref: bool = False
     version_compatible: bool = False
+    optional: bool = False
 
     @property
     def type_hint(self) -> str:
@@ -33,10 +34,11 @@ class DataType(BaseModel):
             self.unresolved_types.append(self.type)
 
     def _get_version_compatible_name(self) -> str:
+        type_ = f'Optional[{self.type}]' if self.optional else self.type
         if self.version_compatible:
             if self.python_version == PythonVersion.PY_36:
-                return f"'{self.type}'"
-        return self.type
+                return f"'{type_}'"
+        return type_
 
     def get_type(self) -> str:
         return self._get_version_compatible_name()
@@ -75,3 +77,4 @@ class Types(Enum):
     boolean = auto()
     object = auto()
     null = auto()
+    array = auto()

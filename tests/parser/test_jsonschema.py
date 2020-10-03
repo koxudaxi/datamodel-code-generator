@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from datamodel_code_generator import DataModelField
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
@@ -382,5 +382,10 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
 def test_get_data_type_array(schema_types, result_types):
     parser = JsonSchemaParser(BaseModel, CustomRootType)
     assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == [
-        DataType(type=r) for r in result_types
+        DataType(
+            type=r,
+            optional='null' in schema_types,
+            imports_=[IMPORT_OPTIONAL] if 'null' in schema_types else None,
+        )
+        for r in result_types
     ]

@@ -23,7 +23,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DICT,
     IMPORT_LIST,
-    Import,
+    IMPORT_OPTIONAL,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
@@ -74,6 +74,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
     'boolean': {'default': Types.boolean},
     'object': {'default': Types.object},
     'null': {'default': Types.null},
+    'array': {'default': Types.array},
 }
 
 
@@ -189,10 +190,21 @@ class JsonSchemaParser(Parser):
         if isinstance(obj.type, list):
             types: List[str] = [t for t in obj.type if t != 'null']
             format_ = 'default'
+            if len(types) == 1 and 'null' in obj.type:
+                type_ = self.data_model_type.get_data_type(
+                    json_schema_data_formats[types[0]][format_],
+                    **obj.dict() if not self.field_constraints else {},
+                )
+                type_.optional = True
+                type_.imports_ = (
+                    [IMPORT_OPTIONAL]
+                    if type_.imports_ is None
+                    else [*type_.imports_, IMPORT_OPTIONAL]
+                )
+                return [type_]
         else:
             types = [obj.type]
             format_ = obj.format or 'default'
-
         return [
             self.data_model_type.get_data_type(
                 json_schema_data_formats[t][format_],
