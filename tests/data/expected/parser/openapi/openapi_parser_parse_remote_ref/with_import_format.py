@@ -8,6 +8,6 @@ from pydantic import AnyUrl, BaseModel, conint
 class Problem(BaseModel):
     detail: Optional[str] = None
     instance: Optional[AnyUrl] = None
-    status: Optional[conint(ge=100, le=600, lt=1)] = None
+    status: Optional[conint(ge=100, lt=600)] = None
     title: Optional[str] = None
     type: Optional[AnyUrl] = 'about:blank'
