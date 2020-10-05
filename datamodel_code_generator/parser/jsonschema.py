@@ -15,7 +15,7 @@ from typing import (
 )
 
 import yaml
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator, validator
 
 from datamodel_code_generator import snooper_to_methods
 from datamodel_code_generator.format import PythonVersion
@@ -79,6 +79,25 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
 
 
 class JsonSchemaObject(BaseModel):
+    @root_validator(pre=True)
+    def validate_exclusive_maximum_and_exclusive_minimum(
+        cls, values: Dict[str, Any]
+    ) -> Any:
+        exclusive_maximum: Union[float, bool, None] = values.get('exclusiveMaximum')
+        exclusive_minimum: Union[float, bool, None] = values.get('exclusiveMinimum')
+
+        if exclusive_maximum is True:
+            values['exclusiveMaximum'] = values['maximum']
+            del values['maximum']
+        elif exclusive_maximum is False:
+            del values['exclusiveMaximum']
+        if exclusive_minimum is True:
+            values['exclusiveMinimum'] = values['minimum']
+            del values['minimum']
+        elif exclusive_minimum is False:
+            del values['exclusiveMinimum']
+        return values
+
     items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
     uniqueItem: Optional[bool]
     type: Union[str, List[str], None]
@@ -89,8 +108,8 @@ class JsonSchemaObject(BaseModel):
     minimum: Optional[float]
     maximum: Optional[float]
     multipleOf: Optional[float]
-    exclusiveMaximum: Optional[bool]
-    exclusiveMinimum: Optional[bool]
+    exclusiveMaximum: Union[float, bool, None]
+    exclusiveMinimum: Union[float, bool, None]
     additionalProperties: Union['JsonSchemaObject', bool, None]
     oneOf: List['JsonSchemaObject'] = []
     anyOf: List['JsonSchemaObject'] = []
