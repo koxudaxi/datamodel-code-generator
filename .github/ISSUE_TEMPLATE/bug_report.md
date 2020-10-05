@@ -29,8 +29,8 @@ A clear and concise description of what you expected to happen.
 
 **Version:**
  - OS: [e.g. iOS]
- - Python Verison:
- - datamodel-code-generator Version [e.g. 22]
+ - Python version:
+ - datamodel-code-generator version: [e.g. 22]
 
 **Additional context**
 Add any other context about the problem here.
