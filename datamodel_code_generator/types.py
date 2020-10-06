@@ -78,3 +78,4 @@ class Types(Enum):
     object = auto()
     null = auto()
     array = auto()
+    any = auto()

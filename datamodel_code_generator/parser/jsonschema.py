@@ -32,7 +32,7 @@ from ..types import DataType, Types
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
-    if len(keys) == 0:
+    if not keys:
         return schema
     elif len(keys) == 1:
         return schema[keys[0]]
@@ -200,11 +200,7 @@ class JsonSchemaParser(Parser):
 
     def get_data_type(self, obj: JsonSchemaObject) -> List[DataType]:
         if obj.type is None:
-            return [
-                self.data_type(
-                    type='Any', version_compatible=True, imports_=[IMPORT_ANY]
-                )
-            ]
+            return [self.data_model_type.get_data_type(Types.any)]
         if isinstance(obj.type, list):
             types: List[str] = [t for t in obj.type if t != 'null']
             format_ = 'default'
@@ -231,6 +227,13 @@ class JsonSchemaParser(Parser):
             for t in types
         ]
 
+    def get_ref_data_type(self, ref: str) -> DataType:
+        return self.data_type(
+            type=self.model_resolver.add_ref(ref).name,
+            ref=True,
+            version_compatible=True,
+        )
+
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if not obj.additionalProperties:
             return
@@ -252,13 +255,7 @@ class JsonSchemaParser(Parser):
         data_types: List[DataType] = []
         for item in target_items:
             if item.ref:  # $ref
-                data_types.append(
-                    self.data_type(
-                        type=self.model_resolver.add_ref(item.ref).name,
-                        ref=True,
-                        version_compatible=True,
-                    )
-                )
+                data_types.append(self.get_ref_data_type(item.ref))
             elif not any(v for k, v in vars(item).items() if k != 'type'):
                 # trivial types
                 data_types.extend(self.get_data_type(item))
@@ -306,17 +303,9 @@ class JsonSchemaParser(Parser):
         base_classes: List[DataType] = []
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                base_classes.append(
-                    self.data_type(
-                        type=self.model_resolver.add_ref(all_of_item.ref).name,
-                        ref=True,
-                        version_compatible=True,
-                    )
-                )
-
+                base_classes.append(self.get_ref_data_type(all_of_item.ref))
             else:
-                fields_ = self.parse_object_fields(all_of_item, path)
-                fields.extend(fields_)
+                fields.extend(self.parse_object_fields(all_of_item, path))
         class_name = self.model_resolver.add(
             path, name, class_name=True, unique=True
         ).name
@@ -356,13 +345,7 @@ class JsonSchemaParser(Parser):
                 field_name
             )
             if field.ref:
-                field_types = [
-                    self.data_type(
-                        type=self.model_resolver.add_ref(field.ref).name,
-                        ref=True,
-                        version_compatible=True,
-                    )
-                ]
+                field_types = [self.get_ref_data_type(field.ref)]
             elif field.is_array:
                 array_field, array_field_classes = self.parse_array_fields(
                     field_name, field, [*path, field_name]
@@ -439,11 +422,7 @@ class JsonSchemaParser(Parser):
                         )
                     ]
                 else:
-                    field_types = [
-                        self.data_type(
-                            type='Dict[str, Any]', imports_=[IMPORT_ANY, IMPORT_DICT],
-                        )
-                    ]
+                    field_types = [self.data_model_type.get_data_type(Types.object)]
             elif field.enum:
                 enum = self.parse_enum(
                     field_name, field, [*path, field_name], unique=True
@@ -513,13 +492,7 @@ class JsonSchemaParser(Parser):
         is_union: bool = False
         for item in items:
             if item.ref:
-                item_obj_data_types.append(
-                    self.data_type(
-                        type=self.model_resolver.add_ref(item.ref).name,
-                        ref=True,
-                        version_compatible=True,
-                    )
-                )
+                item_obj_data_types.append(self.get_ref_data_type(item.ref))
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 item_obj_data_types.append(
                     self.data_type(
@@ -596,19 +569,9 @@ class JsonSchemaParser(Parser):
         elif obj.anyOf:
             types = self.parse_any_of(name, obj, [*path, name])
         elif obj.ref:
-            types = [
-                self.data_type(
-                    type=self.model_resolver.add_ref(obj.ref).name,
-                    ref=True,
-                    version_compatible=True,
-                )
-            ]
+            types = [self.get_ref_data_type(obj.ref)]
         else:
-            types = [
-                self.data_type(
-                    type='Any', version_compatible=True, imports_=[IMPORT_ANY]
-                )
-            ]
+            types = [self.data_model_type.get_data_type(Types.any)]
         data_model_root_type = self.data_model_root_type(
             name,
             [

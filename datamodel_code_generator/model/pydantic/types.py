@@ -70,6 +70,7 @@ type_map: Dict[Types, DataType] = {
     Types.object: DataType(type='Dict[str, Any]', imports_=[IMPORT_ANY, IMPORT_DICT,],),
     Types.null: DataType(type='Any', imports_=[IMPORT_ANY]),
     Types.array: DataType(type='List[Any]', imports_=[IMPORT_LIST, IMPORT_ANY]),
+    Types.any: DataType(type='Any', imports_=[IMPORT_ANY]),
 }
 
 kwargs_schema_to_model = {
