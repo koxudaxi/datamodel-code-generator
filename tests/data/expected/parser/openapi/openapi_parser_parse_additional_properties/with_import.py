@@ -62,6 +62,10 @@ class Test(BaseModel):
     failing: Optional[Dict[str, Failing]] = {}
 
 
+class BrokenArray(BaseModel):
+    broken: Optional[Dict[str, List[Broken]]] = None
+
+
 class Tags(BaseModel):
     __root__: List[str]
 

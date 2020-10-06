@@ -370,19 +370,40 @@ class JsonSchemaParser(Parser):
                         )
                     ]
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
+                    unresolved_type: str
                     field_class_name = self.model_resolver.add(
                         [*path, field_name], field_name, class_name=True
                     ).name
 
                     # TODO: supports other type
                     if field.additionalProperties.is_array:
-                        additional_properties_type = self.parse_array(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                        ).name
+                        if (
+                            isinstance(
+                                field.additionalProperties.items, JsonSchemaObject
+                            )
+                            and field.additionalProperties.items.ref
+                        ):
+                            unresolved_type = self.model_resolver.add_ref(
+                                field.additionalProperties.items.ref
+                            ).name
+                            additional_properties_type = self.data_type(
+                                type=f"List[{unresolved_type}]",
+                                imports_=[IMPORT_LIST],
+                                ref=True,
+                                version_compatible=True,
+                            ).type
+                        else:
+                            additional_properties_type = (
+                                unresolved_type
+                            ) = self.parse_array(
+                                field_class_name,
+                                field.additionalProperties,
+                                [*path, field_name],
+                            ).name
                     else:
-                        additional_properties_type = self.parse_object(
+                        additional_properties_type = (
+                            unresolved_type
+                        ) = self.parse_object(
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
@@ -396,7 +417,7 @@ class JsonSchemaParser(Parser):
                         self.data_type(
                             type=f'Dict[str, {additional_properties_type}]',
                             imports_=[IMPORT_DICT],
-                            unresolved_types=[additional_properties_type],
+                            unresolved_types=[unresolved_type],
                         )
                     ]
                 else:
