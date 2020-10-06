@@ -175,6 +175,15 @@ components:
           type: string
         bar:
           type: integer
+    brokenArray:
+      type: object
+      properties:
+        broken:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/broken'
     FileSetUpload:
       title: FileSetUpload
       required:
