@@ -367,7 +367,7 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
     if from_ and import_:
         imports_: Optional[List[Import]] = [Import(from_=from_, import_=import_)]
     else:
-        imports_ = None
+        imports_ = []
 
     parser = JsonSchemaParser(BaseModel, CustomRootType)
     assert parser.get_data_type(
@@ -381,11 +381,13 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
 )
 def test_get_data_type_array(schema_types, result_types):
     parser = JsonSchemaParser(BaseModel, CustomRootType)
-    assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == [
+    assert [
+        d.type_hint for d in parser.get_data_type(JsonSchemaObject(type=schema_types))
+    ] == [
         DataType(
             type=r,
-            optional='null' in schema_types,
-            imports_=[IMPORT_OPTIONAL] if 'null' in schema_types else None,
-        )
+            is_optional='null' in schema_types,
+            imports_=[IMPORT_OPTIONAL] if 'null' in schema_types else [],
+        ).type_hint
         for r in result_types
     ]

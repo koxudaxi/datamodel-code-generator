@@ -205,17 +205,17 @@ class JsonSchemaParser(Parser):
             types: List[str] = [t for t in obj.type if t != 'null']
             format_ = 'default'
             if len(types) == 1 and 'null' in obj.type:
-                type_ = self.data_model_type.get_data_type(
-                    json_schema_data_formats[types[0]][format_],
-                    **obj.dict() if not self.field_constraints else {},
-                )
-                type_.optional = True
-                type_.imports_ = (
-                    [IMPORT_OPTIONAL]
-                    if type_.imports_ is None
-                    else [*type_.imports_, IMPORT_OPTIONAL]
-                )
-                return [type_]
+                return [
+                    self.data_type(
+                        data_types=[
+                            self.data_model_type.get_data_type(
+                                json_schema_data_formats[types[0]][format_],
+                                **obj.dict() if not self.field_constraints else {},
+                            )
+                        ],
+                        is_optional=True,
+                    )
+                ]
         else:
             types = [obj.type]
             format_ = obj.format or 'default'
@@ -228,11 +228,7 @@ class JsonSchemaParser(Parser):
         ]
 
     def get_ref_data_type(self, ref: str) -> DataType:
-        return self.data_type(
-            type=self.model_resolver.add_ref(ref).name,
-            ref=True,
-            version_compatible=True,
-        )
+        return self.data_type(type=self.model_resolver.add_ref(ref).name, ref=True)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if not obj.additionalProperties:
@@ -268,10 +264,7 @@ class JsonSchemaParser(Parser):
                 types = [t.type_hint for t in self.get_data_type(item.items)]
                 data_types.append(
                     self.data_type(
-                        type=f"List[Union[{', '.join(types)}]]"
-                        if len(types) > 1
-                        else f"List[{types[0]}]",
-                        imports_=[IMPORT_LIST],
+                        data_types=self.get_data_type(item.items), is_list=True
                     )
                 )
             else:
@@ -281,7 +274,6 @@ class JsonSchemaParser(Parser):
                             name, item, path, singular_name=True
                         ).name,
                         ref=True,
-                        version_compatible=True,
                     )
                 )
         return data_types
@@ -313,7 +305,7 @@ class JsonSchemaParser(Parser):
         data_model_type = self.data_model_type(
             class_name,
             fields=fields,
-            base_classes=[b.type for b in base_classes],
+            base_classes=[b.type_hint for b in base_classes],
             auto_import=False,
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
@@ -324,7 +316,7 @@ class JsonSchemaParser(Parser):
             data_model_type.imports.extend(f.imports)
         self.append_result(data_model_type)
 
-        return [self.data_type(type=class_name, ref=True, version_compatible=True)]
+        return [self.data_type(type=class_name, ref=True)]
 
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str]
@@ -367,7 +359,6 @@ class JsonSchemaParser(Parser):
                                 field_name, field, [*path, field_name], unique=True
                             ).name,
                             ref=True,
-                            version_compatible=True,
                         )
                     ]
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
@@ -388,11 +379,8 @@ class JsonSchemaParser(Parser):
                                 field.additionalProperties.items.ref
                             ).name
                             additional_properties_type = self.data_type(
-                                type=f"List[{unresolved_type}]",
-                                imports_=[IMPORT_LIST],
-                                ref=True,
-                                version_compatible=True,
-                            ).type
+                                type=unresolved_type, is_list=True, ref=True,
+                            ).get_type(as_string=False)
                         else:
                             additional_properties_type = (
                                 unresolved_type
@@ -416,8 +404,8 @@ class JsonSchemaParser(Parser):
 
                     field_types = [
                         self.data_type(
-                            type=f'Dict[str, {additional_properties_type}]',
-                            imports_=[IMPORT_DICT],
+                            type=additional_properties_type,
+                            is_dict=True,
                             unresolved_types=[unresolved_type],
                         )
                     ]
@@ -427,9 +415,7 @@ class JsonSchemaParser(Parser):
                 enum = self.parse_enum(
                     field_name, field, [*path, field_name], unique=True
                 )
-                field_types = [
-                    self.data_type(type=enum.name, ref=True, version_compatible=True)
-                ]
+                field_types = [self.data_type(type=enum.name, ref=True)]
             else:
                 field_types = self.get_data_type(field)
                 if self.field_constraints:
@@ -500,7 +486,6 @@ class JsonSchemaParser(Parser):
                             name, item, path, singular_name=True
                         ).name,
                         ref=True,
-                        version_compatible=True,
                     )
                 )
             elif item.anyOf:
@@ -519,7 +504,6 @@ class JsonSchemaParser(Parser):
                     self.data_type(
                         type=self.parse_enum(name, item, path, singular_name=True).name,
                         ref=True,
-                        version_compatible=True,
                     )
                 )
             elif item.is_array:

@@ -399,7 +399,7 @@ class Parser(ABC):
                     if type_hint is None:  # pragma: no cover
                         continue
                     for data_type in field.data_types:
-                        if '.' not in data_type.type:
+                        if not data_type.type or '.' not in data_type.type:
                             continue
                         from_, import_ = relative(module_path, data_type.type)
                         full_path = f'{from_}/{import_}'
