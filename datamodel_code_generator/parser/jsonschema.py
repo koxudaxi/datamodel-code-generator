@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import (
     Any,
@@ -28,7 +27,7 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
-from ..parser.base import Parser, get_singular_name
+from ..parser.base import Parser
 from ..types import DataType, Types
 
 

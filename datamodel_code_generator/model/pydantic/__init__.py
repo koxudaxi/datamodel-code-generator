@@ -1,10 +1,7 @@
-from pathlib import Path
 from typing import List, Optional
 
-from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel as _BaseModel
 
-from ..base import TEMPLATE_DIR
 from .base_model import BaseModel, DataModelField
 from .custom_root_type import CustomRootType
 from .dataclass import DataClass
