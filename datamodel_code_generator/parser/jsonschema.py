@@ -194,32 +194,18 @@ class JsonSchemaParser(Parser):
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:
             return self.data_model_type.get_data_type(Types.any)
-        if not isinstance(obj.type, list):
+
+        def _get_data_type(type_: str, format__: str) -> DataType:
             return self.data_model_type.get_data_type(
-                json_schema_data_formats[obj.type][obj.format or 'default'],
+                json_schema_data_formats[type_][format__],
                 **obj.dict() if not self.field_constraints else {},
             )
-        types: List[str] = [t for t in obj.type if t != 'null']
-        format_ = 'default'
-        if len(types) == 1 and 'null' in obj.type:
+        if isinstance(obj.type, list):
             return self.data_type(
-                data_types=[
-                    self.data_model_type.get_data_type(
-                        json_schema_data_formats[types[0]][format_],
-                        **obj.dict() if not self.field_constraints else {},
-                    )
-                ],
-                is_optional=True,
+                data_types=[_get_data_type(t, 'default') for t in obj.type if t != 'null'],
+                is_optional='null' in obj.type,
             )
-        return self.data_type(
-            data_types=[
-                self.data_model_type.get_data_type(
-                    json_schema_data_formats[t][format_],
-                    **obj.dict() if not self.field_constraints else {},
-                )
-                for t in types
-            ]
-        )
+        return _get_data_type(obj.type, obj.format or 'default')
 
     def get_ref_data_type(self, ref: str) -> DataType:
         return self.data_type(type=self.model_resolver.add_ref(ref).name, ref=True)
@@ -255,7 +241,6 @@ class JsonSchemaParser(Parser):
                 and not any(v for k, v in vars(item.items).items() if k != 'type')
             ):
                 # trivial item types
-                # types = [t.type_hint for t in self.get_data_type(item.items)]
                 data_types.append(
                     self.data_type(
                         data_types=[self.get_data_type(item.items)], is_list=True

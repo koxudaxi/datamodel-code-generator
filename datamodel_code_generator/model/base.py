@@ -42,11 +42,9 @@ class DataModelFieldBase(BaseModel):
         type_hint = self.data_type.type_hint
         if self.required:
             return type_hint
-        else:
-            if type_hint is None or type_hint == '':
-                return OPTIONAL
-            else:
-                return f'{OPTIONAL}[{type_hint}]'
+        if type_hint is None or type_hint == '':
+            return OPTIONAL
+        return f'{OPTIONAL}[{type_hint}]'
 
     @property
     def imports(self) -> List[Import]:
@@ -83,9 +81,6 @@ class DataModelFieldBase(BaseModel):
                 values['alias'] = alias
             values['name'] = name
         return values
-
-    def __init__(self, **values: Any) -> None:
-        super().__init__(**values)
 
     @property
     def represented_default(self) -> str:
