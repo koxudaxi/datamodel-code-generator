@@ -126,4 +126,4 @@ class BaseModel(DataModel):
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
-        return get_data_type(types, **kwargs).copy()
+        return get_data_type(types, **kwargs)

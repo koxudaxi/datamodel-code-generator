@@ -30,7 +30,7 @@ class DataType(BaseModel):
     is_list: bool = False
 
     @property
-    def types(self) -> 'Iterator[str]':
+    def types(self) -> Iterator[str]:
         if self.type:
             yield self.type
         for data_type in self.data_types:
