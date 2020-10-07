@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from pydantic import BaseModel
 
@@ -14,6 +14,9 @@ from datamodel_code_generator.imports import (
 
 
 class DataType(BaseModel):
+    class Config:
+        validate_assignment = True
+
     type: Optional[str]
     data_types: List['DataType'] = []
     is_func: bool = False
@@ -27,8 +30,19 @@ class DataType(BaseModel):
     is_list: bool = False
 
     @property
-    def type_hint(self) -> str:
-        return self.get_type()
+    def types(self) -> 'Iterator[str]':
+        if self.type:
+            yield self.type
+        for data_type in self.data_types:
+            for type_ in data_type.types:  # pragma: no cover
+                if type_:
+                    yield type_
+
+    def replace_type(self, old: str, new: str) -> None:
+        if self.type == old:
+            self.type = new
+        for data_type in self.data_types:
+            data_type.replace_type(old, new)
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
@@ -44,36 +58,36 @@ class DataType(BaseModel):
                 self.imports_.append(import_)
         for data_type in self.data_types:
             self.imports_.extend(data_type.imports_)
+            self.unresolved_types.extend(data_type.unresolved_types)
 
-    def get_type(self, as_string: Optional[bool] = None) -> str:
+    @property
+    def type_hint(self) -> str:
+        if self.type:
+            if self.ref and self.python_version == PythonVersion.PY_36:
+                type_: str = f"'{self.type}'"
+            else:
+                type_ = self.type
+        else:
+            types: List[str] = [data_type.type_hint for data_type in self.data_types]
+            if len(types) > 1:
+                type_ = f"Union[{', '.join(types)}]"
+            elif len(types) == 1:
+                type_ = types[0]
+            else:
+                # TODO support strict Any
+                # type_ = 'Any'
+                type_ = ''
+        if self.is_list:
+            type_ = f'List[{type_}]' if type_ else 'List'
+        if self.is_dict:
+            type_ = f'Dict[str, {type_}]' if type_ else 'Dict'
+        if self.is_optional:
+            type_ = f'Optional[{type_}]'
         if self.is_func:
             if self.kwargs:
                 kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
-                return f'{self.get_raw_type()}({kwargs})'
-            return f'{self.get_raw_type(as_string)}()'
-        return self.get_raw_type(as_string)
-
-    def get_raw_type(self, as_string: Optional[bool] = None) -> str:
-        if self.type:
-            type_: str = self.type
-        else:
-            types: List[str] = [
-                data_type.get_type(as_string=False) for data_type in self.data_types
-            ]
-            if len(types) > 1:  # pragma: no cover
-                type_ = f"Union[{', '.join(types)}]"
-            else:
-                type_ = types[0]
-        if self.is_list:
-            type_ = f'List[{type_}]'
-        if self.is_dict:
-            type_ = f'Dict[str, {type_}]'
-        if self.is_optional:
-            type_ = f'Optional[{type_}]'
-        if as_string or (
-            as_string is None and self.python_version == PythonVersion.PY_36
-        ):
-            return f"'{type_}'"
+                return f'{type_}({kwargs})'
+            return f'{type_}()'
         return type_
 
 

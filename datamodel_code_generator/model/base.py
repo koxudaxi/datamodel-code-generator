@@ -2,19 +2,13 @@ import keyword
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Optional, Set
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
 
-from datamodel_code_generator.imports import (
-    IMPORT_LIST,
-    IMPORT_OPTIONAL,
-    IMPORT_UNION,
-    Import,
-)
+from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.types import DataType, Types
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
@@ -24,20 +18,6 @@ OPTIONAL: str = 'Optional'
 LIST: str = 'List'
 
 ALL_MODEL: str = '#all#'
-
-
-def optional(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
-    def inner(self: 'DataModelFieldBase', *args: Any, **kwargs: Any) -> Optional[str]:
-        type_hint: Optional[str] = func(self, *args, **kwargs)
-        if self.required:
-            return type_hint
-        self.imports.append(IMPORT_OPTIONAL)
-        if type_hint is None or type_hint == '':
-            return OPTIONAL
-        return f'{OPTIONAL}[{type_hint}]'
-
-    return inner
 
 
 class ConstraintsBase(BaseModel):
@@ -53,39 +33,35 @@ class DataModelFieldBase(BaseModel):
     examples: Any = None
     description: Optional[str]
     title: Optional[str]
-    data_types: List[DataType] = []
-    is_list: bool = False
-    is_union: bool = False
-    imports: List[Import] = []
-    type_hint: Optional[str] = None
-    unresolved_types: List[str] = []
+    data_type: DataType
     constraints: Any = None
     strip_default_none: bool = False
+
+    @property
+    def type_hint(self) -> str:
+        type_hint = self.data_type.type_hint
+        if self.required:
+            return type_hint
+        else:
+            if type_hint is None or type_hint == '':
+                return OPTIONAL
+            else:
+                return f'{OPTIONAL}[{type_hint}]'
+
+    @property
+    def imports(self) -> List[Import]:
+        if not self.required:
+            return self.data_type.imports_ + [IMPORT_OPTIONAL]
+        return self.data_type.imports_
+
+    @property
+    def unresolved_types(self) -> List[str]:
+        return self.data_type.unresolved_types
 
     @property
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         return None
-
-    @optional
-    def _get_type_hint(self) -> Optional[str]:
-        type_hint = ', '.join(d.type_hint for d in self.data_types)
-        if not type_hint:
-            if self.is_list:
-                self.imports.append(IMPORT_LIST)
-                return LIST
-            return ''
-        if len(self.data_types) == 1:
-            if self.is_list:
-                self.imports.append(IMPORT_LIST)
-                return f'{LIST}[{type_hint}]'
-            return type_hint
-        if self.is_list:
-            self.imports.append(IMPORT_LIST)
-            self.imports.append(IMPORT_UNION)
-            return f'{LIST}[{UNION}[{type_hint}]]'
-        self.imports.append(IMPORT_UNION)
-        return f'{UNION}[{type_hint}]'
 
     @property
     def method(self) -> Optional[str]:
@@ -110,11 +86,6 @@ class DataModelFieldBase(BaseModel):
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
-        for data_type in self.data_types:
-            self.unresolved_types.extend(data_type.unresolved_types)
-            if data_type.imports_:
-                self.imports.extend(data_type.imports_)
-        self.type_hint = self._get_type_hint()
 
     @property
     def represented_default(self) -> str:

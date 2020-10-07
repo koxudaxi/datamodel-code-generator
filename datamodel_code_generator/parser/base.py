@@ -395,13 +395,10 @@ class Parser(ABC):
                     models_to_update += [model.name]
                 imports.append(model.imports)
                 for field in model.fields:
-                    type_hint = field.type_hint
-                    if type_hint is None:  # pragma: no cover
-                        continue
-                    for data_type in field.data_types:
-                        if not data_type.type or '.' not in data_type.type:
+                    for type_ in field.data_type.types:  # type: str
+                        if not type_ or '.' not in type_:
                             continue
-                        from_, import_ = relative(module_path, data_type.type)
+                        from_, import_ = relative(module_path, type_)
                         full_path = f'{from_}/{import_}'
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_
@@ -410,14 +407,11 @@ class Parser(ABC):
                                 full_path.split('/'), import_, unique=True
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
-                        name = data_type.type.rsplit('.', 1)[-1]
-                        pattern = re.compile(rf'\b{re.escape(data_type.type)}\b')
+                        name = type_.rsplit('.', 1)[-1]
                         if from_ and import_:
-                            type_hint = pattern.sub(rf'{alias}.{name}', type_hint)
+                            field.data_type.replace_type(type_, f'{alias}.{name}')
                         else:
-                            type_hint = pattern.sub(name, type_hint)
-
-                    field.type_hint = type_hint
+                            field.data_type.replace_type(type_, name)
 
                 for ref_name in model.reference_classes:
                     from_, import_ = relative(module_path, ref_name)
