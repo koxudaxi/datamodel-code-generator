@@ -200,9 +200,12 @@ class JsonSchemaParser(Parser):
                 json_schema_data_formats[type_][format__],
                 **obj.dict() if not self.field_constraints else {},
             )
+
         if isinstance(obj.type, list):
             return self.data_type(
-                data_types=[_get_data_type(t, 'default') for t in obj.type if t != 'null'],
+                data_types=[
+                    _get_data_type(t, 'default') for t in obj.type if t != 'null'
+                ],
                 is_optional='null' in obj.type,
             )
         return _get_data_type(obj.type, obj.format or 'default')
