@@ -383,7 +383,7 @@ class JsonSchemaParser(Parser):
                     field_type = self.data_type(
                         type=additional_properties_type,
                         is_dict=True,
-                        unresolved_types=[unresolved_type],
+                        unresolved_types={unresolved_type},
                     )
 
                 else:
@@ -464,7 +464,6 @@ class JsonSchemaParser(Parser):
                 )
             elif item.anyOf:
                 item_obj_data_types.append(self.parse_any_of(name, item, path))
-                # is_union = True
             elif item.allOf:
                 item_obj_data_types.append(
                     self.parse_all_of(

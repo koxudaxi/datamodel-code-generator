@@ -43,9 +43,9 @@ def test_parser():
 
 def test_sort_data_models():
     reference = [
-        BaseModel(name='A', reference_classes=['A', 'C'], fields=[]),
-        BaseModel(name='B', reference_classes=['B'], fields=[]),
-        BaseModel(name='C', reference_classes=['B'], fields=[]),
+        BaseModel(name='A', reference_classes={'A', 'C'}, fields=[]),
+        BaseModel(name='B', reference_classes={'B'}, fields=[]),
+        BaseModel(name='C', reference_classes={'B'}, fields=[]),
     ]
 
     unresolved, resolved, require_update_action_models = sort_data_models(reference)

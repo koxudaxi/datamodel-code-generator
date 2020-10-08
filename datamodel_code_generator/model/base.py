@@ -53,7 +53,7 @@ class DataModelFieldBase(BaseModel):
         return self.data_type.imports_
 
     @property
-    def unresolved_types(self) -> List[str]:
+    def unresolved_types(self) -> Set[str]:
         return self.data_type.unresolved_types
 
     @property
@@ -150,11 +150,11 @@ class DataModel(TemplateBase, ABC):
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes
 
-        self.reference_classes: List[str] = [
+        self.reference_classes: Set[str] = {
             r for r in base_classes if r != self.BASE_CLASS
-        ] if base_classes else []
+        } if base_classes else set()
         if reference_classes:
-            self.reference_classes.extend(reference_classes)
+            self.reference_classes.update(reference_classes)
 
         if self.base_classes:
             self.base_class = ', '.join(self.base_classes)
@@ -185,11 +185,11 @@ class DataModel(TemplateBase, ABC):
             if all_model_extra_template_data:
                 self.extra_template_data.update(all_model_extra_template_data)
 
-        unresolved_types: Set[str] = set()
+        unresolved_types: Set[str] = {*()}
         for field in self.fields:
-            unresolved_types.update(set(field.unresolved_types))
+            unresolved_types.update(field.unresolved_types)
 
-        self.reference_classes = list(set(self.reference_classes) | unresolved_types)
+        self.reference_classes |= unresolved_types
 
         if auto_import:
             for field in self.fields:

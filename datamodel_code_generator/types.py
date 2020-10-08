@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Set
 
 from pydantic import BaseModel
 
@@ -14,16 +14,13 @@ from datamodel_code_generator.imports import (
 
 
 class DataType(BaseModel):
-    class Config:
-        validate_assignment = True
-
     type: Optional[str]
     data_types: List['DataType'] = []
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]]
     imports_: List[Import] = []
     python_version: PythonVersion = PythonVersion.PY_37
-    unresolved_types: List[str] = []
+    unresolved_types: Set[str] = {*()}
     ref: bool = False
     is_optional: bool = False
     is_dict: bool = False
@@ -47,7 +44,7 @@ class DataType(BaseModel):
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
         if self.ref and self.type:
-            self.unresolved_types.append(self.type)
+            self.unresolved_types.add(self.type)
         for field, import_ in (
             (self.is_list, IMPORT_LIST),
             (self.is_dict, IMPORT_DICT),
@@ -58,7 +55,7 @@ class DataType(BaseModel):
                 self.imports_.append(import_)
         for data_type in self.data_types:
             self.imports_.extend(data_type.imports_)
-            self.unresolved_types.extend(data_type.unresolved_types)
+            self.unresolved_types.update(data_type.unresolved_types)
 
     @property
     def type_hint(self) -> str:
