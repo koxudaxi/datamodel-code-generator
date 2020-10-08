@@ -1,5 +1,6 @@
+from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, Dict, Iterator, List, Optional, Set
+from typing import Any, Dict, Iterator, List, Optional, Set, Type
 
 from pydantic import BaseModel
 
@@ -126,3 +127,16 @@ class Types(Enum):
     null = auto()
     array = auto()
     any = auto()
+
+
+class DataTypeManager(ABC):
+    def __init__(self, python_version: PythonVersion = PythonVersion.PY_37) -> None:
+        self.python_version = python_version
+        if python_version == PythonVersion.PY_36:
+            self.data_type: Type[DataType] = DataTypePy36
+        else:
+            self.data_type = DataType
+
+    @abstractmethod
+    def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+        raise NotImplementedError

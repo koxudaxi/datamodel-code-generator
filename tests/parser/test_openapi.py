@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import pytest
 
-from datamodel_code_generator import DataModelField, PythonVersion
+from datamodel_code_generator import DataModelField, DataTypeManager, PythonVersion
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import Reference, dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
@@ -120,7 +120,7 @@ class Pets(BaseModel):
     ],
 )
 def test_parse_object(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parser = OpenAPIParser(BaseModel, CustomRootType, DataTypeManager)
     parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -162,7 +162,7 @@ class Pets(BaseModel):
     ],
 )
 def test_parse_array(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parser = OpenAPIParser(BaseModel, CustomRootType, DataTypeManager)
     parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -203,6 +203,7 @@ def test_openapi_parser_parse(with_import, format_, base_class):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'api.yaml').read_text(),
         base_class=base_class,
     )
@@ -231,7 +232,7 @@ def test_openapi_parser_parse(with_import, format_, base_class):
     ],
 )
 def test_parse_root_type(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parser = OpenAPIParser(BaseModel, CustomRootType, DataTypeManager)
     parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -240,6 +241,7 @@ def test_openapi_parser_parse_duplicate_models():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'duplicate_models.yaml').read_text(),
     )
     assert (
@@ -256,6 +258,7 @@ def test_openapi_parser_parse_resolved_models():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'resolved_models.yaml').read_text(),
     )
     assert (
@@ -272,6 +275,7 @@ def test_openapi_parser_parse_lazy_resolved_models():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'lazy_resolved_models.yaml').read_text(),
     )
     assert (
@@ -316,7 +320,10 @@ class Results(BaseModel):
 
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, text=Path(DATA_PATH / 'enum_models.yaml').read_text()
+        BaseModel,
+        CustomRootType,
+        DataTypeManager,
+        text=Path(DATA_PATH / 'enum_models.yaml').read_text(),
     )
     expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_enum_models'
     assert parser.parse() == (expected_dir / 'output_py37.py').read_text()
@@ -324,6 +331,7 @@ def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'enum_models.yaml').read_text(),
         target_python_version=PythonVersion.PY_36,
     )
@@ -332,7 +340,10 @@ def test_openapi_parser_parse_enum_models():
 
 def test_openapi_parser_parse_anyof():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, text=Path(DATA_PATH / 'anyof.yaml').read_text()
+        BaseModel,
+        CustomRootType,
+        DataTypeManager,
+        text=Path(DATA_PATH / 'anyof.yaml').read_text(),
     )
     assert (
         parser.parse()
@@ -346,6 +357,7 @@ def test_openapi_parser_parse_nested_anyof():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         data_model_field_type=DataModelField,
         text=Path(DATA_PATH / 'nested_anyof.yaml').read_text(),
     )
@@ -359,7 +371,10 @@ def test_openapi_parser_parse_nested_anyof():
 
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, text=Path(DATA_PATH / 'allof.yaml').read_text()
+        BaseModel,
+        CustomRootType,
+        DataTypeManager,
+        text=Path(DATA_PATH / 'allof.yaml').read_text(),
     )
     assert (
         parser.parse()
@@ -373,6 +388,7 @@ def test_openapi_parser_parse_alias():
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         data_model_field_type=DataModelField,
         text=Path(DATA_PATH / 'alias.yaml').read_text(),
     )
@@ -392,6 +408,7 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'modular.yaml').read_text(),
         base_class=base_class,
     )
@@ -416,6 +433,7 @@ def test_openapi_parser_parse_additional_properties(with_import, format_, base_c
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'additional_properties.yaml').read_text(),
         base_class=base_class,
     )
@@ -438,6 +456,7 @@ def test_openapi_parser_parse_array_enum(with_import, format_, base_class):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         text=Path(DATA_PATH / 'array_enum.yaml').read_text(),
         base_class=base_class,
     )
@@ -457,6 +476,7 @@ def test_openapi_parser_parse_remote_ref(with_import, format_, base_class):
     parser = OpenAPIParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         base_class=base_class,
         text=(DATA_PATH / 'refs.yaml').read_text(),
     )
@@ -472,7 +492,10 @@ def test_openapi_parser_parse_remote_ref(with_import, format_, base_class):
 
 def test_openapi_model_resolver():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, text=Path(DATA_PATH / 'api.yaml').read_text(),
+        BaseModel,
+        CustomRootType,
+        DataTypeManager,
+        text=Path(DATA_PATH / 'api.yaml').read_text(),
     )
     parser.parse()
 
@@ -548,7 +571,10 @@ def test_openapi_model_resolver():
 
 def test_openapi_parser_parse_any():
     parser = OpenAPIParser(
-        BaseModel, CustomRootType, text=Path(DATA_PATH / 'any.yaml').read_text()
+        BaseModel,
+        CustomRootType,
+        DataTypeManager,
+        text=Path(DATA_PATH / 'any.yaml').read_text(),
     )
     assert (
         parser.parse()

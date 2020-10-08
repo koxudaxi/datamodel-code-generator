@@ -209,8 +209,3 @@ class DataModel(TemplateBase, ABC):
             **self.extra_template_data,
         )
         return response
-
-    @classmethod
-    @abstractmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
-        raise NotImplementedError

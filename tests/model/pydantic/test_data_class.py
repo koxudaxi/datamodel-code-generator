@@ -1,3 +1,4 @@
+from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic.dataclass import DataClass
 from datamodel_code_generator.types import DataType, Types
@@ -45,4 +46,4 @@ def test_data_class_optional():
 
 
 def test_data_class_get_data_type():
-    assert DataClass.get_data_type(Types.integer) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')

@@ -1,3 +1,4 @@
+from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic.custom_root_type import CustomRootType
 from datamodel_code_generator.types import DataType, Types
@@ -65,4 +66,4 @@ def test_custom_root_type_decorator():
 
 
 def test_custom_root_type_get_data_type():
-    assert CustomRootType.get_data_type(Types.integer) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')

@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Any, Dict, Set
 
+from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,
@@ -30,7 +31,9 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_UUID4,
     IMPORT_UUID5,
 )
-from datamodel_code_generator.types import DataType, Types
+from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
+from datamodel_code_generator.types import Types
 
 type_map: Dict[Types, DataType] = {
     Types.integer: DataType(type='int'),
@@ -105,71 +108,80 @@ def transform_kwargs(kwargs: Dict[str, Any], filter: Set[str]) -> Dict[str, str]
     }
 
 
-def get_data_int_type(types: Types, **kwargs: Any) -> DataType:
-    data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
-    if data_type_kwargs:
-        if data_type_kwargs == {'gt': 0}:
-            return DataType(type='PositiveInt', imports_=[IMPORT_POSITIVE_INT])
-        if data_type_kwargs == {'lt': 0}:
-            return DataType(type='NegativeInt', imports_=[IMPORT_NEGATIVE_INT])
-        return DataType(
-            type='conint',
-            is_func=True,
-            kwargs={k: int(v) for k, v in data_type_kwargs.items()},
-            imports_=[IMPORT_CONINT],
-        )
-    return type_map[types]
+class DataTypeManager(_DataTypeManager):
+    def __init__(self, python_version: PythonVersion = PythonVersion.PY_37):
+        super().__init__(python_version)
+        self.type_map: Dict[Types, DataType] = type_map
 
+    def get_data_int_type(self, types: Types, **kwargs: Any) -> DataType:
+        data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        if data_type_kwargs:
+            if data_type_kwargs == {'gt': 0}:
+                return self.data_type(
+                    type='PositiveInt', imports_=[IMPORT_POSITIVE_INT]
+                )
+            if data_type_kwargs == {'lt': 0}:
+                return self.data_type(
+                    type='NegativeInt', imports_=[IMPORT_NEGATIVE_INT]
+                )
+            return self.data_type(
+                type='conint',
+                is_func=True,
+                kwargs={k: int(v) for k, v in data_type_kwargs.items()},
+                imports_=[IMPORT_CONINT],
+            )
+        return self.type_map[types]
 
-def get_data_float_type(types: Types, **kwargs: Any) -> DataType:
-    data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
-    if data_type_kwargs:
-        if data_type_kwargs == {'gt': 0}:
-            return DataType(type='PositiveFloat', imports_=[IMPORT_POSITIVE_FLOAT])
-        if data_type_kwargs == {'lt': 0}:
-            return DataType(type='NegativeFloat', imports_=[IMPORT_NEGATIVE_FLOAT])
-        return DataType(
-            type='confloat',
-            is_func=True,
-            kwargs={k: float(v) for k, v in data_type_kwargs.items()},
-            imports_=[IMPORT_CONFLOAT],
-        )
-    return type_map[types]
+    def get_data_float_type(self, types: Types, **kwargs: Any) -> DataType:
+        data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        if data_type_kwargs:
+            if data_type_kwargs == {'gt': 0}:
+                return self.data_type(
+                    type='PositiveFloat', imports_=[IMPORT_POSITIVE_FLOAT]
+                )
+            if data_type_kwargs == {'lt': 0}:
+                return self.data_type(
+                    type='NegativeFloat', imports_=[IMPORT_NEGATIVE_FLOAT]
+                )
+            return DataType(
+                type='confloat',
+                is_func=True,
+                kwargs={k: float(v) for k, v in data_type_kwargs.items()},
+                imports_=[IMPORT_CONFLOAT],
+            )
+        return self.type_map[types]
 
+    def get_data_decimal_type(self, types: Types, **kwargs: Any) -> DataType:
+        data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        if data_type_kwargs:
+            return self.data_type(
+                type='condecimal',
+                is_func=True,
+                kwargs={k: Decimal(v) for k, v in data_type_kwargs.items()},
+                imports_=[IMPORT_CONDECIMAL],
+            )
+        return self.type_map[types]
 
-def get_data_decimal_type(types: Types, **kwargs: Any) -> DataType:
-    data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
-    if data_type_kwargs:
-        return DataType(
-            type='condecimal',
-            is_func=True,
-            kwargs={k: Decimal(v) for k, v in data_type_kwargs.items()},
-            imports_=[IMPORT_CONDECIMAL],
-        )
-    return type_map[types]
+    def get_data_str_type(self, types: Types, **kwargs: Any) -> DataType:
+        data_type_kwargs = transform_kwargs(kwargs, string_kwargs)
+        if data_type_kwargs:
+            if 'regex' in data_type_kwargs:
+                data_type_kwargs['regex'] = f'\'{data_type_kwargs["regex"]}\''
+            return self.data_type(
+                type='constr',
+                is_func=True,
+                kwargs=data_type_kwargs,
+                imports_=[IMPORT_CONSTR],
+            )
+        return self.type_map[types]
 
-
-def get_data_str_type(types: Types, **kwargs: Any) -> DataType:
-    data_type_kwargs = transform_kwargs(kwargs, string_kwargs)
-    if data_type_kwargs:
-        if 'regex' in data_type_kwargs:
-            data_type_kwargs['regex'] = f'\'{data_type_kwargs["regex"]}\''
-        return DataType(
-            type='constr',
-            is_func=True,
-            kwargs=data_type_kwargs,
-            imports_=[IMPORT_CONSTR],
-        )
-    return type_map[types]
-
-
-def get_data_type(types: Types, **kwargs: Any) -> DataType:
-    if types == Types.string:
-        return get_data_str_type(types, **kwargs)
-    elif types in (Types.int32, Types.int64, Types.integer):
-        return get_data_int_type(types, **kwargs)
-    elif types in (Types.float, Types.double, Types.number, Types.time):
-        return get_data_float_type(types, **kwargs)
-    elif types == Types.decimal:
-        return get_data_decimal_type(types, **kwargs)
-    return type_map[types]
+    def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+        if types == Types.string:
+            return self.get_data_str_type(types, **kwargs)
+        elif types in (Types.int32, Types.int64, Types.integer):
+            return self.get_data_int_type(types, **kwargs)
+        elif types in (Types.float, Types.double, Types.number, Types.time):
+            return self.get_data_float_type(types, **kwargs)
+        elif types == Types.decimal:
+            return self.get_data_decimal_type(types, **kwargs)
+        return self.type_map[types]

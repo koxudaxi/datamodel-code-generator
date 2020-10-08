@@ -21,7 +21,7 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
 from ..parser.base import Parser
-from ..types import DataType, Types
+from ..types import DataType, DataTypeManager, Types
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
@@ -151,6 +151,8 @@ class JsonSchemaParser(Parser):
         self,
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
+        data_type_manager_type: Type[DataTypeManager],
+        *,
         data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
@@ -171,32 +173,33 @@ class JsonSchemaParser(Parser):
         super().__init__(
             data_model_type,
             data_model_root_type,
-            data_model_field_type,
-            base_class,
-            custom_template_dir,
-            extra_template_data,
-            target_python_version,
-            text,
-            result,
-            dump_resolve_reference_action,
-            validation,
-            field_constraints,
-            snake_case_field,
-            strip_default_none,
-            aliases,
-            allow_population_by_field_name,
-            file_path,
-            use_default_on_required_field,
+            data_type_manager_type,
+            data_model_field_type=data_model_field_type,
+            base_class=base_class,
+            custom_template_dir=custom_template_dir,
+            extra_template_data=extra_template_data,
+            target_python_version=target_python_version,
+            text=text,
+            result=result,
+            dump_resolve_reference_action=dump_resolve_reference_action,
+            validation=validation,
+            field_constraints=field_constraints,
+            snake_case_field=snake_case_field,
+            strip_default_none=strip_default_none,
+            aliases=aliases,
+            allow_population_by_field_name=allow_population_by_field_name,
+            file_path=file_path,
+            use_default_on_required_field=use_default_on_required_field,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:
-            return self.data_model_type.get_data_type(Types.any)
+            return self.data_type_manager.get_data_type(Types.any)
 
         def _get_data_type(type_: str, format__: str) -> DataType:
-            return self.data_model_type.get_data_type(
+            return self.data_type_manager.get_data_type(
                 json_schema_data_formats[type_][format__],
                 **obj.dict() if not self.field_constraints else {},
             )
@@ -387,7 +390,7 @@ class JsonSchemaParser(Parser):
                     )
 
                 else:
-                    field_type = self.data_model_type.get_data_type(Types.object)
+                    field_type = self.data_type_manager.get_data_type(Types.object)
             elif field.enum:
                 enum = self.parse_enum(
                     field_name, field, [*path, field_name], unique=True
@@ -526,7 +529,7 @@ class JsonSchemaParser(Parser):
         elif obj.ref:
             data_type = self.get_ref_data_type(obj.ref)
         else:
-            data_type = self.data_model_type.get_data_type(Types.any)
+            data_type = self.data_type_manager.get_data_type(Types.any)
         data_model_root_type = self.data_model_root_type(
             name,
             [
@@ -572,7 +575,7 @@ class JsonSchemaParser(Parser):
                 self.data_model_field_type(
                     name=field_name,
                     default=default,
-                    data_type=self.data_model_type.get_data_type(Types.any),
+                    data_type=self.data_type_manager.get_data_type(Types.any),
                     required=True,
                 )
             )

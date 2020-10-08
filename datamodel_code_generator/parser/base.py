@@ -25,7 +25,7 @@ from datamodel_code_generator.format import format_code
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase, TemplateBase
-from ..types import DataType, DataTypePy36
+from ..types import DataType, DataTypeManager, DataTypePy36, Types
 
 inflect_engine = inflect.engine()
 
@@ -276,6 +276,8 @@ class Parser(ABC):
         self,
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
+        data_type_manager_type: Type[DataTypeManager],
+        *,
         data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
@@ -293,7 +295,9 @@ class Parser(ABC):
         file_path: Optional[Path] = None,
         use_default_on_required_field: bool = False,
     ):
-
+        self.data_type_manager: DataTypeManager = data_type_manager_type(
+            target_python_version
+        )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type

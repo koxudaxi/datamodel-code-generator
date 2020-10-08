@@ -1,5 +1,6 @@
 import pytest
 
+from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model.pydantic.base_model import BaseModel, DataModelField
 from datamodel_code_generator.types import DataType, Types
 
@@ -55,7 +56,7 @@ def test_base_model_decorator():
 
 
 def test_base_model_get_data_type():
-    assert BaseModel.get_data_type(Types.integer) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')
 
 
 def test_base_model_reserved_name():

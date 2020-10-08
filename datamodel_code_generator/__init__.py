@@ -28,6 +28,7 @@ from .model.pydantic import (
     DataModelField,
     dump_resolve_reference_action,
 )
+from .model.pydantic.types import DataTypeManager
 from .parser.base import Parser
 from .version import version as __version__
 
@@ -166,7 +167,8 @@ def generate(
     parser = parser_class(
         BaseModel,
         CustomRootType,
-        DataModelField,
+        data_type_manager_type=DataTypeManager,
+        data_model_field_type=DataModelField,
         base_class=base_class,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
