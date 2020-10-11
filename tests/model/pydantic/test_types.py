@@ -1,5 +1,6 @@
 import pytest
 
+from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_CONDECIMAL,
@@ -11,13 +12,7 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_POSITIVE_FLOAT,
     IMPORT_POSITIVE_INT,
 )
-from datamodel_code_generator.model.pydantic.types import (
-    get_data_decimal_type,
-    get_data_float_type,
-    get_data_int_type,
-    get_data_str_type,
-    get_data_type,
-)
+from datamodel_code_generator.model.pydantic.types import DataTypeManager
 from datamodel_code_generator.types import DataType, Types
 
 
@@ -76,7 +71,7 @@ from datamodel_code_generator.types import DataType, Types
     ],
 )
 def test_get_data_int_type(types, params, data_type):
-    assert get_data_int_type(types, **params) == data_type
+    assert DataTypeManager().get_data_int_type(types, **params) == data_type
 
 
 @pytest.mark.parametrize(
@@ -146,7 +141,7 @@ def test_get_data_int_type(types, params, data_type):
     ],
 )
 def test_get_data_float_type(types, params, data_type):
-    assert get_data_float_type(types, **params) == data_type
+    assert DataTypeManager().get_data_float_type(types, **params) == data_type
 
 
 @pytest.mark.parametrize(
@@ -212,7 +207,7 @@ def test_get_data_float_type(types, params, data_type):
     ],
 )
 def test_get_data_decimal_type(types, params, data_type):
-    assert get_data_decimal_type(types, **params) == data_type
+    assert DataTypeManager().get_data_decimal_type(types, **params) == data_type
 
 
 @pytest.mark.parametrize(
@@ -252,7 +247,7 @@ def test_get_data_decimal_type(types, params, data_type):
     ],
 )
 def test_get_data_str_type(types, params, data_type):
-    assert get_data_str_type(types, **params) == data_type
+    assert DataTypeManager().get_data_str_type(types, **params) == data_type
 
 
 @pytest.mark.parametrize(
@@ -272,7 +267,7 @@ def test_get_data_str_type(types, params, data_type):
     ],
 )
 def test_get_data_type(types, params, data_type):
-    assert get_data_type(types, **params) == data_type
+    assert DataTypeManager().get_data_type(types, **params) == data_type
 
 
 def test_data_type_type_hint():

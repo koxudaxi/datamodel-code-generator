@@ -25,7 +25,7 @@ from datamodel_code_generator.format import format_code
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase, TemplateBase
-from ..types import DataType, DataTypePy36
+from ..types import DataType, DataTypeManager, DataTypePy36, Types
 
 inflect_engine = inflect.engine()
 
@@ -98,7 +98,7 @@ def sort_data_models(
             sorted_data_models[model.name] = model
             require_update_action_models.append(model.name)
         elif (
-            not set(model.reference_classes) - {model.name} - set(sorted_data_models)
+            not model.reference_classes - {model.name} - set(sorted_data_models)
         ):  # reference classes have been resolved
             sorted_data_models[model.name] = model
             if model.name in model.reference_classes:
@@ -276,6 +276,8 @@ class Parser(ABC):
         self,
         data_model_type: Type[DataModel],
         data_model_root_type: Type[DataModel],
+        data_type_manager_type: Type[DataTypeManager],
+        *,
         data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
@@ -293,7 +295,9 @@ class Parser(ABC):
         file_path: Optional[Path] = None,
         use_default_on_required_field: bool = False,
     ):
-
+        self.data_type_manager: DataTypeManager = data_type_manager_type(
+            target_python_version
+        )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
@@ -395,13 +399,10 @@ class Parser(ABC):
                     models_to_update += [model.name]
                 imports.append(model.imports)
                 for field in model.fields:
-                    type_hint = field.type_hint
-                    if type_hint is None:  # pragma: no cover
-                        continue
-                    for data_type in field.data_types:
-                        if '.' not in data_type.type:
+                    for type_ in field.data_type.types:  # type: str
+                        if not type_ or '.' not in type_:
                             continue
-                        from_, import_ = relative(module_path, data_type.type)
+                        from_, import_ = relative(module_path, type_)
                         full_path = f'{from_}/{import_}'
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_
@@ -410,14 +411,11 @@ class Parser(ABC):
                                 full_path.split('/'), import_, unique=True
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
-                        name = data_type.type.rsplit('.', 1)[-1]
-                        pattern = re.compile(rf'\b{re.escape(data_type.type)}\b')
+                        name = type_.rsplit('.', 1)[-1]
                         if from_ and import_:
-                            type_hint = pattern.sub(rf'{alias}.{name}', type_hint)
+                            field.data_type.replace_type(type_, f'{alias}.{name}')
                         else:
-                            type_hint = pattern.sub(name, type_hint)
-
-                    field.type_hint = type_hint
+                            field.data_type.replace_type(type_, name)
 
                 for ref_name in model.reference_classes:
                     from_, import_ = relative(module_path, ref_name)

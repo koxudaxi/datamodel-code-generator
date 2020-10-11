@@ -1,11 +1,12 @@
 import pytest
 
+from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model.pydantic.base_model import BaseModel, DataModelField
 from datamodel_code_generator.types import DataType, Types
 
 
 def test_base_model():
-    field = DataModelField(name='a', data_types=[DataType(type='str')], required=True)
+    field = DataModelField(name='a', data_type=DataType(type='str'), required=True)
 
     base_model = BaseModel(name='test_model', fields=[field])
 
@@ -17,7 +18,7 @@ def test_base_model():
 
 def test_base_model_optional():
     field = DataModelField(
-        name='a', data_types=[DataType(type='str')], default='abc', required=False
+        name='a', data_type=DataType(type='str'), default='abc', required=False
     )
 
     base_model = BaseModel(name='test_model', fields=[field])
@@ -33,7 +34,7 @@ def test_base_model_optional():
 
 def test_base_model_decorator():
     field = DataModelField(
-        name='a', data_types=[DataType(type='str')], default='abc', required=False
+        name='a', data_type=DataType(type='str'), default='abc', required=False
     )
 
     base_model = BaseModel(
@@ -55,13 +56,11 @@ def test_base_model_decorator():
 
 
 def test_base_model_get_data_type():
-    assert BaseModel.get_data_type(Types.integer) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')
 
 
 def test_base_model_reserved_name():
-    field = DataModelField(
-        name='except', data_types=[DataType(type='str')], required=True
-    )
+    field = DataModelField(name='except', data_type=DataType(type='str'), required=True)
 
     base_model = BaseModel(name='test_model', fields=[field])
 
@@ -75,7 +74,7 @@ def test_base_model_reserved_name():
     )
 
     field = DataModelField(
-        name='def', data_types=[DataType(type='str')], required=True, alias='def-field'
+        name='def', data_type=DataType(type='str'), required=True, alias='def-field'
     )
 
     base_model = BaseModel(name='test_model', fields=[field])
@@ -128,4 +127,4 @@ def test_base_model_reserved_name():
     ],
 )
 def test_data_model_field(kwargs, expected):
-    assert DataModelField(**kwargs).field == expected
+    assert DataModelField(**kwargs, data_type=DataType()).field == expected

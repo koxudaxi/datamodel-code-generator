@@ -11,8 +11,6 @@ from datamodel_code_generator.model import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
-from datamodel_code_generator.model.pydantic.types import get_data_type
-from datamodel_code_generator.types import DataType, Types
 
 
 class Constraints(ConstraintsBase):
@@ -123,7 +121,3 @@ class BaseModel(DataModel):
         for field in fields:
             if field.field:
                 self.imports.append(IMPORT_FIELD)
-
-    @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
-        return get_data_type(types, **kwargs).copy()

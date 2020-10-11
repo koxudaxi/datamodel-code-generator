@@ -3,8 +3,6 @@ from typing import Any, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.pydantic.types import get_data_type
-from datamodel_code_generator.types import DataType, Types
 
 
 class CustomRootType(DataModel):
@@ -36,7 +34,3 @@ class CustomRootType(DataModel):
             auto_import=auto_import,
             reference_classes=reference_classes,
         )
-
-    @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
-        return get_data_type(types, **kwargs)

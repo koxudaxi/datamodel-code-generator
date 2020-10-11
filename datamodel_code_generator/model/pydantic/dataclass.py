@@ -3,8 +3,6 @@ from typing import Any, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.pydantic.types import get_data_type
-from datamodel_code_generator.types import DataType, Types
 
 
 class DataClass(DataModel):
@@ -35,7 +33,3 @@ class DataClass(DataModel):
             reference_classes=reference_classes,
         )
         self.imports.append(Import.from_full_path('pydantic.dataclasses.dataclass'))
-
-    @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
-        return get_data_type(types, **kwargs)

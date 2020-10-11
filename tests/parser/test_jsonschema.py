@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 import yaml
 
-from datamodel_code_generator import DataModelField
+from datamodel_code_generator import DataModelField, DataTypeManager
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import dump_templates
@@ -36,7 +36,7 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
 
 def test_json_schema_parser_parse_ref():
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     parser.parse_raw_obj = Mock()
     external_parent_path = Path(DATA_PATH / 'external_parent.json')
@@ -62,7 +62,7 @@ def test_json_schema_parser_parse_ref():
 
 def test_json_schema_object_ref_url_json(mocker):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     obj = JsonSchemaObject.parse_obj(
         {'$ref': 'https://example.org/schema.json#/definitions/User'}
@@ -90,7 +90,7 @@ def test_json_schema_object_ref_url_json(mocker):
 
 def test_json_schema_object_ref_url_yaml(mocker):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     obj = JsonSchemaObject.parse_obj(
         {'$ref': 'https://example.org/schema.yaml#/definitions/User'}
@@ -112,7 +112,7 @@ def test_json_schema_object_ref_url_yaml(mocker):
 
 def test_json_schema_object_cached_ref_url_yaml(mocker):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
 
     obj = JsonSchemaObject.parse_obj(
@@ -144,7 +144,7 @@ class User(BaseModel):
 
 def test_json_schema_ref_url_json(mocker):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     obj = {
         "type": "object",
@@ -230,7 +230,7 @@ class User(BaseModel):
     ],
 )
 def test_parse_object(source_obj, generated_classes):
-    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(BaseModel, CustomRootType, DataTypeManager)
     parser.parse_object('Person', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -252,7 +252,7 @@ def test_parse_object(source_obj, generated_classes):
 )
 def test_parse_any_root_object(source_obj, generated_classes):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     parser.parse_root_type('AnyObject', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -269,7 +269,7 @@ def test_parse_any_root_object(source_obj, generated_classes):
 )
 def test_parse_one_of_object(source_obj, generated_classes):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     parser.parse_raw_obj('onOfObject', source_obj, [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -315,7 +315,7 @@ def test_parse_one_of_object(source_obj, generated_classes):
 )
 def test_parse_default(source_obj, generated_classes):
     parser = JsonSchemaParser(
-        BaseModel, CustomRootType, data_model_field_type=DataModelField
+        BaseModel, CustomRootType, DataTypeManager, data_model_field_type=DataModelField
     )
     parser.parse_raw_obj('Defaults', source_obj, [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -325,6 +325,7 @@ def test_parse_nested_array():
     parser = JsonSchemaParser(
         BaseModel,
         CustomRootType,
+        DataTypeManager,
         data_model_field_type=DataModelField,
         text=(DATA_PATH / 'nested_array.json').read_text(),
     )
@@ -367,12 +368,12 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
     if from_ and import_:
         imports_: Optional[List[Import]] = [Import(from_=from_, import_=import_)]
     else:
-        imports_ = None
+        imports_ = []
 
-    parser = JsonSchemaParser(BaseModel, CustomRootType)
+    parser = JsonSchemaParser(BaseModel, CustomRootType, DataTypeManager)
     assert parser.get_data_type(
         JsonSchemaObject(type=schema_type, format=schema_format)
-    ) == [DataType(type=result_type, imports_=imports_)]
+    ) == DataType(type=result_type, imports_=imports_)
 
 
 @pytest.mark.parametrize(
@@ -380,12 +381,9 @@ def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
     [(['integer', 'number'], ['int', 'float']), (['integer', 'null'], ['int']),],
 )
 def test_get_data_type_array(schema_types, result_types):
-    parser = JsonSchemaParser(BaseModel, CustomRootType)
-    assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == [
-        DataType(
-            type=r,
-            optional='null' in schema_types,
-            imports_=[IMPORT_OPTIONAL] if 'null' in schema_types else None,
-        )
-        for r in result_types
-    ]
+    parser = JsonSchemaParser(BaseModel, CustomRootType, DataTypeManager)
+    assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == DataType(
+        data_types=[DataType(type=r,) for r in result_types],
+        is_optional='null' in schema_types,
+        imports_=[IMPORT_OPTIONAL] if 'null' in schema_types else [],
+    )

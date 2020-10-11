@@ -60,7 +60,7 @@ def test_template_base():
 
 def test_data_model():
     field = DataModelFieldBase(
-        name='a', data_types=[DataType(type='str')], default="" 'abc' "", required=True
+        name='a', data_type=DataType(type='str'), default="" 'abc' "", required=True
     )
 
     with NamedTemporaryFile('w') as dummy_template:
@@ -88,7 +88,7 @@ def test_data_model():
 
 def test_data_model_exception():
     field = DataModelFieldBase(
-        name='a', type_hint='str', default="" 'abc' "", required=True
+        name='a', data_type=DataType(type='str'), default="" 'abc' "", required=True
     )
     with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
         C(name='abc', fields=[field])
@@ -98,7 +98,11 @@ def test_data_field():
     # field = DataModelField(name='a', data_types=[], required=True)
     # assert field.type_hint == ''
     field = DataModelFieldBase(
-        name='a', data_types=[], required=True, is_list=True, is_union=True
+        name='a',
+        data_type=DataType(is_list=True),
+        required=True,
+        is_list=True,
+        is_union=True,
     )
     assert field.type_hint == 'List'
     # field = DataModelField(
@@ -110,176 +114,142 @@ def test_data_field():
     # )
     # assert field.type_hint == ''
     field = DataModelFieldBase(
-        name='a', data_types=[], required=True, is_list=True, is_union=False
+        name='a',
+        data_type=DataType(is_list=True),
+        required=True,
+        is_list=True,
+        is_union=False,
     )
     assert field.type_hint == 'List'
-    field = DataModelFieldBase(name='a', data_types=[], required=False)
+    field = DataModelFieldBase(name='a', data_type=DataType(), required=False)
     assert field.type_hint == 'Optional'
     field = DataModelFieldBase(
-        name='a', data_types=[], required=False, is_list=True, is_union=True
-    )
-    assert field.type_hint == 'Optional[List]'
-    field = DataModelFieldBase(
-        name='a', data_types=[], required=False, is_list=False, is_union=True
-    )
-    assert field.type_hint == 'Optional'
-    field = DataModelFieldBase(
-        name='a', data_types=[], required=False, is_list=False, is_union=False
-    )
-    assert field.type_hint == 'Optional'
-    field = DataModelFieldBase(
-        name='a', data_types=[], required=False, is_list=True, is_union=False
-    )
-    assert field.type_hint == 'Optional[List]'
-    field = DataModelFieldBase(
-        name='a', data_types=[DataType(type='str')], required=True
-    )
-    assert field.type_hint == 'str'
-    field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str')],
-        required=True,
-        is_list=True,
-        is_union=True,
-    )
-    assert field.type_hint == 'List[str]'
-    field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
-        required=True,
-        is_list=False,
-        is_union=True,
-    )
-    assert field.type_hint == 'str'
-    field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
-        required=True,
-        is_list=False,
-        is_union=False,
-    )
-    assert field.type_hint == 'str'
-    field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
-        required=True,
-        is_list=True,
-        is_union=False,
-    )
-    assert field.type_hint == 'List[str]'
-    field = DataModelFieldBase(
-        name='a', data_types=[DataType(type='str')], required=False
-    )
-    assert field.type_hint == 'Optional[str]'
-    field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
+        data_type=DataType(is_list=True),
         required=False,
         is_list=True,
         is_union=True,
+    )
+    assert field.type_hint == 'Optional[List]'
+    field = DataModelFieldBase(
+        name='a', data_type=DataType(), required=False, is_list=False, is_union=True
+    )
+    assert field.type_hint == 'Optional'
+    field = DataModelFieldBase(
+        name='a', data_type=DataType(), required=False, is_list=False, is_union=False
+    )
+    assert field.type_hint == 'Optional'
+    field = DataModelFieldBase(
+        name='a',
+        data_type=DataType(is_list=True),
+        required=False,
+        is_list=True,
+        is_union=False,
+    )
+    assert field.type_hint == 'Optional[List]'
+    field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
+    assert field.type_hint == 'str'
+    field = DataModelFieldBase(
+        name='a', data_type=DataType(type='str', is_list=True), required=True,
+    )
+    assert field.type_hint == 'List[str]'
+    field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
+    assert field.type_hint == 'str'
+    field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True,)
+    assert field.type_hint == 'str'
+    field = DataModelFieldBase(
+        name='a', data_type=DataType(type='str', is_list=True), required=True,
+    )
+    assert field.type_hint == 'List[str]'
+    field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=False)
+    assert field.type_hint == 'Optional[str]'
+    field = DataModelFieldBase(
+        name='a', data_type=DataType(type='str', is_list=True,), required=False,
     )
     assert field.type_hint == 'Optional[List[str]]'
     field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
-        required=False,
-        is_list=False,
-        is_union=True,
+        name='a', data_type=DataType(type='str'), required=False,
     )
     assert field.type_hint == 'Optional[str]'
     field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
-        required=False,
-        is_list=False,
-        is_union=False,
+        name='a', data_type=DataType(type='str'), required=False,
     )
     assert field.type_hint == 'Optional[str]'
     field = DataModelFieldBase(
-        name='a',
-        data_types=[DataType(type='str')],
-        required=False,
-        is_list=True,
-        is_union=False,
+        name='a', data_type=DataType(type='str', is_list=True,), required=False,
     )
     assert field.type_hint == 'Optional[List[str]]'
 
     field = DataModelFieldBase(
-        name='a', data_types=[DataType(type='str'), DataType(type='int')], required=True
+        name='a',
+        data_type=DataType(data_types=[DataType(type='str'), DataType(type='int')]),
+        required=True,
     )
     assert field.type_hint == 'Union[str, int]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(
+            data_types=[DataType(type='str'), DataType(type='int')], is_list=True,
+        ),
         required=True,
-        is_list=True,
-        is_union=True,
     )
     assert field.type_hint == 'List[Union[str, int]]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(data_types=[DataType(type='str'), DataType(type='int')]),
         required=True,
-        is_list=False,
-        is_union=True,
     )
     assert field.type_hint == 'Union[str, int]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(data_types=[DataType(type='str'), DataType(type='int')]),
         required=True,
-        is_list=False,
-        is_union=False,
     )
     assert field.type_hint == 'Union[str, int]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(
+            data_types=[DataType(type='str'), DataType(type='int')], is_list=True
+        ),
         required=True,
-        is_list=True,
-        is_union=False,
     )
     assert field.type_hint == 'List[Union[str, int]]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(data_types=[DataType(type='str'), DataType(type='int')]),
         required=False,
     )
     assert field.type_hint == 'Optional[Union[str, int]]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(
+            data_types=[DataType(type='str'), DataType(type='int')], is_list=True,
+        ),
         required=False,
-        is_list=True,
-        is_union=True,
     )
     assert field.type_hint == 'Optional[List[Union[str, int]]]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(data_types=[DataType(type='str'), DataType(type='int')]),
         required=False,
-        is_list=False,
-        is_union=True,
     )
     assert field.type_hint == 'Optional[Union[str, int]]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(data_types=[DataType(type='str'), DataType(type='int')]),
         required=False,
-        is_list=False,
-        is_union=False,
     )
     assert field.type_hint == 'Optional[Union[str, int]]'
     field = DataModelFieldBase(
         name='a',
-        data_types=[DataType(type='str'), DataType(type='int')],
+        data_type=DataType(
+            data_types=[DataType(type='str'), DataType(type='int')], is_list=True
+        ),
         required=False,
-        is_list=True,
-        is_union=False,
     )
     assert field.type_hint == 'Optional[List[Union[str, int]]]'
 
     field = DataModelFieldBase(
-        name='a', data_types=[], required=False, is_list=True, is_union=False
+        name='a', data_type=DataType(is_list=True), required=False
     )
     assert field.type_hint == 'Optional[List]'
