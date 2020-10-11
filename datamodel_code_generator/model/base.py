@@ -13,9 +13,7 @@ from datamodel_code_generator.types import DataType, Types
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
-UNION: str = 'Union'
 OPTIONAL: str = 'Optional'
-LIST: str = 'List'
 
 ALL_MODEL: str = '#all#'
 
