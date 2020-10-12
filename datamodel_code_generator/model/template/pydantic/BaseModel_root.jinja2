@@ -8,9 +8,11 @@ class {{ class_name }}({{ base_class }}):
 {%- if not fields %}
     pass
 {%- else %}
-    {%- if fields[0].required or (fields[0].default == 'None' and fields[0].strip_default_none) %}
+    {%- if fields[0].field %}
+    __root__: {{ fields[0].type_hint }} = {{ fields[0].field }}
+    {%- elif fields[0].required or (fields[0].default == 'None' and fields[0].strip_default_none) %}
     __root__: {{ fields[0].type_hint }}
     {%- else %}
-    __root__: {{ fields[0].type_hint }} = {{fields[0].default}}
+    __root__: {{ fields[0].type_hint }} = {{ fields[0].represented_default }}
     {%- endif %}
 {%- endif %}

@@ -99,6 +99,8 @@ class JsonSchemaObject(BaseModel):
     maxLength: Optional[int]
     minimum: Optional[float]
     maximum: Optional[float]
+    minItems: Optional[int]
+    maxItems: Optional[int]
     multipleOf: Optional[float]
     exclusiveMaximum: Union[float, bool, None]
     exclusiveMinimum: Union[float, bool, None]
@@ -398,8 +400,6 @@ class JsonSchemaParser(Parser):
                 field_type = self.data_type(type=enum.name, ref=True)
             else:
                 field_type = self.get_data_type(field)
-                if self.field_constraints:
-                    constraints = field.dict()
             if self.use_default_on_required_field and field.has_default:
                 required: bool = False
             else:
@@ -415,7 +415,7 @@ class JsonSchemaParser(Parser):
                     data_type=field_type,
                     required=required,
                     alias=alias,
-                    constraints=constraints,
+                    constraints=field.dict() if self.field_constraints else {},
                 )
             )
         return fields
@@ -500,6 +500,7 @@ class JsonSchemaParser(Parser):
             title=obj.title,
             required=not obj.nullable
             and not (obj.has_default and self.use_default_on_required_field),
+            constraints=obj.dict() if self.field_constraints and items else {},
         )
         return field
 
@@ -530,6 +531,7 @@ class JsonSchemaParser(Parser):
             data_type = self.get_ref_data_type(obj.ref)
         else:
             data_type = self.data_type_manager.get_data_type(Types.any)
+
         data_model_root_type = self.data_model_root_type(
             name,
             [
@@ -541,6 +543,7 @@ class JsonSchemaParser(Parser):
                     default=obj.default,
                     required=not obj.nullable
                     and not (obj.has_default and self.use_default_on_required_field),
+                    constraints=obj.dict() if self.field_constraints else {},
                 )
             ],
             custom_base_class=self.base_class,

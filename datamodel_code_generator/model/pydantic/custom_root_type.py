@@ -3,6 +3,7 @@ from typing import Any, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
 
 
 class CustomRootType(DataModel):
@@ -34,3 +35,6 @@ class CustomRootType(DataModel):
             auto_import=auto_import,
             reference_classes=reference_classes,
         )
+        for field in fields:
+            if field.field:
+                self.imports.append(IMPORT_FIELD)

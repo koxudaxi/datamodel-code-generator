@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field, constr
+from pydantic import AnyUrl, BaseModel, Field, conint, constr
 
 
 class Pet(BaseModel):
-    id: int
+    id: conint(ge=0)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
 
@@ -19,10 +19,15 @@ class Pets(BaseModel):
     __root__: List[Pet]
 
 
+class UID(BaseModel):
+    __root__: conint(ge=0)
+
+
 class User(BaseModel):
-    id: int
+    id: conint(ge=0)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
+    uid: UID
 
 
 class Users(BaseModel):
