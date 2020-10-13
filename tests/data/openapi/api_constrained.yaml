@@ -145,6 +145,12 @@ components:
             maxLength: 64
           uid:
             $ref: '#/components/schemas/UID'
+          phones:
+            type: array
+            items:
+              type: string
+              minLength: 3
+            maxItems: 10
     Id:
       type: string
     Rules:

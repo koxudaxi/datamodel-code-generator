@@ -27,6 +27,10 @@ class DataType(BaseModel):
     is_dict: bool = False
     is_list: bool = False
 
+    @classmethod
+    def from_model_name(cls, model_name: str, is_list: bool = False) -> 'DataType':
+        return cls(type=model_name, ref=True, is_list=is_list)
+
     @property
     def types(self) -> Iterator[str]:
         if self.type:

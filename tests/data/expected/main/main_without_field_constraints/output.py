@@ -16,11 +16,15 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]
+    __root__: List[Pet] = Field(..., max_items=10, min_items=1)
 
 
 class UID(BaseModel):
     __root__: conint(ge=0)
+
+
+class Phone(BaseModel):
+    __root__: constr(min_length=3)
 
 
 class User(BaseModel):
@@ -28,6 +32,7 @@ class User(BaseModel):
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
     uid: UID
+    phones: Optional[List[Phone]] = Field(None, max_items=10)
 
 
 class Users(BaseModel):
