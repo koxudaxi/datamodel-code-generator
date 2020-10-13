@@ -6,23 +6,33 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field, constr
+from pydantic import AnyUrl, BaseModel, Field, conint, constr
 
 
 class Pet(BaseModel):
-    id: int
+    id: conint(ge=0)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]
+    __root__: List[Pet] = Field(..., max_items=10, min_items=1)
+
+
+class UID(BaseModel):
+    __root__: conint(ge=0)
+
+
+class Phone(BaseModel):
+    __root__: constr(min_length=3)
 
 
 class User(BaseModel):
-    id: int
+    id: conint(ge=0)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
+    uid: UID
+    phones: Optional[List[Phone]] = Field(None, max_items=10)
 
 
 class Users(BaseModel):

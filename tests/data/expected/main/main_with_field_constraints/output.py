@@ -10,19 +10,29 @@ from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: int
+    id: int = Field(..., ge=0.0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]
+    __root__: List[Pet] = Field(..., max_items=10, min_items=1)
+
+
+class UID(BaseModel):
+    __root__: int = Field(..., ge=0.0)
+
+
+class Phone(BaseModel):
+    __root__: str = Field(..., min_length=3)
 
 
 class User(BaseModel):
-    id: int
+    id: int = Field(..., ge=0.0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
+    uid: UID
+    phones: Optional[List[Phone]] = Field(None, max_items=10)
 
 
 class Users(BaseModel):

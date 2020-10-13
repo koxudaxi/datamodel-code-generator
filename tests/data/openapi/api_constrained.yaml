@@ -109,7 +109,7 @@ components:
         id:
           type: integer
           format: int64
-          minumum: 0
+          minimum: 0
         name:
           type: string
           maxLength: 256
@@ -120,23 +120,37 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/Pet"
+      maxItems: 10
+      minItems: 1
+    UID:
+      type: integer
+      minimum: 0
     Users:
       type: array
       items:
         required:
           - id
           - name
+          - uid
         properties:
           id:
             type: integer
             format: int64
-            minumum: 0
+            minimum: 0
           name:
             type: string
             maxLength: 256
           tag:
             type: string
             maxLength: 64
+          uid:
+            $ref: '#/components/schemas/UID'
+          phones:
+            type: array
+            items:
+              type: string
+              minLength: 3
+            maxItems: 10
     Id:
       type: string
     Rules:
