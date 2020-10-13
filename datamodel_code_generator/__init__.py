@@ -150,12 +150,7 @@ def generate(
 
         if input_file_type in [InputFileType.Json, InputFileType.Yaml]:
             try:
-                if input_file_type == InputFileType.Json:
-                    obj: Dict[Any, Any] = json.loads(input_text)
-                else:
-                    import yaml
-
-                    obj = yaml.safe_load(input_text)
+                obj: Dict[Any, Any] = yaml.safe_load(input_text)
             except:
                 raise Error('Invalid file format')
             from genson import SchemaBuilder
@@ -165,15 +160,12 @@ def generate(
             input_text = json.dumps(builder.to_schema())
 
     parser = parser_class(
-        BaseModel,
-        CustomRootType,
-        data_type_manager_type=DataTypeManager,
-        data_model_field_type=DataModelField,
+        source=input_text,
+        base_path=Path(input_name).parent,
         base_class=base_class,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
         target_python_version=target_python_version,
-        text=input_text,
         dump_resolve_reference_action=dump_resolve_reference_action,
         validation=validation,
         field_constraints=field_constraints,
@@ -181,7 +173,6 @@ def generate(
         strip_default_none=strip_default_none,
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
-        file_path=Path(input_name),
         use_default_on_required_field=use_default_on_required_field,
     )
 

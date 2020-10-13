@@ -5,6 +5,7 @@ from pydantic import BaseModel as _BaseModel
 from .base_model import BaseModel, DataModelField
 from .custom_root_type import CustomRootType
 from .dataclass import DataClass
+from .types import DataTypeManager
 
 
 def dump_resolve_reference_action(class_names: List[str]) -> str:
@@ -35,5 +36,6 @@ __all__ = [
     'CustomRootType',
     'DataClass',
     'dump_resolve_reference_action',
+    'DataTypeManager'
     # 'VALIDATOR_TEMPLATE',
 ]

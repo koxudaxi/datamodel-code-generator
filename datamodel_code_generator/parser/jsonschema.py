@@ -20,6 +20,7 @@ from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
+from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
 from ..types import DataType, DataTypeManager, Types
 
@@ -168,17 +169,17 @@ JsonSchemaObject.update_forward_refs()
 class JsonSchemaParser(Parser):
     def __init__(
         self,
-        data_model_type: Type[DataModel],
-        data_model_root_type: Type[DataModel],
-        data_type_manager_type: Type[DataTypeManager],
+        source: Union[str, Path, List[Path]],
         *,
-        data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
+        base_path: Optional[Path] = None,
+        data_model_type: Type[DataModel] = pydantic_model.BaseModel,
+        data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
+        data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
+        data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
-        text: Optional[str] = None,
-        result: Optional[List[DataModel]] = None,
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -186,20 +187,19 @@ class JsonSchemaParser(Parser):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
-        file_path: Optional[Path] = None,
         use_default_on_required_field: bool = False,
     ):
         super().__init__(
-            data_model_type,
-            data_model_root_type,
-            data_type_manager_type,
+            source=source,
+            base_path=base_path,
+            data_model_type=data_model_type,
+            data_model_root_type=data_model_root_type,
+            data_type_manager_type=data_type_manager_type,
             data_model_field_type=data_model_field_type,
             base_class=base_class,
             custom_template_dir=custom_template_dir,
             extra_template_data=extra_template_data,
             target_python_version=target_python_version,
-            text=text,
-            result=result,
             dump_resolve_reference_action=dump_resolve_reference_action,
             validation=validation,
             field_constraints=field_constraints,
@@ -207,7 +207,6 @@ class JsonSchemaParser(Parser):
             strip_default_none=strip_default_none,
             aliases=aliases,
             allow_population_by_field_name=allow_population_by_field_name,
-            file_path=file_path,
             use_default_on_required_field=use_default_on_required_field,
         )
 
@@ -704,10 +703,11 @@ class JsonSchemaParser(Parser):
         self.parse_ref(obj, path)
 
     def parse_raw(self) -> None:
-        raw_obj: Dict[Any, Any] = yaml.safe_load(self.text)  # type: ignore
-        obj_name = raw_obj.get('title', 'Model')
-        obj_name = self.model_resolver.add([], obj_name, unique=False).name
-        self.parse_raw_obj(obj_name, raw_obj, [])
-        definitions = raw_obj.get('definitions', {})
-        for key, model in definitions.items():
-            self.parse_raw_obj(key, model, ['#/definitions', key])
+        for text in self.iter_source:
+            raw_obj: Dict[Any, Any] = yaml.safe_load(text)
+            obj_name = raw_obj.get('title', 'Model')
+            obj_name = self.model_resolver.add([], obj_name, unique=False).name
+            self.parse_raw_obj(obj_name, raw_obj, [])
+            definitions = raw_obj.get('definitions', {})
+            for key, model in definitions.items():
+                self.parse_raw_obj(key, model, ['#/definitions', key])

@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import pytest
 
@@ -36,11 +36,11 @@ class C(Parser):
 
 def test_parser():
     c = C(
-        D,
-        B,
-        DataTypeManager,
+        data_model_type=D,
+        data_model_root_type=B,
         data_model_field_type=DataModelFieldBase,
         base_class='Base',
+        source='',
     )
     assert c.data_model_type == D
     assert c.data_model_root_type == B
@@ -119,21 +119,12 @@ def test_snake_to_upper_camel(word, expected):
     assert actual == expected
 
 
-def test_dump_templates():
-    with NamedTemporaryFile('w') as dummy_template:
-        assert dump_templates(D(dummy_template.name, 'abc')) == 'abc'
-        assert (
-            dump_templates(
-                [D(dummy_template.name, 'abc'), D(dummy_template.name, 'def')]
-            )
-            == 'abc\n\n\ndef'
-        )
-
-
-class D(TemplateBase):
-    def __init__(self, filename: str, data: str):
+class D(DataModel):
+    def __init__(
+        self, filename: str, data: str, name: str, fields: List[DataModelFieldBase]
+    ):
+        super().__init__(name, fields)
         self._data = data
-        super().__init__(Path(filename))
 
     def render(self) -> str:
         return self._data

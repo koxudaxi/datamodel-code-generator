@@ -8,6 +8,7 @@ from typing import (
     Callable,
     DefaultDict,
     Dict,
+    Iterator,
     List,
     Mapping,
     Optional,
@@ -24,8 +25,9 @@ from datamodel_code_generator.format import format_code
 
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
+from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase, TemplateBase
-from ..types import DataType, DataTypeManager, DataTypePy36, Types
+from ..types import DataType, DataTypeManager
 
 inflect_engine = inflect.engine()
 
@@ -67,10 +69,7 @@ def set_strip_default_none(field: DataModelFieldBase) -> None:
     field.strip_default_none = True
 
 
-def dump_templates(templates: Union[DataModel, List[DataModel]]) -> str:
-    if isinstance(templates, TemplateBase):
-        templates = [templates]
-
+def dump_templates(templates: List[DataModel]) -> str:
     return '\n\n\n'.join(str(m) for m in templates)
 
 
@@ -274,17 +273,17 @@ class ModelResolver:
 class Parser(ABC):
     def __init__(
         self,
-        data_model_type: Type[DataModel],
-        data_model_root_type: Type[DataModel],
-        data_type_manager_type: Type[DataTypeManager],
+        source: Union[str, Path, List[Path]],
         *,
-        data_model_field_type: Type[DataModelFieldBase] = DataModelFieldBase,
+        base_path: Optional[Path] = None,
+        data_model_type: Type[DataModel] = pydantic_model.BaseModel,
+        data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
+        data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
+        data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
-        text: Optional[str] = None,
-        result: Optional[List[DataModel]] = None,
         dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -292,7 +291,6 @@ class Parser(ABC):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
-        file_path: Optional[Path] = None,
         use_default_on_required_field: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -304,8 +302,7 @@ class Parser(ABC):
         self.imports: Imports = Imports()
         self.base_class: Optional[str] = base_class
         self.target_python_version: PythonVersion = target_python_version
-        self.text: Optional[str] = text
-        self.results: List[DataModel] = result or []
+        self.results: List[DataModel] = []
         self.dump_resolve_reference_action: Optional[
             Callable[[List[str]], str]
         ] = dump_resolve_reference_action
@@ -315,16 +312,16 @@ class Parser(ABC):
         self.strip_default_none: bool = strip_default_none
         self.use_default_on_required_field: bool = use_default_on_required_field
 
-        if self.target_python_version == PythonVersion.PY_36:
-            self.data_type: Type[DataType] = DataTypePy36
-        else:
-            self.data_type = DataType
-
-        if file_path:
-            self.base_path: Path = file_path.absolute().parent
+        if base_path:
+            self.base_path: Path = base_path.absolute()
+        elif isinstance(source, Path):
+            self.base_path = (
+                source.absolute() if source.is_dir() else source.absolute().parent
+            )
         else:
             self.base_path = Path.cwd()
 
+        self.source: Union[str, Path, List[Path]] = source
         self.custom_template_dir = custom_template_dir
         self.extra_template_data: DefaultDict[
             str, Any
@@ -340,11 +337,25 @@ class Parser(ABC):
         if self.strip_default_none:
             self.field_preprocessors.append(set_strip_default_none)
 
+    @property
+    def iter_source(self) -> Iterator[str]:
+        if isinstance(self.source, str):
+            yield self.source
+        elif isinstance(self.source, Path):
+            yield self.source.read_text()
+        elif isinstance(self.source, list):  # pragma: no cover
+            for path in self.source:  # type: Path
+                yield path.read_text()
+
     def append_result(self, data_model: DataModel) -> None:
         for field_preprocessor in self.field_preprocessors:
             for field in data_model.fields:
                 field_preprocessor(field)
         self.results.append(data_model)
+
+    @property
+    def data_type(self) -> Type[DataType]:
+        return self.data_type_manager.data_type
 
     @abstractmethod
     def parse_raw(self) -> None:
