@@ -703,11 +703,12 @@ class JsonSchemaParser(Parser):
         self.parse_ref(obj, path)
 
     def parse_raw(self) -> None:
-        for text in self.iter_source:
-            raw_obj: Dict[Any, Any] = yaml.safe_load(text)
+        for source in self.iter_source:
+            self.model_resolver.set_current_root(source.path)
+            raw_obj: Dict[Any, Any] = yaml.safe_load(source.text)
             obj_name = raw_obj.get('title', 'Model')
-            obj_name = self.model_resolver.add([], obj_name, unique=False).name
-            self.parse_raw_obj(obj_name, raw_obj, [])
+            obj_name = self.model_resolver.add(source.path, obj_name, unique=False).name
+            self.parse_raw_obj(obj_name, raw_obj, source.path)
             definitions = raw_obj.get('definitions', {})
             for key, model in definitions.items():
-                self.parse_raw_obj(key, model, ['#/definitions', key])
+                self.parse_raw_obj(key, model, [*source.path, '#/definitions', key])

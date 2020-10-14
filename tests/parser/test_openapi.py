@@ -442,68 +442,68 @@ def test_openapi_model_resolver():
     parser.parse()
 
     assert parser.model_resolver.references == {
-        '#/components/schemas/Error': Reference(
-            path=['#/components', 'schemas', 'Error'],
+        'api.yaml#/components/schemas/Error': Reference(
+            path=['components', 'schemas', 'Error'],
             original_name='Error',
             name='Error',
             loaded=True,
         ),
-        '#/components/schemas/Event': Reference(
-            path=['#/components', 'schemas', 'Event'],
+        'api.yaml#/components/schemas/Event': Reference(
+            path=['components', 'schemas', 'Event'],
             original_name='Event',
             name='Event',
             loaded=True,
         ),
-        '#/components/schemas/Id': Reference(
-            path=['#/components', 'schemas', 'Id'],
+        'api.yaml#/components/schemas/Id': Reference(
+            path=['components', 'schemas', 'Id'],
             original_name='Id',
             name='Id',
             loaded=True,
         ),
-        '#/components/schemas/Pet': Reference(
-            path=['#/components', 'schemas', 'Pet'],
+        'api.yaml#/components/schemas/Pet': Reference(
+            path=['components', 'schemas', 'Pet'],
             original_name='Pet',
             name='Pet',
             loaded=True,
         ),
-        '#/components/schemas/Pets': Reference(
-            path=['#/components', 'schemas', 'Pets'],
+        'api.yaml#/components/schemas/Pets': Reference(
+            path=['components', 'schemas', 'Pets'],
             original_name='Pets',
             name='Pets',
             loaded=True,
         ),
-        '#/components/schemas/Result': Reference(
-            path=['#/components', 'schemas', 'Result'],
+        'api.yaml#/components/schemas/Result': Reference(
+            path=['components', 'schemas', 'Result'],
             original_name='Result',
             name='Result',
             loaded=True,
         ),
-        '#/components/schemas/Rules': Reference(
-            path=['#/components', 'schemas', 'Rules'],
+        'api.yaml#/components/schemas/Rules': Reference(
+            path=['components', 'schemas', 'Rules'],
             original_name='Rules',
             name='Rules',
             loaded=True,
         ),
-        '#/components/schemas/Users': Reference(
-            path=['#/components', 'schemas', 'Users'],
+        'api.yaml#/components/schemas/Users': Reference(
+            path=['components', 'schemas', 'Users'],
             original_name='Users',
             name='Users',
             loaded=True,
         ),
-        '#/components/schemas/Users/Users': Reference(
-            path=['#/components', 'schemas', 'Users', 'Users'],
+        'api.yaml#/components/schemas/Users/Users': Reference(
+            path=['components', 'schemas', 'Users', 'Users'],
             original_name='Users',
             name='User',
             loaded=True,
         ),
-        '#/components/schemas/apis': Reference(
-            path=['#/components', 'schemas', 'apis'],
+        'api.yaml#/components/schemas/apis': Reference(
+            path=['components', 'schemas', 'apis'],
             original_name='apis',
             name='Apis',
             loaded=True,
         ),
-        '#/components/schemas/apis/Apis': Reference(
-            path=['#/components', 'schemas', 'apis', 'Apis'],
+        'api.yaml#/components/schemas/apis/Apis': Reference(
+            path=['components', 'schemas', 'apis', 'Apis'],
             original_name='Apis',
             name='Api',
             loaded=True,

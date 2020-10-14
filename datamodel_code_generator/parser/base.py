@@ -157,18 +157,26 @@ class Reference(BaseModel):
 class ModelResolver:
     def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
-        self.aliases = {**aliases} if aliases is not None else {}
+        self.aliases: Mapping[str, str] = {**aliases} if aliases is not None else {}
+        self._current_root: List[str] = []
 
-    @staticmethod
-    def _get_path(path: List[str]) -> str:
-        if '#' in path:  # remote
+    @property
+    def current_root(self) -> List[str]:
+        return self._current_root  # pragma: no cover
+
+    def set_current_root(self, current_root: List[str]) -> None:
+        self._current_root = current_root
+
+    def _get_path(self, path: List[str]) -> str:
+        if '#' in path and path[0] != '#':  # remote
             delimiter = path.index('#')
             return f"{''.join(path[:delimiter])}#/{''.join(path[delimiter + 1:])}"
-        return '/'.join(path)
+        return f"{''.join(self._current_root)}#/{'/'.join(path[1:] if '#' in path else path)}"
 
     def add_ref(self, ref: str) -> Reference:
-        if ref in self.references:
-            return self.references[ref]
+        path = self._get_path(ref.split('/'))
+        if path in self.references:
+            return self.references[path]
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
             # TODO Support $id with $ref
@@ -183,7 +191,7 @@ class ModelResolver:
         reference = Reference(
             path=ref.split('/'), original_name=original_name, name=name, loaded=loaded,
         )
-        self.references[ref] = reference
+        self.references[path] = reference
         return reference
 
     def add(
@@ -270,6 +278,11 @@ class ModelResolver:
         return valid_name, None if field_name == valid_name else field_name
 
 
+class Source(BaseModel):
+    path: List[str]
+    text: str
+
+
 class Parser(ABC):
     def __init__(
         self,
@@ -338,14 +351,19 @@ class Parser(ABC):
             self.field_preprocessors.append(set_strip_default_none)
 
     @property
-    def iter_source(self) -> Iterator[str]:
+    def iter_source(self) -> Iterator[Source]:
         if isinstance(self.source, str):
-            yield self.source
-        elif isinstance(self.source, Path):
-            yield self.source.read_text()
-        elif isinstance(self.source, list):  # pragma: no cover
+            yield Source(path=[], text=self.source)
+        elif isinstance(self.source, Path):   # pragma: no cover
+            yield Source(
+                path=self.source.relative_to(self.base_path).parts,  # type: ignore
+                text=self.source.read_text(),
+            )
+        elif isinstance(self.source, list):    # pragma: no cover
             for path in self.source:  # type: Path
-                yield path.read_text()
+                yield Source(
+                    path=path.relative_to(self.base_path).parts, text=path.read_text()  # type: ignore
+                )
 
     def append_result(self, data_model: DataModel) -> None:
         for field_preprocessor in self.field_preprocessors:
