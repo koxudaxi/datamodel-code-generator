@@ -18,7 +18,6 @@ from typing import (
     Union,
 )
 
-import inflect
 from pydantic import BaseModel
 
 from datamodel_code_generator.format import format_code
@@ -26,29 +25,12 @@ from datamodel_code_generator.format import format_code
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
-from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase, TemplateBase
+from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
+from ..reference import ModelResolver
 from ..types import DataType, DataTypeManager
-
-inflect_engine = inflect.engine()
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
-
-
-def get_singular_name(name: str, suffix: str = 'Item') -> str:
-    singular_name = inflect_engine.singular_noun(name)
-    if singular_name is False:
-        singular_name = f'{name}{suffix}'
-    return singular_name
-
-
-def snake_to_upper_camel(word: str) -> str:
-    prefix = ''
-    if word.startswith('_'):
-        prefix = '_'
-        word = word[1:]
-
-    return prefix + ''.join(x[0].upper() + x[1:] for x in word.split('_') if x)
 
 
 def camel_to_snake(string: str) -> str:
@@ -147,140 +129,18 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
-class Reference(BaseModel):
-    path: List[str]
-    original_name: str
-    name: str
-    loaded: bool = True
-
-
-class ModelResolver:
-    def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
-        self.references: Dict[str, Reference] = {}
-        self.aliases: Mapping[str, str] = {**aliases} if aliases is not None else {}
-        self._current_root: List[str] = []
-
-    @property
-    def current_root(self) -> List[str]:
-        return self._current_root  # pragma: no cover
-
-    def set_current_root(self, current_root: List[str]) -> None:
-        self._current_root = current_root
-
-    def _get_path(self, path: List[str]) -> str:
-        if '#' in path and path[0] != '#':  # remote
-            delimiter = path.index('#')
-            return f"{''.join(path[:delimiter])}#/{''.join(path[delimiter + 1:])}"
-        return f"{''.join(self._current_root)}#/{'/'.join(path[1:] if '#' in path else path)}"
-
-    def add_ref(self, ref: str) -> Reference:
-        path = self._get_path(ref.split('/'))
-        if path in self.references:
-            return self.references[path]
-        split_ref = ref.rsplit('/', 1)
-        if len(split_ref) == 1:
-            # TODO Support $id with $ref
-            # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
-            raise NotImplementedError('It is not support to use $id with $ref')
-        parents, original_name = split_ref  # type: str, str
-        loaded: bool = not ref.startswith(('https://', 'http://'))
-        if not original_name:
-            original_name = Path(parents).stem
-            loaded = False
-        name = self.get_class_name(original_name, unique=False)
-        reference = Reference(
-            path=ref.split('/'), original_name=original_name, name=name, loaded=loaded,
-        )
-        self.references[path] = reference
-        return reference
-
-    def add(
-        self,
-        path: List[str],
-        original_name: str,
-        *,
-        class_name: bool = False,
-        singular_name: bool = False,
-        unique: bool = False,
-        singular_name_suffix: str = 'Item',
-    ) -> Reference:
-        joined_path: str = self._get_path(path)
-        if joined_path in self.references:
-            return self.references[joined_path]
-        if not original_name:
-            original_name = Path(joined_path.split('#')[0]).stem
-        if class_name:
-            name = self.get_class_name(original_name, unique)
-            if singular_name:  # pragma: no cover
-                name = get_singular_name(name, singular_name_suffix)
-        elif singular_name:
-            name = get_singular_name(original_name, singular_name_suffix)
-            if unique:  # pragma: no cover
-                name = self._get_uniq_name(name)
-        elif unique:
-            name = self._get_uniq_name(original_name)
-        else:
-            name = original_name
-        reference = Reference(path=path, original_name=original_name, name=name)
-        self.references[joined_path] = reference
-        return reference
-
-    def get(
-        self, path: Union[List[str], str]
-    ) -> Optional[Reference]:  # pragma: no cover
-        if isinstance(path, str):
-            return self.references.get(path)
-        return self.references[self._get_path(path)]
-
-    def get_class_name(self, field_name: str, unique: bool = True) -> str:
-        if '.' in field_name:
-            split_name = [self.get_valid_name(n) for n in field_name.split('.')]
-            prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
-            prefix += '.'
-        else:
-            prefix = ''
-
-        field_name = self.get_valid_name(field_name)
-        upper_camel_name = snake_to_upper_camel(field_name)
-        if unique:
-            class_name = self._get_uniq_name(upper_camel_name, camel=True)
-        else:
-            class_name = upper_camel_name
-
-        return f'{prefix}{class_name}'
-
-    def _get_uniq_name(self, name: str, camel: bool = False) -> str:
-        uniq_name: str = name
-        count: int = 1
-        while uniq_name in [r.name for r in self.references.values()]:
-            if camel:
-                uniq_name = f'{name}{count}'
-            else:
-                uniq_name = f'{name}_{count}'
-            count += 1
-        return uniq_name
-
-    def get_valid_name(self, name: str, camel: bool = False) -> str:
-        # TODO: when first character is a number
-        replaced_name = re.sub(r'\W', '_', name)
-        if re.match(r'^[0-9]', replaced_name):
-            replaced_name = f'field_{replaced_name}'
-        # if replaced_name.isidentifier() and not iskeyword(replaced_name):
-        # return self.get_uniq_name(replaced_name, camel)
-        return replaced_name
-
-    def get_valid_field_name_and_alias(
-        self, field_name: str
-    ) -> Tuple[str, Optional[str]]:
-        if field_name in self.aliases:
-            return self.aliases[field_name], field_name
-        valid_name = self.get_valid_name(field_name)
-        return valid_name, None if field_name == valid_name else field_name
+class Result(BaseModel):
+    body: str
+    source: Optional[Path]
 
 
 class Source(BaseModel):
-    path: List[str]
+    path: Path
     text: str
+
+    @classmethod
+    def from_path(cls, path: Path, base_path: Path) -> 'Source':
+        return cls(path=path.relative_to(base_path), text=path.read_text(),)
 
 
 class Parser(ABC):
@@ -288,7 +148,6 @@ class Parser(ABC):
         self,
         source: Union[str, Path, List[Path]],
         *,
-        base_path: Optional[Path] = None,
         data_model_type: Type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
@@ -325,9 +184,9 @@ class Parser(ABC):
         self.strip_default_none: bool = strip_default_none
         self.use_default_on_required_field: bool = use_default_on_required_field
 
-        if base_path:
-            self.base_path: Path = base_path.absolute()
-        elif isinstance(source, Path):
+        self.current_source_path: Optional[Path] = None
+
+        if isinstance(source, Path):
             self.base_path = (
                 source.absolute() if source.is_dir() else source.absolute().parent
             )
@@ -353,17 +212,17 @@ class Parser(ABC):
     @property
     def iter_source(self) -> Iterator[Source]:
         if isinstance(self.source, str):
-            yield Source(path=[], text=self.source)
-        elif isinstance(self.source, Path):   # pragma: no cover
-            yield Source(
-                path=self.source.relative_to(self.base_path).parts,  # type: ignore
-                text=self.source.read_text(),
-            )
-        elif isinstance(self.source, list):    # pragma: no cover
-            for path in self.source:  # type: Path
-                yield Source(
-                    path=path.relative_to(self.base_path).parts, text=path.read_text()  # type: ignore
-                )
+            yield Source(path=Path(), text=self.source)
+        elif isinstance(self.source, Path):  # pragma: no cover
+            if self.source.is_dir():
+                for path in self.source.rglob('*'):
+                    if path.is_file():
+                        yield Source.from_path(path, self.base_path)
+            else:
+                yield Source.from_path(self.source, self.base_path)
+        elif isinstance(self.source, list):  # pragma: no cover
+            for path in self.source:
+                yield Source.from_path(path, self.base_path)
 
     def append_result(self, data_model: DataModel) -> None:
         for field_preprocessor in self.field_preprocessors:
@@ -381,7 +240,7 @@ class Parser(ABC):
 
     def parse(
         self, with_import: Optional[bool] = True, format_: Optional[bool] = True
-    ) -> Union[str, Dict[Tuple[str, ...], str]]:
+    ) -> Union[str, Dict[Tuple[str, ...], Result]]:
 
         self.parse_raw()
 
@@ -393,23 +252,25 @@ class Parser(ABC):
             self.results
         )
 
-        results: Dict[Tuple[str, ...], str] = {}
+        results: Dict[Tuple[str, ...], Result] = {}
 
-        module_key = lambda x: (*x.name.split('.')[:-1],)
+        module_key = lambda x: x.module_path
 
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
             sorted(sorted_data_models.values(), key=module_key, reverse=True),
             key=module_key,
         )
-        for module, models in ((k, [*v]) for k, v in grouped_models):
+        for module, models in (
+            (k, [*v]) for k, v in grouped_models
+        ):  # type: Tuple[str, ...], List[DataModel]
             module_path = '.'.join(module)
 
             init = False
             if module:
                 parent = (*module[:-1], '__init__.py')
                 if parent not in results:
-                    results[parent] = ''
+                    results[parent] = Result(body='')
                 if (*module, '__init__.py') in results:
                     module = (*module, '__init__.py')
                     init = True
@@ -428,11 +289,29 @@ class Parser(ABC):
                     models_to_update += [model.name]
                 imports.append(model.imports)
                 for field in model.fields:
-                    for type_ in field.data_type.types:  # type: str
-                        if not type_ or '.' not in type_:
+                    for data_type in field.data_type.all_data_types:  # type: DataType
+                        if not data_type.type or (
+                            '.' not in data_type.type and data_type.module_name is None
+                        ):
                             continue
+                        type_ = (
+                            f"{data_type.module_name}.{data_type.type}"
+                            if data_type.module_name
+                            else data_type.type
+                        )
                         from_, import_ = relative(module_path, type_)
                         full_path = f'{from_}/{import_}'
+                        name = type_.rsplit('.', 1)[-1]
+                        if data_type.reference:
+                            reference = self.model_resolver.get(
+                                data_type.reference.path
+                            )
+                            if (
+                                reference
+                                and reference.actual_module_name == module_path
+                            ):
+                                model.reference_classes.remove(name)
+                                continue
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_
                         else:
@@ -440,11 +319,11 @@ class Parser(ABC):
                                 full_path.split('/'), import_, unique=True
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
-                        name = type_.rsplit('.', 1)[-1]
-                        if from_ and import_:
-                            field.data_type.replace_type(type_, f'{alias}.{name}')
-                        else:
-                            field.data_type.replace_type(type_, name)
+                        new_name = f'{alias}.{name}' if from_ and import_ else name
+                        if name in model.reference_classes:
+                            model.reference_classes.remove(name)
+                            model.reference_classes.add(new_name)
+                        data_type.type = new_name
 
                 for ref_name in model.reference_classes:
                     from_, import_ = relative(module_path, ref_name)
@@ -472,10 +351,10 @@ class Parser(ABC):
             if format_:
                 body = format_code(body, self.target_python_version)
 
-            results[module] = body
+            results[module] = Result(body=body, source=models[0].path)
 
         # retain existing behaviour
         if [*results] == [('__init__.py',)]:
-            return results[('__init__.py',)]
+            return results[('__init__.py',)].body
 
         return results

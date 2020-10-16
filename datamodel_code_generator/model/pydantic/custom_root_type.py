@@ -22,6 +22,7 @@ class CustomRootType(DataModel):
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
+        path: Optional[Path] = None,
     ):
         super().__init__(
             name,
@@ -34,6 +35,7 @@ class CustomRootType(DataModel):
             imports=imports,
             auto_import=auto_import,
             reference_classes=reference_classes,
+            path=path,
         )
         for field in fields:
             if field.field:

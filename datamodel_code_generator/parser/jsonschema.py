@@ -29,7 +29,7 @@ def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]
     if not keys:
         return schema
     elif len(keys) == 1:
-        return schema[keys[0]]
+        return schema.get(keys[0], {})
     return get_model_by_path(schema[keys[0]], keys[1:])
 
 
@@ -171,7 +171,6 @@ class JsonSchemaParser(Parser):
         self,
         source: Union[str, Path, List[Path]],
         *,
-        base_path: Optional[Path] = None,
         data_model_type: Type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
@@ -191,7 +190,6 @@ class JsonSchemaParser(Parser):
     ):
         super().__init__(
             source=source,
-            base_path=base_path,
             data_model_type=data_model_type,
             data_model_root_type=data_model_root_type,
             data_type_manager_type=data_type_manager_type,
@@ -232,7 +230,8 @@ class JsonSchemaParser(Parser):
         return _get_data_type(obj.type, obj.format or 'default')
 
     def get_ref_data_type(self, ref: str) -> DataType:
-        return self.data_type.from_model_name(self.model_resolver.add_ref(ref).name)
+        reference = self.model_resolver.add_ref(ref)
+        return self.data_type.from_reference(reference)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if not obj.additionalProperties:
@@ -267,7 +266,7 @@ class JsonSchemaParser(Parser):
                 # trivial item types
                 data_types.append(
                     self.data_type(
-                        data_types=[self.get_data_type(item.items)], is_list=True
+                        data_types=[self.get_data_type(item.items)], is_list=True,
                     )
                 )
             else:
@@ -310,6 +309,7 @@ class JsonSchemaParser(Parser):
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
         )
         # add imports for the fields
         for f in fields:
@@ -455,6 +455,7 @@ class JsonSchemaParser(Parser):
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
         )
         self.append_result(data_model_type)
         return data_model_type
@@ -478,7 +479,7 @@ class JsonSchemaParser(Parser):
                 )
                 item_obj_data_types.append(
                     self.data_type.from_model_name(
-                        self.parse_root_type(model.name, item, model.path,).name
+                        self.parse_root_type(model.name, item, path,).name
                     )
                 )
             elif item.ref:
@@ -515,7 +516,7 @@ class JsonSchemaParser(Parser):
             else:
                 item_obj_data_types.append(self.get_data_type(item))
         field = self.data_model_field_type(
-            data_type=self.data_type(data_types=item_obj_data_types, is_list=True),
+            data_type=self.data_type(data_types=item_obj_data_types, is_list=True,),
             example=obj.example,
             examples=obj.examples,
             default=obj.default,
@@ -572,6 +573,7 @@ class JsonSchemaParser(Parser):
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
         )
         self.append_result(data_model_root_type)
         return data_model_root_type
@@ -665,10 +667,13 @@ class JsonSchemaParser(Parser):
                     else:
                         models = ref_body
                         model_name = Path(object_path).stem
-                    self.parse_raw_obj(
-                        model_name, models, [str(full_path), '#', *object_paths],
-                    )
-                    self.model_resolver.add_ref(obj.ref).loaded = True
+                    if models:  # pragma: no cover
+                        self.parse_raw_obj(
+                            model_name, models, [relative_path, '#', *object_paths],
+                        )
+                    self.model_resolver.add_ref(
+                        obj.ref, actual_module_name=''
+                    ).loaded = True
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
@@ -703,12 +708,19 @@ class JsonSchemaParser(Parser):
         self.parse_ref(obj, path)
 
     def parse_raw(self) -> None:
+        if isinstance(self.source, list) or (
+            isinstance(self.source, Path) and self.source.is_dir()
+        ):
+            self.current_source_path = Path()
         for source in self.iter_source:
-            self.model_resolver.set_current_root(source.path)
+            if self.current_source_path is not None:
+                self.current_source_path = source.path
+            path_parts = list(source.path.parts)
+            self.model_resolver.set_current_root(path_parts)
             raw_obj: Dict[Any, Any] = yaml.safe_load(source.text)
             obj_name = raw_obj.get('title', 'Model')
-            obj_name = self.model_resolver.add(source.path, obj_name, unique=False).name
-            self.parse_raw_obj(obj_name, raw_obj, source.path)
+            obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
+            self.parse_raw_obj(obj_name, raw_obj, path_parts)
             definitions = raw_obj.get('definitions', {})
             for key, model in definitions.items():
-                self.parse_raw_obj(key, model, [*source.path, '#/definitions', key])
+                self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])

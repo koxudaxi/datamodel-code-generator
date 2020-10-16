@@ -20,6 +20,10 @@ from datamodel_code_generator.types import DataType
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
 
+EXPECTED_JSONSCHEMA_PATH = (
+    Path(__file__).parents[1] / 'data' / 'expected' / 'parser' / 'jsonschema'
+)
+
 
 @pytest.mark.parametrize(
     'schema,path,model',
@@ -314,6 +318,15 @@ def test_parse_nested_array():
     assert (
         dump_templates(list(parser.results))
         == (DATA_PATH / 'nested_array.json.snapshot').read_text()
+    )
+
+
+def test_parse_multiple_files():
+    parser = JsonSchemaParser(DATA_PATH / 'multiple_files')
+    parser.parse()
+    assert (
+        dump_templates(list(parser.results))
+        == (EXPECTED_JSONSCHEMA_PATH / 'multiple_files' / 'output.py').read_text()
     )
 
 

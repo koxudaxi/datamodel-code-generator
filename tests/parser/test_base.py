@@ -7,15 +7,9 @@ import pytest
 
 from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import TemplateBase
 from datamodel_code_generator.model.pydantic import BaseModel
-from datamodel_code_generator.parser.base import (
-    Parser,
-    dump_templates,
-    relative,
-    snake_to_upper_camel,
-    sort_data_models,
-)
+from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
+from datamodel_code_generator.reference import snake_to_upper_camel
 
 
 class A(DataModel):

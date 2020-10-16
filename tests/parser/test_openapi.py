@@ -3,12 +3,12 @@ from typing import List, Optional
 
 import pytest
 
-from datamodel_code_generator import DataModelField, DataTypeManager, PythonVersion
+from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.model import DataModelFieldBase
-from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
-from datamodel_code_generator.parser.base import Reference, dump_templates
+from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser
+from datamodel_code_generator.reference import Reference
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 
@@ -355,7 +355,7 @@ def test_openapi_parser_parse_alias():
     )
     for path in openapi_parser_parse_alias_dir.rglob('*.py'):
         key = str(path.relative_to(openapi_parser_parse_alias_dir))
-        assert results.pop(key) == path.read_text()
+        assert results.pop(key).body == path.read_text()
 
 
 @pytest.mark.parametrize(
@@ -372,7 +372,7 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class):
 
     for paths, result in modules.items():
         expected = main_modular_dir.joinpath(*paths).read_text()
-        assert result == expected
+        assert result.body == expected
 
 
 @pytest.mark.parametrize(
@@ -442,68 +442,80 @@ def test_openapi_model_resolver():
     parser.parse()
 
     assert parser.model_resolver.references == {
+        '#/components/schemas/Event': Reference(
+            path='#/components/schemas/Event',
+            original_name='Event',
+            name='Event',
+            loaded=True,
+        ),
+        '#/components/schemas/Pet': Reference(
+            path='#/components/schemas/Pet',
+            original_name='Pet',
+            name='Pet',
+            loaded=True,
+        ),
         'api.yaml#/components/schemas/Error': Reference(
-            path=['components', 'schemas', 'Error'],
+            path='api.yaml#/components/schemas/Error',
             original_name='Error',
             name='Error',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Event': Reference(
-            path=['components', 'schemas', 'Event'],
+            path='api.yaml#/components/schemas/Event',
             original_name='Event',
             name='Event',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Id': Reference(
-            path=['components', 'schemas', 'Id'],
+            path='api.yaml#/components/schemas/Id',
             original_name='Id',
             name='Id',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Pet': Reference(
-            path=['components', 'schemas', 'Pet'],
+            path='api.yaml#/components/schemas/Pet',
             original_name='Pet',
             name='Pet',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Pets': Reference(
-            path=['components', 'schemas', 'Pets'],
+            path='api.yaml#/components/schemas/Pets',
             original_name='Pets',
             name='Pets',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Result': Reference(
-            path=['components', 'schemas', 'Result'],
+            path='api.yaml#/components/schemas/Result',
             original_name='Result',
             name='Result',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Rules': Reference(
-            path=['components', 'schemas', 'Rules'],
+            path='api.yaml#/components/schemas/Rules',
             original_name='Rules',
             name='Rules',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Users': Reference(
-            path=['components', 'schemas', 'Users'],
+            path='api.yaml#/components/schemas/Users',
             original_name='Users',
             name='Users',
             loaded=True,
         ),
         'api.yaml#/components/schemas/Users/Users': Reference(
-            path=['components', 'schemas', 'Users', 'Users'],
+            path='api.yaml#/components/schemas/Users/Users',
             original_name='Users',
             name='User',
             loaded=True,
         ),
         'api.yaml#/components/schemas/apis': Reference(
-            path=['components', 'schemas', 'apis'],
+            path='api.yaml#/components/schemas/apis',
             original_name='apis',
             name='Apis',
             loaded=True,
         ),
         'api.yaml#/components/schemas/apis/Apis': Reference(
-            path=['components', 'schemas', 'apis', 'Apis'],
+            path='api.yaml#/components/schemas/apis/Apis',
             original_name='Apis',
             name='Api',
             loaded=True,

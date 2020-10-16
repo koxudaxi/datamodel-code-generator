@@ -19,7 +19,7 @@ class OpenAPIParser(JsonSchemaParser):
                 components: Dict[str, Any] = base_parser.specification['components']
             else:
                 components = yaml.safe_load(source.text)['components']
-            self.model_resolver.set_current_root(source.path)
+            self.model_resolver.set_current_root(list(source.path.parts))
             for obj_name, raw_obj in components[
                 'schemas'
             ].items():  # type: str, Dict[Any, Any]

@@ -12,10 +12,12 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.reference import Reference
 
 
 class DataType(BaseModel):
     type: Optional[str]
+    reference: Optional[Reference]
     data_types: List['DataType'] = []
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]]
@@ -31,24 +33,23 @@ class DataType(BaseModel):
     def from_model_name(cls, model_name: str, is_list: bool = False) -> 'DataType':
         return cls(type=model_name, ref=True, is_list=is_list)
 
-    @property
-    def types(self) -> Iterator[str]:
-        if self.type:
-            yield self.type
-        for data_type in self.data_types:
-            for type_ in data_type.types:  # pragma: no cover
-                if type_:
-                    yield type_
+    @classmethod
+    def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
+        return cls(type=reference.name, reference=reference, is_list=is_list)
 
-    def replace_type(self, old: str, new: str) -> None:
-        if self.type == old:
-            self.type = new
+    @property
+    def module_name(self) -> Optional[str]:
+        return self.reference.module_name if self.reference else None
+
+    @property
+    def all_data_types(self) -> Iterator['DataType']:
         for data_type in self.data_types:
-            data_type.replace_type(old, new)
+            yield from data_type.all_data_types
+        yield self
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
-        if self.ref and self.type:
+        if self.type and (self.reference or self.ref):
             self.unresolved_types.add(self.type)
         for field, import_ in (
             (self.is_list, IMPORT_LIST),
@@ -65,7 +66,9 @@ class DataType(BaseModel):
     @property
     def type_hint(self) -> str:
         if self.type:
-            if self.ref and self.python_version == PythonVersion.PY_36:
+            if (
+                self.reference or self.ref
+            ) and self.python_version == PythonVersion.PY_36:
                 type_: str = f"'{self.type}'"
             else:
                 type_ = self.type
