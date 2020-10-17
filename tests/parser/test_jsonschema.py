@@ -321,15 +321,6 @@ def test_parse_nested_array():
     )
 
 
-def test_parse_multiple_files():
-    parser = JsonSchemaParser(DATA_PATH / 'multiple_files')
-    parser.parse()
-    assert (
-        dump_templates(list(parser.results))
-        == (EXPECTED_JSONSCHEMA_PATH / 'multiple_files' / 'output.py').read_text()
-    )
-
-
 @pytest.mark.parametrize(
     'schema_type,schema_format,result_type,from_,import_',
     [
