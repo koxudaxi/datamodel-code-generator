@@ -130,6 +130,7 @@ class DataModel(TemplateBase, ABC):
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
         methods: Optional[List[str]] = None,
+        path: Optional[Path] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -147,6 +148,7 @@ class DataModel(TemplateBase, ABC):
         self.base_class: Optional[str] = None
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes
+        self.path: Optional[Path] = path
 
         self.reference_classes: Set[str] = {
             r for r in base_classes if r != self.BASE_CLASS
@@ -196,6 +198,16 @@ class DataModel(TemplateBase, ABC):
         self.methods: List[str] = methods or []
 
         super().__init__(template_file_path=template_file_path)
+
+    @property
+    def module_path(self) -> List[str]:
+        if self.path:
+            return [
+                *self.path.parts[:-1],
+                self.path.stem,
+                *self.name.split('.')[:-1],
+            ]
+        return self.name.split('.')[:-1]
 
     def render(self) -> str:
         response = self._render(

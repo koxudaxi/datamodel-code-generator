@@ -3,11 +3,12 @@ from typing import List, Optional
 
 import pytest
 
-from datamodel_code_generator import DataModelField, DataTypeManager, PythonVersion
-from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
-from datamodel_code_generator.parser.base import Reference, dump_templates
+from datamodel_code_generator import PythonVersion
+from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser
+from datamodel_code_generator.reference import Reference
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 
@@ -120,7 +121,7 @@ class Pets(BaseModel):
     ],
 )
 def test_parse_object(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType, DataTypeManager)
+    parser = OpenAPIParser('')
     parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -162,7 +163,7 @@ class Pets(BaseModel):
     ],
 )
 def test_parse_array(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType, DataTypeManager)
+    parser = OpenAPIParser('')
     parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
@@ -183,7 +184,7 @@ def test_parse_array(source_obj, generated_classes):
     ],
 )
 def test_parse_root_type(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType)
+    parser = OpenAPIParser('')
     parsed_templates = parser.parse_root_type(
         'Name', JsonSchemaObject.parse_obj(source_obj)
     )
@@ -201,10 +202,8 @@ def test_parse_root_type(source_obj, generated_classes):
 )
 def test_openapi_parser_parse(with_import, format_, base_class):
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'api.yaml').read_text(),
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'api.yaml'),
         base_class=base_class,
     )
     expected_file = get_expected_file(
@@ -232,18 +231,13 @@ def test_openapi_parser_parse(with_import, format_, base_class):
     ],
 )
 def test_parse_root_type(source_obj, generated_classes):
-    parser = OpenAPIParser(BaseModel, CustomRootType, DataTypeManager)
+    parser = OpenAPIParser('')
     parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
 def test_openapi_parser_parse_duplicate_models():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'duplicate_models.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'duplicate_models.yaml'),)
     assert (
         parser.parse()
         == (
@@ -255,12 +249,7 @@ def test_openapi_parser_parse_duplicate_models():
 
 
 def test_openapi_parser_parse_resolved_models():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'resolved_models.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'resolved_models.yaml'),)
     assert (
         parser.parse()
         == (
@@ -272,12 +261,7 @@ def test_openapi_parser_parse_resolved_models():
 
 
 def test_openapi_parser_parse_lazy_resolved_models():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'lazy_resolved_models.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'lazy_resolved_models.yaml'),)
     assert (
         parser.parse()
         == '''from __future__ import annotations
@@ -320,31 +304,21 @@ class Results(BaseModel):
 
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'enum_models.yaml').read_text(),
+        Path(DATA_PATH / 'enum_models.yaml').read_text(),
+        data_model_field_type=DataModelFieldBase,
     )
     expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_enum_models'
     assert parser.parse() == (expected_dir / 'output_py37.py').read_text()
 
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'enum_models.yaml').read_text(),
+        Path(DATA_PATH / 'enum_models.yaml').read_text(),
         target_python_version=PythonVersion.PY_36,
     )
     assert parser.parse() == (expected_dir / 'output_py36.py').read_text()
 
 
 def test_openapi_parser_parse_anyof():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'anyof.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'anyof.yaml'),)
     assert (
         parser.parse()
         == (
@@ -354,13 +328,7 @@ def test_openapi_parser_parse_anyof():
 
 
 def test_openapi_parser_parse_nested_anyof():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        data_model_field_type=DataModelField,
-        text=Path(DATA_PATH / 'nested_anyof.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'nested_anyof.yaml').read_text(),)
     assert (
         parser.parse()
         == (
@@ -370,12 +338,7 @@ def test_openapi_parser_parse_nested_anyof():
 
 
 def test_openapi_parser_parse_allof():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'allof.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'allof.yaml'),)
     assert (
         parser.parse()
         == (
@@ -385,20 +348,14 @@ def test_openapi_parser_parse_allof():
 
 
 def test_openapi_parser_parse_alias():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        data_model_field_type=DataModelField,
-        text=Path(DATA_PATH / 'alias.yaml').read_text(),
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'alias.yaml'),)
     results = {'/'.join(p): r for p, r in parser.parse().items()}
     openapi_parser_parse_alias_dir = (
         EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_alias'
     )
     for path in openapi_parser_parse_alias_dir.rglob('*.py'):
         key = str(path.relative_to(openapi_parser_parse_alias_dir))
-        assert results.pop(key) == path.read_text()
+        assert results.pop(key).body == path.read_text()
 
 
 @pytest.mark.parametrize(
@@ -406,18 +363,16 @@ def test_openapi_parser_parse_alias():
 )
 def test_openapi_parser_parse_modular(with_import, format_, base_class):
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'modular.yaml').read_text(),
+        Path(DATA_PATH / 'modular.yaml'),
         base_class=base_class,
+        data_model_field_type=DataModelFieldBase,
     )
     modules = parser.parse(with_import=with_import, format_=format_)
     main_modular_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_modular'
 
     for paths, result in modules.items():
         expected = main_modular_dir.joinpath(*paths).read_text()
-        assert result == expected
+        assert result.body == expected
 
 
 @pytest.mark.parametrize(
@@ -431,11 +386,9 @@ def test_openapi_parser_parse_modular(with_import, format_, base_class):
 )
 def test_openapi_parser_parse_additional_properties(with_import, format_, base_class):
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'additional_properties.yaml').read_text(),
+        Path(DATA_PATH / 'additional_properties.yaml').read_text(),
         base_class=base_class,
+        data_model_field_type=DataModelFieldBase,
     )
 
     assert (
@@ -454,11 +407,7 @@ def test_openapi_parser_parse_additional_properties(with_import, format_, base_c
 )
 def test_openapi_parser_parse_array_enum(with_import, format_, base_class):
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'array_enum.yaml').read_text(),
-        base_class=base_class,
+        source=Path(DATA_PATH / 'array_enum.yaml'), base_class=base_class
     )
     expected_file = get_expected_file(
         'openapi_parser_parse_array_enum', with_import, format_, base_class
@@ -474,11 +423,9 @@ def test_openapi_parser_parse_array_enum(with_import, format_, base_class):
 )
 def test_openapi_parser_parse_remote_ref(with_import, format_, base_class):
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
+        data_model_field_type=DataModelFieldBase,
         base_class=base_class,
-        text=(DATA_PATH / 'refs.yaml').read_text(),
+        source=(DATA_PATH / 'refs.yaml').read_text(),
     )
     expected_file = get_expected_file(
         'openapi_parser_parse_remote_ref', with_import, format_, base_class
@@ -491,77 +438,84 @@ def test_openapi_parser_parse_remote_ref(with_import, format_, base_class):
 
 
 def test_openapi_model_resolver():
-    parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'api.yaml').read_text(),
-    )
+    parser = OpenAPIParser(source=(DATA_PATH / 'api.yaml'))
     parser.parse()
 
     assert parser.model_resolver.references == {
-        '#/components/schemas/Error': Reference(
-            path=['#/components', 'schemas', 'Error'],
-            original_name='Error',
-            name='Error',
-            loaded=True,
-        ),
         '#/components/schemas/Event': Reference(
-            path=['#/components', 'schemas', 'Event'],
+            path='#/components/schemas/Event',
             original_name='Event',
             name='Event',
             loaded=True,
         ),
-        '#/components/schemas/Id': Reference(
-            path=['#/components', 'schemas', 'Id'],
-            original_name='Id',
-            name='Id',
-            loaded=True,
-        ),
         '#/components/schemas/Pet': Reference(
-            path=['#/components', 'schemas', 'Pet'],
+            path='#/components/schemas/Pet',
             original_name='Pet',
             name='Pet',
             loaded=True,
         ),
-        '#/components/schemas/Pets': Reference(
-            path=['#/components', 'schemas', 'Pets'],
+        'api.yaml#/components/schemas/Error': Reference(
+            path='api.yaml#/components/schemas/Error',
+            original_name='Error',
+            name='Error',
+            loaded=True,
+        ),
+        'api.yaml#/components/schemas/Event': Reference(
+            path='api.yaml#/components/schemas/Event',
+            original_name='Event',
+            name='Event',
+            loaded=True,
+        ),
+        'api.yaml#/components/schemas/Id': Reference(
+            path='api.yaml#/components/schemas/Id',
+            original_name='Id',
+            name='Id',
+            loaded=True,
+        ),
+        'api.yaml#/components/schemas/Pet': Reference(
+            path='api.yaml#/components/schemas/Pet',
+            original_name='Pet',
+            name='Pet',
+            loaded=True,
+        ),
+        'api.yaml#/components/schemas/Pets': Reference(
+            path='api.yaml#/components/schemas/Pets',
             original_name='Pets',
             name='Pets',
             loaded=True,
         ),
-        '#/components/schemas/Result': Reference(
-            path=['#/components', 'schemas', 'Result'],
+        'api.yaml#/components/schemas/Result': Reference(
+            path='api.yaml#/components/schemas/Result',
             original_name='Result',
             name='Result',
             loaded=True,
         ),
-        '#/components/schemas/Rules': Reference(
-            path=['#/components', 'schemas', 'Rules'],
+        'api.yaml#/components/schemas/Rules': Reference(
+            path='api.yaml#/components/schemas/Rules',
             original_name='Rules',
             name='Rules',
             loaded=True,
         ),
-        '#/components/schemas/Users': Reference(
-            path=['#/components', 'schemas', 'Users'],
+        'api.yaml#/components/schemas/Users': Reference(
+            path='api.yaml#/components/schemas/Users',
             original_name='Users',
             name='Users',
             loaded=True,
         ),
-        '#/components/schemas/Users/Users': Reference(
-            path=['#/components', 'schemas', 'Users', 'Users'],
+        'api.yaml#/components/schemas/Users/Users': Reference(
+            path='api.yaml#/components/schemas/Users/Users',
             original_name='Users',
             name='User',
             loaded=True,
         ),
-        '#/components/schemas/apis': Reference(
-            path=['#/components', 'schemas', 'apis'],
+        'api.yaml#/components/schemas/apis': Reference(
+            path='api.yaml#/components/schemas/apis',
             original_name='apis',
             name='Apis',
             loaded=True,
         ),
-        '#/components/schemas/apis/Apis': Reference(
-            path=['#/components', 'schemas', 'apis', 'Apis'],
+        'api.yaml#/components/schemas/apis/Apis': Reference(
+            path='api.yaml#/components/schemas/apis/Apis',
             original_name='Apis',
             name='Api',
             loaded=True,
@@ -571,10 +525,7 @@ def test_openapi_model_resolver():
 
 def test_openapi_parser_parse_any():
     parser = OpenAPIParser(
-        BaseModel,
-        CustomRootType,
-        DataTypeManager,
-        text=Path(DATA_PATH / 'any.yaml').read_text(),
+        data_model_field_type=DataModelFieldBase, source=Path(DATA_PATH / 'any.yaml'),
     )
     assert (
         parser.parse()

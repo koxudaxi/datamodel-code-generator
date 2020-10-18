@@ -47,7 +47,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
-    '--input', help='Input file (default: stdin)', type=FileType('rt'),
+    '--input', help='Input file/directory (default: stdin)',
 )
 arg_parser.add_argument(
     '--input-file-type',
@@ -128,19 +128,19 @@ class Config(BaseModel):
         validate_assignment = True
         arbitrary_types_allowed = (TextIOBase,)
 
-    @validator("input", "aliases", "extra_template_data", pre=True)
+    @validator("aliases", "extra_template_data", pre=True)
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
         return cast(TextIOBase, Path(value).expanduser().resolve().open("rt"))
 
-    @validator("output", "custom_template_dir", pre=True)
+    @validator("input", "output", "custom_template_dir", pre=True)
     def validate_path(cls, value: Any) -> Optional[Path]:
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
-    input: Optional[TextIOBase]
+    input: Optional[Path]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
     debug: bool = False
@@ -198,13 +198,6 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     config = Config.parse_obj(pyproject_toml)
     config.merge_args(namespace)
 
-    if config.input is not None:
-        input_name: str = config.input.name  # type: ignore
-        input_text: str = config.input.read()
-    else:
-        input_name = '<stdin>'
-        input_text = sys.stdin.read()
-
     if config.debug:  # pragma: no cover
         enable_debug_message()
 
@@ -241,8 +234,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     try:
         generate(
-            input_name=input_name,
-            input_text=input_text,
+            input_=config.input or sys.stdin.read(),
             input_file_type=config.input_file_type,
             output=config.output,
             target_python_version=config.target_python_version,

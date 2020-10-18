@@ -19,6 +19,7 @@ class DataClass(DataModel):
         extra_template_data: Optional[DefaultDict[str, Any]] = None,
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
+        path: Optional[Path] = None,
     ):
 
         super().__init__(
@@ -31,5 +32,6 @@ class DataClass(DataModel):
             extra_template_data=extra_template_data,
             auto_import=auto_import,
             reference_classes=reference_classes,
+            path=path,
         )
         self.imports.append(Import.from_full_path('pydantic.dataclasses.dataclass'))
