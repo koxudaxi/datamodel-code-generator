@@ -124,9 +124,11 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
 
 def generate(
     input_: Union[Path, str],
-    input_file_type: InputFileType,
-    output: Optional[Path],
-    target_python_version: PythonVersion,
+    *,
+    input_filename: Optional[str] = None,
+    input_file_type: InputFileType = InputFileType.Auto,
+    output: Optional[Path] = None,
+    target_python_version: PythonVersion = PythonVersion.PY_37,
     base_class: str = DEFAULT_BASE_CLASS,
     custom_template_dir: Optional[Path] = None,
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
@@ -196,10 +198,11 @@ def generate(
 
     with chdir(output):
         results = parser.parse()
-    if isinstance(input_, str):
-        input_filename = '<stdin>'
-    else:
-        input_filename = input_.name
+    if not input_filename:
+        if isinstance(input_, str):
+            input_filename = '<stdin>'
+        else:
+            input_filename = input_.name
     if isinstance(results, str):
 
         modules = {output: (results, input_filename)}
