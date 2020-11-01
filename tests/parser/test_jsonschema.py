@@ -326,6 +326,7 @@ def test_parse_nested_array():
     [
         ('integer', 'int32', 'int', None, None),
         ('integer', 'int64', 'int', None, None),
+        ('integer', 'unix-time', 'int', None, None),
         ('number', 'float', 'float', None, None),
         ('number', 'double', 'float', None, None),
         ('number', 'time', 'time', None, None),

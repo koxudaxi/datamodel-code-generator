@@ -34,7 +34,12 @@ def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]
 
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
-    'integer': {'int32': Types.int32, 'int64': Types.int64, 'default': Types.integer},
+    'integer': {
+        'int32': Types.int32,
+        'int64': Types.int64,
+        'default': Types.integer,
+        'unix-time': Types.int64,
+    },
     'number': {
         'float': Types.float,
         'double': Types.double,
