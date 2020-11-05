@@ -191,7 +191,7 @@ class JsonSchemaParser(Parser):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
-        use_default_on_required_field: bool = False,
+        apply_default_values_for_required_fields: bool = False,
     ):
         super().__init__(
             source=source,
@@ -210,7 +210,7 @@ class JsonSchemaParser(Parser):
             strip_default_none=strip_default_none,
             aliases=aliases,
             allow_population_by_field_name=allow_population_by_field_name,
-            use_default_on_required_field=use_default_on_required_field,
+            apply_default_values_for_required_fields=apply_default_values_for_required_fields,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -419,7 +419,7 @@ class JsonSchemaParser(Parser):
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
                     constraints = field.dict()
-            if self.use_default_on_required_field and field.has_default:
+            if self.apply_default_values_for_required_fields and field.has_default:
                 required: bool = False
             else:
                 required = original_field_name in requires
@@ -528,7 +528,7 @@ class JsonSchemaParser(Parser):
             description=obj.description,
             title=obj.title,
             required=not obj.nullable
-            and not (obj.has_default and self.use_default_on_required_field),
+            and not (obj.has_default and self.apply_default_values_for_required_fields),
             constraints=obj.dict(),
         )
         return field
@@ -571,7 +571,10 @@ class JsonSchemaParser(Parser):
                     examples=obj.examples,
                     default=obj.default,
                     required=not obj.nullable
-                    and not (obj.has_default and self.use_default_on_required_field),
+                    and not (
+                        obj.has_default
+                        and self.apply_default_values_for_required_fields
+                    ),
                     constraints=obj.dict() if self.field_constraints else {},
                 )
             ],

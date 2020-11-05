@@ -248,7 +248,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
             allow_population_by_field_name=config.allow_population_by_field_name,
-            use_default_on_required_field=config.use_default,
+            apply_default_values_for_required_fields=config.use_default,
         )
         return Exit.OK
     except Error as e:
