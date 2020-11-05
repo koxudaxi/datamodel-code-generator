@@ -38,7 +38,7 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--field-constraints] [--snake-case-field]
                          [--strip-default-none]
                          [--allow-population-by-field-name] [--use-default]
-                         [--disable-timestamp]
+                         [--force-optional] [--disable-timestamp]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
@@ -47,7 +47,7 @@ usage: datamodel-codegen [-h] [--input INPUT]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input INPUT         Input file (default: stdin)
+  --input INPUT         Input file/directory (default: stdin)
   --input-file-type {auto,openapi,jsonschema,json,yaml}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
@@ -59,6 +59,7 @@ optional arguments:
   --allow-population-by-field-name
                         Allow population by field name
   --use-default         Use default value even if a field is required
+  --force-optional      Force optional for required fields
   --disable-timestamp   Disable timestamp on file headers
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
