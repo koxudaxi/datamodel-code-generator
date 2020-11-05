@@ -140,6 +140,7 @@ def generate(
     disable_timestamp: bool = False,
     allow_population_by_field_name: bool = False,
     apply_default_values_for_required_fields: bool = False,
+    force_optional_for_required_fields: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -194,6 +195,7 @@ def generate(
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
         apply_default_values_for_required_fields=apply_default_values_for_required_fields,
+        force_optional_for_required_fields=force_optional_for_required_fields,
     )
 
     with chdir(output):

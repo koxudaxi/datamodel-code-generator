@@ -192,6 +192,7 @@ class JsonSchemaParser(Parser):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
+        force_optional_for_required_fields: bool = False,
     ):
         super().__init__(
             source=source,
@@ -211,6 +212,7 @@ class JsonSchemaParser(Parser):
             aliases=aliases,
             allow_population_by_field_name=allow_population_by_field_name,
             apply_default_values_for_required_fields=apply_default_values_for_required_fields,
+            force_optional_for_required_fields=force_optional_for_required_fields,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -419,7 +421,9 @@ class JsonSchemaParser(Parser):
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
                     constraints = field.dict()
-            if self.apply_default_values_for_required_fields and field.has_default:
+            if self.force_optional_for_required_fields or (
+                self.apply_default_values_for_required_fields and field.has_default
+            ):
                 required: bool = False
             else:
                 required = original_field_name in requires
@@ -520,6 +524,12 @@ class JsonSchemaParser(Parser):
                 item_obj_data_types.append(array_field.data_type)
             else:
                 item_obj_data_types.append(self.get_data_type(item))
+        if self.force_optional_for_required_fields:
+            required: bool = False
+        else:
+            required = not obj.nullable and not (
+                obj.has_default and self.apply_default_values_for_required_fields
+            )
         field = self.data_model_field_type(
             data_type=self.data_type(data_types=item_obj_data_types, is_list=True,),
             example=obj.example,
@@ -527,8 +537,7 @@ class JsonSchemaParser(Parser):
             default=obj.default,
             description=obj.description,
             title=obj.title,
-            required=not obj.nullable
-            and not (obj.has_default and self.apply_default_values_for_required_fields),
+            required=required,
             constraints=obj.dict(),
         )
         return field
@@ -560,7 +569,12 @@ class JsonSchemaParser(Parser):
             data_type = self.get_ref_data_type(obj.ref)
         else:
             data_type = self.data_type_manager.get_data_type(Types.any)
-
+        if self.force_optional_for_required_fields:
+            required: bool = False
+        else:
+            required = not obj.nullable and not (
+                obj.has_default and self.apply_default_values_for_required_fields
+            )
         data_model_root_type = self.data_model_root_type(
             name,
             [
@@ -570,11 +584,7 @@ class JsonSchemaParser(Parser):
                     example=obj.example,
                     examples=obj.examples,
                     default=obj.default,
-                    required=not obj.nullable
-                    and not (
-                        obj.has_default
-                        and self.apply_default_values_for_required_fields
-                    ),
+                    required=required,
                     constraints=obj.dict() if self.field_constraints else {},
                 )
             ],

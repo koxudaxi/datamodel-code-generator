@@ -93,6 +93,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--force-optional',
+    help='Force optional for required fields',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--disable-timestamp',
     help='Disable timestamp on file headers',
     action='store_true',
@@ -156,6 +163,7 @@ class Config(BaseModel):
     disable_timestamp: bool = False
     allow_population_by_field_name: bool = False
     use_default: bool = False
+    force_optional: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -249,6 +257,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             disable_timestamp=config.disable_timestamp,
             allow_population_by_field_name=config.allow_population_by_field_name,
             apply_default_values_for_required_fields=config.use_default,
+            force_optional_for_required_fields=config.force_optional,
         )
         return Exit.OK
     except Error as e:
