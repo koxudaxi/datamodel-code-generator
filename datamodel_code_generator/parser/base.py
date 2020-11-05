@@ -163,7 +163,7 @@ class Parser(ABC):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
-        use_default_on_required_field: bool = False,
+        apply_default_values_for_required_fields: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version
@@ -182,7 +182,7 @@ class Parser(ABC):
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
         self.strip_default_none: bool = strip_default_none
-        self.use_default_on_required_field: bool = use_default_on_required_field
+        self.apply_default_values_for_required_fields: bool = apply_default_values_for_required_fields
 
         self.current_source_path: Optional[Path] = None
 

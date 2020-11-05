@@ -139,7 +139,7 @@ def generate(
     aliases: Optional[Mapping[str, str]] = None,
     disable_timestamp: bool = False,
     allow_population_by_field_name: bool = False,
-    use_default_on_required_field: bool = False,
+    apply_default_values_for_required_fields: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -193,7 +193,7 @@ def generate(
         strip_default_none=strip_default_none,
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
-        use_default_on_required_field=use_default_on_required_field,
+        apply_default_values_for_required_fields=apply_default_values_for_required_fields,
     )
 
     with chdir(output):
