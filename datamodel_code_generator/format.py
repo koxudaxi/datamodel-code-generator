@@ -4,7 +4,7 @@ from typing import Dict
 
 import black
 import toml
-from isort import SortImports
+import isort
 
 
 class PythonVersion(Enum):
@@ -49,4 +49,4 @@ def apply_black(code: str, python_version: PythonVersion) -> str:
 
 
 def apply_isort(code: str) -> str:
-    return SortImports(file_contents=code).output
+    return isort.code(code)
