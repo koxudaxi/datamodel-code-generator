@@ -50,6 +50,6 @@ def apply_black(code: str, python_version: PythonVersion) -> str:
 
 def apply_isort(code: str) -> str:
     if isort.__version__.startswith('4.'):
-        return isort.SortImports(file_contents=code).output  # type: ignore
+        return isort.SortImports(file_contents=code).output
     else:
         return isort.code(code)
