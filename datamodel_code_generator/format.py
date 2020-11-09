@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Dict
 
 import black
-import toml
 import isort
+import toml
 
 
 class PythonVersion(Enum):
