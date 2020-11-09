@@ -241,7 +241,10 @@ class Parser(ABC):
         raise NotImplementedError
 
     def parse(
-        self, with_import: Optional[bool] = True, format_: Optional[bool] = True
+        self,
+        with_import: Optional[bool] = True,
+        format_: Optional[bool] = True,
+        settings_path: Optional[Path] = None,
     ) -> Union[str, Dict[Tuple[str, ...], Result]]:
 
         self.parse_raw()
@@ -351,7 +354,9 @@ class Parser(ABC):
 
             body = '\n'.join(result)
             if format_:
-                body = format_code(body, self.target_python_version)
+                body = format_code(
+                    body, self.target_python_version, settings_path or Path().resolve()
+                )
 
             results[module] = Result(body=body, source=models[0].path)
 
