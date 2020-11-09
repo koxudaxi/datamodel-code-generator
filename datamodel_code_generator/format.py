@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Dict
 
 import black
-import toml
 import isort
+import toml
 
 
 class PythonVersion(Enum):
@@ -20,16 +20,15 @@ BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
 }
 
 
-def format_code(code: str, python_version: PythonVersion) -> str:
-
-    code = apply_isort(code)
-    code = apply_black(code, python_version)
+def format_code(code: str, python_version: PythonVersion, settings_path: Path) -> str:
+    code = apply_isort(code, settings_path)
+    code = apply_black(code, python_version, settings_path)
     return code
 
 
-def apply_black(code: str, python_version: PythonVersion) -> str:
+def apply_black(code: str, python_version: PythonVersion, settings_path: Path) -> str:
 
-    root = black.find_project_root((Path().resolve(),))
+    root = black.find_project_root((settings_path,))
     path = root / "pyproject.toml"
     if path.is_file():
         value = str(path)
@@ -48,8 +47,10 @@ def apply_black(code: str, python_version: PythonVersion) -> str:
     )
 
 
-def apply_isort(code: str) -> str:
+def apply_isort(code: str, settings_path: Path) -> str:
     if isort.__version__.startswith('4.'):
-        return isort.SortImports(file_contents=code).output
+        return isort.SortImports(
+            file_contents=code, settings_path=str(settings_path)
+        ).output
     else:
-        return isort.code(code)
+        return isort.code(code, config=isort.Config(settings_path=str(settings_path)))

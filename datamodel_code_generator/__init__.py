@@ -200,7 +200,7 @@ def generate(
 
     with chdir(output):
         results = parser.parse()
-    if not input_filename:
+    if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
             input_filename = '<stdin>'
         else:

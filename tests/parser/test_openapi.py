@@ -210,7 +210,9 @@ def test_openapi_parser_parse(with_import, format_, base_class):
         'openapi_parser_parse', with_import, format_, base_class
     )
     assert (
-        parser.parse(with_import=with_import, format_=format_)
+        parser.parse(
+            with_import=with_import, format_=format_, settings_path=DATA_PATH.parent
+        )
         == expected_file.read_text()
     )
 
@@ -392,7 +394,9 @@ def test_openapi_parser_parse_additional_properties(with_import, format_, base_c
     )
 
     assert (
-        parser.parse(with_import=with_import, format_=format_)
+        parser.parse(
+            with_import=with_import, format_=format_, settings_path=DATA_PATH.parent
+        )
         == get_expected_file(
             'openapi_parser_parse_additional_properties',
             with_import,

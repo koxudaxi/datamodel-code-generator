@@ -43,6 +43,7 @@ def test_main():
 def test_main_base_class():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
+        shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
         return_code: Exit = main(
             [
                 '--input',

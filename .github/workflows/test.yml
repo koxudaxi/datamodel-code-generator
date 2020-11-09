@@ -31,6 +31,9 @@ jobs:
     - name: Lint
       if: matrix.os != 'windows-latest'
       run: |
+        pip install isort==4.3.21
+        ./scripts/lint.sh
+        pip install isort==5.6.4
         ./scripts/lint.sh
     - name: Unit Test
       if: matrix.os != 'windows-latest'
