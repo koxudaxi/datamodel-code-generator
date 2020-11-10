@@ -112,6 +112,13 @@ class Error(Exception):
         return self.message
 
 
+class InvalidClassNameError(Error):
+    def __init__(self, class_name: str) -> None:
+        self.class_name = class_name
+        message = f'title={repr(class_name)} is invalid class name.'
+        super().__init__(message=message)
+
+
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     if path.is_file():
         return path
@@ -141,6 +148,7 @@ def generate(
     allow_population_by_field_name: bool = False,
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
+    class_name: Optional[str] = None,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -196,6 +204,7 @@ def generate(
         allow_population_by_field_name=allow_population_by_field_name,
         apply_default_values_for_required_fields=apply_default_values_for_required_fields,
         force_optional_for_required_fields=force_optional_for_required_fields,
+        class_name=class_name,
     )
 
     with chdir(output):

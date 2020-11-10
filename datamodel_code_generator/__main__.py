@@ -23,6 +23,7 @@ from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
     Error,
     InputFileType,
+    InvalidClassNameError,
     enable_debug_message,
     generate,
 )
@@ -107,6 +108,10 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--class-name', help='Set class name of root model', default=None,
+)
+
+arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
 )
 arg_parser.add_argument(
@@ -164,6 +169,7 @@ class Config(BaseModel):
     allow_population_by_field_name: bool = False
     use_default: bool = False
     force_optional: bool = False
+    class_name: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -258,8 +264,12 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             allow_population_by_field_name=config.allow_population_by_field_name,
             apply_default_values_for_required_fields=config.use_default,
             force_optional_for_required_fields=config.force_optional,
+            class_name=config.class_name,
         )
         return Exit.OK
+    except InvalidClassNameError as e:
+        print(f'{e} You have to set --class-name option', file=sys.stderr)
+        return Exit.ERROR
     except Error as e:
         print(str(e), file=sys.stderr)
         return Exit.ERROR

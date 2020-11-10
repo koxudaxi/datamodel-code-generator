@@ -15,7 +15,7 @@ from typing import (
 import yaml
 from pydantic import BaseModel, Field, root_validator, validator
 
-from datamodel_code_generator import snooper_to_methods
+from datamodel_code_generator import Error, InvalidClassNameError, snooper_to_methods
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
@@ -193,6 +193,7 @@ class JsonSchemaParser(Parser):
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
         force_optional_for_required_fields: bool = False,
+        class_name: Optional[str] = None,
     ):
         super().__init__(
             source=source,
@@ -213,6 +214,7 @@ class JsonSchemaParser(Parser):
             allow_population_by_field_name=allow_population_by_field_name,
             apply_default_values_for_required_fields=apply_default_values_for_required_fields,
             force_optional_for_required_fields=force_optional_for_required_fields,
+            class_name=class_name,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -744,7 +746,15 @@ class JsonSchemaParser(Parser):
             path_parts = list(source.path.parts)
             self.model_resolver.set_current_root(path_parts)
             self.raw_obj = yaml.safe_load(source.text)
-            obj_name = self.raw_obj.get('title', 'Model')
+            if self.class_name:
+                obj_name = self.class_name
+            else:
+                # backward compatible
+                obj_name = self.raw_obj.get('title', 'Model')
+                if obj_name:
+                    if not self.model_resolver.validate_name(obj_name):
+                        raise InvalidClassNameError(obj_name)
+
             obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
             self.parse_raw_obj(obj_name, self.raw_obj, path_parts)
             definitions = self.raw_obj.get('definitions', {})

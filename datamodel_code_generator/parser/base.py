@@ -165,6 +165,7 @@ class Parser(ABC):
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
         force_optional_for_required_fields: bool = False,
+        class_name: Optional[str] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version
@@ -210,6 +211,7 @@ class Parser(ABC):
             self.field_preprocessors.append(snakify_field)
         if self.strip_default_none:
             self.field_preprocessors.append(set_strip_default_none)
+        self.class_name: Optional[str] = class_name
 
     @property
     def iter_source(self) -> Iterator[Source]:
