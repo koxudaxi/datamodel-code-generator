@@ -216,6 +216,7 @@ class JsonSchemaParser(Parser):
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
+        self.raw_obj: Dict[Any, Any] = {}
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:
@@ -299,6 +300,13 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
         base_classes: List[DataType] = []
+        if len(obj.allOf) == 1:
+            single_obj = obj.allOf[0]
+            if single_obj.ref and single_obj.ref.startswith('#/'):
+                if get_model_by_path(self.raw_obj, single_obj.ref[2:].split('/')).get(
+                    'enum'
+                ):
+                    return self.get_ref_data_type(single_obj.ref)
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
                 base_classes.append(self.get_ref_data_type(all_of_item.ref))
@@ -735,10 +743,10 @@ class JsonSchemaParser(Parser):
                 self.current_source_path = source.path
             path_parts = list(source.path.parts)
             self.model_resolver.set_current_root(path_parts)
-            raw_obj: Dict[Any, Any] = yaml.safe_load(source.text)
-            obj_name = raw_obj.get('title', 'Model')
+            self.raw_obj = yaml.safe_load(source.text)
+            obj_name = self.raw_obj.get('title', 'Model')
             obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
-            self.parse_raw_obj(obj_name, raw_obj, path_parts)
-            definitions = raw_obj.get('definitions', {})
+            self.parse_raw_obj(obj_name, self.raw_obj, path_parts)
+            definitions = self.raw_obj.get('definitions', {})
             for key, model in definitions.items():
                 self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])

@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import black
 import isort
@@ -20,7 +20,11 @@ BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
 }
 
 
-def format_code(code: str, python_version: PythonVersion, settings_path: Path) -> str:
+def format_code(
+    code: str, python_version: PythonVersion, settings_path: Optional[Path] = None
+) -> str:
+    if not settings_path:
+        settings_path = Path().resolve()
     code = apply_isort(code, settings_path)
     code = apply_black(code, python_version, settings_path)
     return code
