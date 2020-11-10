@@ -354,9 +354,7 @@ class Parser(ABC):
 
             body = '\n'.join(result)
             if format_:
-                body = format_code(
-                    body, self.target_python_version, settings_path or Path().resolve()
-                )
+                body = format_code(body, self.target_python_version, settings_path)
 
             results[module] = Result(body=body, source=models[0].path)
 

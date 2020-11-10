@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -16,13 +16,17 @@ class OpenAPIParser(JsonSchemaParser):
                 base_parser = BaseParser(
                     spec_string=source.text, backend='openapi-spec-validator'
                 )
-                components: Dict[str, Any] = base_parser.specification['components']
+                specification: Dict[str, Any] = base_parser.specification
             else:
-                components = yaml.safe_load(source.text)['components']
-            self.model_resolver.set_current_root(list(source.path.parts))
-            for obj_name, raw_obj in components[
+                specification = yaml.safe_load(source.text)
+            self.raw_obj = specification
+            schemas: Optional[Dict[Any, Any]] = specification.get('components', {}).get(
                 'schemas'
-            ].items():  # type: str, Dict[Any, Any]
+            )
+            if not schemas:  # pragma: no cover
+                continue
+            self.model_resolver.set_current_root(list(source.path.parts))
+            for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
                 self.parse_raw_obj(
                     obj_name, raw_obj, ['components', 'schemas', obj_name]
                 )
