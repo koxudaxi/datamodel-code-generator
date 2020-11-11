@@ -4,7 +4,7 @@ This code generator creates pydantic model from an openapi file and others.
 
 [![Build Status](https://travis-ci.org/koxudaxi/datamodel-code-generator.svg?branch=master)](https://travis-ci.org/koxudaxi/datamodel-code-generator)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![Downloads](https://pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/project/datamodel-code-generator/month)
+[![Downloads](https://pepy.tech/badge/datamodel-code-generator)](https://pepy.tech/project/datamodel-code-generator/month)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
