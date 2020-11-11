@@ -751,9 +751,8 @@ class JsonSchemaParser(Parser):
             else:
                 # backward compatible
                 obj_name = self.raw_obj.get('title', 'Model')
-                if obj_name:
-                    if not self.model_resolver.validate_name(obj_name):
-                        raise InvalidClassNameError(obj_name)
+                if not self.model_resolver.validate_name(obj_name):
+                    raise InvalidClassNameError(obj_name)
 
             obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
             self.parse_raw_obj(obj_name, self.raw_obj, path_parts)
