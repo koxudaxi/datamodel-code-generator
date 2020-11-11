@@ -39,6 +39,7 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--strip-default-none]
                          [--allow-population-by-field-name] [--use-default]
                          [--force-optional] [--disable-timestamp]
+                         [--class-name CLASS_NAME]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
@@ -61,6 +62,8 @@ optional arguments:
   --use-default         Use default value even if a field is required
   --force-optional      Force optional for required fields
   --disable-timestamp   Disable timestamp on file headers
+  --class-name CLASS_NAME
+                        Set class name of root model
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA

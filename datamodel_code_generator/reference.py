@@ -1,4 +1,5 @@
 import re
+from keyword import iskeyword
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
@@ -138,6 +139,10 @@ class ModelResolver:
                 uniq_name = f'{name}_{count}'
             count += 1
         return uniq_name
+
+    @classmethod
+    def validate_name(cls, name: str) -> bool:
+        return name.isidentifier() and not iskeyword(name)
 
     def get_valid_name(self, name: str, camel: bool = False) -> str:
         # TODO: when first character is a number
