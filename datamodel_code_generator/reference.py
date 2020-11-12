@@ -67,7 +67,7 @@ class ModelResolver:
             return f'{self.root_id_base_path}/{joined_path}#/'
         return f'{joined_path}#/'
 
-    def add_ref(self, ref: str, actual_module_name: Optional[str] = None,) -> Reference:
+    def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
         path = self._get_path(ref.split('/'))
         reference = self.references.get(path)
         if reference:
