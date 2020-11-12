@@ -698,12 +698,7 @@ class JsonSchemaParser(Parser):
             self.remote_object_cache[ref] = ref_body
         return ref_body
 
-    def parse_ref(
-        self,
-        obj: JsonSchemaObject,
-        path: List[str],
-        root_id_base_path: Optional[str] = None,
-    ) -> None:
+    def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
             reference = self.model_resolver.get(obj.ref)
             if not reference or not reference.loaded:
@@ -743,19 +738,19 @@ class JsonSchemaParser(Parser):
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
-                self.parse_ref(obj.items, path, root_id_base_path)
+                self.parse_ref(obj.items, path)
             else:
                 for item in obj.items:
-                    self.parse_ref(item, path, root_id_base_path)
+                    self.parse_ref(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
-            self.parse_ref(obj.additionalProperties, path, root_id_base_path)
+            self.parse_ref(obj.additionalProperties, path)
         for item in obj.anyOf:
-            self.parse_ref(item, path, root_id_base_path)
+            self.parse_ref(item, path)
         for item in obj.allOf:
-            self.parse_ref(item, path, root_id_base_path)
+            self.parse_ref(item, path)
         if obj.properties:
             for value in obj.properties.values():
-                self.parse_ref(value, path, root_id_base_path)
+                self.parse_ref(value, path)
 
     @contextmanager
     def root_id_context(self, root_raw: Dict[str, Any]) -> Generator[None, None, None]:
