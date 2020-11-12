@@ -28,3 +28,4 @@ This codegen supports major data types to OpenAPI/JSON Schema
 - anyOf (as Union)
 - oneOf (as Union)
 - $ref ([http extra](../#http-extra-option) is required when resolving $ref for remote files.)
+- $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
