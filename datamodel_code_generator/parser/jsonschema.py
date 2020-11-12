@@ -727,11 +727,10 @@ class JsonSchemaParser(Parser):
                     else:
                         models = ref_body
                         model_name = models.get('title', 'Model')
-                    if models:
-                        with self.root_id_context(self.raw_obj):
-                            self.parse_raw_obj(
-                                model_name, models, [relative_path, '#', *object_paths]
-                            )
+                    with self.root_id_context(self.raw_obj):
+                        self.parse_raw_obj(
+                            model_name, models, [relative_path, '#', *object_paths]
+                        )
                     self.model_resolver.add_ref(
                         ref, actual_module_name=''
                     ).loaded = True
