@@ -1,7 +1,18 @@
 import re
+from collections import defaultdict
 from keyword import iskeyword
 from pathlib import Path
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import (
+    DefaultDict,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Pattern,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import inflect
 from pydantic import BaseModel
@@ -26,29 +37,38 @@ class Reference(BaseModel):
         return module_name
 
 
+ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
+
+
 class ModelResolver:
     def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {**aliases} if aliases is not None else {}
         self._current_root: List[str] = []
         self._root_id_base_path: Optional[str] = None
+        self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
 
     @property
     def current_root(self) -> List[str]:
-        return self._current_root  # pragma: no cover
+        return self._current_root
 
     def set_current_root(self, current_root: List[str]) -> None:
         self._current_root = current_root
 
     @property
     def root_id_base_path(self) -> Optional[str]:
-        return self._root_id_base_path  # pragma: no cover
+        return self._root_id_base_path
 
     def set_root_id_base_path(self, root_id_base_path: Optional[str]) -> None:
         self._root_id_base_path = root_id_base_path
 
+    def add_id(self, id_: str, path: List[str]) -> None:
+        self.ids['/'.join(self.current_root)][id_] = self._get_path(path)
+
     def _get_path(self, path: List[str]) -> str:
         joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+        if ID_PATTERN.match(joined_path):
+            return self.ids['/'.join(self.current_root)][joined_path]
         if '#' in joined_path:
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
@@ -57,7 +77,12 @@ class ModelResolver:
             return f'{self.root_id_base_path}/{joined_path}#/'
         return f'{joined_path}#/'
 
-    def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
+    def add_ref(
+        self,
+        ref: str,
+        actual_module_name: Optional[str] = None,
+        id_: Optional[str] = None,
+    ) -> Reference:
         path = self._get_path(ref.split('/'))
         reference = self.references.get(path)
         if reference:
@@ -66,12 +91,12 @@ class ModelResolver:
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
             first_ref = split_ref[0]
-            if first_ref[0] == '#':
-                # TODO Support $id with $ref
-                # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
-                raise NotImplementedError('It is not support to use $id with $ref')
-            else:
-                parents, original_name = self.root_id_base_path, Path(first_ref).stem
+            # if first_ref[0] == '#':
+            # TODO Support $id with $ref
+            # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
+            # raise NotImplementedError('It is not support to use $id with $ref')
+            # else:
+            parents, original_name = self.root_id_base_path, Path(first_ref).stem
         else:
             parents, original_name = split_ref
         loaded: bool = not ref.startswith(('https://', 'http://'))
@@ -106,7 +131,7 @@ class ModelResolver:
         if not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
-        if singular_name:  # pragma: no cover
+        if singular_name:
             name = get_singular_name(name, singular_name_suffix)
         if class_name:
             name = self.get_class_name(name, unique)
@@ -156,6 +181,8 @@ class ModelResolver:
         return name.isidentifier() and not iskeyword(name)
 
     def get_valid_name(self, name: str, camel: bool = False) -> str:
+        if name[0] == '#':
+            name = name[1:]
         # TODO: when first character is a number
         replaced_name = re.sub(r'\W', '_', name)
         if re.match(r'^[0-9]', replaced_name):

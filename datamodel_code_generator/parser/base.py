@@ -26,7 +26,7 @@ from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
-from ..reference import ModelResolver
+from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
@@ -320,11 +320,17 @@ class Parser(ABC):
                             reference = self.model_resolver.get(
                                 data_type.reference.path
                             )
-                            if (
-                                reference
-                                and reference.actual_module_name == module_path
+                            if reference and (
+                                (
+                                    isinstance(self.source, Path)
+                                    and self.source.is_file()
+                                    and self.source.name
+                                    == reference.path.split('#/')[0]
+                                )
+                                or reference.actual_module_name == module_path
                             ):
-                                model.reference_classes.remove(name)
+                                if name in model.reference_classes:  # pragma: no cover
+                                    model.reference_classes.remove(name)
                                 continue
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_

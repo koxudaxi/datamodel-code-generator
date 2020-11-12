@@ -686,7 +686,7 @@ class JsonSchemaParser(Parser):
                 ref_body = yaml.safe_load(raw_body)
                 self.remote_object_cache[ref] = ref_body
         else:
-            if remote_object:  # pragma: no cover
+            if remote_object:
                 ref_body = remote_object
             else:
                 # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
@@ -751,6 +751,25 @@ class JsonSchemaParser(Parser):
             for value in obj.properties.values():
                 self.parse_ref(value, path)
 
+    def parse_id(self, obj: JsonSchemaObject, path: List[str]) -> None:
+        if obj.id:
+            self.model_resolver.add_id(obj.id, path)
+        if obj.items:
+            if isinstance(obj.items, JsonSchemaObject):
+                self.parse_id(obj.items, path)
+            else:
+                for item in obj.items:
+                    self.parse_id(item, path)
+        if isinstance(obj.additionalProperties, JsonSchemaObject):  # pragma: no cover
+            self.parse_id(obj.additionalProperties, path)
+        for item in obj.anyOf:  # pragma: no cover
+            self.parse_id(item, path)  # pragma: no cover
+        for item in obj.allOf:
+            self.parse_id(item, path)  # pragma: no cover
+        if obj.properties:
+            for value in obj.properties.values():
+                self.parse_id(value, path)
+
     @contextmanager
     def root_id_context(self, root_raw: Dict[str, Any]) -> Generator[None, None, None]:
         root_id: Optional[str] = root_raw.get('$id')
@@ -770,7 +789,6 @@ class JsonSchemaParser(Parser):
 
     def parse_raw_obj(self, name: str, raw: Dict[str, Any], path: List[str],) -> None:
         obj = JsonSchemaObject.parse_obj(raw)
-
         name = self.model_resolver.add(path, name, class_name=True).name
         if obj.is_object:
             self.parse_object(name, obj, path)
@@ -804,7 +822,13 @@ class JsonSchemaParser(Parser):
                     raise InvalidClassNameError(obj_name)
 
             obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
+            obj = JsonSchemaObject.parse_obj(self.raw_obj)
             with self.root_id_context(self.raw_obj):
+                definitions = self.raw_obj.get('definitions', {})
+                self.parse_id(obj, path_parts)
+                for key, model in definitions.items():
+                    obj = JsonSchemaObject.parse_obj(model)
+                    self.parse_id(obj, [*path_parts, '#/definitions', key])
                 self.parse_raw_obj(obj_name, self.raw_obj, path_parts)
                 definitions = self.raw_obj.get('definitions', {})
                 for key, model in definitions.items():
