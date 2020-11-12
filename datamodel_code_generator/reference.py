@@ -49,8 +49,6 @@ class ModelResolver:
 
     def _get_path(self, path: List[str]) -> str:
         joined_path = '/'.join(p for p in path if p).replace('/#', '#')
-        if joined_path.endswith('#'):
-            joined_path += '/'
         if '#' in joined_path:
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
