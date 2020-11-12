@@ -2,17 +2,7 @@ import re
 from collections import defaultdict
 from keyword import iskeyword
 from pathlib import Path
-from typing import (
-    DefaultDict,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Pattern,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import DefaultDict, Dict, List, Mapping, Optional, Pattern, Tuple, Union
 
 import inflect
 from pydantic import BaseModel
@@ -77,12 +67,7 @@ class ModelResolver:
             return f'{self.root_id_base_path}/{joined_path}#/'
         return f'{joined_path}#/'
 
-    def add_ref(
-        self,
-        ref: str,
-        actual_module_name: Optional[str] = None,
-        id_: Optional[str] = None,
-    ) -> Reference:
+    def add_ref(self, ref: str, actual_module_name: Optional[str] = None,) -> Reference:
         path = self._get_path(ref.split('/'))
         reference = self.references.get(path)
         if reference:
@@ -90,13 +75,7 @@ class ModelResolver:
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
-            first_ref = split_ref[0]
-            # if first_ref[0] == '#':
-            # TODO Support $id with $ref
-            # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
-            # raise NotImplementedError('It is not support to use $id with $ref')
-            # else:
-            parents, original_name = self.root_id_base_path, Path(first_ref).stem
+            parents, original_name = self.root_id_base_path, Path(split_ref[0]).stem
         else:
             parents, original_name = split_ref
         loaded: bool = not ref.startswith(('https://', 'http://'))

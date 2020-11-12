@@ -26,7 +26,7 @@ from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
-from ..reference import ModelResolver, Reference
+from ..reference import ModelResolver
 from ..types import DataType, DataTypeManager
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')

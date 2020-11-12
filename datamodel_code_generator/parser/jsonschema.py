@@ -788,7 +788,9 @@ class JsonSchemaParser(Parser):
         self.root_id = previous_root_id
 
     def parse_raw_obj(self, name: str, raw: Dict[str, Any], path: List[str],) -> None:
-        obj = JsonSchemaObject.parse_obj(raw)
+        self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
+
+    def parse_obj(self, name: str, obj: JsonSchemaObject, path: List[str],) -> None:
         name = self.model_resolver.add(path, name, class_name=True).name
         if obj.is_object:
             self.parse_object(name, obj, path)
@@ -822,14 +824,17 @@ class JsonSchemaParser(Parser):
                     raise InvalidClassNameError(obj_name)
 
             obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
-            obj = JsonSchemaObject.parse_obj(self.raw_obj)
+            root_obj = JsonSchemaObject.parse_obj(self.raw_obj)
             with self.root_id_context(self.raw_obj):
                 definitions = self.raw_obj.get('definitions', {})
-                self.parse_id(obj, path_parts)
+
+                # parse $id before parsing $ref
+                self.parse_id(root_obj, path_parts)
                 for key, model in definitions.items():
                     obj = JsonSchemaObject.parse_obj(model)
                     self.parse_id(obj, [*path_parts, '#/definitions', key])
-                self.parse_raw_obj(obj_name, self.raw_obj, path_parts)
+
+                self.parse_obj(obj_name, root_obj, path_parts)
                 definitions = self.raw_obj.get('definitions', {})
                 for key, model in definitions.items():
                     self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])
