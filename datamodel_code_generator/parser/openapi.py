@@ -28,5 +28,5 @@ class OpenAPIParser(JsonSchemaParser):
             self.model_resolver.set_current_root(list(source.path.parts))
             for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
                 self.parse_raw_obj(
-                    obj_name, raw_obj, ['components', 'schemas', obj_name]
+                    obj_name, raw_obj, ['#/components', 'schemas', obj_name]
                 )

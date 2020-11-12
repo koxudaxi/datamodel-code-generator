@@ -11,7 +11,6 @@ $ datamodel-codegen  --input person.json --input-file-type jsonschema --output m
 `person.json`:
 ```json
 {
-  "$id": "https://example.com/person.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Person",
   "type": "object",
