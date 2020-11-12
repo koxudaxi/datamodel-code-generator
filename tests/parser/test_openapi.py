@@ -458,68 +458,53 @@ def test_openapi_model_resolver():
             name='Pet',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/Error': Reference(
-            path='api.yaml#/components/schemas/Error',
+        '#/components/schemas/Error': Reference(
+            path='#/components/schemas/Error',
             original_name='Error',
             name='Error',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/Event': Reference(
-            path='api.yaml#/components/schemas/Event',
-            original_name='Event',
-            name='Event',
-            loaded=True,
+        '#/components/schemas/Id': Reference(
+            path='#/components/schemas/Id', original_name='Id', name='Id', loaded=True,
         ),
-        'api.yaml#/components/schemas/Id': Reference(
-            path='api.yaml#/components/schemas/Id',
-            original_name='Id',
-            name='Id',
-            loaded=True,
-        ),
-        'api.yaml#/components/schemas/Pet': Reference(
-            path='api.yaml#/components/schemas/Pet',
-            original_name='Pet',
-            name='Pet',
-            loaded=True,
-        ),
-        'api.yaml#/components/schemas/Pets': Reference(
-            path='api.yaml#/components/schemas/Pets',
+        '#/components/schemas/Pets': Reference(
+            path='#/components/schemas/Pets',
             original_name='Pets',
             name='Pets',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/Result': Reference(
-            path='api.yaml#/components/schemas/Result',
+        '#/components/schemas/Result': Reference(
+            path='#/components/schemas/Result',
             original_name='Result',
             name='Result',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/Rules': Reference(
-            path='api.yaml#/components/schemas/Rules',
+        '#/components/schemas/Rules': Reference(
+            path='#/components/schemas/Rules',
             original_name='Rules',
             name='Rules',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/Users': Reference(
-            path='api.yaml#/components/schemas/Users',
+        '#/components/schemas/Users': Reference(
+            path='#/components/schemas/Users',
             original_name='Users',
             name='Users',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/Users/Users': Reference(
-            path='api.yaml#/components/schemas/Users/Users',
+        '#/components/schemas/Users/Users': Reference(
+            path='#/components/schemas/Users/Users',
             original_name='Users',
             name='User',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/apis': Reference(
-            path='api.yaml#/components/schemas/apis',
+        '#/components/schemas/apis': Reference(
+            path='#/components/schemas/apis',
             original_name='apis',
             name='Apis',
             loaded=True,
         ),
-        'api.yaml#/components/schemas/apis/Apis': Reference(
-            path='api.yaml#/components/schemas/apis/Apis',
+        '#/components/schemas/apis/Apis': Reference(
+            path='#/components/schemas/apis/Apis',
             original_name='Apis',
             name='Api',
             loaded=True,

@@ -31,6 +31,7 @@ class ModelResolver:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {**aliases} if aliases is not None else {}
         self._current_root: List[str] = []
+        self._root_id_base_path: Optional[str] = None
 
     @property
     def current_root(self) -> List[str]:
@@ -39,12 +40,22 @@ class ModelResolver:
     def set_current_root(self, current_root: List[str]) -> None:
         self._current_root = current_root
 
+    @property
+    def root_id_base_path(self) -> Optional[str]:
+        return self._root_id_base_path  # pragma: no cover
+
+    def set_root_id_base_path(self, root_id_base_path: Optional[str]) -> None:
+        self._root_id_base_path = root_id_base_path
+
     def _get_path(self, path: List[str]) -> str:
-        joined_path = '/'.join(p for p in path if p)
-        if '#' in joined_path:  # remote
+        joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+        if '#' in joined_path:
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
-        return f"{''.join(self._current_root)}#/{'/'.join(path[1:] if '#' in joined_path else path)}"
+
+        if self.root_id_base_path and self.current_root != path:
+            return f'{self.root_id_base_path}/{joined_path}#/'
+        return f'{joined_path}#/'
 
     def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
         path = self._get_path(ref.split('/'))
@@ -54,13 +65,18 @@ class ModelResolver:
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
-            # TODO Support $id with $ref
-            # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
-            raise NotImplementedError('It is not support to use $id with $ref')
-        parents, original_name = split_ref  # type: str, str
+            first_ref = split_ref[0]
+            if first_ref[0] == '#':
+                # TODO Support $id with $ref
+                # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
+                raise NotImplementedError('It is not support to use $id with $ref')
+            else:
+                parents, original_name = self.root_id_base_path, Path(first_ref).stem
+        else:
+            parents, original_name = split_ref
         loaded: bool = not ref.startswith(('https://', 'http://'))
         if not original_name:
-            original_name = Path(parents).stem
+            original_name = Path(parents).stem  # type: ignore
             loaded = False
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
@@ -89,18 +105,13 @@ class ModelResolver:
             return self.references[joined_path]
         if not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
+        name = original_name
+        if singular_name:  # pragma: no cover
+            name = get_singular_name(name, singular_name_suffix)
         if class_name:
-            name = self.get_class_name(original_name, unique)
-            if singular_name:  # pragma: no cover
-                name = get_singular_name(name, singular_name_suffix)
-        elif singular_name:
-            name = get_singular_name(original_name, singular_name_suffix)
-            if unique:  # pragma: no cover
-                name = self._get_uniq_name(name)
+            name = self.get_class_name(name, unique)
         elif unique:
-            name = self._get_uniq_name(original_name)
-        else:
-            name = original_name
+            name = self._get_uniq_name(name)
         reference = Reference(path=joined_path, original_name=original_name, name=name)
         self.references[joined_path] = reference
         return reference

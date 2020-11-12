@@ -293,7 +293,14 @@ class Parser(ABC):
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
-                    models_to_update += [model.name]
+                    ref_names = [
+                        d.reference.name
+                        for f in model.fields
+                        for d in f.data_type.all_data_types
+                        if d.reference
+                    ]
+                    if model.name in ref_names:
+                        models_to_update += [model.name]
                 imports.append(model.imports)
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:  # type: DataType
