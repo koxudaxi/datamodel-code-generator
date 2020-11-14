@@ -1038,3 +1038,29 @@ def test_main_jsonschema_id_as_stdin(monkeypatch):
         )
     with pytest.raises(SystemExit):
         main()
+
+
+def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--use-standard-collections',
+            ]
+        )
+    main_use_standard_collections_dir = (
+        EXPECTED_MAIN_PATH / 'main_use_standard_collections'
+    )
+    for path in main_use_standard_collections_dir.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_use_standard_collections_dir)
+        ).read_text()
+        assert result == path.read_text()

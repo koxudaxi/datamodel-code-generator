@@ -198,6 +198,7 @@ class JsonSchemaParser(Parser):
         apply_default_values_for_required_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
+        use_standard_collections: bool = False,
     ):
         super().__init__(
             source=source,
@@ -219,6 +220,7 @@ class JsonSchemaParser(Parser):
             apply_default_values_for_required_fields=apply_default_values_for_required_fields,
             force_optional_for_required_fields=force_optional_for_required_fields,
             class_name=class_name,
+            use_standard_collections=use_standard_collections,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}

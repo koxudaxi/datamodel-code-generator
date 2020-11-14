@@ -166,9 +166,10 @@ class Parser(ABC):
         apply_default_values_for_required_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
+        use_standard_collections: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
-            target_python_version
+            target_python_version, use_standard_collections
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type

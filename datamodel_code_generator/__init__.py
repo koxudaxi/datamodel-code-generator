@@ -149,6 +149,7 @@ def generate(
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
     class_name: Optional[str] = None,
+    use_standard_collections: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -205,6 +206,7 @@ def generate(
         apply_default_values_for_required_fields=apply_default_values_for_required_fields,
         force_optional_for_required_fields=force_optional_for_required_fields,
         class_name=class_name,
+        use_standard_collections=use_standard_collections,
     )
 
     with chdir(output):
