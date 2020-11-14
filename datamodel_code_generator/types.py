@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, Dict, Iterator, List, Optional, Set, Type
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type
 
 from pydantic import BaseModel
 
@@ -52,7 +52,7 @@ class DataType(BaseModel):
         super().__init__(**values)
         if self.type and (self.reference or self.ref):
             self.unresolved_types.add(self.type)
-        imports = (
+        imports: Tuple[Tuple[bool, Import], ...] = (
             (self.is_optional, IMPORT_OPTIONAL),
             (len(self.data_types) > 1, IMPORT_UNION),
         )
