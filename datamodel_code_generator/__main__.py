@@ -108,6 +108,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-standard-collections',
+    help='Use standard collections for type hinting (list, dict)',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--class-name', help='Set class name of root model', default=None,
 )
 
@@ -170,6 +177,7 @@ class Config(BaseModel):
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None
+    use_standard_collections: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -265,6 +273,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             apply_default_values_for_required_fields=config.use_default,
             force_optional_for_required_fields=config.force_optional,
             class_name=config.class_name,
+            use_standard_collections=config.use_standard_collections,
         )
         return Exit.OK
     except InvalidClassNameError as e:

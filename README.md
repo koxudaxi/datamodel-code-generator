@@ -65,19 +65,13 @@ $ pip install datamodel-code-generator[http]
 
 The `datamodel-codegen` command:
 ```
-usage: datamodel-codegen [-h] [--input INPUT]
-                         [--input-file-type {auto,openapi,jsonschema,json,yaml}]
-                         [--output OUTPUT] [--base-class BASE_CLASS]
-                         [--field-constraints] [--snake-case-field]
-                         [--strip-default-none]
-                         [--allow-population-by-field-name] [--use-default]
-                         [--force-optional] [--disable-timestamp]
-                         [--class-name CLASS_NAME]
-                         [--custom-template-dir CUSTOM_TEMPLATE_DIR]
-                         [--extra-template-data EXTRA_TEMPLATE_DATA]
-                         [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7}] [--validation]
-                         [--debug] [--version]
+datamodel-codegen --help                                                                                master ✭ ✚ ✱ ◼
+usage: datamodel-codegen [-h] [--input INPUT] [--input-file-type {auto,openapi,jsonschema,json,yaml}] [--output OUTPUT]
+                         [--base-class BASE_CLASS] [--field-constraints] [--snake-case-field] [--strip-default-none]
+                         [--allow-population-by-field-name] [--use-default] [--force-optional] [--disable-timestamp]
+                         [--use-standard-collections] [--class-name CLASS_NAME]
+                         [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA]
+                         [--aliases ALIASES] [--target-python-version {3.6,3.7}] [--validation] [--debug] [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -95,6 +89,8 @@ optional arguments:
   --use-default         Use default value even if a field is required
   --force-optional      Force optional for required fields
   --disable-timestamp   Disable timestamp on file headers
+  --use-standard-collections
+                        Use standard collections for type hinting (list, dict)
   --class-name CLASS_NAME
                         Set class name of root model
   --custom-template-dir CUSTOM_TEMPLATE_DIR

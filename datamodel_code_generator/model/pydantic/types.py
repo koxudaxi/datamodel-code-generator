@@ -76,6 +76,11 @@ type_map: Dict[Types, DataType] = {
     Types.any: DataType(type='Any', imports_=[IMPORT_ANY]),
 }
 
+standard_collections_type_map = {
+    **type_map,
+    Types.object: DataType(type='dict[str, Any]', imports_=[IMPORT_ANY,],),
+    Types.array: DataType(type='list[Any]', imports_=[IMPORT_ANY]),
+}
 kwargs_schema_to_model = {
     'exclusiveMinimum': 'gt',
     'minimum': 'ge',
@@ -109,9 +114,15 @@ def transform_kwargs(kwargs: Dict[str, Any], filter: Set[str]) -> Dict[str, str]
 
 
 class DataTypeManager(_DataTypeManager):
-    def __init__(self, python_version: PythonVersion = PythonVersion.PY_37):
-        super().__init__(python_version)
-        self.type_map: Dict[Types, DataType] = type_map
+    def __init__(
+        self,
+        python_version: PythonVersion = PythonVersion.PY_37,
+        use_standard_collections: bool = False,
+    ):
+        super().__init__(python_version, use_standard_collections)
+        self.type_map: Dict[
+            Types, DataType
+        ] = standard_collections_type_map if use_standard_collections else type_map
 
     def get_data_int_type(self, types: Types, **kwargs: Any) -> DataType:
         data_type_kwargs = transform_kwargs(kwargs, number_kwargs)

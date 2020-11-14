@@ -28,6 +28,7 @@ class DataType(BaseModel):
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
+    use_standard_collections: bool = False
 
     @classmethod
     def from_model_name(cls, model_name: str, is_list: bool = False) -> 'DataType':
@@ -51,12 +52,17 @@ class DataType(BaseModel):
         super().__init__(**values)
         if self.type and (self.reference or self.ref):
             self.unresolved_types.add(self.type)
-        for field, import_ in (
-            (self.is_list, IMPORT_LIST),
-            (self.is_dict, IMPORT_DICT),
+        imports = (
             (self.is_optional, IMPORT_OPTIONAL),
             (len(self.data_types) > 1, IMPORT_UNION),
-        ):
+        )
+        if not self.use_standard_collections:
+            imports = (
+                *imports,
+                (self.is_list, IMPORT_LIST),
+                (self.is_dict, IMPORT_DICT),
+            )
+        for field, import_ in imports:
             if field and import_ not in self.imports_:
                 self.imports_.append(import_)
         for data_type in self.data_types:
@@ -83,9 +89,17 @@ class DataType(BaseModel):
                 # type_ = 'Any'
                 type_ = ''
         if self.is_list:
-            type_ = f'List[{type_}]' if type_ else 'List'
+            if self.use_standard_collections:
+                list_ = 'list'
+            else:
+                list_ = 'List'
+            type_ = f'{list_}[{type_}]' if type_ else list_
         if self.is_dict:
-            type_ = f'Dict[str, {type_}]' if type_ else 'Dict'
+            if self.use_standard_collections:
+                dict_ = 'dict'
+            else:
+                dict_ = 'Dict'
+            type_ = f'{dict_}[str, {type_}]' if type_ else 'dict_'
         if self.is_optional:
             type_ = f'Optional[{type_}]'
         if self.is_func:
@@ -101,6 +115,10 @@ DataType.update_forward_refs()
 
 class DataTypePy36(DataType):
     python_version: PythonVersion = PythonVersion.PY_36
+
+
+class DataTypeStandardCollections(DataType):
+    use_standard_collections: bool = True
 
 
 class Types(Enum):
@@ -137,10 +155,16 @@ class Types(Enum):
 
 
 class DataTypeManager(ABC):
-    def __init__(self, python_version: PythonVersion = PythonVersion.PY_37) -> None:
+    def __init__(
+        self,
+        python_version: PythonVersion = PythonVersion.PY_37,
+        use_standard_collections: bool = False,
+    ) -> None:
         self.python_version = python_version
-        if python_version == PythonVersion.PY_36:
-            self.data_type: Type[DataType] = DataTypePy36
+        if use_standard_collections:
+            self.data_type: Type[DataType] = DataTypeStandardCollections
+        elif python_version == PythonVersion.PY_36:
+            self.data_type = DataTypePy36
         else:
             self.data_type = DataType
 
