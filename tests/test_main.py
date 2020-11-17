@@ -1064,3 +1064,28 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
             path.relative_to(main_use_standard_collections_dir)
         ).read_text()
         assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_external_definitions():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'external_definitions_root.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
