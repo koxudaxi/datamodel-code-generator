@@ -708,6 +708,8 @@ class JsonSchemaParser(Parser):
                 if obj.ref.startswith('#'):
                     # Local Reference – $ref: '#/definitions/myElement'
                     pass
+                elif self.model_resolver.is_after_load(obj.ref):
+                    pass
                 else:
                     if (
                         not obj.ref.startswith(('https://', 'http://'))
@@ -811,6 +813,9 @@ class JsonSchemaParser(Parser):
             isinstance(self.source, Path) and self.source.is_dir()
         ):
             self.current_source_path = Path()
+            self.model_resolver.after_load_files = [
+                str(s.path) for s in self.iter_source
+            ]
         for source in self.iter_source:
             if self.current_source_path is not None:
                 self.current_source_path = source.path

@@ -37,6 +37,7 @@ class ModelResolver:
         self._current_root: List[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
+        self.after_load_files: List[str] = []
 
     @property
     def current_root(self) -> List[str]:
@@ -67,6 +68,9 @@ class ModelResolver:
             return f'{self.root_id_base_path}/{joined_path}#/'
         return f'{joined_path}#/'
 
+    def is_after_load(self, ref: str) -> bool:
+        return '#/' in ref and ref.split('#/', 1)[0] in self.after_load_files
+
     def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
         path = self._get_path(ref.split('/'))
         reference = self.references.get(path)
@@ -78,7 +82,10 @@ class ModelResolver:
             parents, original_name = self.root_id_base_path, Path(split_ref[0]).stem
         else:
             parents, original_name = split_ref
-        loaded: bool = not ref.startswith(('https://', 'http://'))
+        if self.is_after_load(ref):
+            loaded: bool = False
+        else:
+            loaded = '#/' not in ref
         if not original_name:
             original_name = Path(parents).stem  # type: ignore
             loaded = False
