@@ -1063,3 +1063,54 @@ def test_main_jsonschema_ids(tmpdir_factory: TempdirFactory) -> None:
             path.relative_to(main_jsonschema_ids_dir)
         ).read_text()
         assert result == path.read_text()
+
+
+def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--use-standard-collections',
+            ]
+        )
+    main_use_standard_collections_dir = (
+        EXPECTED_MAIN_PATH / 'main_use_standard_collections'
+    )
+    for path in main_use_standard_collections_dir.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_use_standard_collections_dir)
+        ).read_text()
+        assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_external_definitions():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'external_definitions_root.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
