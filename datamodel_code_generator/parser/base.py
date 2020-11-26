@@ -253,7 +253,7 @@ class Parser(ABC):
         self.parse_raw()
 
         if with_import:
-            if self.target_python_version == PythonVersion.PY_37:
+            if self.target_python_version != PythonVersion.PY_36:
                 self.imports.append(IMPORT_ANNOTATIONS)
 
         _, sorted_data_models, require_update_action_models = sort_data_models(
