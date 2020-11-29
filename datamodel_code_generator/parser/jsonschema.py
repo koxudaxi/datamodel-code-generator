@@ -235,7 +235,11 @@ class JsonSchemaParser(Parser):
     @root_id.setter
     def root_id(self, value: Optional[str]) -> None:
         self._root_id = value
-        self._root_id_base_path = value.rsplit('/', 1)[0] if value else None
+        if value and '/' in value:
+            self._root_id_base_path = value.rsplit('/', 1)[0]
+        else:
+            self._root_id_base_path = None
+
         self.model_resolver.set_root_id_base_path(self.root_id_base_path)
 
     @property
@@ -730,11 +734,13 @@ class JsonSchemaParser(Parser):
                         model_name = object_paths[-1]
                     else:
                         models = ref_body
-                        model_name = models.get('title', 'Model')
-                    with self.root_id_context(self.raw_obj):
-                        self.parse_raw_obj(
-                            model_name, models, [relative_path, '#', *object_paths]
-                        )
+                        model_name = self.model_resolver.add_ref(obj.ref).name
+                    self._parse_file(
+                        models,
+                        model_name,
+                        [relative_path, '#', *object_paths],
+                        [relative_path],
+                    )
                     self.model_resolver.add_ref(
                         ref, actual_module_name=''
                     ).loaded = True
@@ -829,19 +835,31 @@ class JsonSchemaParser(Parser):
                 obj_name = self.raw_obj.get('title', 'Model')
                 if not self.model_resolver.validate_name(obj_name):
                     raise InvalidClassNameError(obj_name)
+            self._parse_file(self.raw_obj, obj_name, path_parts, path_parts)
 
-            obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
-            root_obj = JsonSchemaObject.parse_obj(self.raw_obj)
-            with self.root_id_context(self.raw_obj):
-                definitions = self.raw_obj.get('definitions', {})
+    def _parse_file(
+        self,
+        raw: Dict[str, Any],
+        obj_name: str,
+        path_parts: List[str],
+        root_path: List[str],
+    ) -> None:
+        previous_root_path: List[str] = self.model_resolver.current_root
+        self.model_resolver.set_current_root(root_path)
 
-                # parse $id before parsing $ref
-                self.parse_id(root_obj, path_parts)
-                for key, model in definitions.items():
-                    obj = JsonSchemaObject.parse_obj(model)
-                    self.parse_id(obj, [*path_parts, '#/definitions', key])
+        obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
+        root_obj = JsonSchemaObject.parse_obj(raw)
+        with self.root_id_context(raw):
+            definitions = raw.get('definitions', {})
 
-                self.parse_obj(obj_name, root_obj, path_parts)
-                definitions = self.raw_obj.get('definitions', {})
-                for key, model in definitions.items():
-                    self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])
+            # parse $id before parsing $ref
+            self.parse_id(root_obj, path_parts)
+            for key, model in definitions.items():
+                obj = JsonSchemaObject.parse_obj(model)
+                self.parse_id(obj, [*path_parts, '#/definitions', key])
+
+            self.parse_obj(obj_name, root_obj, path_parts)
+            definitions = raw.get('definitions', {})
+            for key, model in definitions.items():
+                self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])
+        self.model_resolver.set_current_root(previous_root_path)
