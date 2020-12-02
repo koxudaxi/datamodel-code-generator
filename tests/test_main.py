@@ -1123,7 +1123,11 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
         return_code: Exit = main(
             [
                 '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'external_files_in_directory' / 'person.json'),
+                str(
+                    JSON_SCHEMA_DATA_PATH
+                    / 'external_files_in_directory'
+                    / 'person.json'
+                ),
                 '--output',
                 str(output_file),
                 '--input-file-type',
