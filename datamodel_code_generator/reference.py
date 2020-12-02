@@ -69,7 +69,19 @@ class ModelResolver:
         return f'{joined_path}#/'
 
     def is_after_load(self, ref: str) -> bool:
-        return '#/' in ref and ref.split('#/', 1)[0] in self.after_load_files
+        if self.is_external_ref(ref):
+            return ref.split('#/', 1)[0] in self.after_load_files
+        elif self.is_external_root_ref(ref):
+            return ref[:-1] in self.after_load_files
+        return False
+
+    @staticmethod
+    def is_external_ref(ref: str) -> bool:
+        return '#/' in ref
+
+    @staticmethod
+    def is_external_root_ref(ref: str) -> bool:
+        return ref[-1] == '#'
 
     def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
         path = self._get_path(ref.split('/'))
@@ -79,13 +91,23 @@ class ModelResolver:
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
-            parents, original_name = self.root_id_base_path, Path(split_ref[0]).stem
+            parents = self.root_id_base_path
+            original_name = Path(
+                split_ref[0][:-1] if self.is_external_root_ref(ref) else split_ref[0]
+            ).stem
         else:
-            parents, original_name = split_ref
+            parents = split_ref[0]
+            original_name = (
+                Path(split_ref[1][:-1]).stem
+                if self.is_external_root_ref(ref)
+                else split_ref[1]
+            )
         if self.is_after_load(ref):
             loaded: bool = False
         else:
-            loaded = '#/' not in ref
+            loaded = not self.is_external_ref(ref) and not self.is_external_root_ref(
+                ref
+            )
         if not original_name:
             original_name = Path(parents).stem  # type: ignore
             loaded = False
