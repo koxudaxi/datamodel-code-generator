@@ -722,8 +722,10 @@ class JsonSchemaParser(Parser):
                         ref = f'{self.root_id_base_path}/{obj.ref}'
                     else:
                         ref = obj.ref
-                    if '#/' in ref:
+                    if self.model_resolver.is_external_ref(ref):
                         relative_path, object_path = ref.split('#/')
+                    elif self.model_resolver.is_external_root_ref(ref):
+                        relative_path, object_path = ref[:-1], ''
                     else:
                         relative_path, object_path = ref, ''
                     object_paths = object_path.split('/')
@@ -735,12 +737,19 @@ class JsonSchemaParser(Parser):
                     else:
                         models = ref_body
                         model_name = self.model_resolver.add_ref(obj.ref).name
+                    if not obj.ref.startswith(('https://', 'http://')):
+                        previous_base_path: Optional[Path] = self.base_path
+                        self.base_path = (self.base_path / relative_path).parent
+                    else:
+                        previous_base_path = None
                     self._parse_file(
                         models,
                         model_name,
                         [relative_path, '#', *object_paths],
                         [relative_path],
                     )
+                    if previous_base_path:
+                        self.base_path = previous_base_path
                     self.model_resolver.add_ref(
                         ref, actual_module_name=''
                     ).loaded = True

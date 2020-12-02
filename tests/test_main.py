@@ -1114,3 +1114,54 @@ def test_main_external_definitions():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_definitions_directory(tmpdir_factory: TempdirFactory) -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'definitions_directory' / 'person.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_definitions_directory' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+    # output_directory = Path(tmpdir_factory.mktemp('output'))
+    #
+    # input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    # output_path = output_directory / 'model'
+    # return_code: Exit = main(
+    #     [
+    #         '--input',
+    #         str(JSON_SCHEMA_DATA_PATH / 'main_definitions_directory' / 'person.json'),
+    #         '--output',
+    #         str(output_path),
+    #         '--input-file-type',
+    #         'jsonschema',
+    #     ]
+    # )
+    # assert return_code == Exit.OK
+    # main_definitions_directory_dir = (
+    #     EXPECTED_MAIN_PATH / 'main_definitions_directory'
+    # )
+    # for path in main_definitions_directory_dir.rglob('*.py'):
+    #     result = output_path.joinpath(
+    #         path.relative_to(main_definitions_directory_dir)
+    #     ).read_text()
+    #     assert result == path.read_text()
+    #
+    # with pytest.raises(SystemExit):
+    #     main()
