@@ -1,6 +1,7 @@
 import sys
 from contextlib import contextmanager
 from pathlib import Path
+from warnings import warn
 from typing import (
     Any,
     Callable,
@@ -251,8 +252,11 @@ class JsonSchemaParser(Parser):
             return self.data_type_manager.get_data_type(Types.any)
 
         def _get_data_type(type_: str, format__: str) -> DataType:
+            if format__ not in json_schema_data_formats[type_]:
+                warn("format of {!r} not understood for {!r} - using default"
+                     "".format(format__, type_))
             return self.data_type_manager.get_data_type(
-                json_schema_data_formats[type_][format__],
+                json_schema_data_formats[type_].get(format__, 'default'),
                 **obj.dict() if not self.field_constraints else {},
             )
 
