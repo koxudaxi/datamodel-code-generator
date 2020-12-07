@@ -4,11 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
 from .definitions import pet
+from .definitions.drink import coffee, tea
 
 
 class Person(BaseModel):
@@ -17,3 +18,4 @@ class Person(BaseModel):
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[pet.Pet]] = None
     comment: Optional[Any] = None
+    drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
