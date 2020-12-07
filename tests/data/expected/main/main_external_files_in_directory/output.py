@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
@@ -13,6 +13,16 @@ from pydantic import BaseModel, Field, conint
 class Fur(Enum):
     Short_hair = 'Short hair'
     Long_hair = 'Long hair'
+
+
+class Coffee(Enum):
+    Black = 'Black'
+    Espresso = 'Espresso'
+
+
+class Tea(Enum):
+    Oolong = 'Oolong'
+    Green = 'Green'
 
 
 class Pet(BaseModel):
@@ -27,3 +37,4 @@ class Person(BaseModel):
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[Pet]] = None
     comment: Optional[Any] = None
+    drink: Optional[List[Union[Coffee, Tea]]] = None
