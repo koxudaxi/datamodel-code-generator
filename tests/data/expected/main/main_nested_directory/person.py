@@ -4,37 +4,18 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
-
-class Fur(Enum):
-    Short_hair = 'Short hair'
-    Long_hair = 'Long hair'
-
-
-class Coffee(Enum):
-    Black = 'Black'
-    Espresso = 'Espresso'
-
-
-class Tea(Enum):
-    Oolong = 'Oolong'
-    Green = 'Green'
-
-
-class Pet(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
-    fur: Optional[Fur] = None
+from .definitions import pet
+from .definitions.drink import coffee, tea
 
 
 class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
-    pets: Optional[List[Pet]] = None
+    pets: Optional[List[pet.Pet]] = None
     comment: Optional[Any] = None
-    drink: Optional[List[Union[Coffee, Tea]]] = None
+    drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None

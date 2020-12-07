@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, List, Optional
 
 from datamodel_code_generator.imports import IMPORT_ENUM
@@ -14,9 +15,14 @@ class Enum(DataModel):
         name: str,
         fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
+        path: Optional[Path] = None,
     ):
         super().__init__(
-            name=name, fields=fields, decorators=decorators, auto_import=False
+            name=name,
+            fields=fields,
+            decorators=decorators,
+            auto_import=False,
+            path=path,
         )
         self.imports.append(IMPORT_ENUM)
 

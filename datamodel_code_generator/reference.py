@@ -21,7 +21,11 @@ class Reference(BaseModel):
             return None
         # TODO: Support file:///
         path = Path(self.path.split('#')[0])
-        module_name = f'{".".join(path.parts[:-1][1:])}.{path.stem}'
+
+        # workaround: If a file name has dot then, this method uses first part.
+        module_name = f'{".".join(path.parts[:-1])}.{path.stem.split(".")[0]}'
+        if module_name.startswith(f'.{self.name.split(".", 1)[0]}'):
+            return None
         if module_name == '.':
             return None
         return module_name
@@ -69,6 +73,8 @@ class ModelResolver:
         return f'{joined_path}#/'
 
     def is_after_load(self, ref: str) -> bool:
+        if self.current_root and len(self.current_root) > 1:
+            ref = f"{'/'.join(self.current_root[:-1])}/{ref}"
         if self.is_external_ref(ref):
             return ref.split('#/', 1)[0] in self.after_load_files
         elif self.is_external_root_ref(ref):
