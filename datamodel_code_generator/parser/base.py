@@ -291,6 +291,7 @@ class Parser(ABC):
             imports = Imports()
             models_to_update: List[str] = []
             scoped_model_resolver = ModelResolver()
+            import_map: Dict[str, Tuple[str, str]] = {}
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
@@ -341,13 +342,21 @@ class Parser(ABC):
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
                         new_name = f'{alias}.{name}' if from_ and import_ else name
+                        if data_type.module_name and not type_.startswith(from_):
+                            import_map[new_name] = (
+                                f'.{type_[:len(new_name) * - 1 - 1]}',
+                                new_name.split('.')[0],
+                            )
                         if name in model.reference_classes:
                             model.reference_classes.remove(name)
                             model.reference_classes.add(new_name)
                         data_type.type = new_name
 
                 for ref_name in model.reference_classes:
-                    from_, import_ = relative(module_path, ref_name)
+                    if ref_name in import_map:
+                        from_, import_ = import_map[ref_name]
+                    else:
+                        from_, import_ = relative(module_path, ref_name)
                     if init:
                         from_ += "."
                     if from_ and import_:
