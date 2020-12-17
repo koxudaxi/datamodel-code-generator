@@ -295,6 +295,7 @@ class Parser(ABC):
             models_to_update: List[str] = []
             scoped_model_resolver = ModelResolver()
             import_map: Dict[str, Tuple[str, str]] = {}
+            model_names: List[str] = [m.name for m in models]
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
@@ -356,6 +357,8 @@ class Parser(ABC):
                         data_type.type = new_name
 
                 for ref_name in model.reference_classes:
+                    if ref_name in model_names:
+                        continue
                     if ref_name in import_map:
                         from_, import_ = import_map[ref_name]
                     else:

@@ -591,6 +591,7 @@ class JsonSchemaParser(Parser):
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
         )
 
         self.append_result(data_model_root)
