@@ -154,16 +154,18 @@ def generate(
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
         try:
-            input_text = (
+            input_text_ = (
                 input_
                 if isinstance(input_, str)
                 else get_first_file(input_).read_text()
             )
             input_file_type = (
                 InputFileType.OpenAPI
-                if is_openapi(input_text)
+                if is_openapi(input_text_)
                 else InputFileType.JsonSchema
             )
+            if isinstance(input_, str):
+                input_text = input_text_
         except:
             raise Error('Invalid file format')
 
@@ -207,6 +209,9 @@ def generate(
         force_optional_for_required_fields=force_optional_for_required_fields,
         class_name=class_name,
         use_standard_collections=use_standard_collections,
+        base_path=input_.parent
+        if isinstance(input_, Path) and input_.is_file()
+        else None,
     )
 
     with chdir(output):

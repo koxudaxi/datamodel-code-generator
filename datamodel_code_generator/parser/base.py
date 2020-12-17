@@ -167,6 +167,7 @@ class Parser(ABC):
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
+        base_path: Optional[Path] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -190,7 +191,9 @@ class Parser(ABC):
 
         self.current_source_path: Optional[Path] = None
 
-        if isinstance(source, Path):
+        if base_path:
+            self.base_path = base_path
+        elif isinstance(source, Path):
             self.base_path = (
                 source.absolute() if source.is_dir() else source.absolute().parent
             )
