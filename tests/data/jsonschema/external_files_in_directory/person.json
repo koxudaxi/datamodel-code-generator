@@ -25,6 +25,9 @@
         }
       ]
     },
+    "friends": {
+      "$ref": "definitions/friends.json#"
+    },
     "comment": {
       "type": "null"
     },

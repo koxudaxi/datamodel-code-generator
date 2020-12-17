@@ -8,7 +8,7 @@ from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
-from .definitions import pet
+from .definitions import friends, pet
 from .definitions.drink import coffee, tea
 
 
@@ -17,5 +17,6 @@ class Person(BaseModel):
     last_name: str = Field(..., description="The person's last name.")
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[pet.Pet]] = None
+    friends: Optional[friends.Friends] = None
     comment: Optional[Any] = None
     drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
