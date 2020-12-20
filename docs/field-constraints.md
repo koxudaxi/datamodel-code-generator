@@ -29,7 +29,7 @@ Input JSON Schema
 ### Without `--field-constraints` option
  
 ```bash
-$ datamodel-codegen --input model.json --input-file-type jsonschema --field-constraints > model.py 
+$ datamodel-codegen --input a.json --input-file-type jsonschema > model.py 
 ```
 
 Generated Model
@@ -63,7 +63,7 @@ mypy show errors...
 ### With `--field-constraints` option
 
 ```bash
-$ datamodel-codegen --input a.json --input-file-type jsonschema > model.py 
+$ datamodel-codegen --input model.json --input-file-type jsonschema --field-constraints > model.py 
 ```
 
 Generated Model
