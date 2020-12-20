@@ -486,7 +486,7 @@ The option resolves the problem.</p>
 </code></pre></div>
 
 <h3 id="without-field-constraints-option">Without <code>--field-constraints</code> option</h3>
-<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input model.json --input-file-type jsonschema --field-constraints &gt; model.py 
+<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input a.json --input-file-type jsonschema &gt; model.py 
 </code></pre></div>
 
 <p>Generated Model</p>
@@ -513,7 +513,7 @@ Found <span class="m">1</span> error in <span class="m">1</span> file <span clas
 
 <p>mypy show errors...</p>
 <h3 id="with-field-constraints-option">With <code>--field-constraints</code> option</h3>
-<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input a.json --input-file-type jsonschema &gt; model.py 
+<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input model.json --input-file-type jsonschema --field-constraints &gt; model.py 
 </code></pre></div>
 
 <p>Generated Model</p>
