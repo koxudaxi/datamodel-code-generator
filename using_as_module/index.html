@@ -16,7 +16,7 @@
     
     
       
-        <title>Generate from JSON Data - datamodel-code-generator</title>
+        <title>Using as module - datamodel-code-generator</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#generate-from-jsondata" class="md-skip">
+        <a href="#using-as-module" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
         <div class="md-header-nav__topic">
           <span class="md-ellipsis">
             
-              Generate from JSON Data
+              Using as module
             
           </span>
         </div>
@@ -281,6 +281,19 @@
           
 
 
+
+  <li class="md-nav__item">
+    <a href="../jsondata/" class="md-nav__link">
+      Generate from JSON Data
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
   
 
 
@@ -292,12 +305,12 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
-        Generate from JSON Data
+        Using as module
         <span class="md-nav__icon md-icon"></span>
       </label>
     
     <a href="./" class="md-nav__link md-nav__link--active">
-      Generate from JSON Data
+      Using as module
     </a>
     
       
@@ -314,8 +327,35 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-to-use-it-as-module" class="md-nav__link">
+    How to use it as module
+  </a>
+  
+    <nav class="md-nav" aria-label="How to use it as module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#example" class="md-nav__link">
     Example
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-doesnt-the-function-return-str" class="md-nav__link">
+    Why doesn't the function return str?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-projects" class="md-nav__link">
+    Related projects
   </a>
   
 </li>
@@ -324,19 +364,6 @@
   
 </nav>
     
-  </li>
-
-        
-          
-          
-          
-
-
-
-  <li class="md-nav__item">
-    <a href="../using_as_module/" class="md-nav__link">
-      Using as module
-    </a>
   </li>
 
         
@@ -422,8 +449,35 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-to-use-it-as-module" class="md-nav__link">
+    How to use it as module
+  </a>
+  
+    <nav class="md-nav" aria-label="How to use it as module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#example" class="md-nav__link">
     Example
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-doesnt-the-function-return-str" class="md-nav__link">
+    Why doesn't the function return str?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-projects" class="md-nav__link">
+    Related projects
   </a>
   
 </li>
@@ -440,60 +494,78 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/koxudaxi/datamodel-code-generator/edit/master/docs/jsondata.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/koxudaxi/datamodel-code-generator/edit/master/docs/using_as_module.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="generate-from-jsondata">Generate from JsonData</h1>
-<p>The codegen generate pydantic models from JSON Data</p>
-<h2 id="example">Example</h2>
-<div class="codehilite"><pre><span></span><code>$ datamodel-codegen  --input pets.json --input-file-type json --output model.py
+                <h1 id="using-as-module">Using as module</h1>
+<p>datamodel-code-generator is a CLI. But, it has another side as a python module.</p>
+<p>You can call this code-generator in your python code.</p>
+<h2 id="how-to-use-it-as-module">How to use it as module</h2>
+<p>You can generate models with <code>datamodel_code_generator.generate</code> into a temporary directory.</p>
+<p>And, you can read files from the directory.</p>
+<h3 id="example">Example</h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<span class="kn">from</span> <span class="nn">datamodel_code_generator</span> <span class="kn">import</span> <span class="n">InputFileType</span><span class="p">,</span> <span class="n">generate</span>
+
+<span class="n">json_schema</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;{</span>
+<span class="s2">    &quot;type&quot;: &quot;object&quot;,</span>
+<span class="s2">    &quot;properties&quot;: {</span>
+<span class="s2">        &quot;number&quot;: {&quot;type&quot;: &quot;number&quot;},</span>
+<span class="s2">        &quot;street_name&quot;: {&quot;type&quot;: &quot;string&quot;},</span>
+<span class="s2">        &quot;street_type&quot;: {&quot;type&quot;: &quot;string&quot;,</span>
+<span class="s2">                        &quot;enum&quot;: [&quot;Street&quot;, &quot;Avenue&quot;, &quot;Boulevard&quot;]</span>
+<span class="s2">                        }</span>
+<span class="s2">    }</span>
+<span class="s2">}&quot;&quot;&quot;</span>
+
+<span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">temporary_directory_name</span><span class="p">:</span>
+    <span class="n">temporary_directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temporary_directory_name</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temporary_directory</span> <span class="o">/</span> <span class="s1">&#39;model.py&#39;</span><span class="p">)</span>
+    <span class="n">generate</span><span class="p">(</span>
+        <span class="n">json_schema</span><span class="p">,</span>
+        <span class="n">input_file_type</span><span class="o">=</span><span class="n">InputFileType</span><span class="o">.</span><span class="n">JsonSchema</span><span class="p">,</span>
+        <span class="n">input_filename</span><span class="o">=</span><span class="s2">&quot;example.json&quot;</span><span class="p">,</span>
+        <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 </code></pre></div>
 
-<p><code>pets.json</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="p">{</span>
-  <span class="nt">&quot;pets&quot;</span><span class="p">:</span> <span class="p">[</span>
-    <span class="p">{</span>
-      <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;dog&quot;</span><span class="p">,</span>
-      <span class="nt">&quot;age&quot;</span><span class="p">:</span> <span class="mi">2</span>
-    <span class="p">},</span>
-    <span class="p">{</span>
-      <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;cat&quot;</span><span class="p">,</span>
-      <span class="nt">&quot;age&quot;</span><span class="p">:</span> <span class="mi">1</span>
-    <span class="p">},</span>
-    <span class="p">{</span>
-      <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;snake&quot;</span><span class="p">,</span>
-      <span class="nt">&quot;age&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-      <span class="nt">&quot;nickname&quot;</span><span class="p">:</span> <span class="s2">&quot;python&quot;</span>
-    <span class="p">}</span>
-  <span class="p">],</span>
-  <span class="nt">&quot;status&quot;</span><span class="p">:</span> <span class="mi">200</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p><code>model.py</code>:</p>
+<p>The result of print(model)</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># generated by datamodel-codegen:</span>
-<span class="c1">#   filename:  pets.json</span>
-<span class="c1">#   timestamp: 2020-04-27T16:08:21+00:00</span>
+<span class="c1">#   filename:  example.json</span>
+<span class="c1">#   timestamp: 2020-12-21T08:01:06+00:00</span>
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 
 <span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
 
 
-<span class="k">class</span> <span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">age</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">nickname</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">class</span> <span class="nc">StreetType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">Street</span> <span class="o">=</span> <span class="s1">&#39;Street&#39;</span>
+    <span class="n">Avenue</span> <span class="o">=</span> <span class="s1">&#39;Avenue&#39;</span>
+    <span class="n">Boulevard</span> <span class="o">=</span> <span class="s1">&#39;Boulevard&#39;</span>
 
 
 <span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">pets</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span>
-    <span class="n">status</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">number</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">street_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">street_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StreetType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div>
+
+<h2 id="why-doesnt-the-function-return-str">Why doesn't the function return str?</h2>
+<p>If generated code are modular files then, str can't reproduce the structure of modules.</p>
+<p>Also, <code>TemporaryDirectory</code> and <code>Path</code> provide an easy way to read files.</p>
+<p>There is an example when a generated model file is only one.</p>
+<p>Otherwise, You should walk in a directory to find modular files.</p>
+<h2 id="related-projects">Related projects</h2>
+<p><a href="https://github.com/koxudaxi/fastapi-code-generator">fastapi-code-generator</a> uses <code>datamodel-code-generator</code> as module to create models from OpenAPI.</p>
                 
               
               
@@ -512,7 +584,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
         
-          <a href="../jsonschema/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../jsondata/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-footer-nav__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
@@ -521,19 +593,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Generate from JSON Schema
+                Generate from JSON Data
               </div>
             </div>
           </a>
         
         
-          <a href="../using_as_module/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../formatting/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-footer-nav__title">
               <div class="md-ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Using as module
+                Formatting
               </div>
             </div>
             <div class="md-footer-nav__button md-icon">
