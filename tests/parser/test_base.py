@@ -73,6 +73,19 @@ def test_sort_data_models_unresolved():
         sort_data_models(reference)
 
 
+def test_sort_data_models_unresolved_raise_recursion_error():
+    reference = [
+        BaseModel(name='A', reference_classes=['A', 'C'], fields=[]),
+        BaseModel(name='B', reference_classes=['B'], fields=[]),
+        BaseModel(name='C', reference_classes=['B'], fields=[]),
+        BaseModel(name='D', reference_classes=['A', 'C', 'v'], fields=[]),
+        BaseModel(name='z', reference_classes=['v'], fields=[]),
+    ]
+
+    with pytest.raises(Exception):
+        sort_data_models(reference, recursion_count=100000)
+
+
 @pytest.mark.parametrize(
     'current_module,reference,val',
     [
@@ -85,7 +98,6 @@ def test_sort_data_models_unresolved():
     ],
 )
 def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
-
     assert relative(current_module, reference) == val
 
 
@@ -93,14 +105,14 @@ def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
     'word,expected',
     [
         (
-            '_hello',
-            '_Hello',
+                '_hello',
+                '_Hello',
         ),  # In case a name starts with a underline, we should keep it.
         ('hello_again', 'HelloAgain'),  # regular snake case
         ('hello__again', 'HelloAgain'),  # handles double underscores
         (
-            'hello___again_again',
-            'HelloAgainAgain',
+                'hello___again_again',
+                'HelloAgainAgain',
         ),  # handles double and single underscores
         ('hello_again_', 'HelloAgain'),  # handles trailing underscores
         ('hello', 'Hello'),  # no underscores
@@ -115,7 +127,7 @@ def test_snake_to_upper_camel(word, expected):
 
 class D(DataModel):
     def __init__(
-        self, filename: str, data: str, name: str, fields: List[DataModelFieldBase]
+            self, filename: str, data: str, name: str, fields: List[DataModelFieldBase]
     ):
         super().__init__(name, fields)
         self._data = data
