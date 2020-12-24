@@ -1193,3 +1193,26 @@ def test_main_circular_reference():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_invalid_enum_name():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'invalid_enum_name.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
