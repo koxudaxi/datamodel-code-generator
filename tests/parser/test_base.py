@@ -105,14 +105,14 @@ def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
     'word,expected',
     [
         (
-                '_hello',
-                '_Hello',
+            '_hello',
+            '_Hello',
         ),  # In case a name starts with a underline, we should keep it.
         ('hello_again', 'HelloAgain'),  # regular snake case
         ('hello__again', 'HelloAgain'),  # handles double underscores
         (
-                'hello___again_again',
-                'HelloAgainAgain',
+            'hello___again_again',
+            'HelloAgainAgain',
         ),  # handles double and single underscores
         ('hello_again_', 'HelloAgain'),  # handles trailing underscores
         ('hello', 'Hello'),  # no underscores
@@ -127,7 +127,7 @@ def test_snake_to_upper_camel(word, expected):
 
 class D(DataModel):
     def __init__(
-            self, filename: str, data: str, name: str, fields: List[DataModelFieldBase]
+        self, filename: str, data: str, name: str, fields: List[DataModelFieldBase]
     ):
         super().__init__(name, fields)
         self._data = data
