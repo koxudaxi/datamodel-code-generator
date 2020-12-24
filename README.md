@@ -15,8 +15,8 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 
 
 ## Supported source types
-- OpenAPI 3 (YAML/JSON)
-- JSON Schema
+- OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
+- JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
 - JSON/YAML Data (it will be converted to JSON Schema)
 
 ## Implemented list
