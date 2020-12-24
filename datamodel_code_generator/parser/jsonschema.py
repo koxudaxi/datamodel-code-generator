@@ -659,7 +659,7 @@ class JsonSchemaParser(Parser):
                     field_name = f'{obj.type}_{enum_part}'
             enum_fields.append(
                 self.data_model_field_type(
-                    name=field_name,
+                    name=self.model_resolver.get_valid_name(field_name),
                     default=default,
                     data_type=self.data_type_manager.get_data_type(Types.any),
                     required=True,
