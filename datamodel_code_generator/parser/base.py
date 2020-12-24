@@ -391,7 +391,7 @@ class Parser(ABC):
                         from_, import_ = relative(module_path, ref_name)
                     if init:
                         from_ += "."
-                    if from_ and import_:
+                    if from_ and import_:  # pragma: no cover
                         imports.append(
                             Import(
                                 from_=from_,
