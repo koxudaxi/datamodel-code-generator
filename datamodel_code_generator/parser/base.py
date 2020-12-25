@@ -100,9 +100,31 @@ def sort_data_models(
                 )
             except RecursionError:
                 pass
-            # circular reference
-        unsorted_data_model_names = {model.name for model in unsorted_data_models}
-        for model in unsorted_data_models:
+
+        # sort on base_class dependency
+        while True:
+            ordered_models: List[Tuple[int, DataModel]] = []
+            unresolved_reference_model_names = [m.name for m in unresolved_references]
+            for model in unresolved_references:
+                indexes = [
+                    unresolved_reference_model_names.index(b)
+                    for b in model.base_classes
+                    if b in unresolved_reference_model_names
+                ]
+                if indexes:
+                    ordered_models.append((min(indexes), model,))
+                else:
+                    ordered_models.append((-1, model,))
+            sorted_unresolved_models = [
+                m[1] for m in sorted(ordered_models, key=lambda m: m[0])
+            ]
+            if sorted_unresolved_models == unresolved_references:
+                break
+            unresolved_references = sorted_unresolved_models
+
+        # circular reference
+        unsorted_data_model_names = set(unresolved_reference_model_names)
+        for model in unresolved_references:
             unresolved_model = (
                 model.reference_classes - {model.name} - set(sorted_data_models)
             )

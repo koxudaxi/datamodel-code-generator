@@ -121,6 +121,27 @@ components:
       allOf:
         - $ref: "#/components/schemas/Pet"
         - $ref: "#/components/schemas/Car"
+    AllOfNested1:
+      allOf:
+       - $ref: "#/components/schemas/AllOfNested2"
+       - type: object
+         properties:
+           name:
+             $ref: "#/components/schemas/AllOfCombine"
+    AllOfNested2:
+      allOf:
+       - $ref: "#/components/schemas/AllOfNested3"
+       - type: object
+         properties:
+           name:
+             $ref: "#/components/schemas/AllOfNested1"
+    AllOfNested3:
+      allOf:
+       - $ref: "#/components/schemas/AllOfCombine"
+       - type: object
+         properties:
+           name:
+             $ref: "#/components/schemas/AnyOfCombine"
     AllOfobj:
       allOf:
         - type: object
