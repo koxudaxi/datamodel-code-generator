@@ -71,7 +71,7 @@ type_map: Dict[Types, DataType] = {
     Types.ipv6: DataType(type='IPv6Address', imports_=[IMPORT_IPV6ADDRESS]),
     Types.boolean: DataType(type='bool'),
     Types.object: DataType(type='Dict[str, Any]', imports_=[IMPORT_ANY, IMPORT_DICT,],),
-    Types.null: DataType(type='Any', imports_=[IMPORT_ANY]),
+    Types.null: DataType(type='Any', imports_=[IMPORT_ANY], is_optional=True),
     Types.array: DataType(type='List[Any]', imports_=[IMPORT_LIST, IMPORT_ANY]),
     Types.any: DataType(type='Any', imports_=[IMPORT_ANY]),
 }

@@ -52,6 +52,17 @@ class DataType(BaseModel):
         super().__init__(**values)
         if self.type and (self.reference or self.ref):
             self.unresolved_types.add(self.type)
+        for type_ in self.data_types:
+            if type_.type == 'Any' and type_.is_optional:
+                if any(t for t in self.data_types if t.type != 'Any'):
+                    self.is_optional = True
+                    self.data_types = [
+                        t
+                        for t in self.data_types
+                        if not (t.type == 'Any' and t.is_optional)
+                    ]
+                break
+
         imports: Tuple[Tuple[bool, Import], ...] = (
             (self.is_optional, IMPORT_OPTIONAL),
             (len(self.data_types) > 1, IMPORT_UNION),
@@ -100,7 +111,7 @@ class DataType(BaseModel):
             else:
                 dict_ = 'Dict'
             type_ = f'{dict_}[str, {type_}]' if type_ else 'dict_'
-        if self.is_optional:
+        if self.is_optional and type_ != 'Any':
             type_ = f'Optional[{type_}]'
         if self.is_func:
             if self.kwargs:
