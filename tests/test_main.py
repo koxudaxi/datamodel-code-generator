@@ -1143,3 +1143,76 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_nested_directory(tmpdir_factory: TempdirFactory) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    output_path = output_directory / 'model'
+    return_code: Exit = main(
+        [
+            '--input',
+            str(JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'),
+            '--output',
+            str(output_path),
+            '--input-file-type',
+            'jsonschema',
+        ]
+    )
+    assert return_code == Exit.OK
+    main_nested_directory = EXPECTED_MAIN_PATH / 'main_nested_directory'
+
+    for path in main_nested_directory.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_nested_directory)
+        ).read_text()
+        assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_circular_reference():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'circular_reference.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_circular_reference' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_invalid_enum_name():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'invalid_enum_name.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()

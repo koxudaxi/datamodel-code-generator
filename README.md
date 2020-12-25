@@ -2,7 +2,7 @@
 
 This code generator creates pydantic model from an openapi file and others.
 
-[![Build Status](https://travis-ci.org/koxudaxi/datamodel-code-generator.svg?branch=master)](https://travis-ci.org/koxudaxi/datamodel-code-generator)
+[![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Downloads](https://pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/project/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
@@ -15,8 +15,8 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 
 
 ## Supported source types
-- OpenAPI 3 (YAML/JSON)
-- JSON Schema
+- OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
+- JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
 - JSON/YAML Data (it will be converted to JSON Schema)
 
 ## Implemented list

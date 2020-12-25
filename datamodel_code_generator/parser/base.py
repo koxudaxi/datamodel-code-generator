@@ -58,11 +58,14 @@ def dump_templates(templates: List[DataModel]) -> str:
 ReferenceMapSet = Dict[str, Set[str]]
 SortedDataModels = Dict[str, DataModel]
 
+MAX_RECURSION_COUNT: int = 100
+
 
 def sort_data_models(
     unsorted_data_models: List[DataModel],
     sorted_data_models: Optional[SortedDataModels] = None,
     require_update_action_models: Optional[List[str]] = None,
+    recursion_count: int = MAX_RECURSION_COUNT,
 ) -> Tuple[List[DataModel], SortedDataModels, List[str]]:
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
@@ -87,11 +90,30 @@ def sort_data_models(
         else:
             unresolved_references.append(model)
     if unresolved_references:
-        try:
-            return sort_data_models(
-                unresolved_references, sorted_data_models, require_update_action_models
+        if recursion_count:
+            try:
+                return sort_data_models(
+                    unresolved_references,
+                    sorted_data_models,
+                    require_update_action_models,
+                    recursion_count - 1,
+                )
+            except RecursionError:
+                pass
+            # circular reference
+        unsorted_data_model_names = {model.name for model in unsorted_data_models}
+        for model in unsorted_data_models:
+            unresolved_model = (
+                model.reference_classes - {model.name} - set(sorted_data_models)
             )
-        except RecursionError:
+            if not unresolved_model:
+                sorted_data_models[model.name] = model
+                continue
+            if not unresolved_model - unsorted_data_model_names:
+                sorted_data_models[model.name] = model
+                require_update_action_models.append(model.name)
+                continue
+            # unresolved
             unresolved_classes = ', '.join(
                 f"[class: {item.name} references: {item.reference_classes}]"
                 for item in unresolved_references
@@ -167,6 +189,7 @@ class Parser(ABC):
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
+        base_path: Optional[Path] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -190,7 +213,9 @@ class Parser(ABC):
 
         self.current_source_path: Optional[Path] = None
 
-        if isinstance(source, Path):
+        if base_path:
+            self.base_path = base_path
+        elif isinstance(source, Path):
             self.base_path = (
                 source.absolute() if source.is_dir() else source.absolute().parent
             )
@@ -291,18 +316,24 @@ class Parser(ABC):
             imports = Imports()
             models_to_update: List[str] = []
             scoped_model_resolver = ModelResolver()
+            import_map: Dict[str, Tuple[str, str]] = {}
+            model_names: Set[str] = {m.name for m in models}
+            processed_models: Set[str] = set()
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
-                    ref_names = [
+                    ref_names = {
                         d.reference.name
                         for f in model.fields
                         for d in f.data_type.all_data_types
                         if d.reference
-                    ]
-                    if model.name in ref_names:
+                    }
+                    if model.name in ref_names or (
+                        not ref_names - model_names and ref_names - processed_models
+                    ):
                         models_to_update += [model.name]
                 imports.append(model.imports)
+                processed_models.add(model.name)
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:  # type: DataType
                         if not data_type.type or (
@@ -341,16 +372,26 @@ class Parser(ABC):
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
                         new_name = f'{alias}.{name}' if from_ and import_ else name
+                        if data_type.module_name and not type_.startswith(from_):
+                            import_map[new_name] = (
+                                f'.{type_[:len(new_name) * - 1 - 1]}',
+                                new_name.split('.')[0],
+                            )
                         if name in model.reference_classes:
                             model.reference_classes.remove(name)
                             model.reference_classes.add(new_name)
                         data_type.type = new_name
 
                 for ref_name in model.reference_classes:
-                    from_, import_ = relative(module_path, ref_name)
+                    if ref_name in model_names:
+                        continue
+                    if ref_name in import_map:
+                        from_, import_ = import_map[ref_name]
+                    else:
+                        from_, import_ = relative(module_path, ref_name)
                     if init:
                         from_ += "."
-                    if from_ and import_:
+                    if from_ and import_:  # pragma: no cover
                         imports.append(
                             Import(
                                 from_=from_,

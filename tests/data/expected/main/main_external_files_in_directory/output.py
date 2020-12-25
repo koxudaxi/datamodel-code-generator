@@ -5,14 +5,36 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
-from pydantic import BaseModel, Field, conint
+from pydantic import BaseModel, Extra, Field, conint
 
 
 class Fur(Enum):
     Short_hair = 'Short hair'
     Long_hair = 'Long hair'
+
+
+class Friend(BaseModel):
+    class Config:
+        extra = Extra.allow
+
+    name: str = Field(..., example='John Doe')
+    phone_number: Optional[str] = Field(None, example='(555) 555-1234')
+
+
+class Friends(BaseModel):
+    __root__: List[Friend] = Field(..., title='Friends')
+
+
+class Coffee(Enum):
+    Black = 'Black'
+    Espresso = 'Espresso'
+
+
+class Tea(Enum):
+    Oolong = 'Oolong'
+    Green = 'Green'
 
 
 class Pet(BaseModel):
@@ -26,4 +48,6 @@ class Person(BaseModel):
     last_name: str = Field(..., description="The person's last name.")
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[Pet]] = None
+    friends: Optional[Friends] = None
     comment: Optional[Any] = None
+    drink: Optional[List[Union[Coffee, Tea]]] = None

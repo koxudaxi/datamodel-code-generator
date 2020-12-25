@@ -200,6 +200,7 @@ class JsonSchemaParser(Parser):
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
+        base_path: Optional[Path] = None,
     ):
         super().__init__(
             source=source,
@@ -222,6 +223,7 @@ class JsonSchemaParser(Parser):
             force_optional_for_required_fields=force_optional_for_required_fields,
             class_name=class_name,
             use_standard_collections=use_standard_collections,
+            base_path=base_path,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -593,6 +595,7 @@ class JsonSchemaParser(Parser):
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
         )
 
         self.append_result(data_model_root)
@@ -660,7 +663,7 @@ class JsonSchemaParser(Parser):
                     field_name = f'{obj.type}_{enum_part}'
             enum_fields.append(
                 self.data_model_field_type(
-                    name=field_name,
+                    name=self.model_resolver.get_valid_name(field_name),
                     default=default,
                     data_type=self.data_type_manager.get_data_type(Types.any),
                     required=True,
@@ -674,7 +677,7 @@ class JsonSchemaParser(Parser):
             singular_name_suffix='Enum',
             unique=unique,
         ).name
-        enum = Enum(enum_name, fields=enum_fields)
+        enum = Enum(enum_name, fields=enum_fields, path=self.current_source_path)
         self.append_result(enum)
         return enum
 
@@ -701,7 +704,10 @@ class JsonSchemaParser(Parser):
             else:
                 # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
                 # the same location. TODO treat edge case
-                full_path = self.base_path / ref
+                if self.current_source_path and len(self.current_source_path.parts) > 1:
+                    full_path = self.base_path / self.current_source_path.parent / ref
+                else:
+                    full_path = self.base_path / ref
                 # yaml loader can parse json data.
                 with full_path.open() as f:
                     ref_body = yaml.safe_load(f)
@@ -746,11 +752,12 @@ class JsonSchemaParser(Parser):
                         self.base_path = (self.base_path / relative_path).parent
                     else:
                         previous_base_path = None
+                    relative_paths = relative_path.split('/')
                     self._parse_file(
                         models,
                         model_name,
-                        [relative_path, '#', *object_paths],
-                        [relative_path],
+                        [*relative_paths, '#', *object_paths],
+                        relative_paths,
                     )
                     if previous_base_path:
                         self.base_path = previous_base_path

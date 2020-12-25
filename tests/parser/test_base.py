@@ -73,6 +73,19 @@ def test_sort_data_models_unresolved():
         sort_data_models(reference)
 
 
+def test_sort_data_models_unresolved_raise_recursion_error():
+    reference = [
+        BaseModel(name='A', reference_classes=['A', 'C'], fields=[]),
+        BaseModel(name='B', reference_classes=['B'], fields=[]),
+        BaseModel(name='C', reference_classes=['B'], fields=[]),
+        BaseModel(name='D', reference_classes=['A', 'C', 'v'], fields=[]),
+        BaseModel(name='z', reference_classes=['v'], fields=[]),
+    ]
+
+    with pytest.raises(Exception):
+        sort_data_models(reference, recursion_count=100000)
+
+
 @pytest.mark.parametrize(
     'current_module,reference,val',
     [
@@ -85,7 +98,6 @@ def test_sort_data_models_unresolved():
     ],
 )
 def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
-
     assert relative(current_module, reference) == val
 
 

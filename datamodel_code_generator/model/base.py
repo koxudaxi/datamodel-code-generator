@@ -70,7 +70,7 @@ class DataModelFieldBase(BaseModel):
             if keyword.iskeyword(name):
                 alias = name
                 name += '_'
-            elif re.search(r'\W', name):
+            elif re.search(r'\W', name):  # pragma: no cover
                 alias = name
                 name = re.sub(r'\W', '_', name)
             else:
