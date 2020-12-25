@@ -348,6 +348,7 @@ def test_parse_nested_array():
         ('string', 'uuid5', 'UUID5', 'pydantic', 'UUID5'),
         ('string', 'ipv4', 'IPv4Address', 'pydantic', 'IPv4Address'),
         ('string', 'ipv6', 'IPv6Address', 'pydantic', 'IPv6Address'),
+        ('string', 'unknown-type', 'str', None, None),
     ],
 )
 def test_get_data_type(schema_type, schema_format, result_type, from_, import_):

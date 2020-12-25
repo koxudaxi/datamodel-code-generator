@@ -1,7 +1,6 @@
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from warnings import warn
 from typing import (
     Any,
     Callable,
@@ -15,6 +14,7 @@ from typing import (
     Type,
     Union,
 )
+from warnings import warn
 
 import yaml
 from pydantic import BaseModel, Field, root_validator, validator
@@ -254,12 +254,17 @@ class JsonSchemaParser(Parser):
             return self.data_type_manager.get_data_type(Types.any)
 
         def _get_data_type(type_: str, format__: str) -> DataType:
-            if format__ not in json_schema_data_formats[type_]:
-                warn("format of {!r} not understood for {!r} - using default"
-                     "".format(format__, type_))
+            data_formats: Optional[Types] = json_schema_data_formats[type_].get(
+                format__
+            )
+            if data_formats is None:
+                warn(
+                    "format of {!r} not understood for {!r} - using default"
+                    "".format(format__, type_)
+                )
+                data_formats = json_schema_data_formats[type_]['default']
             return self.data_type_manager.get_data_type(
-                json_schema_data_formats[type_].get(format__, 'default'),
-                **obj.dict() if not self.field_constraints else {},
+                data_formats, **obj.dict() if not self.field_constraints else {},
             )
 
         if isinstance(obj.type, list):
