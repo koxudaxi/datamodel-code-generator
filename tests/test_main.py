@@ -332,6 +332,31 @@ def test_main_json_failed():
 
 
 @freeze_time('2019-07-26')
+def test_main_json_arrary_include_null():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_DATA_PATH / 'array_include_null.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'json',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_null_and_array():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
