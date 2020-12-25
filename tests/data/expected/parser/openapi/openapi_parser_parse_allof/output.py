@@ -58,3 +58,15 @@ class AnyOfCombineInRoot(Pet, Car):
 class Error(BaseModel):
     code: int
     message: str
+
+
+class AllOfNested3(AllOfCombine):
+    name: Optional[AnyOfCombine] = None
+
+
+class AllOfNested2(AllOfNested3):
+    name: Optional[AllOfNested1] = None
+
+
+class AllOfNested1(AllOfNested2):
+    name: Optional[AllOfCombine] = None
