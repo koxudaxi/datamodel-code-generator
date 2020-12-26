@@ -1,5 +1,7 @@
+import enum as _enum
 import sys
 from contextlib import contextmanager
+from functools import cached_property
 from pathlib import Path
 from typing import (
     Any,
@@ -35,6 +37,10 @@ def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]
     elif len(keys) == 1:
         return schema.get(keys[0], {})
     return get_model_by_path(schema[keys[0]], keys[1:])
+
+
+def is_url(ref: str) -> bool:
+    return ref.startswith(('https://', 'http://'))
 
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
@@ -78,6 +84,12 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
     'null': {'default': Types.null},
     'array': {'default': Types.array},
 }
+
+
+class JSONReference(_enum.Enum):
+    LOCAL = 'LOCAL'
+    REMOTE = 'REMOTE'
+    URL = 'URL'
 
 
 class JsonSchemaObject(BaseModel):
@@ -145,15 +157,18 @@ class JsonSchemaObject(BaseModel):
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
 
-    @property
+    class Config:
+        keep_untouched = (cached_property,)
+
+    @cached_property
     def is_object(self) -> bool:
         return self.properties is not None or self.type == 'object'
 
-    @property
+    @cached_property
     def is_array(self) -> bool:
         return self.items is not None or self.type == 'array'
 
-    @property
+    @cached_property
     def ref_object_name(self) -> str:  # pragma: no cover
         return self.ref.rsplit('/', 1)[-1]  # type: ignore
 
@@ -163,13 +178,23 @@ class JsonSchemaObject(BaseModel):
             return None
         return values
 
-    @property
+    @cached_property
     def has_default(self) -> bool:
         return 'default' in self.__fields_set__
 
-    @property
+    @cached_property
     def has_constraint(self) -> bool:
         return bool(self.__constraint_fields__ & self.__fields_set__)
+
+    @cached_property
+    def ref_type(self) -> Optional[JSONReference]:
+        if self.ref:
+            if self.ref[0] == '#':
+                return JSONReference.LOCAL
+            elif is_url(self.ref):
+                return JSONReference.URL
+            return JSONReference.REMOTE
+        return None
 
 
 JsonSchemaObject.update_forward_refs()
@@ -341,7 +366,7 @@ class JsonSchemaParser(Parser):
         base_classes: List[DataType] = []
         if len(obj.allOf) == 1:
             single_obj = obj.allOf[0]
-            if single_obj.ref and single_obj.ref.startswith('#/'):
+            if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
                 if get_model_by_path(self.raw_obj, single_obj.ref[2:].split('/')).get(
                     'enum'
                 ):
@@ -687,36 +712,42 @@ class JsonSchemaParser(Parser):
         return enum
 
     def _get_ref_body(self, ref: str) -> Dict[Any, Any]:
-        remote_object: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
-        if ref.startswith(('https://', 'http://')):
-            if remote_object:
-                ref_body: Dict[str, Any] = remote_object
-            else:
-                # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-                try:
-                    import httpx
-                except ImportError:  # pragma: no cover
-                    raise Exception(
-                        f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
-                    )
-                raw_body: str = httpx.get(ref).text
-                # yaml loader can parse json data.
-                ref_body = yaml.safe_load(raw_body)
-                self.remote_object_cache[ref] = ref_body
+        if is_url(ref):
+            return self._get_ref_body_from_url(ref)
+        return self._get_ref_body_from_remote(ref)
+
+    def _get_ref_body_from_url(self, ref: str) -> Dict[Any, Any]:
+        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
+        if cached_ref_body:
+            return cached_ref_body
+
+        # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+        try:
+            import httpx
+        except ImportError:  # pragma: no cover
+            raise Exception(
+                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
+            )
+        raw_body: str = httpx.get(ref).text
+        # yaml loader can parse json data.
+        ref_body = yaml.safe_load(raw_body)
+        self.remote_object_cache[ref] = ref_body
+        return ref_body
+
+    def _get_ref_body_from_remote(self, ref: str) -> Dict[Any, Any]:
+        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
+        if cached_ref_body:
+            return cached_ref_body
+        # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
+        # the same location. TODO treat edge case
+        if self.current_source_path and len(self.current_source_path.parts) > 1:
+            full_path = self.base_path / self.current_source_path.parent / ref
         else:
-            if remote_object:
-                ref_body = remote_object
-            else:
-                # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
-                # the same location. TODO treat edge case
-                if self.current_source_path and len(self.current_source_path.parts) > 1:
-                    full_path = self.base_path / self.current_source_path.parent / ref
-                else:
-                    full_path = self.base_path / ref
-                # yaml loader can parse json data.
-                with full_path.open() as f:
-                    ref_body = yaml.safe_load(f)
-            self.remote_object_cache[ref] = ref_body
+            full_path = self.base_path / ref
+        # yaml loader can parse json data.
+        with full_path.open() as f:
+            ref_body = yaml.safe_load(f)
+        self.remote_object_cache[ref] = ref_body
         return ref_body
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
@@ -724,16 +755,13 @@ class JsonSchemaParser(Parser):
             reference = self.model_resolver.get(obj.ref)
             if not reference or not reference.loaded:
                 # https://swagger.io/docs/specification/using-ref/
-                if obj.ref.startswith('#'):
+                if obj.ref_type == JSONReference.LOCAL:
                     # Local Reference – $ref: '#/definitions/myElement'
                     pass
                 elif self.model_resolver.is_after_load(obj.ref):
                     pass
                 else:
-                    if (
-                        not obj.ref.startswith(('https://', 'http://'))
-                        and self.root_id_base_path
-                    ):
+                    if obj.ref_type == JSONReference.REMOTE and self.root_id_base_path:
                         ref = f'{self.root_id_base_path}/{obj.ref}'
                     else:
                         ref = obj.ref
@@ -752,7 +780,7 @@ class JsonSchemaParser(Parser):
                     else:
                         models = ref_body
                         model_name = self.model_resolver.add_ref(obj.ref).name
-                    if not obj.ref.startswith(('https://', 'http://')):
+                    if obj.ref_type == JSONReference.REMOTE:
                         previous_base_path: Optional[Path] = self.base_path
                         self.base_path = (self.base_path / relative_path).parent
                     else:

@@ -358,18 +358,12 @@ class Parser(ABC):
                 processed_models.add(model.name)
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:  # type: DataType
-                        if not data_type.type or (
-                            '.' not in data_type.type and data_type.module_name is None
-                        ):
+                        if not data_type.is_modular:
                             continue
-                        type_ = (
-                            f"{data_type.module_name}.{data_type.type}"
-                            if data_type.module_name
-                            else data_type.type
-                        )
-                        from_, import_ = relative(module_path, type_)
+                        full_name = data_type.full_name
+                        from_, import_ = relative(module_path, full_name)
                         full_path = f'{from_}/{import_}'
-                        name = type_.rsplit('.', 1)[-1]
+                        name = data_type.name
                         if data_type.reference:
                             reference = self.model_resolver.get(
                                 data_type.reference.path
@@ -394,9 +388,9 @@ class Parser(ABC):
                             ).name
                             alias_map[full_path] = None if alias == import_ else alias
                         new_name = f'{alias}.{name}' if from_ and import_ else name
-                        if data_type.module_name and not type_.startswith(from_):
+                        if data_type.module_name and not full_name.startswith(from_):
                             import_map[new_name] = (
-                                f'.{type_[:len(new_name) * - 1 - 1]}',
+                                f'.{full_name[:len(new_name) * - 1 - 1]}',
                                 new_name.split('.')[0],
                             )
                         if name in model.reference_classes:
