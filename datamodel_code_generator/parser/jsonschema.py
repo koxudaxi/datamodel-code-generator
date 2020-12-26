@@ -45,7 +45,7 @@ else:
 
             def __get__(self, instance: Any, owner: Any = None) -> Any:
                 value = instance.__dict__.get(self.func.__name__, _NOT_FOUND)
-                if value == _NOT_FOUND:
+                if value == _NOT_FOUND:  # pragma: no cover
                     value = instance.__dict__[self.func.__name__] = self.func(instance)
                 return value
 
