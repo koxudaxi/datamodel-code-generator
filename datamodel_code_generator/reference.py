@@ -11,6 +11,7 @@ from typing import (
     Mapping,
     Optional,
     Pattern,
+    Set,
     Tuple,
     Union,
 )
@@ -52,7 +53,7 @@ class ModelResolver:
         self._current_root: List[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
-        self.after_load_files: List[str] = []
+        self.after_load_files: Set[str] = set()
 
     @property
     def current_root(self) -> List[str]:
@@ -204,7 +205,8 @@ class ModelResolver:
     def _get_uniq_name(self, name: str, camel: bool = False) -> str:
         uniq_name: str = name
         count: int = 1
-        while uniq_name in [r.name for r in self.references.values()]:
+        reference_names = {r.name for r in self.references.values()}
+        while uniq_name in reference_names:
             if camel:
                 uniq_name = f'{name}{count}'
             else:
