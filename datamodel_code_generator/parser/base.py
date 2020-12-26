@@ -354,15 +354,14 @@ class Parser(ABC):
                         not ref_names - model_names and ref_names - processed_models
                     ):
                         models_to_update += [model.name]
+                        processed_models.add(model.name)
                 imports.append(model.imports)
-                processed_models.add(model.name)
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:  # type: DataType
                         if not data_type.is_modular:
                             continue
                         full_name = data_type.full_name
                         from_, import_ = relative(module_path, full_name)
-                        full_path = f'{from_}/{import_}'
                         name = data_type.name
                         if data_type.reference:
                             reference = self.model_resolver.get(
@@ -380,6 +379,7 @@ class Parser(ABC):
                                 if name in model.reference_classes:  # pragma: no cover
                                     model.reference_classes.remove(name)
                                 continue
+                        full_path = f'{from_}/{import_}'
                         if full_path in alias_map:
                             alias = alias_map[full_path] or import_
                         else:
@@ -401,20 +401,21 @@ class Parser(ABC):
                 for ref_name in model.reference_classes:
                     if ref_name in model_names:
                         continue
-                    if ref_name in import_map:
+                    elif ref_name in import_map:
                         from_, import_ = import_map[ref_name]
                     else:
                         from_, import_ = relative(module_path, ref_name)
-                    if init:
-                        from_ += "."
-                    if from_ and import_:  # pragma: no cover
-                        imports.append(
-                            Import(
-                                from_=from_,
-                                import_=import_,
-                                alias=alias_map.get(f'{from_}/{import_}'),
+                    if import_:
+                        if init:
+                            from_ += "."
+                        if from_:  # pragma: no cover
+                            imports.append(
+                                Import(
+                                    from_=from_,
+                                    import_=import_,
+                                    alias=alias_map.get(f'{from_}/{import_}'),
+                                )
                             )
-                        )
 
             if with_import:
                 result += [str(imports), str(self.imports), '\n']
