@@ -407,14 +407,13 @@ class Parser(ABC):
                         from_, import_ = relative(module_path, ref_name)
                     if init:
                         from_ += "."
-                    if from_:
-                        imports.append(
-                            Import(
-                                from_=from_,
-                                import_=import_,
-                                alias=alias_map.get(f'{from_}/{import_}'),
-                            )
+                    imports.append(
+                        Import(
+                            from_=from_,
+                            import_=import_,
+                            alias=alias_map.get(f'{from_}/{import_}'),
                         )
+                    )
 
             if with_import:
                 result += [str(imports), str(self.imports), '\n']
