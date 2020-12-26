@@ -29,7 +29,7 @@ class Reference(BaseModel):
 
     @property
     def module_name(self) -> Optional[str]:
-        if self.path.startswith(('https://', 'http://')):  # pragma: no cover
+        if is_url(self.path):  # pragma: no cover
             return None
         # TODO: Support file:///
         path = Path(self.path.split('#')[0])
@@ -59,19 +59,14 @@ class ModelResolver:
     def current_root(self) -> List[str]:
         return self._current_root
 
-    def set_current_root(self, current_root: List[str]) -> None:
-        self._current_root = current_root
-
     @contextmanager
     def current_root_context(
         self, current_root: List[str]
     ) -> Generator[None, None, None]:
         previous_root_path: List[str] = self.current_root
-        try:
-            self.set_current_root(current_root)
-            yield
-        finally:
-            self.set_current_root(previous_root_path)
+        self.set_current_root(current_root)
+        yield
+        self.set_current_root(previous_root_path)
 
     @property
     def root_id_base_path(self) -> Optional[str]:
@@ -255,3 +250,7 @@ def snake_to_upper_camel(word: str) -> str:
 
 
 inflect_engine = inflect.engine()
+
+
+def is_url(ref: str) -> bool:
+    return ref.startswith(('https://', 'http://'))
