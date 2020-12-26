@@ -59,6 +59,9 @@ class ModelResolver:
     def current_root(self) -> List[str]:
         return self._current_root
 
+    def set_current_root(self, current_root: List[str]) -> None:
+        self._current_root = current_root
+
     @contextmanager
     def current_root_context(
         self, current_root: List[str]
