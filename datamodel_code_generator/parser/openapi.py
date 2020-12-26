@@ -25,8 +25,8 @@ class OpenAPIParser(JsonSchemaParser):
             )
             if not schemas:  # pragma: no cover
                 continue
-            self.model_resolver.set_current_root(list(source.path.parts))
-            for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
-                self.parse_raw_obj(
-                    obj_name, raw_obj, ['#/components', 'schemas', obj_name]
-                )
+            with self.model_resolver.current_root_context(list(source.path.parts)):
+                for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
+                    self.parse_raw_obj(
+                        obj_name, raw_obj, ['#/components', 'schemas', obj_name]
+                    )

@@ -1,8 +1,19 @@
 import re
 from collections import defaultdict
+from contextlib import contextmanager
 from keyword import iskeyword
 from pathlib import Path
-from typing import DefaultDict, Dict, List, Mapping, Optional, Pattern, Tuple, Union
+from typing import (
+    DefaultDict,
+    Dict,
+    Generator,
+    List,
+    Mapping,
+    Optional,
+    Pattern,
+    Tuple,
+    Union,
+)
 
 import inflect
 from pydantic import BaseModel
@@ -49,6 +60,17 @@ class ModelResolver:
 
     def set_current_root(self, current_root: List[str]) -> None:
         self._current_root = current_root
+
+    @contextmanager
+    def current_root_context(
+        self, current_root: List[str]
+    ) -> Generator[None, None, None]:
+        previous_root_path: List[str] = self.current_root
+        try:
+            self.set_current_root(current_root)
+            yield
+        finally:
+            self.set_current_root(previous_root_path)
 
     @property
     def root_id_base_path(self) -> Optional[str]:
