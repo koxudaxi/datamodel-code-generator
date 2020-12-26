@@ -1,9 +1,9 @@
 import enum as _enum
 import sys
 from contextlib import contextmanager
-from functools import cached_property
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -29,6 +29,14 @@ from datamodel_code_generator.model.enum import Enum
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
 from ..types import DataType, DataTypeManager, Types
+
+if TYPE_CHECKING:
+    cached_property = property
+else:
+    try:
+        from functools import cached_property
+    except ImportError:
+        from cached_property import cached_property
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
