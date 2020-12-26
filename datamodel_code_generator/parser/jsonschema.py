@@ -36,7 +36,18 @@ else:
     try:
         from functools import cached_property
     except ImportError:
-        from cached_property import cached_property
+        _NOT_FOUND = object()
+
+        class cached_property:
+            def __init__(self, func: Callable) -> None:
+                self.func: Callable = func
+                self.__doc__: Any = func.__doc__
+
+            def __get__(self, instance: Any, owner: Any = None) -> Any:
+                value = instance.__dict__.get(self.func.__name__, _NOT_FOUND)
+                if value == _NOT_FOUND:
+                    value = instance.__dict__[self.func.__name__] = self.func(instance)
+                return value
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
@@ -166,6 +177,7 @@ class JsonSchemaObject(BaseModel):
     id: Optional[str] = Field(default=None, alias='$id')
 
     class Config:
+        arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
 
     @cached_property
