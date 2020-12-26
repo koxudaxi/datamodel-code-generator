@@ -214,7 +214,7 @@ class JsonSchemaObject(BaseModel):
             elif is_url(self.ref):
                 return JSONReference.URL
             return JSONReference.REMOTE
-        return None
+        return None  # pragma: no cover
 
 
 JsonSchemaObject.update_forward_refs()
