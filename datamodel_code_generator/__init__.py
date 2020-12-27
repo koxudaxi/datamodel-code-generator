@@ -15,6 +15,7 @@ from typing import (
     Iterator,
     Mapping,
     Optional,
+    TextIO,
     Type,
     TypeVar,
     Union,
@@ -22,6 +23,11 @@ from typing import (
 
 import pysnooper
 import yaml
+
+try:
+    from yaml import CSafeLoader as CSafeLoader
+except ImportError:
+    from yaml import Loader
 
 if TYPE_CHECKING:
     cached_property = property
@@ -60,7 +66,12 @@ pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
+
 # ALL_MODEL: str = '#all#'
+
+
+def load_yaml(stream: Union[str, TextIO]) -> Any:
+    return yaml.load(stream, Loader=CSafeLoader)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
@@ -114,7 +125,7 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
 
 
 def is_openapi(text: str) -> bool:
-    return 'openapi' in yaml.safe_load(text)
+    return 'openapi' in load_yaml(text)
 
 
 class InputFileType(Enum):
@@ -204,7 +215,7 @@ def generate(
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
                 input_text = input_ if isinstance(input_, str) else input_.read_text()
-                obj: Dict[Any, Any] = yaml.safe_load(input_text)
+                obj: Dict[Any, Any] = load_yaml(input_text)
             except:
                 raise Error('Invalid file format')
             from genson import SchemaBuilder
@@ -271,7 +282,7 @@ def generate(
         else:
             if not path.parent.exists():
                 path.parent.mkdir(parents=True)
-            file = path.open('wt')
+            file = path.open('wt', encoding='utf-8')
 
         print(header.format(filename=filename), file=file)
         if body:

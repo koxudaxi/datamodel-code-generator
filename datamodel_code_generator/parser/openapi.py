@@ -1,8 +1,6 @@
 from typing import Any, Dict, Optional
 
-import yaml
-
-from datamodel_code_generator import snooper_to_methods
+from datamodel_code_generator import load_yaml, snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 
@@ -18,7 +16,7 @@ class OpenAPIParser(JsonSchemaParser):
                 )
                 specification: Dict[str, Any] = base_parser.specification
             else:
-                specification = yaml.safe_load(source.text)
+                specification = load_yaml(source.text)
             self.raw_obj = specification
             schemas: Optional[Dict[Any, Any]] = specification.get('components', {}).get(
                 'schemas'

@@ -58,7 +58,7 @@ def dump_templates(templates: List[DataModel]) -> str:
 ReferenceMapSet = Dict[str, Set[str]]
 SortedDataModels = Dict[str, DataModel]
 
-MAX_RECURSION_COUNT: int = 100
+MAX_RECURSION_COUNT: int = 1
 
 
 def sort_data_models(

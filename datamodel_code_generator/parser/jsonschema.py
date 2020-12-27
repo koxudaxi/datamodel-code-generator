@@ -17,12 +17,12 @@ from typing import (
 )
 from warnings import warn
 
-import yaml
 from pydantic import BaseModel, Field, root_validator, validator
 
 from datamodel_code_generator import (
     InvalidClassNameError,
     cached_property,
+    load_yaml,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import PythonVersion
@@ -725,7 +725,7 @@ class JsonSchemaParser(Parser):
             )
         raw_body: str = httpx.get(ref).text
         # yaml loader can parse json data.
-        ref_body = yaml.safe_load(raw_body)
+        ref_body = load_yaml(raw_body)
         self.remote_object_cache[ref] = ref_body
         return ref_body
 
@@ -741,7 +741,7 @@ class JsonSchemaParser(Parser):
             full_path = self.base_path / ref
         # yaml loader can parse json data.
         with full_path.open() as f:
-            ref_body = yaml.safe_load(f)
+            ref_body = load_yaml(f)
         self.remote_object_cache[ref] = ref_body
         return ref_body
 
@@ -875,7 +875,7 @@ class JsonSchemaParser(Parser):
                 self.current_source_path = source.path
             path_parts = list(source.path.parts)
             with self.model_resolver.current_root_context(path_parts):
-                self.raw_obj = yaml.safe_load(source.text)
+                self.raw_obj = load_yaml(source.text)
                 if self.class_name:
                     obj_name = self.class_name
                 else:
