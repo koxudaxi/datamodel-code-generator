@@ -1,3 +1,4 @@
+import enum as _enum
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -16,16 +17,21 @@ from typing import (
 )
 from warnings import warn
 
-import yaml
 from pydantic import BaseModel, Field, root_validator, validator
 
-from datamodel_code_generator import Error, InvalidClassNameError, snooper_to_methods
+from datamodel_code_generator import (
+    InvalidClassNameError,
+    cached_property,
+    load_yaml,
+    snooper_to_methods,
+)
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
+from ..reference import is_url
 from ..types import DataType, DataTypeManager, Types
 
 
@@ -78,6 +84,12 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
     'null': {'default': Types.null},
     'array': {'default': Types.array},
 }
+
+
+class JSONReference(_enum.Enum):
+    LOCAL = 'LOCAL'
+    REMOTE = 'REMOTE'
+    URL = 'URL'
 
 
 class JsonSchemaObject(BaseModel):
@@ -145,31 +157,44 @@ class JsonSchemaObject(BaseModel):
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
 
-    @property
+    class Config:
+        arbitrary_types_allowed = True
+        keep_untouched = (cached_property,)
+
+    @cached_property
     def is_object(self) -> bool:
         return self.properties is not None or self.type == 'object'
 
-    @property
+    @cached_property
     def is_array(self) -> bool:
         return self.items is not None or self.type == 'array'
 
-    @property
+    @cached_property
     def ref_object_name(self) -> str:  # pragma: no cover
         return self.ref.rsplit('/', 1)[-1]  # type: ignore
 
     @validator('items', pre=True)
     def validate_items(cls, values: Any) -> Any:
-        if not values:  # this condition expects empty dict
-            return None
-        return values
+        # this condition expects empty dict
+        return values or None
 
-    @property
+    @cached_property
     def has_default(self) -> bool:
         return 'default' in self.__fields_set__
 
-    @property
+    @cached_property
     def has_constraint(self) -> bool:
         return bool(self.__constraint_fields__ & self.__fields_set__)
+
+    @cached_property
+    def ref_type(self) -> Optional[JSONReference]:
+        if self.ref:
+            if self.ref[0] == '#':
+                return JSONReference.LOCAL
+            elif is_url(self.ref):
+                return JSONReference.URL
+            return JSONReference.REMOTE
+        return None  # pragma: no cover
 
 
 JsonSchemaObject.update_forward_refs()
@@ -281,19 +306,15 @@ class JsonSchemaParser(Parser):
         return self.data_type.from_reference(reference)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
-        if not obj.additionalProperties:
-            return
-
-        # TODO check additional property types.
-        self.extra_template_data[name][
-            'additionalProperties'
-        ] = obj.additionalProperties
+        if obj.additionalProperties:
+            # TODO check additional property types.
+            self.extra_template_data[name][
+                'additionalProperties'
+            ] = obj.additionalProperties
 
     def set_title(self, name: str, obj: JsonSchemaObject) -> None:
-        if not obj.title:
-            return
-
-        self.extra_template_data[name]['title'] = obj.title
+        if obj.title:
+            self.extra_template_data[name]['title'] = obj.title
 
     def parse_list_item(
         self, name: str, target_items: List[JsonSchemaObject], path: List[str]
@@ -341,7 +362,7 @@ class JsonSchemaParser(Parser):
         base_classes: List[DataType] = []
         if len(obj.allOf) == 1:
             single_obj = obj.allOf[0]
-            if single_obj.ref and single_obj.ref.startswith('#/'):
+            if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
                 if get_model_by_path(self.raw_obj, single_obj.ref[2:].split('/')).get(
                     'enum'
                 ):
@@ -376,9 +397,9 @@ class JsonSchemaParser(Parser):
         self, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataModelFieldBase]:
         properties: Dict[str, JsonSchemaObject] = (
-            obj.properties if obj.properties is not None else {}
+            {} if obj.properties is None else obj.properties
         )
-        requires: Set[str] = {*obj.required} if obj.required is not None else {*()}
+        requires: Set[str] = {*()} if obj.required is None else {*obj.required}
         fields: List[DataModelFieldBase] = []
 
         for field_name, field in properties.items():
@@ -502,12 +523,11 @@ class JsonSchemaParser(Parser):
         class_name = self.model_resolver.add(
             path, name, class_name=True, singular_name=singular_name, unique=unique
         ).name
-        fields = self.parse_object_fields(obj, path)
         self.set_title(class_name, obj)
         self.set_additional_properties(class_name, additional_properties or obj)
         data_model_type = self.data_model_type(
             class_name,
-            fields=fields,
+            fields=self.parse_object_fields(obj, path),
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
@@ -687,36 +707,42 @@ class JsonSchemaParser(Parser):
         return enum
 
     def _get_ref_body(self, ref: str) -> Dict[Any, Any]:
-        remote_object: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
-        if ref.startswith(('https://', 'http://')):
-            if remote_object:
-                ref_body: Dict[str, Any] = remote_object
-            else:
-                # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-                try:
-                    import httpx
-                except ImportError:  # pragma: no cover
-                    raise Exception(
-                        f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
-                    )
-                raw_body: str = httpx.get(ref).text
-                # yaml loader can parse json data.
-                ref_body = yaml.safe_load(raw_body)
-                self.remote_object_cache[ref] = ref_body
+        if is_url(ref):
+            return self._get_ref_body_from_url(ref)
+        return self._get_ref_body_from_remote(ref)
+
+    def _get_ref_body_from_url(self, ref: str) -> Dict[Any, Any]:
+        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
+        if cached_ref_body:
+            return cached_ref_body
+
+        # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+        try:
+            import httpx
+        except ImportError:  # pragma: no cover
+            raise Exception(
+                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
+            )
+        raw_body: str = httpx.get(ref).text
+        # yaml loader can parse json data.
+        ref_body = load_yaml(raw_body)
+        self.remote_object_cache[ref] = ref_body
+        return ref_body
+
+    def _get_ref_body_from_remote(self, ref: str) -> Dict[Any, Any]:
+        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
+        if cached_ref_body:
+            return cached_ref_body
+        # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
+        # the same location. TODO treat edge case
+        if self.current_source_path and len(self.current_source_path.parts) > 1:
+            full_path = self.base_path / self.current_source_path.parent / ref
         else:
-            if remote_object:
-                ref_body = remote_object
-            else:
-                # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
-                # the same location. TODO treat edge case
-                if self.current_source_path and len(self.current_source_path.parts) > 1:
-                    full_path = self.base_path / self.current_source_path.parent / ref
-                else:
-                    full_path = self.base_path / ref
-                # yaml loader can parse json data.
-                with full_path.open() as f:
-                    ref_body = yaml.safe_load(f)
-            self.remote_object_cache[ref] = ref_body
+            full_path = self.base_path / ref
+        # yaml loader can parse json data.
+        with full_path.open() as f:
+            ref_body = load_yaml(f)
+        self.remote_object_cache[ref] = ref_body
         return ref_body
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
@@ -724,16 +750,13 @@ class JsonSchemaParser(Parser):
             reference = self.model_resolver.get(obj.ref)
             if not reference or not reference.loaded:
                 # https://swagger.io/docs/specification/using-ref/
-                if obj.ref.startswith('#'):
+                if obj.ref_type == JSONReference.LOCAL:
                     # Local Reference – $ref: '#/definitions/myElement'
                     pass
                 elif self.model_resolver.is_after_load(obj.ref):
                     pass
                 else:
-                    if (
-                        not obj.ref.startswith(('https://', 'http://'))
-                        and self.root_id_base_path
-                    ):
+                    if obj.ref_type == JSONReference.REMOTE and self.root_id_base_path:
                         ref = f'{self.root_id_base_path}/{obj.ref}'
                     else:
                         ref = obj.ref
@@ -752,7 +775,7 @@ class JsonSchemaParser(Parser):
                     else:
                         models = ref_body
                         model_name = self.model_resolver.add_ref(obj.ref).name
-                    if not obj.ref.startswith(('https://', 'http://')):
+                    if obj.ref_type == JSONReference.REMOTE:
                         previous_base_path: Optional[Path] = self.base_path
                         self.base_path = (self.base_path / relative_path).parent
                     else:
@@ -844,23 +867,23 @@ class JsonSchemaParser(Parser):
             isinstance(self.source, Path) and self.source.is_dir()
         ):
             self.current_source_path = Path()
-            self.model_resolver.after_load_files = [
+            self.model_resolver.after_load_files = {
                 str(s.path) for s in self.iter_source
-            ]
+            }
         for source in self.iter_source:
             if self.current_source_path is not None:
                 self.current_source_path = source.path
             path_parts = list(source.path.parts)
-            self.model_resolver.set_current_root(path_parts)
-            self.raw_obj = yaml.safe_load(source.text)
-            if self.class_name:
-                obj_name = self.class_name
-            else:
-                # backward compatible
-                obj_name = self.raw_obj.get('title', 'Model')
-                if not self.model_resolver.validate_name(obj_name):
-                    raise InvalidClassNameError(obj_name)
-            self._parse_file(self.raw_obj, obj_name, path_parts, path_parts)
+            with self.model_resolver.current_root_context(path_parts):
+                self.raw_obj = load_yaml(source.text)
+                if self.class_name:
+                    obj_name = self.class_name
+                else:
+                    # backward compatible
+                    obj_name = self.raw_obj.get('title', 'Model')
+                    if not self.model_resolver.validate_name(obj_name):
+                        raise InvalidClassNameError(obj_name)
+                self._parse_file(self.raw_obj, obj_name, path_parts, path_parts)
 
     def _parse_file(
         self,
@@ -869,22 +892,19 @@ class JsonSchemaParser(Parser):
         path_parts: List[str],
         root_path: List[str],
     ) -> None:
-        previous_root_path: List[str] = self.model_resolver.current_root
-        self.model_resolver.set_current_root(root_path)
+        with self.model_resolver.current_root_context(root_path):
+            obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
+            root_obj = JsonSchemaObject.parse_obj(raw)
+            with self.root_id_context(raw):
+                definitions = raw.get('definitions', {})
 
-        obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
-        root_obj = JsonSchemaObject.parse_obj(raw)
-        with self.root_id_context(raw):
-            definitions = raw.get('definitions', {})
+                # parse $id before parsing $ref
+                self.parse_id(root_obj, path_parts)
+                for key, model in definitions.items():
+                    obj = JsonSchemaObject.parse_obj(model)
+                    self.parse_id(obj, [*path_parts, '#/definitions', key])
 
-            # parse $id before parsing $ref
-            self.parse_id(root_obj, path_parts)
-            for key, model in definitions.items():
-                obj = JsonSchemaObject.parse_obj(model)
-                self.parse_id(obj, [*path_parts, '#/definitions', key])
-
-            self.parse_obj(obj_name, root_obj, path_parts)
-            definitions = raw.get('definitions', {})
-            for key, model in definitions.items():
-                self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])
-        self.model_resolver.set_current_root(previous_root_path)
+                self.parse_obj(obj_name, root_obj, path_parts)
+                definitions = raw.get('definitions', {})
+                for key, model in definitions.items():
+                    self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])

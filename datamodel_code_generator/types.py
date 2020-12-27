@@ -43,12 +43,28 @@ class DataType(BaseModel):
         return self.reference.module_name if self.reference else None
 
     @property
+    def is_modular(self) -> bool:
+        if self.type:
+            return '.' in self.type or self.module_name is not None
+        return False
+
+    @property
+    def full_name(self) -> str:
+        if self.module_name:
+            return f"{self.module_name}.{self.type}"
+        return self.type  # type: ignore
+
+    @property
+    def name(self) -> str:
+        return self.type.rsplit('.', 1)[-1]  # type: ignore
+
+    @property
     def all_data_types(self) -> Iterator['DataType']:
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
 
-    def __init__(self, **values: Any) -> None:
+    def __init__(self, **values: Any) -> None:  # type: ignore
         super().__init__(**values)
         if self.type and (self.reference or self.ref):
             self.unresolved_types.add(self.type)

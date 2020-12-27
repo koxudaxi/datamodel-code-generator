@@ -4,7 +4,7 @@ set -e
 ISORT_VERSION=$(python -c "import isort; print(isort.__version__.split('.')[0])")
 
 if [ "$ISORT_VERSION" == 4 ] ; then
-   ISORT_OPT="--recursive"
+   pip install isort=="5.6.4"
 fi
 
 BLACK_VERSION=$(python -c "import black; print(black.__version__.split('.')[0])")

@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -14,6 +15,7 @@ from typing import (
     Iterator,
     Mapping,
     Optional,
+    TextIO,
     Type,
     TypeVar,
     Union,
@@ -21,6 +23,32 @@ from typing import (
 
 import pysnooper
 import yaml
+
+if TYPE_CHECKING:
+    cached_property = property
+    from yaml import SafeLoader
+else:
+    try:
+        from yaml import CSafeLoader as SafeLoader
+    except ImportError:
+        from yaml import SafeLoader
+
+    try:
+        from functools import cached_property
+    except ImportError:
+        _NOT_FOUND = object()
+
+        class cached_property:
+            def __init__(self, func: Callable) -> None:
+                self.func: Callable = func
+                self.__doc__: Any = func.__doc__
+
+            def __get__(self, instance: Any, owner: Any = None) -> Any:
+                value = instance.__dict__.get(self.func.__name__, _NOT_FOUND)
+                if value is _NOT_FOUND:  # pragma: no cover
+                    value = instance.__dict__[self.func.__name__] = self.func(instance)
+                return value
+
 
 from .format import PythonVersion
 from .model.pydantic import (
@@ -39,7 +67,12 @@ pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
+
 # ALL_MODEL: str = '#all#'
+
+
+def load_yaml(stream: Union[str, TextIO]) -> Any:
+    return yaml.load(stream, Loader=SafeLoader)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
@@ -93,7 +126,7 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
 
 
 def is_openapi(text: str) -> bool:
-    return 'openapi' in yaml.safe_load(text)
+    return 'openapi' in load_yaml(text)
 
 
 class InputFileType(Enum):
@@ -183,7 +216,7 @@ def generate(
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
                 input_text = input_ if isinstance(input_, str) else input_.read_text()
-                obj: Dict[Any, Any] = yaml.safe_load(input_text)
+                obj: Dict[Any, Any] = load_yaml(input_text)
             except:
                 raise Error('Invalid file format')
             from genson import SchemaBuilder
@@ -245,12 +278,12 @@ def generate(
     file: Optional[IO[Any]]
     for path, body_and_filename in modules.items():
         body, filename = body_and_filename
-        if path is not None:
+        if path is None:
+            file = None
+        else:
             if not path.parent.exists():
                 path.parent.mkdir(parents=True)
             file = path.open('wt')
-        else:
-            file = None
 
         print(header.format(filename=filename), file=file)
         if body:

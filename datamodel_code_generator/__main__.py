@@ -224,7 +224,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         enable_debug_message()
 
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]]
-    if config.extra_template_data is not None:
+    if config.extra_template_data is None:
+        extra_template_data = None
+    else:
         with config.extra_template_data as data:
             try:
                 extra_template_data = json.load(
@@ -233,10 +235,10 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             except json.JSONDecodeError as e:
                 print(f"Unable to load extra template data: {e}", file=sys.stderr)
                 return Exit.ERROR
-    else:
-        extra_template_data = None
 
-    if config.aliases is not None:
+    if config.aliases is None:
+        aliases = None
+    else:
         with config.aliases as data:
             try:
                 aliases = json.load(data)
@@ -251,8 +253,6 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                 file=sys.stderr,
             )
             return Exit.ERROR
-    else:
-        aliases = None
 
     try:
         generate(

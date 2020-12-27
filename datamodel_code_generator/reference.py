@@ -1,11 +1,25 @@
 import re
 from collections import defaultdict
+from contextlib import contextmanager
 from keyword import iskeyword
 from pathlib import Path
-from typing import DefaultDict, Dict, List, Mapping, Optional, Pattern, Tuple, Union
+from typing import (
+    DefaultDict,
+    Dict,
+    Generator,
+    List,
+    Mapping,
+    Optional,
+    Pattern,
+    Set,
+    Tuple,
+    Union,
+)
 
 import inflect
 from pydantic import BaseModel
+
+from datamodel_code_generator import cached_property
 
 
 class Reference(BaseModel):
@@ -15,9 +29,13 @@ class Reference(BaseModel):
     loaded: bool = True
     actual_module_name: Optional[str]
 
-    @property
+    class Config:
+        arbitrary_types_allowed = True
+        keep_untouched = (cached_property,)
+
+    @cached_property
     def module_name(self) -> Optional[str]:
-        if self.path.startswith(('https://', 'http://')):  # pragma: no cover
+        if is_url(self.path):  # pragma: no cover
             return None
         # TODO: Support file:///
         path = Path(self.path.split('#')[0])
@@ -26,7 +44,7 @@ class Reference(BaseModel):
         module_name = f'{".".join(path.parts[:-1])}.{path.stem.split(".")[0]}'
         if module_name.startswith(f'.{self.name.split(".", 1)[0]}'):
             return None
-        if module_name == '.':
+        elif module_name == '.':
             return None
         return module_name
 
@@ -37,11 +55,11 @@ ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 class ModelResolver:
     def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
-        self.aliases: Mapping[str, str] = {**aliases} if aliases is not None else {}
+        self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self._current_root: List[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
-        self.after_load_files: List[str] = []
+        self.after_load_files: Set[str] = set()
 
     @property
     def current_root(self) -> List[str]:
@@ -49,6 +67,15 @@ class ModelResolver:
 
     def set_current_root(self, current_root: List[str]) -> None:
         self._current_root = current_root
+
+    @contextmanager
+    def current_root_context(
+        self, current_root: List[str]
+    ) -> Generator[None, None, None]:
+        previous_root_path: List[str] = self.current_root
+        self.set_current_root(current_root)
+        yield
+        self.set_current_root(previous_root_path)
 
     @property
     def root_id_base_path(self) -> Optional[str]:
@@ -64,11 +91,10 @@ class ModelResolver:
         joined_path = '/'.join(p for p in path if p).replace('/#', '#')
         if ID_PATTERN.match(joined_path):
             return self.ids['/'.join(self.current_root)][joined_path]
-        if '#' in joined_path:
+        elif '#' in joined_path:
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
-
-        if self.root_id_base_path and self.current_root != path:
+        elif self.root_id_base_path and self.current_root != path:
             return f'{self.root_id_base_path}/{joined_path}#/'
         return f'{joined_path}#/'
 
@@ -142,7 +168,7 @@ class ModelResolver:
         joined_path: str = self._get_path(path)
         if joined_path in self.references:
             return self.references[joined_path]
-        if not original_name:
+        elif not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
         if singular_name:
@@ -182,7 +208,8 @@ class ModelResolver:
     def _get_uniq_name(self, name: str, camel: bool = False) -> str:
         uniq_name: str = name
         count: int = 1
-        while uniq_name in [r.name for r in self.references.values()]:
+        reference_names = {r.name for r in self.references.values()}
+        while uniq_name in reference_names:
             if camel:
                 uniq_name = f'{name}{count}'
             else:
@@ -228,6 +255,10 @@ def snake_to_upper_camel(word: str) -> str:
         word = word[1:]
 
     return prefix + ''.join(x[0].upper() + x[1:] for x in word.split('_') if x)
+
+
+def is_url(ref: str) -> bool:
+    return ref.startswith(('https://', 'http://'))
 
 
 inflect_engine = inflect.engine()
