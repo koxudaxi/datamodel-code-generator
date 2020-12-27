@@ -8,6 +8,7 @@ from typing import Any, DefaultDict, Dict, List, Optional, Set
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
 
+from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.types import DataType
 
@@ -199,7 +200,7 @@ class DataModel(TemplateBase, ABC):
 
         super().__init__(template_file_path=template_file_path)
 
-    @property
+    @cached_property
     def module_path(self) -> List[str]:
         if self.path:
             return [
