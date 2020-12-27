@@ -282,7 +282,7 @@ def generate(
         else:
             if not path.parent.exists():
                 path.parent.mkdir(parents=True)
-            file = path.open('wt', encoding='utf-8')
+            file = path.open('wt')
 
         print(header.format(filename=filename), file=file)
         if body:
