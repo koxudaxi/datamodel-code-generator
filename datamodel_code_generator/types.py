@@ -64,7 +64,7 @@ class DataType(BaseModel):
             yield from data_type.all_data_types
         yield self
 
-    def __init__(self, **values: Any) -> None:
+    def __init__(self, **values: Any) -> None:  # type: ignore
         super().__init__(**values)
         if self.type and (self.reference or self.ref):
             self.unresolved_types.add(self.type)
