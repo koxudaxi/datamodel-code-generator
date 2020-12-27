@@ -25,9 +25,9 @@ import pysnooper
 import yaml
 
 try:
-    from yaml import CSafeLoader as CSafeLoader
+    from yaml import CSafeLoader as SafeLoader
 except ImportError:
-    from yaml import Loader
+    from yaml import SafeLoader
 
 if TYPE_CHECKING:
     cached_property = property
@@ -71,7 +71,7 @@ DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
 
 def load_yaml(stream: Union[str, TextIO]) -> Any:
-    return yaml.load(stream, Loader=CSafeLoader)
+    return yaml.load(stream, Loader=SafeLoader)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
