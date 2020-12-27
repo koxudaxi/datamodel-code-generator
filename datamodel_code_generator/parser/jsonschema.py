@@ -175,9 +175,9 @@ class JsonSchemaObject(BaseModel):
 
     @validator('items', pre=True)
     def validate_items(cls, values: Any) -> Any:
-        if not values:  # this condition expects empty dict
-            return None
-        return values
+        # this condition expects empty dict
+        return values or None
+
 
     @cached_property
     def has_default(self) -> bool:
