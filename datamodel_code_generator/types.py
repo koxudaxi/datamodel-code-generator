@@ -44,9 +44,9 @@ class DataType(BaseModel):
 
     @property
     def is_modular(self) -> bool:
-        if not self.type:
-            return False
-        return '.' in self.type or self.module_name is not None
+        if self.type:
+            return '.' in self.type or self.module_name is not None
+        return False
 
     @property
     def full_name(self) -> str:

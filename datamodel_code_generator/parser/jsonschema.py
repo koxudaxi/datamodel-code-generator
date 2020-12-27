@@ -178,7 +178,6 @@ class JsonSchemaObject(BaseModel):
         # this condition expects empty dict
         return values or None
 
-
     @cached_property
     def has_default(self) -> bool:
         return 'default' in self.__fields_set__
@@ -307,19 +306,15 @@ class JsonSchemaParser(Parser):
         return self.data_type.from_reference(reference)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
-        if not obj.additionalProperties:
-            return
-
-        # TODO check additional property types.
-        self.extra_template_data[name][
-            'additionalProperties'
-        ] = obj.additionalProperties
+        if obj.additionalProperties:
+            # TODO check additional property types.
+            self.extra_template_data[name][
+                'additionalProperties'
+            ] = obj.additionalProperties
 
     def set_title(self, name: str, obj: JsonSchemaObject) -> None:
-        if not obj.title:
-            return
-
-        self.extra_template_data[name]['title'] = obj.title
+        if obj.title:
+            self.extra_template_data[name]['title'] = obj.title
 
     def parse_list_item(
         self, name: str, target_items: List[JsonSchemaObject], path: List[str]
@@ -402,9 +397,9 @@ class JsonSchemaParser(Parser):
         self, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataModelFieldBase]:
         properties: Dict[str, JsonSchemaObject] = (
-            obj.properties if obj.properties is not None else {}
+            {} if obj.properties is None else obj.properties
         )
-        requires: Set[str] = {*obj.required} if obj.required is not None else {*()}
+        requires: Set[str] = {*()} if obj.required is None else {*obj.required}
         fields: List[DataModelFieldBase] = []
 
         for field_name, field in properties.items():

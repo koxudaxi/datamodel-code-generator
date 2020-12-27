@@ -55,7 +55,7 @@ ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 class ModelResolver:
     def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
-        self.aliases: Mapping[str, str] = {**aliases} if aliases is not None else {}
+        self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self._current_root: List[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)

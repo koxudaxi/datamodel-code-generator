@@ -266,12 +266,12 @@ def generate(
     file: Optional[IO[Any]]
     for path, body_and_filename in modules.items():
         body, filename = body_and_filename
-        if path is not None:
+        if path is None:
+            file = None
+        else:
             if not path.parent.exists():
                 path.parent.mkdir(parents=True)
             file = path.open('wt')
-        else:
-            file = None
 
         print(header.format(filename=filename), file=file)
         if body:
