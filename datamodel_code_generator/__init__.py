@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     cached_property = property
 else:
     try:
-        from functools import cached_property
+        from functools import cached_property  # isort:skip
     except ImportError:
         _NOT_FOUND = object()
 
