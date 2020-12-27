@@ -49,9 +49,10 @@ class {{ class_name }}:
 
 
 def test_template_base():
-    with NamedTemporaryFile('w') as dummy_template:
+    with NamedTemporaryFile('w', delete=False) as dummy_template:
         dummy_template.write('abc')
         dummy_template.seek(0)
+        dummy_template.close()
         a: TemplateBase = A(Path(dummy_template.name))
     assert str(a.template_file_path) == dummy_template.name
     assert a._render() == 'abc'
@@ -63,9 +64,10 @@ def test_data_model():
         name='a', data_type=DataType(type='str'), default="" 'abc' "", required=True
     )
 
-    with NamedTemporaryFile('w') as dummy_template:
+    with NamedTemporaryFile('w', delete=False) as dummy_template:
         dummy_template.write(template)
         dummy_template.seek(0)
+        dummy_template.close()
         B.TEMPLATE_FILE_PATH = dummy_template.name
         data_model = B(
             name='test_model',
