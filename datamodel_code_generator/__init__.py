@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -21,6 +22,26 @@ from typing import (
 
 import pysnooper
 import yaml
+
+if TYPE_CHECKING:
+    cached_property = property
+else:
+    try:
+        from functools import cached_property
+    except ImportError:
+        _NOT_FOUND = object()
+
+        class cached_property:
+            def __init__(self, func: Callable) -> None:
+                self.func: Callable = func
+                self.__doc__: Any = func.__doc__
+
+            def __get__(self, instance: Any, owner: Any = None) -> Any:
+                value = instance.__dict__.get(self.func.__name__, _NOT_FOUND)
+                if value is _NOT_FOUND:  # pragma: no cover
+                    value = instance.__dict__[self.func.__name__] = self.func(instance)
+                return value
+
 
 from .format import PythonVersion
 from .model.pydantic import (

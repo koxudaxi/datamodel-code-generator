@@ -48,7 +48,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             if isinstance(imports, Import):
                 imports = [imports]
             for import_ in imports:
-                if import_.import_.count('.') >= 1:
+                if '.' in import_.import_:
                     self[None].add(import_.import_)
                 else:
                     self[import_.from_].add(import_.import_)

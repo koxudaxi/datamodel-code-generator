@@ -3,7 +3,6 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -21,7 +20,11 @@ from warnings import warn
 import yaml
 from pydantic import BaseModel, Field, root_validator, validator
 
-from datamodel_code_generator import InvalidClassNameError, snooper_to_methods
+from datamodel_code_generator import (
+    InvalidClassNameError,
+    cached_property,
+    snooper_to_methods,
+)
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
@@ -30,25 +33,6 @@ from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
 from ..reference import is_url
 from ..types import DataType, DataTypeManager, Types
-
-if TYPE_CHECKING:
-    cached_property = property
-else:
-    try:
-        from functools import cached_property
-    except ImportError:
-        _NOT_FOUND = object()
-
-        class cached_property:
-            def __init__(self, func: Callable) -> None:
-                self.func: Callable = func
-                self.__doc__: Any = func.__doc__
-
-            def __get__(self, instance: Any, owner: Any = None) -> Any:
-                value = instance.__dict__.get(self.func.__name__, _NOT_FOUND)
-                if value == _NOT_FOUND:  # pragma: no cover
-                    value = instance.__dict__[self.func.__name__] = self.func(instance)
-                return value
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:

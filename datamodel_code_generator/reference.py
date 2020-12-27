@@ -19,6 +19,8 @@ from typing import (
 import inflect
 from pydantic import BaseModel
 
+from datamodel_code_generator import cached_property
+
 
 class Reference(BaseModel):
     path: str
@@ -27,7 +29,11 @@ class Reference(BaseModel):
     loaded: bool = True
     actual_module_name: Optional[str]
 
-    @property
+    class Config:
+        arbitrary_types_allowed = True
+        keep_untouched = (cached_property,)
+
+    @cached_property
     def module_name(self) -> Optional[str]:
         if is_url(self.path):  # pragma: no cover
             return None
@@ -38,7 +44,7 @@ class Reference(BaseModel):
         module_name = f'{".".join(path.parts[:-1])}.{path.stem.split(".")[0]}'
         if module_name.startswith(f'.{self.name.split(".", 1)[0]}'):
             return None
-        if module_name == '.':
+        elif module_name == '.':
             return None
         return module_name
 
@@ -85,11 +91,10 @@ class ModelResolver:
         joined_path = '/'.join(p for p in path if p).replace('/#', '#')
         if ID_PATTERN.match(joined_path):
             return self.ids['/'.join(self.current_root)][joined_path]
-        if '#' in joined_path:
+        elif '#' in joined_path:
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
-
-        if self.root_id_base_path and self.current_root != path:
+        elif self.root_id_base_path and self.current_root != path:
             return f'{self.root_id_base_path}/{joined_path}#/'
         return f'{joined_path}#/'
 
@@ -163,7 +168,7 @@ class ModelResolver:
         joined_path: str = self._get_path(path)
         if joined_path in self.references:
             return self.references[joined_path]
-        if not original_name:
+        elif not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
         if singular_name:
@@ -252,8 +257,8 @@ def snake_to_upper_camel(word: str) -> str:
     return prefix + ''.join(x[0].upper() + x[1:] for x in word.split('_') if x)
 
 
-inflect_engine = inflect.engine()
-
-
 def is_url(ref: str) -> bool:
     return ref.startswith(('https://', 'http://'))
+
+
+inflect_engine = inflect.engine()
