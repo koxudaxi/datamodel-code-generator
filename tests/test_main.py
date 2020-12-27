@@ -1,3 +1,4 @@
+import platform
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -484,21 +485,28 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 
 @freeze_time('2019-07-26')
 def test_pyproject():
+    if platform.system() == 'Windows':
+        get_path = lambda path: str(path).replace('\\', '\\\\')
+    else:
+        get_path = lambda path: str(path)
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
+
         with chdir(output_dir):
             output_file: Path = output_dir / 'output.py'
             pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
             pyproject_toml = (
                 pyproject_toml_path.read_text()
-                .replace('INPUT_PATH', str(OPEN_API_DATA_PATH / 'api.yaml'))
-                .replace('OUTPUT_PATH', str(output_file))
-                .replace('ALIASES_PATH', str(OPEN_API_DATA_PATH / 'empty_aliases.json'))
+                .replace('INPUT_PATH', get_path(OPEN_API_DATA_PATH / 'api.yaml'))
+                .replace('OUTPUT_PATH', get_path(output_file))
+                .replace(
+                    'ALIASES_PATH', get_path(OPEN_API_DATA_PATH / 'empty_aliases.json')
+                )
                 .replace(
                     'EXTRA_TEMPLATE_DATA_PATH',
-                    str(OPEN_API_DATA_PATH / 'empty_data.json'),
+                    get_path(OPEN_API_DATA_PATH / 'empty_data.json'),
                 )
-                .replace('CUSTOM_TEMPLATE_DIR_PATH', str(output_dir))
+                .replace('CUSTOM_TEMPLATE_DIR_PATH', get_path(output_dir))
             )
             (output_dir / 'pyproject.toml').write_text(pyproject_toml)
 

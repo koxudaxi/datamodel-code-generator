@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 from typing import List, Optional
 
@@ -351,7 +352,11 @@ def test_openapi_parser_parse_allof():
 
 def test_openapi_parser_parse_alias():
     parser = OpenAPIParser(Path(DATA_PATH / 'alias.yaml'),)
-    results = {'/'.join(p): r for p, r in parser.parse().items()}
+    if platform.system() == 'Windows':
+        delimiter = '\\'
+    else:
+        delimiter = '/'
+    results = {delimiter.join(p): r for p, r in parser.parse().items()}
     openapi_parser_parse_alias_dir = (
         EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_alias'
     )

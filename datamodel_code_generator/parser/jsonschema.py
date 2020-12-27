@@ -868,7 +868,7 @@ class JsonSchemaParser(Parser):
         ):
             self.current_source_path = Path()
             self.model_resolver.after_load_files = {
-                str(s.path) for s in self.iter_source
+                s.path.as_posix() for s in self.iter_source
             }
         for source in self.iter_source:
             if self.current_source_path is not None:

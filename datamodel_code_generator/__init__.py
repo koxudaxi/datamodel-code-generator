@@ -263,7 +263,10 @@ def generate(
         if output.suffix:
             raise Error('Modular references require an output directory, not a file')
         modules = {
-            output.joinpath(*name): (result.body, str(result.source or input_filename))
+            output.joinpath(*name): (
+                result.body,
+                str(result.source.as_posix() if result.source else input_filename),
+            )
             for name, result in sorted(results.items())
         }
 
