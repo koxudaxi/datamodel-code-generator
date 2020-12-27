@@ -24,14 +24,15 @@ from typing import (
 import pysnooper
 import yaml
 
-try:
-    from yaml import CSafeLoader as SafeLoader
-except ImportError:
-    from yaml import SafeLoader
-
 if TYPE_CHECKING:
     cached_property = property
+    from yaml import SafeLoader
 else:
+    try:
+        from yaml import CSafeLoader as SafeLoader
+    except ImportError:
+        from yaml import SafeLoader
+
     try:
         from functools import cached_property
     except ImportError:
