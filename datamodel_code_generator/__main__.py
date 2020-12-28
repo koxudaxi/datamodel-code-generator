@@ -216,9 +216,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         pyproject_toml: Dict[str, Any] = {
             k.replace('-', '_'): v
             for k, v in toml.load(str(pyproject_toml_path))
-                .get('tool', {})
-                .get('datamodel-codegen', {})
-                .items()
+            .get('tool', {})
+            .get('datamodel-codegen', {})
+            .items()
         }
     else:
         pyproject_toml = {}
@@ -231,7 +231,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
             f"You have to install a newer black.\n"
             f"Installed black version: {black.__version__}",
-            file=sys.stderr)
+            file=sys.stderr,
+        )
         return Exit.ERROR
 
     if config.debug:  # pragma: no cover
@@ -260,7 +261,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                 print(f"Unable to load alias mapping: {e}", file=sys.stderr)
                 return Exit.ERROR
         if not isinstance(aliases, Dict) or not all(
-                isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+            isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
             print(
                 'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',

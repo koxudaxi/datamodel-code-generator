@@ -21,7 +21,7 @@ BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
 }
 
 
-def is_supported_in_black(python_version: PythonVersion) -> bool:   # pragma: no cover
+def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
     return python_version in BLACK_PYTHON_VERSION
 
 
