@@ -227,6 +227,7 @@ class JsonSchemaParser(Parser):
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
+        reuse_model: bool = False,
     ):
         super().__init__(
             source=source,
@@ -251,6 +252,7 @@ class JsonSchemaParser(Parser):
             use_standard_collections=use_standard_collections,
             base_path=base_path,
             use_schema_description=use_schema_description,
+            reuse_model=reuse_model,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}

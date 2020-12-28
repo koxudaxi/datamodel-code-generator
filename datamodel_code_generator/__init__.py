@@ -184,6 +184,7 @@ def generate(
     class_name: Optional[str] = None,
     use_standard_collections: bool = False,
     use_schema_description: bool = False,
+    reuse_model: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -247,6 +248,7 @@ def generate(
         if isinstance(input_, Path) and input_.is_file()
         else None,
         use_schema_description=use_schema_description,
+        reuse_model=reuse_model,
     )
 
     with chdir(output):
