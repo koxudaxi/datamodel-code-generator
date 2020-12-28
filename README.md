@@ -70,7 +70,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--input-file-type {auto,openapi,j
                          [--field-constraints] [--snake-case-field] [--strip-default-none] [--allow-population-by-field-name] [--use-default]
                          [--force-optional] [--disable-timestamp] [--use-standard-collections] [--use-schema-description] [--class-name CLASS_NAME]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7}] [--validation] [--debug] [--version]
+                         [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--debug] [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -99,7 +99,7 @@ optional arguments:
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
   --aliases ALIASES     Alias mapping file
-  --target-python-version {3.6,3.7}
+  --target-python-version {3.6,3.7,3.8,3.9}
                         target python version (default: 3.7)
   --validation          Enable validation (Only OpenAPI)
   --debug               show debug message
