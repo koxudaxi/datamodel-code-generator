@@ -20,6 +20,7 @@ class DataClass(DataModel):
         auto_import: bool = True,
         reference_classes: Optional[List[str]] = None,
         path: Optional[Path] = None,
+        description: Optional[str] = None,
     ):
 
         super().__init__(
@@ -33,5 +34,6 @@ class DataClass(DataModel):
             auto_import=auto_import,
             reference_classes=reference_classes,
             path=path,
+            description=description,
         )
         self.imports.append(Import.from_full_path('pydantic.dataclasses.dataclass'))

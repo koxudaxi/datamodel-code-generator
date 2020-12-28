@@ -87,6 +87,7 @@ class BaseModel(DataModel):
         reference_classes: Optional[List[str]] = None,
         imports: Optional[List[Import]] = None,
         path: Optional[Path] = None,
+        description: Optional[str] = None,
     ):
 
         methods: List[str] = [field.method for field in fields if field.method]
@@ -104,6 +105,7 @@ class BaseModel(DataModel):
             imports=imports,
             methods=methods,
             path=path,
+            description=description,
         )
 
         config_parameters: Dict[str, Any] = {}

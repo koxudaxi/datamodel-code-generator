@@ -7,6 +7,11 @@ class {{ class_name }}({{ base_class }}):
 {%- else %}
 class {{ class_name }}:
 {%- endif %}
+{%- if description %}
+    """
+    {{ description }}
+    """
+{%- endif %}
 {%- if not fields %}
     pass
 {%- endif %}

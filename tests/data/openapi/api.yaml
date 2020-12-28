@@ -137,6 +137,7 @@ components:
       items:
         type: string
     Error:
+      description: error result
       required:
         - code
         - message
@@ -167,6 +168,7 @@ components:
             description: A URL to the API console for each API
     Event:
       type: object
+      description: Event object
       properties:
         name:
           type: string

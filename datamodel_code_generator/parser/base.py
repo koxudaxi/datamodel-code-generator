@@ -212,6 +212,7 @@ class Parser(ABC):
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
+        use_schema_description: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -232,6 +233,7 @@ class Parser(ABC):
         self.strip_default_none: bool = strip_default_none
         self.apply_default_values_for_required_fields: bool = apply_default_values_for_required_fields
         self.force_optional_for_required_fields: bool = force_optional_for_required_fields
+        self.use_schema_description: bool = use_schema_description
 
         self.current_source_path: Optional[Path] = None
 

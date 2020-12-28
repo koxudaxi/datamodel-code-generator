@@ -115,6 +115,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-schema-description',
+    help='Use schema description to populate class docstring',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--class-name', help='Set class name of root model', default=None,
 )
 
@@ -178,6 +185,7 @@ class Config(BaseModel):
     force_optional: bool = False
     class_name: Optional[str] = None
     use_standard_collections: bool = False
+    use_schema_description: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -274,6 +282,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             force_optional_for_required_fields=config.force_optional,
             class_name=config.class_name,
             use_standard_collections=config.use_standard_collections,
+            use_schema_description=config.use_schema_description,
         )
         return Exit.OK
     except InvalidClassNameError as e:

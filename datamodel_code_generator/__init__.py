@@ -183,6 +183,7 @@ def generate(
     force_optional_for_required_fields: bool = False,
     class_name: Optional[str] = None,
     use_standard_collections: bool = False,
+    use_schema_description: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -245,6 +246,7 @@ def generate(
         base_path=input_.parent
         if isinstance(input_, Path) and input_.is_file()
         else None,
+        use_schema_description=use_schema_description,
     )
 
     with chdir(output):

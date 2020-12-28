@@ -132,6 +132,7 @@ class DataModel(TemplateBase, ABC):
         reference_classes: Optional[List[str]] = None,
         methods: Optional[List[str]] = None,
         path: Optional[Path] = None,
+        description: Optional[str] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -198,6 +199,7 @@ class DataModel(TemplateBase, ABC):
 
         self.methods: List[str] = methods or []
 
+        self.description = description
         super().__init__(template_file_path=template_file_path)
 
     @cached_property
@@ -217,6 +219,7 @@ class DataModel(TemplateBase, ABC):
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,
+            description=self.description,
             **self.extra_template_data,
         )
         return response
