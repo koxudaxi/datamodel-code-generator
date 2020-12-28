@@ -2,6 +2,11 @@
 {{ decorator }}
 {% endfor -%}
 class {{ class_name }}(Enum):
+{%- if description %}
+    """
+    {{ description }}
+    """
+{%- endif %}
 {%- for field in fields %}
     {{ field.name }} = {{ field.default }}
 {%- endfor -%}

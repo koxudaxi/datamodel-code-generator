@@ -2,6 +2,11 @@
 {{ decorator }}
 {% endfor -%}
 class {{ class_name }}({{ base_class }}):
+{%- if description %}
+    """
+    {{ description }}
+    """
+{%- endif %}
 {%- if config %}
 {% include 'Config.jinja2' %}
 {%- endif %}

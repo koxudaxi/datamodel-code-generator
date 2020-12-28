@@ -16,6 +16,7 @@ class Enum(DataModel):
         fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         path: Optional[Path] = None,
+        description: Optional[str] = None,
     ):
         super().__init__(
             name=name,
@@ -23,6 +24,7 @@ class Enum(DataModel):
             decorators=decorators,
             auto_import=False,
             path=path,
+            description=description,
         )
         self.imports.append(IMPORT_ENUM)
 

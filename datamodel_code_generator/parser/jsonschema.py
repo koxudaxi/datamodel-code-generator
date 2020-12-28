@@ -226,6 +226,7 @@ class JsonSchemaParser(Parser):
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
+        use_schema_description: bool = False,
     ):
         super().__init__(
             source=source,
@@ -249,6 +250,7 @@ class JsonSchemaParser(Parser):
             class_name=class_name,
             use_standard_collections=use_standard_collections,
             base_path=base_path,
+            use_schema_description=use_schema_description,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -385,6 +387,7 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
         )
         # add imports for the fields
         for f in fields:
@@ -532,6 +535,7 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
         )
         self.append_result(data_model_type)
         return data_model_type
@@ -621,6 +625,7 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
         )
 
         self.append_result(data_model_root)
@@ -702,7 +707,12 @@ class JsonSchemaParser(Parser):
             singular_name_suffix='Enum',
             unique=unique,
         ).name
-        enum = Enum(enum_name, fields=enum_fields, path=self.current_source_path)
+        enum = Enum(
+            enum_name,
+            fields=enum_fields,
+            path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
+        )
         self.append_result(enum)
         return enum
 
