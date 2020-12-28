@@ -120,6 +120,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--reuse-model',
+    help='Re-use models on the field when a module has the model with the same content',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--class-name', help='Set class name of root model', default=None,
 )
 
@@ -184,6 +191,7 @@ class Config(BaseModel):
     class_name: Optional[str] = None
     use_standard_collections: bool = False
     use_schema_description: bool = False
+    reuse_model: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -290,6 +298,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             class_name=config.class_name,
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
+            reuse_model=config.reuse_model,
         )
         return Exit.OK
     except InvalidClassNameError as e:

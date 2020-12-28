@@ -38,6 +38,18 @@ def camel_to_snake(string: str) -> str:
     return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
 
 
+def to_hashable(item: Any) -> Any:
+    if isinstance(item, list):
+        return tuple(to_hashable(i) for i in item)
+    elif isinstance(item, dict):
+        return tuple(sorted((k, to_hashable(v),) for k, v in item.items()))
+    elif isinstance(item, set):
+        return frozenset(to_hashable(i) for i in item)
+    elif isinstance(item, BaseModel):
+        return to_hashable(item.dict())
+    return item
+
+
 def snakify_field(field: DataModelFieldBase) -> None:
     if not field.name:
         return
@@ -213,6 +225,7 @@ class Parser(ABC):
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
+        reuse_model: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -234,6 +247,7 @@ class Parser(ABC):
         self.apply_default_values_for_required_fields: bool = apply_default_values_for_required_fields
         self.force_optional_for_required_fields: bool = force_optional_for_required_fields
         self.use_schema_description: bool = use_schema_description
+        self.reuse_model: bool = reuse_model
 
         self.current_source_path: Optional[Path] = None
 
@@ -343,6 +357,8 @@ class Parser(ABC):
             import_map: Dict[str, Tuple[str, str]] = {}
             model_names: Set[str] = {m.name for m in models}
             processed_models: Set[str] = set()
+            model_cache: Dict[Tuple[str, ...], str] = {}
+            duplicated_model_names: Dict[str, str] = {}
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
@@ -416,6 +432,34 @@ class Parser(ABC):
                             alias=alias_map.get(f'{from_}/{import_}'),
                         )
                     )
+
+                if self.reuse_model:
+                    model_key = tuple(
+                        to_hashable(v)
+                        for v in (
+                            model.base_classes,
+                            model.extra_template_data,
+                            model.fields,
+                        )
+                    )
+                    cached_model_name = model_cache.get(model_key)
+                    if cached_model_name:
+                        duplicated_model_names[model.name] = cached_model_name
+                    else:
+                        model_cache[model_key] = model.name
+
+            if self.reuse_model:
+                for model in models:
+                    for fields in model.fields:
+                        for (
+                            data_type
+                        ) in fields.data_type.all_data_types:  # pragma: no cover
+                            if data_type.type:
+                                duplicated_model_name = duplicated_model_names.get(
+                                    data_type.type
+                                )
+                                if duplicated_model_name:
+                                    data_type.type = duplicated_model_name
 
             if with_import:
                 result += [str(imports), str(self.imports), '\n']
