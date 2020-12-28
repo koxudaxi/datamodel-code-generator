@@ -28,7 +28,7 @@ from datamodel_code_generator import (
     generate,
 )
 
-from .format import PythonVersion
+from .format import PythonVersion, is_supported_in_black
 
 
 class Exit(IntEnum):
@@ -44,7 +44,6 @@ def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
 
 
 signal.signal(signal.SIGINT, sig_int_handler)
-
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
@@ -77,7 +76,6 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
-
 
 arg_parser.add_argument(
     '--allow-population-by-field-name',
@@ -135,7 +133,7 @@ arg_parser.add_argument('--aliases', help='Alias mapping file', type=FileType('r
 arg_parser.add_argument(
     '--target-python-version',
     help='target python version (default: 3.7)',
-    choices=['3.6', '3.7'],
+    choices=[v.value for v in PythonVersion],
 )
 arg_parser.add_argument(
     '--validation',
@@ -227,6 +225,15 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     config = Config.parse_obj(pyproject_toml)
     config.merge_args(namespace)
+
+    if not is_supported_in_black(config.target_python_version):  # pragma: no cover
+        print(
+            f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
+            f"You have to install a newer black.\n"
+            f"Installed black version: {black.__version__}",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
 
     if config.debug:  # pragma: no cover
         enable_debug_message()
