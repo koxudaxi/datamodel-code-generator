@@ -11,13 +11,18 @@ class PythonVersion(Enum):
     PY_36 = '3.6'
     PY_37 = '3.7'
     PY_38 = '3.8'
+    PY_39 = '3.9'
 
 
 BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
-    PythonVersion.PY_36: black.TargetVersion.PY36,
-    PythonVersion.PY_37: black.TargetVersion.PY37,
-    PythonVersion.PY_38: black.TargetVersion.PY38,
+    v: getattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
+    for v in PythonVersion
+    if hasattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
 }
+
+
+def is_supported_in_black(python_version: PythonVersion) -> bool:   # pragma: no cover
+    return python_version in BLACK_PYTHON_VERSION
 
 
 def format_code(
@@ -31,7 +36,6 @@ def format_code(
 
 
 def apply_black(code: str, python_version: PythonVersion, settings_path: Path) -> str:
-
     root = black.find_project_root((settings_path,))
     path = root / "pyproject.toml"
     if path.is_file():
