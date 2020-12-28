@@ -451,7 +451,9 @@ class Parser(ABC):
             if self.reuse_model:
                 for model in models:
                     for fields in model.fields:
-                        for data_type in fields.data_type.all_data_types:  # pragma: no cover
+                        for (
+                            data_type
+                        ) in fields.data_type.all_data_types:  # pragma: no cover
                             if data_type.type:
                                 duplicated_model_name = duplicated_model_names.get(
                                     data_type.type
