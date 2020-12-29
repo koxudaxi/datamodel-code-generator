@@ -906,17 +906,16 @@ class JsonSchemaParser(Parser):
     ) -> None:
         with self.model_resolver.current_root_context(root_path):
             obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
-            root_obj = JsonSchemaObject.parse_obj(raw)
             with self.root_id_context(raw):
-                definitions = raw.get('definitions', {})
 
                 # parse $id before parsing $ref
+                root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
+                definitions = raw.get('definitions', {})
                 for key, model in definitions.items():
                     obj = JsonSchemaObject.parse_obj(model)
                     self.parse_id(obj, [*path_parts, '#/definitions', key])
 
                 self.parse_obj(obj_name, root_obj, path_parts)
-                definitions = raw.get('definitions', {})
                 for key, model in definitions.items():
                     self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])

@@ -1,6 +1,7 @@
 import re
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import lru_cache
 from keyword import iskeyword
 from pathlib import Path
 from typing import (
@@ -221,12 +222,15 @@ class ModelResolver:
     def validate_name(cls, name: str) -> bool:
         return name.isidentifier() and not iskeyword(name)
 
+    @lru_cache
     def get_valid_name(self, name: str, camel: bool = False) -> str:
+        if name.isidentifier():
+            return name
         if name[0] == '#':
             name = name[1:]
         # TODO: when first character is a number
         replaced_name = re.sub(r'\W', '_', name)
-        if re.match(r'^[0-9]', replaced_name):
+        if replaced_name[0].isnumeric():
             replaced_name = f'field_{replaced_name}'
         # if replaced_name.isidentifier() and not iskeyword(replaced_name):
         # return self.get_uniq_name(replaced_name, camel)
@@ -241,6 +245,7 @@ class ModelResolver:
         return valid_name, None if field_name == valid_name else field_name
 
 
+@lru_cache
 def get_singular_name(name: str, suffix: str = 'Item') -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
@@ -248,6 +253,7 @@ def get_singular_name(name: str, suffix: str = 'Item') -> str:
     return singular_name
 
 
+@lru_cache
 def snake_to_upper_camel(word: str) -> str:
     prefix = ''
     if word.startswith('_'):

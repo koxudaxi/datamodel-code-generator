@@ -18,11 +18,9 @@ class OpenAPIParser(JsonSchemaParser):
             else:
                 specification = load_yaml(source.text)
             self.raw_obj = specification
-            schemas: Optional[Dict[Any, Any]] = specification.get('components', {}).get(
-                'schemas'
+            schemas: Dict[Any, Any] = specification.get('components', {}).get(
+                'schemas', {}
             )
-            if not schemas:  # pragma: no cover
-                continue
             with self.model_resolver.current_root_context(list(source.path.parts)):
                 for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
                     self.parse_raw_obj(

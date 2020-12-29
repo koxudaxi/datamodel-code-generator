@@ -268,7 +268,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             except json.JSONDecodeError as e:
                 print(f"Unable to load alias mapping: {e}", file=sys.stderr)
                 return Exit.ERROR
-        if not isinstance(aliases, Dict) or not all(
+        if not isinstance(aliases, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
             print(
