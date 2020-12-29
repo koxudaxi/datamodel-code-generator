@@ -11,6 +11,7 @@ class Import(BaseModel):
     alias: Optional[str]
 
     @classmethod
+    @lru_cache()
     def from_full_path(cls, class_path: str) -> 'Import':
         split_class_path: List[str] = class_path.split('.')
         return Import(
