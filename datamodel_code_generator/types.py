@@ -51,7 +51,7 @@ class DataType(BaseModel):
     @property
     def full_name(self) -> str:
         if self.module_name:
-            return f"{self.module_name}.{self.type}"
+            return f'{self.module_name}.{self.type}'
         return self.type  # type: ignore
 
     @property
@@ -106,11 +106,10 @@ class DataType(BaseModel):
             else:
                 type_ = self.type
         else:
-            types: List[str] = [data_type.type_hint for data_type in self.data_types]
-            if len(types) > 1:
-                type_ = f"Union[{', '.join(types)}]"
-            elif len(types) == 1:
-                type_ = types[0]
+            if len(self.data_types) > 1:
+                type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
+            elif len(self.data_types) == 1:
+                type_ = self.data_types[0].type_hint
             else:
                 # TODO support strict Any
                 # type_ = 'Any'
@@ -121,7 +120,7 @@ class DataType(BaseModel):
             else:
                 list_ = 'List'
             type_ = f'{list_}[{type_}]' if type_ else list_
-        if self.is_dict:
+        elif self.is_dict:
             if self.use_standard_collections:
                 dict_ = 'dict'
             else:
@@ -129,7 +128,7 @@ class DataType(BaseModel):
             type_ = f'{dict_}[str, {type_}]' if type_ else 'dict_'
         if self.is_optional and type_ != 'Any':
             type_ = f'Optional[{type_}]'
-        if self.is_func:
+        elif self.is_func:
             if self.kwargs:
                 kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
                 return f'{type_}({kwargs})'

@@ -3,7 +3,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Optional, Set
+from typing import Any, DefaultDict, Dict, Iterator, List, Optional, Set
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
@@ -66,16 +66,16 @@ class DataModelFieldBase(BaseModel):
 
     @root_validator
     def validate_root(cls, values: Any) -> Dict[str, Any]:
-        name = values.get('name')
+        name: Optional[str] = values.get('name')
         if name:
             if keyword.iskeyword(name):
                 alias = name
                 name += '_'
-            elif re.search(r'\W', name):  # pragma: no cover
+            elif name.isidentifier():
+                return values
+            else:  # pragma: no cover
                 alias = name
                 name = re.sub(r'\W', '_', name)
-            else:
-                return values
             if not values.get('alias'):
                 values['alias'] = alias
             values['name'] = name
@@ -211,6 +211,11 @@ class DataModel(TemplateBase, ABC):
                 *self.name.split('.')[:-1],
             ]
         return self.name.split('.')[:-1]
+
+    @property
+    def all_data_types(self) -> Iterator['DataType']:
+        for field in self.fields:
+            yield from field.data_type.all_data_types
 
     def render(self) -> str:
         response = self._render(

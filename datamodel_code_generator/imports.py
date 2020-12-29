@@ -1,4 +1,5 @@
 from collections import defaultdict
+from functools import lru_cache
 from typing import DefaultDict, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ class Import(BaseModel):
     alias: Optional[str]
 
     @classmethod
+    @lru_cache()
     def from_full_path(cls, class_path: str) -> 'Import':
         split_class_path: List[str] = class_path.split('.')
         return Import(
@@ -33,9 +35,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
     def create_line(self, from_: Optional[str], imports: Set[str]) -> str:
         if from_:
-            line = f'from {from_} '
-            line += f"import {', '.join(self._set_alias(from_, imports))}"
-            return line
+            return f"from {from_} import {', '.join(self._set_alias(from_, imports))}"
         return '\n'.join(f'import {i}' for i in self._set_alias(from_, imports))
 
     def dump(self) -> str:

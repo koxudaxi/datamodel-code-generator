@@ -1,6 +1,7 @@
 import re
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
+from functools import lru_cache
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -20,7 +21,7 @@ from typing import (
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import format_code
+from datamodel_code_generator.format import CodeFormatter
 
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
@@ -33,6 +34,7 @@ _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
 
 
+@lru_cache()
 def camel_to_snake(string: str) -> str:
     subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
     return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
@@ -319,6 +321,13 @@ class Parser(ABC):
             if self.target_python_version != PythonVersion.PY_36:
                 self.imports.append(IMPORT_ANNOTATIONS)
 
+        if format_:
+            code_formatter: Optional[CodeFormatter] = CodeFormatter(
+                self.target_python_version, settings_path
+            )
+        else:
+            code_formatter = None
+
         _, sorted_data_models, require_update_action_models = sort_data_models(
             self.results
         )
@@ -363,10 +372,7 @@ class Parser(ABC):
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
                     ref_names = {
-                        d.reference.name
-                        for f in model.fields
-                        for d in f.data_type.all_data_types
-                        if d.reference
+                        d.reference.name for d in model.all_data_types if d.reference
                     }
                     if model.name in ref_names or (
                         not ref_names - model_names and ref_names - processed_models
@@ -374,47 +380,43 @@ class Parser(ABC):
                         models_to_update += [model.name]
                         processed_models.add(model.name)
                 imports.append(model.imports)
-                for field in model.fields:
-                    for data_type in field.data_type.all_data_types:  # type: DataType
-                        if not data_type.is_modular:
+                for data_type in model.all_data_types:
+                    if not data_type.is_modular:
+                        continue
+                    full_name = data_type.full_name
+                    from_, import_ = relative(module_path, full_name)
+                    name = data_type.name
+                    if data_type.reference:
+                        reference = self.model_resolver.get(data_type.reference.path)
+                        if reference and (
+                            (
+                                isinstance(self.source, Path)
+                                and self.source.is_file()
+                                and self.source.name == reference.path.split('#/')[0]
+                            )
+                            or reference.actual_module_name == module_path
+                        ):
+                            if name in model.reference_classes:  # pragma: no cover
+                                model.reference_classes.remove(name)
                             continue
-                        full_name = data_type.full_name
-                        from_, import_ = relative(module_path, full_name)
-                        name = data_type.name
-                        if data_type.reference:
-                            reference = self.model_resolver.get(
-                                data_type.reference.path
-                            )
-                            if reference and (
-                                (
-                                    isinstance(self.source, Path)
-                                    and self.source.is_file()
-                                    and self.source.name
-                                    == reference.path.split('#/')[0]
-                                )
-                                or reference.actual_module_name == module_path
-                            ):
-                                if name in model.reference_classes:  # pragma: no cover
-                                    model.reference_classes.remove(name)
-                                continue
-                        full_path = f'{from_}/{import_}'
-                        if full_path in alias_map:
-                            alias = alias_map[full_path] or import_
-                        else:
-                            alias = scoped_model_resolver.add(
-                                full_path.split('/'), import_, unique=True
-                            ).name
-                            alias_map[full_path] = None if alias == import_ else alias
-                        new_name = f'{alias}.{name}' if from_ and import_ else name
-                        if data_type.module_name and not full_name.startswith(from_):
-                            import_map[new_name] = (
-                                f'.{full_name[:len(new_name) * - 1 - 1]}',
-                                new_name.split('.')[0],
-                            )
-                        if name in model.reference_classes:
-                            model.reference_classes.remove(name)
-                            model.reference_classes.add(new_name)
-                        data_type.type = new_name
+                    full_path = f'{from_}/{import_}'
+                    if full_path in alias_map:
+                        alias = alias_map[full_path] or import_
+                    else:
+                        alias = scoped_model_resolver.add(
+                            full_path.split('/'), import_, unique=True
+                        ).name
+                        alias_map[full_path] = None if alias == import_ else alias
+                    new_name = f'{alias}.{name}' if from_ and import_ else name
+                    if data_type.module_name and not full_name.startswith(from_):
+                        import_map[new_name] = (
+                            f'.{full_name[:len(new_name) * - 1 - 1]}',
+                            new_name.split('.')[0],
+                        )
+                    if name in model.reference_classes:
+                        model.reference_classes.remove(name)
+                        model.reference_classes.add(new_name)
+                    data_type.type = new_name
 
                 for ref_name in model.reference_classes:
                     if ref_name in model_names:
@@ -450,16 +452,13 @@ class Parser(ABC):
 
             if self.reuse_model:
                 for model in models:
-                    for fields in model.fields:
-                        for (
-                            data_type
-                        ) in fields.data_type.all_data_types:  # pragma: no cover
-                            if data_type.type:
-                                duplicated_model_name = duplicated_model_names.get(
-                                    data_type.type
-                                )
-                                if duplicated_model_name:
-                                    data_type.type = duplicated_model_name
+                    for data_type in model.all_data_types:  # pragma: no cover
+                        if data_type.type:
+                            duplicated_model_name = duplicated_model_names.get(
+                                data_type.type
+                            )
+                            if duplicated_model_name:
+                                data_type.type = duplicated_model_name
 
             if with_import:
                 result += [str(imports), str(self.imports), '\n']
@@ -471,8 +470,8 @@ class Parser(ABC):
                 result += ['\n', self.dump_resolve_reference_action(models_to_update)]
 
             body = '\n'.join(result)
-            if format_:
-                body = format_code(body, self.target_python_version, settings_path)
+            if code_formatter:
+                body = code_formatter.format_code(body)
 
             results[module] = Result(body=body, source=models[0].path)
 
