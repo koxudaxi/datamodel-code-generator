@@ -21,7 +21,7 @@ from typing import (
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import format_code
+from datamodel_code_generator.format import CodeFormatter
 
 from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
@@ -321,6 +321,13 @@ class Parser(ABC):
             if self.target_python_version != PythonVersion.PY_36:
                 self.imports.append(IMPORT_ANNOTATIONS)
 
+        if format_:
+            code_formatter: Optional[CodeFormatter] = CodeFormatter(
+                self.target_python_version, settings_path
+            )
+        else:
+            code_formatter = None
+
         _, sorted_data_models, require_update_action_models = sort_data_models(
             self.results
         )
@@ -463,8 +470,8 @@ class Parser(ABC):
                 result += ['\n', self.dump_resolve_reference_action(models_to_update)]
 
             body = '\n'.join(result)
-            if format_:
-                body = format_code(body, self.target_python_version, settings_path)
+            if code_formatter:
+                body = code_formatter.format_code(body)
 
             results[module] = Result(body=body, source=models[0].path)
 
