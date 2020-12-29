@@ -2,6 +2,7 @@ import keyword
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, Iterator, List, Optional, Set
 
@@ -86,14 +87,17 @@ class DataModelFieldBase(BaseModel):
         return repr(self.default)
 
 
+@lru_cache()
+def get_template(template_file_path: Path) -> Template:
+    loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
+    environment: Environment = Environment(loader=loader)
+    return environment.get_template(template_file_path.name)
+
+
 class TemplateBase(ABC):
     def __init__(self, template_file_path: Path) -> None:
         self.template_file_path: Path = template_file_path
-        loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
-        self.environment: Environment = Environment(loader=loader)
-        self._template: Template = self.environment.get_template(
-            template_file_path.name
-        )
+        self._template: Template = get_template(template_file_path)
 
     @property
     def template(self) -> Template:
