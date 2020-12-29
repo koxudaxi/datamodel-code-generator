@@ -222,7 +222,7 @@ class ModelResolver:
     def validate_name(cls, name: str) -> bool:
         return name.isidentifier() and not iskeyword(name)
 
-    @lru_cache
+    @lru_cache()
     def get_valid_name(self, name: str, camel: bool = False) -> str:
         if name.isidentifier():
             return name
@@ -245,7 +245,7 @@ class ModelResolver:
         return valid_name, None if field_name == valid_name else field_name
 
 
-@lru_cache
+@lru_cache()
 def get_singular_name(name: str, suffix: str = 'Item') -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
@@ -253,7 +253,7 @@ def get_singular_name(name: str, suffix: str = 'Item') -> str:
     return singular_name
 
 
-@lru_cache
+@lru_cache()
 def snake_to_upper_camel(word: str) -> str:
     prefix = ''
     if word.startswith('_'):

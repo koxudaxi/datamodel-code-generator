@@ -34,7 +34,7 @@ _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
 
 
-@lru_cache
+@lru_cache()
 def camel_to_snake(string: str) -> str:
     subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
     return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
