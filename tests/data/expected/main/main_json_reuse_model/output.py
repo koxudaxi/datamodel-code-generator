@@ -13,10 +13,8 @@ class ArmRight(BaseModel):
     Joint_3: int = Field(..., alias='Joint 3')
 
 
-class ArmLeft(BaseModel):
-    Joint_1: int = Field(..., alias='Joint 1')
-    Joint_2: int = Field(..., alias='Joint 2')
-    Joint_3: int = Field(..., alias='Joint 3')
+class ArmLeft(ArmRight):
+    pass
 
 
 class Head(BaseModel):
@@ -25,5 +23,5 @@ class Head(BaseModel):
 
 class Model(BaseModel):
     Arm_Right: ArmRight = Field(..., alias='Arm Right')
-    Arm_Left: ArmRight = Field(..., alias='Arm Left')
+    Arm_Left: ArmLeft = Field(..., alias='Arm Left')
     Head: Head
