@@ -27,6 +27,7 @@ from ..format import PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
+from ..model.enum import Enum
 from ..reference import ModelResolver
 from ..types import DataType, DataTypeManager
 
@@ -446,7 +447,19 @@ class Parser(ABC):
                     )
                     cached_model_name = model_cache.get(model_key)
                     if cached_model_name:
-                        duplicated_model_names[model.name] = cached_model_name
+                        if isinstance(model, Enum):
+                            duplicated_model_names[model.name] = cached_model_name
+                        else:
+                            index = models.index(model)
+                            inherited_model = model.__class__(
+                                name=model.name,
+                                fields=[],
+                                base_classes=[cached_model_name],
+                                description=model.description,
+                            )
+                            models.insert(index, inherited_model)
+                            models.remove(model)
+
                     else:
                         model_cache[model_key] = model.name
 

@@ -1269,7 +1269,31 @@ def test_main_json_reuse_model():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_json_resuse_model' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_json_reuse_enum():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'duplicate_enum.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--reuse-model',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_reuse_enum' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
