@@ -70,6 +70,10 @@ DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
 # ALL_MODEL: str = '#all#'
 
+SafeLoader.yaml_constructors[
+    'tag:yaml.org,2002:timestamp'
+] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
+
 
 def load_yaml(stream: Union[str, TextIO]) -> Any:
     return yaml.load(stream, Loader=SafeLoader)
