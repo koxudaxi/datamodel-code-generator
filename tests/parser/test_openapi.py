@@ -496,8 +496,8 @@ def test_openapi_model_resolver():
             name='Users',
             loaded=True,
         ),
-        '#/components/schemas/Users/Users': Reference(
-            path='#/components/schemas/Users/Users',
+        '#/components/schemas/Users/Users/0': Reference(
+            path='#/components/schemas/Users/Users/0',
             original_name='Users',
             name='User',
             loaded=True,
@@ -508,8 +508,8 @@ def test_openapi_model_resolver():
             name='Apis',
             loaded=True,
         ),
-        '#/components/schemas/apis/Apis': Reference(
-            path='#/components/schemas/apis/Apis',
+        '#/components/schemas/apis/Apis/0': Reference(
+            path='#/components/schemas/apis/Apis/0',
             original_name='Apis',
             name='Api',
             loaded=True,

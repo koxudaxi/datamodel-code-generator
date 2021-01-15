@@ -324,7 +324,7 @@ class JsonSchemaParser(Parser):
         self, name: str, target_items: List[JsonSchemaObject], path: List[str]
     ) -> DataType:
         data_types: List[DataType] = []
-        for item in target_items:
+        for index, item in enumerate(target_items):
             if item.ref:  # $ref
                 data_types.append(self.get_ref_data_type(item.ref))
             elif not any(v for k, v in vars(item).items() if k != 'type'):
@@ -344,7 +344,13 @@ class JsonSchemaParser(Parser):
             else:
                 data_types.append(
                     self.data_type.from_model_name(
-                        self.parse_object(name, item, path, singular_name=True).name,
+                        self.parse_object(
+                            name,
+                            item,
+                            [*path, str(index)],
+                            singular_name=True,
+                            unique=True,
+                        ).name,
                     )
                 )
         return self.data_type(data_types=data_types)
@@ -475,6 +481,7 @@ class JsonSchemaParser(Parser):
                             if field.additionalProperties.ref
                             or field.additionalProperties.is_object
                             else field,
+                            unique=True,
                         ).name
 
                     field_type = self.data_type(
@@ -569,7 +576,13 @@ class JsonSchemaParser(Parser):
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 item_obj_data_types.append(
                     self.data_type.from_model_name(
-                        self.parse_object(name, item, path, singular_name=True).name,
+                        self.parse_object(
+                            name,
+                            item,
+                            [*path, str(index)],
+                            singular_name=True,
+                            unique=True,
+                        ).name,
                     )
                 )
             elif item.anyOf:
