@@ -17,6 +17,7 @@ OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / 'jsonschema'
 JSON_DATA_PATH: Path = DATA_PATH / 'json'
 YAML_DATA_PATH: Path = DATA_PATH / 'yaml'
+PYTHON_DATA_PATH: Path = DATA_PATH / 'python'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
@@ -1341,6 +1342,31 @@ def test_main_similar_nested_array():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_similar_nested_array' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_space_and_special_characters_dict():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(PYTHON_DATA_PATH / 'space_and_special_characters_dict.py'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'dict',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
             ).read_text()
         )
     with pytest.raises(SystemExit):
