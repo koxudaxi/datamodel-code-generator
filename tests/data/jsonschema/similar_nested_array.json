@@ -76,6 +76,14 @@
                     "type": "string"
                   }
                 }
+              },
+            {
+                "type": "string",
+                "enum": ["dog", "cat", "snake"]
+              },
+                        {
+                "type": "string",
+                "enum": ["orange", "apple", "milk"]
               }
           ]
         }
