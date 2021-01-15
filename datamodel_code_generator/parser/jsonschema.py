@@ -523,7 +523,7 @@ class JsonSchemaParser(Parser):
         unique: bool = True,
         additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataModel:
-        if not unique:
+        if not unique:  # pragma: no cover
             warn(
                 f'{self.__class__.__name__}.parse_object() ignore `unique` argument.'
                 f'An object name must be unique.'
@@ -686,7 +686,7 @@ class JsonSchemaParser(Parser):
         singular_name: bool = False,
         unique: bool = True,
     ) -> DataModel:
-        if not unique:
+        if not unique:  # pragma: no cover
             warn(
                 f'{self.__class__.__name__}.parse_enum() ignore `unique` argument.'
                 f'An object name must be unique.'
