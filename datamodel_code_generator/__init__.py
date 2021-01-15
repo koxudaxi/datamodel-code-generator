@@ -139,6 +139,7 @@ class InputFileType(Enum):
     JsonSchema = 'jsonschema'
     Json = 'json'
     Yaml = 'yaml'
+    Dict = 'dict'
 
 
 class Error(Exception):
@@ -217,7 +218,11 @@ def generate(
 
         parser_class = JsonSchemaParser
 
-        if input_file_type in [InputFileType.Json, InputFileType.Yaml]:
+        if input_file_type in [
+            InputFileType.Json,
+            InputFileType.Yaml,
+            InputFileType.Dict,
+        ]:
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
