@@ -830,6 +830,8 @@ class JsonSchemaParser(Parser):
             self.parse_ref(item, path)
         for item in obj.allOf:
             self.parse_ref(item, path)
+        for item in obj.oneOf:
+            self.parse_ref(item, path)
         if obj.properties:
             for value in obj.properties.values():
                 self.parse_ref(value, path)
