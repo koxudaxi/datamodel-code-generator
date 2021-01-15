@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel
@@ -49,5 +50,17 @@ class KeyCItem3(BaseModel):
     nestedB: Optional[str] = None
 
 
+class KeyCEnum(Enum):
+    dog = 'dog'
+    cat = 'cat'
+    snake = 'snake'
+
+
+class KeyCEnum1(Enum):
+    orange = 'orange'
+    apple = 'apple'
+    milk = 'milk'
+
+
 class ObjectD(BaseModel):
-    keyC: Optional[List[Union[KeyCItem2, KeyCItem3]]] = None
+    keyC: Optional[List[Union[KeyCItem2, KeyCItem3, KeyCEnum, KeyCEnum1]]] = None
