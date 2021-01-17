@@ -228,6 +228,7 @@ class JsonSchemaParser(Parser):
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
         reuse_model: bool = False,
+        encoding: str = 'utf-8',
     ):
         super().__init__(
             source=source,
@@ -253,6 +254,7 @@ class JsonSchemaParser(Parser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             reuse_model=reuse_model,
+            encoding=encoding,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -765,7 +767,7 @@ class JsonSchemaParser(Parser):
         else:
             full_path = self.base_path / ref
         # yaml loader can parse json data.
-        with full_path.open() as f:
+        with full_path.open(encoding=self.encoding) as f:
             ref_body = load_yaml(f)
         self.remote_object_cache[ref] = ref_body
         return ref_body
