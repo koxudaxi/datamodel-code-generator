@@ -5,6 +5,7 @@ Main function.
 """
 
 import json
+import locale
 import signal
 import sys
 from argparse import ArgumentParser, FileType, Namespace
@@ -44,6 +45,8 @@ def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
 
 
 signal.signal(signal.SIGINT, sig_int_handler)
+
+DEFAULT_ENCODING = locale.getpreferredencoding()
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
@@ -148,6 +151,13 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+
+arg_parser.add_argument(
+    '--encoding',
+    help=f'The encoding of input and output (default: {DEFAULT_ENCODING})',
+    default=DEFAULT_ENCODING,
+)
+
 arg_parser.add_argument(
     '--debug', help='show debug message', action='store_true', default=None
 )
@@ -192,6 +202,7 @@ class Config(BaseModel):
     use_standard_collections: bool = False
     use_schema_description: bool = False
     reuse_model: bool = False
+    encoding: str = 'utf-8'
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -299,6 +310,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
             reuse_model=config.reuse_model,
+            encoding=config.encoding,
         )
         return Exit.OK
     except InvalidClassNameError as e:

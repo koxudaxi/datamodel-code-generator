@@ -198,8 +198,10 @@ class Source(BaseModel):
     text: str
 
     @classmethod
-    def from_path(cls, path: Path, base_path: Path) -> 'Source':
-        return cls(path=path.relative_to(base_path), text=path.read_text(),)
+    def from_path(cls, path: Path, base_path: Path, encoding: str) -> 'Source':
+        return cls(
+            path=path.relative_to(base_path), text=path.read_text(encoding=encoding),
+        )
 
 
 class Parser(ABC):
@@ -229,6 +231,7 @@ class Parser(ABC):
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
         reuse_model: bool = False,
+        encoding: str = 'utf-8',
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -251,6 +254,7 @@ class Parser(ABC):
         self.force_optional_for_required_fields: bool = force_optional_for_required_fields
         self.use_schema_description: bool = use_schema_description
         self.reuse_model: bool = reuse_model
+        self.encoding: str = encoding
 
         self.current_source_path: Optional[Path] = None
 
@@ -288,12 +292,12 @@ class Parser(ABC):
             if self.source.is_dir():
                 for path in self.source.rglob('*'):
                     if path.is_file():
-                        yield Source.from_path(path, self.base_path)
+                        yield Source.from_path(path, self.base_path, self.encoding)
             else:
-                yield Source.from_path(self.source, self.base_path)
+                yield Source.from_path(self.source, self.base_path, self.encoding)
         elif isinstance(self.source, list):  # pragma: no cover
             for path in self.source:
-                yield Source.from_path(path, self.base_path)
+                yield Source.from_path(path, self.base_path, self.encoding)
 
     def append_result(self, data_model: DataModel) -> None:
         for field_preprocessor in self.field_preprocessors:

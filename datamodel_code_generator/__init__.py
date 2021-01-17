@@ -190,6 +190,7 @@ def generate(
     use_standard_collections: bool = False,
     use_schema_description: bool = False,
     reuse_model: bool = False,
+    encoding: str = 'utf-8',
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -197,7 +198,7 @@ def generate(
             input_text_ = (
                 input_
                 if isinstance(input_, str)
-                else get_first_file(input_).read_text()
+                else get_first_file(input_).read_text(encoding=encoding)
             )
             input_file_type = (
                 InputFileType.OpenAPI
@@ -226,7 +227,11 @@ def generate(
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
-                input_text = input_ if isinstance(input_, str) else input_.read_text()
+                input_text = (
+                    input_
+                    if isinstance(input_, str)
+                    else input_.read_text(encoding=encoding)
+                )
                 obj: Dict[Any, Any] = load_yaml(input_text)
             except:
                 raise Error('Invalid file format')
@@ -299,7 +304,7 @@ def generate(
         else:
             if not path.parent.exists():
                 path.parent.mkdir(parents=True)
-            file = path.open('wt')
+            file = path.open('wt', encoding=encoding)
 
         print(header.format(filename=filename), file=file)
         if body:

@@ -42,7 +42,8 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--use-schema-description] [--reuse-model] [--class-name CLASS_NAME]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--debug]
+                         [--target-python-version {3.6,3.7,3.8,3.9}]
+                         [--validation] [--encoding ENCODING] [--debug]
                          [--version]
 
 optional arguments:
@@ -76,6 +77,7 @@ optional arguments:
   --target-python-version {3.6,3.7,3.8,3.9}
                         target python version (default: 3.7)
   --validation          Enable validation (Only OpenAPI)
+  --encoding ENCODING   The encoding of input and output (default: utf-8)
   --debug               show debug message
   --version             show version
 ```
