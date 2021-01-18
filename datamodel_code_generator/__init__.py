@@ -287,7 +287,9 @@ def generate(
             input_filename = '<stdin>'
         else:
             input_filename = input_.name
-    if isinstance(results, str):
+    if not results:
+        raise Error('Models not found in the input data')
+    elif isinstance(results, str):
 
         modules = {output: (results, input_filename)}
     else:
