@@ -232,9 +232,9 @@ def generate(
                 if InputFileType.CSV:
                     import csv
 
-                    def get_header_and_first_line(csv_file: IO) -> Dict[str, Any]:
+                    def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
-                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))
+                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))  # type: ignore
 
                     if isinstance(input_, str):
                         import io
