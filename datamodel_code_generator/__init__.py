@@ -241,8 +241,8 @@ def generate(
 
                         obj = get_header_and_first_line(io.StringIO(input_))
                     else:
-                        with input_.open(encoding=encoding) as file:
-                            obj = get_header_and_first_line(file)
+                        with input_.open(encoding=encoding) as f:
+                            obj = get_header_and_first_line(f)
                 else:
                     obj = load_yaml(
                         input_
