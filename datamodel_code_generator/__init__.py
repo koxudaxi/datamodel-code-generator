@@ -67,7 +67,6 @@ pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
-# ALL_MODEL: str = '#all#'
 
 SafeLoader.yaml_constructors[
     'tag:yaml.org,2002:timestamp'
