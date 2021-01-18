@@ -17,7 +17,7 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 ## Supported source types
 - OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
 - JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
-- JSON/YAML Data (it will be converted to JSON Schema)
+- JSON/YAML/CSV Data (it will be converted to JSON Schema)
 - Python dictionary (it will be converted to JSON Schema)
 
 ## Implemented list
@@ -67,7 +67,7 @@ $ pip install datamodel-code-generator[http]
 The `datamodel-codegen` command:
 ```
 usage: datamodel-codegen [-h] [--input INPUT]
-                         [--input-file-type {auto,openapi,jsonschema,json,yaml,dict}]
+                         [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
                          [--output OUTPUT] [--base-class BASE_CLASS] [--field-constraints]
                          [--snake-case-field] [--strip-default-none]
                          [--allow-population-by-field-name] [--use-default] [--force-optional]
@@ -82,7 +82,7 @@ usage: datamodel-codegen [-h] [--input INPUT]
 optional arguments:
   -h, --help            show this help message and exit
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,jsonschema,json,yaml,dict}
+  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
