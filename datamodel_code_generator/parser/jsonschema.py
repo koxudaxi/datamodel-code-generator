@@ -143,7 +143,7 @@ class JsonSchemaObject(BaseModel):
     oneOf: List['JsonSchemaObject'] = []
     anyOf: List['JsonSchemaObject'] = []
     allOf: List['JsonSchemaObject'] = []
-    enum: List[str] = []
+    enum: List[Any] = []
     writeOnly: Optional[bool]
     properties: Optional[Dict[str, 'JsonSchemaObject']]
     required: List[str] = []
@@ -697,9 +697,7 @@ class JsonSchemaParser(Parser):
         enum_fields: List[DataModelFieldBase] = []
 
         for i, enum_part in enumerate(obj.enum):
-            if obj.type == 'string' or (
-                isinstance(obj.type, list) and 'string' in obj.type
-            ):
+            if obj.type == 'string' or isinstance(enum_part, str):
                 default = f"'{enum_part}'"
                 field_name = enum_part
             else:
@@ -707,7 +705,12 @@ class JsonSchemaParser(Parser):
                 if obj.x_enum_varnames:
                     field_name = obj.x_enum_varnames[i]
                 else:
-                    field_name = f'{obj.type}_{enum_part}'
+                    prefix = (
+                        obj.type
+                        if isinstance(obj.type, str)
+                        else type(enum_part).__name__
+                    )
+                    field_name = f'{prefix}_{enum_part}'
             enum_fields.append(
                 self.data_model_field_type(
                     name=self.model_resolver.get_valid_name(field_name),

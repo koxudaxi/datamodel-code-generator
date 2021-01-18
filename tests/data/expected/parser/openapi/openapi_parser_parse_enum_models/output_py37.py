@@ -59,3 +59,11 @@ class AliasEnum(Enum):
     a = 1
     b = 2
     c = 3
+
+
+class MultipleTypeEnum(Enum):
+    red = 'red'
+    amber = 'amber'
+    green = 'green'
+    NoneType_None = None
+    int_42 = 42
