@@ -1430,7 +1430,4 @@ def test_main_models_not_found(capsys):
         )
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
-        assert (
-            captured.err
-            == 'Models not found in the input data\n'
-        )
+        assert captured.err == 'Models not found in the input data\n'
