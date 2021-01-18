@@ -1412,3 +1412,22 @@ def test_csv_stdin(monkeypatch):
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_models_not_found(capsys):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'no_components.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        captured = capsys.readouterr()
+        assert return_code == Exit.ERROR
+        assert captured.err == 'Models not found in the input data\n'
