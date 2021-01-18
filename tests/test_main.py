@@ -18,6 +18,7 @@ JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / 'jsonschema'
 JSON_DATA_PATH: Path = DATA_PATH / 'json'
 YAML_DATA_PATH: Path = DATA_PATH / 'yaml'
 PYTHON_DATA_PATH: Path = DATA_PATH / 'python'
+CSV_DATA_PATH: Path = DATA_PATH / 'csv'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
@@ -1368,6 +1369,46 @@ def test_space_and_special_characters_dict():
             == (
                 EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
             ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_csv_file():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(CSV_DATA_PATH / 'simple.csv'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'csv',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_csv_stdin(monkeypatch):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        monkeypatch.setattr('sys.stdin', (CSV_DATA_PATH / 'simple.csv').open())
+        return_code: Exit = main(
+            ['--output', str(output_file), '--input-file-type', 'csv',]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()

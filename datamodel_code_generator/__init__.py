@@ -68,8 +68,6 @@ pysnooper.tracer.DISABLED = True
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
 
-# ALL_MODEL: str = '#all#'
-
 SafeLoader.yaml_constructors[
     'tag:yaml.org,2002:timestamp'
 ] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
@@ -140,6 +138,7 @@ class InputFileType(Enum):
     Json = 'json'
     Yaml = 'yaml'
     Dict = 'dict'
+    CSV = 'csv'
 
 
 class Error(Exception):
@@ -219,20 +218,36 @@ def generate(
 
         parser_class = JsonSchemaParser
 
-        if input_file_type in [
+        if input_file_type in (
             InputFileType.Json,
             InputFileType.Yaml,
             InputFileType.Dict,
-        ]:
+            InputFileType.CSV,
+        ):
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
-                input_text = (
-                    input_
-                    if isinstance(input_, str)
-                    else input_.read_text(encoding=encoding)
-                )
-                obj: Dict[Any, Any] = load_yaml(input_text)
+                obj: Dict[Any, Any]
+                if input_file_type == InputFileType.CSV:
+                    import csv
+
+                    def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
+                        csv_reader = csv.DictReader(csv_file)
+                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))  # type: ignore
+
+                    if isinstance(input_, str):
+                        import io
+
+                        obj = get_header_and_first_line(io.StringIO(input_))
+                    else:
+                        with input_.open(encoding=encoding) as f:
+                            obj = get_header_and_first_line(f)
+                else:
+                    obj = load_yaml(
+                        input_
+                        if isinstance(input_, str)
+                        else input_.read_text(encoding=encoding)
+                    )
             except:
                 raise Error('Invalid file format')
             from genson import SchemaBuilder
