@@ -98,3 +98,5 @@ components:
       enum: [1,2,3]
       type: number
       x-enum-varnames: ['a', 'b', 'c']
+    MultipleTypeEnum:
+      enum: [ "red", "amber", "green", null, 42 ]
