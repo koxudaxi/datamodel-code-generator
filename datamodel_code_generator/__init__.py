@@ -228,7 +228,7 @@ def generate(
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
                 obj: Dict[Any, Any]
-                if InputFileType.CSV:
+                if input_file_type == InputFileType.CSV:
                     import csv
 
                     def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
