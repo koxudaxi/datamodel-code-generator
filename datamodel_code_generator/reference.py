@@ -96,8 +96,8 @@ class ModelResolver:
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         elif self.root_id_base_path and self.current_root != path:
-            return f'{self.root_id_base_path}/{joined_path}#/'
-        return f'{joined_path}#/'
+            return f'{self.root_id_base_path}/{joined_path}#'
+        return f'{joined_path}#'
 
     def is_after_load(self, ref: str) -> bool:
         if self.current_root and len(self.current_root) > 1:
@@ -165,10 +165,14 @@ class ModelResolver:
         singular_name: bool = False,
         unique: bool = False,
         singular_name_suffix: str = 'Item',
+        loaded: bool = False,
     ) -> Reference:
         joined_path: str = self._get_path(path)
         if joined_path in self.references:
-            return self.references[joined_path]
+            reference = self.references[joined_path]
+            if loaded and not reference.loaded:
+                reference.loaded = True
+            return reference
         elif not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
@@ -178,7 +182,9 @@ class ModelResolver:
             name = self.get_class_name(name, unique)
         elif unique:
             name = self._get_uniq_name(name)
-        reference = Reference(path=joined_path, original_name=original_name, name=name)
+        reference = Reference(
+            path=joined_path, original_name=original_name, name=name, loaded=loaded
+        )
         self.references[joined_path] = reference
         return reference
 

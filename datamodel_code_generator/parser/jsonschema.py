@@ -1,5 +1,6 @@
 import enum as _enum
 import sys
+from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
@@ -12,6 +13,7 @@ from typing import (
     Mapping,
     Optional,
     Set,
+    Tuple,
     Type,
     Union,
 )
@@ -261,6 +263,7 @@ class JsonSchemaParser(Parser):
         self.raw_obj: Dict[Any, Any] = {}
         self._root_id: Optional[str] = None
         self._root_id_base_path: Optional[str] = None
+        self.reserved_refs: DefaultDict[Tuple[str], Set[str]] = defaultdict(set)
 
     @property
     def root_id(self) -> Optional[str]:
@@ -381,7 +384,7 @@ class JsonSchemaParser(Parser):
             else:
                 fields.extend(self.parse_object_fields(all_of_item, path))
         class_name = self.model_resolver.add(
-            path, name, class_name=True, unique=True
+            path, name, class_name=True, unique=True, loaded=True
         ).name
         self.set_additional_properties(class_name, obj)
         data_model_type = self.data_model_type(
@@ -532,7 +535,12 @@ class JsonSchemaParser(Parser):
                 f'This argument will be removed in a future version'
             )
         class_name = self.model_resolver.add(
-            path, name, class_name=True, singular_name=singular_name, unique=True
+            path,
+            name,
+            class_name=True,
+            singular_name=singular_name,
+            unique=True,
+            loaded=True,
         ).name
         self.set_title(class_name, obj)
         self.set_additional_properties(class_name, additional_properties or obj)
@@ -628,7 +636,7 @@ class JsonSchemaParser(Parser):
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> DataModel:
         field = self.parse_array_fields(name, obj, [*path, name])
-        self.model_resolver.add(path, name)
+        self.model_resolver.add(path, name, loaded=True)
         data_model_root = self.data_model_root_type(
             name,
             [field],
@@ -659,6 +667,7 @@ class JsonSchemaParser(Parser):
             required = not obj.nullable and not (
                 obj.has_default and self.apply_default_values_for_required_fields
             )
+        self.model_resolver.add(path, name, loaded=True)
         data_model_root_type = self.data_model_root_type(
             name,
             [
@@ -726,6 +735,7 @@ class JsonSchemaParser(Parser):
             singular_name=singular_name,
             singular_name_suffix='Enum',
             unique=True,
+            loaded=True,
         ).name
         enum = Enum(
             enum_name,
@@ -782,9 +792,9 @@ class JsonSchemaParser(Parser):
                 # https://swagger.io/docs/specification/using-ref/
                 if obj.ref_type == JSONReference.LOCAL:
                     # Local Reference – $ref: '#/definitions/myElement'
-                    pass
+                    self.reserved_refs[tuple(self.model_resolver.current_root)].add(obj.ref)  # type: ignore
                 elif self.model_resolver.is_after_load(obj.ref):
-                    pass
+                    self.reserved_refs[tuple(obj.ref.split('#')[0].split('/'))].add(obj.ref)  # type: ignore
                 else:
                     if obj.ref_type == JSONReference.REMOTE and self.root_id_base_path:
                         ref = f'{self.root_id_base_path}/{obj.ref}'
@@ -902,10 +912,11 @@ class JsonSchemaParser(Parser):
             self.model_resolver.after_load_files = {
                 s.path.as_posix() for s in self.iter_source
             }
+
         for source in self.iter_source:
+            path_parts = list(source.path.parts)
             if self.current_source_path is not None:
                 self.current_source_path = source.path
-            path_parts = list(source.path.parts)
             with self.model_resolver.current_root_context(path_parts):
                 self.raw_obj = load_yaml(source.text)
                 if self.class_name:
@@ -915,7 +926,45 @@ class JsonSchemaParser(Parser):
                     obj_name = self.raw_obj.get('title', 'Model')
                     if not self.model_resolver.validate_name(obj_name):
                         raise InvalidClassNameError(obj_name)
-                self._parse_file(self.raw_obj, obj_name, path_parts, path_parts)
+                self._parse_file(self.raw_obj, obj_name, [*path_parts], path_parts)
+
+        # resolve unparsed json pointer
+        for source in self.iter_source:
+            path_parts = list(source.path.parts)
+            reserved_refs = self.reserved_refs.get(tuple(path_parts))  # type: ignore
+            if not reserved_refs:
+                continue
+            if self.current_source_path is not None:
+                self.current_source_path = source.path
+
+            with self.model_resolver.current_root_context(path_parts):
+                for reserved_ref in sorted(reserved_refs):
+                    if self.model_resolver.add_ref(reserved_ref).loaded:
+                        continue
+                    file_path, model_path = reserved_ref.split('#', 1)
+                    valid_path_parts = [p for p in model_path.split('/') if p]
+                    if (
+                        len(valid_path_parts) == 1
+                        and self.model_resolver.add_ref(f'{file_path}#').loaded
+                    ):  # pragma: no cover
+                        continue
+                    # for root model
+                    self.raw_obj = load_yaml(source.text)
+                    self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
+
+    def parse_json_pointer(
+        self, raw: Dict[str, Any], ref: str, path_parts: List[str]
+    ) -> None:
+        path = ref.split('#', 1)[-1]
+        if path[0] == '/':  # pragma: no cover
+            path = path[1:]
+        object_paths = path.split('/')
+        models = get_model_by_path(raw, object_paths)
+        model_name = object_paths[-1]
+
+        self.parse_raw_obj(
+            model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
+        )
 
     def _parse_file(
         self,
