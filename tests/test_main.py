@@ -939,7 +939,7 @@ def test_main_invalid_model_name_failed(capsys):
         assert return_code == Exit.ERROR
         assert (
             captured.err
-            == 'title=\'1 xyz\' is invalid class name. You have to set --class-name option\n'
+            == 'title=\'1 xyz\' is invalid class name. You have to set `--class-name` option\n'
         )
 
 
@@ -1480,3 +1480,87 @@ def test_main_jsonschema_multiple_files_json_pointer():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_enum_models_as_literal_one():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'enum_models.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--enum-field-as-literal',
+                'one',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_one' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_enum_models_as_literal_one():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'enum_models.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--enum-field-as-literal',
+                'all',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_enum_models_as_literal_py37(capsys):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'enum_models.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--enum-field-as-literal',
+                'all',
+            ]
+        )
+
+        captured = capsys.readouterr()
+        assert return_code == Exit.ERROR
+        assert (
+            captured.err
+            == "`--enum-field-as-literal` isn't compatible with `--target-python-version 3.7`.\n"
+            "You have to set `--target-python-version 3.8` or later version.\n"
+        )

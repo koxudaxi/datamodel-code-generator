@@ -58,6 +58,7 @@ from .model.pydantic import (
     dump_resolve_reference_action,
 )
 from .model.pydantic.types import DataTypeManager
+from .parser import LiteralType
 from .parser.base import Parser
 from .version import version as __version__
 
@@ -190,6 +191,7 @@ def generate(
     use_schema_description: bool = False,
     reuse_model: bool = False,
     encoding: str = 'utf-8',
+    enum_field_as_literal: Optional[LiteralType] = None,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -278,6 +280,7 @@ def generate(
         else None,
         use_schema_description=use_schema_description,
         reuse_model=reuse_model,
+        enum_field_as_literal=enum_field_as_literal,
     )
 
     with chdir(output):

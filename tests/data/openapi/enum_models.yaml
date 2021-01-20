@@ -62,6 +62,9 @@ components:
         kind:
           type: string
           enum: ['dog', 'cat']
+        type:
+          type: string
+          enum: [ 'animal' ]
     Pets:
       type: array
       items:
@@ -100,3 +103,6 @@ components:
       x-enum-varnames: ['a', 'b', 'c']
     MultipleTypeEnum:
       enum: [ "red", "amber", "green", null, 42 ]
+    singleEnum:
+      enum: [ "pet" ]
+      type: string

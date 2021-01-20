@@ -11,11 +11,16 @@ class Kind(Enum):
     cat = 'cat'
 
 
+class Type(Enum):
+    animal = 'animal'
+
+
 class Pet(BaseModel):
     id: int
     name: str
     tag: Optional[str] = None
     kind: Optional[Kind] = None
+    type: Optional[Type] = None
 
 
 class Pets(BaseModel):
@@ -36,13 +41,13 @@ class Error(BaseModel):
     message: str
 
 
-class Type(Enum):
+class Type1(Enum):
     a = 'a'
     b = 'b'
 
 
 class EnumObject(BaseModel):
-    type: Optional[Type] = None
+    type: Optional[Type1] = None
 
 
 class EnumRoot(Enum):
@@ -67,3 +72,7 @@ class MultipleTypeEnum(Enum):
     green = 'green'
     NoneType_None = None
     int_42 = 42
+
+
+class SingleEnum(Enum):
+    pet = 'pet'

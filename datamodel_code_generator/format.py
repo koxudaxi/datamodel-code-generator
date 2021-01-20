@@ -13,6 +13,10 @@ class PythonVersion(Enum):
     PY_38 = '3.8'
     PY_39 = '3.9'
 
+    @property
+    def has_literal_type(self) -> bool:
+        return self.value >= self.PY_38.value  # type: ignore
+
 
 BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
     v: getattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')

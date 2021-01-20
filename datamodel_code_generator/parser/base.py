@@ -30,6 +30,7 @@ from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
 from ..reference import ModelResolver
 from ..types import DataType, DataTypeManager
+from . import LiteralType
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
@@ -232,6 +233,7 @@ class Parser(ABC):
         use_schema_description: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
+        enum_field_as_literal: Optional[LiteralType] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -255,6 +257,7 @@ class Parser(ABC):
         self.use_schema_description: bool = use_schema_description
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
+        self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
 
         self.current_source_path: Optional[Path] = None
 

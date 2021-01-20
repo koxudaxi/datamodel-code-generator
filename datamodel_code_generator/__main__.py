@@ -18,7 +18,7 @@ from typing import Any, DefaultDict, Dict, Optional, Sequence, cast
 import argcomplete
 import black
 import toml
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, root_validator, validator
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     enable_debug_message,
     generate,
 )
+from datamodel_code_generator.parser import LiteralType
 
 from .format import PythonVersion, is_supported_in_black
 
@@ -130,6 +131,15 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--enum-field-as-literal',
+    help='Parse enum field as literal. '
+    'all: all enum field type are Literal. '
+    'one: field type is Literal when an enum has only one possible value',
+    choices=[l.value for l in LiteralType],
+    default=None,
+)
+
+arg_parser.add_argument(
     '--class-name', help='Set class name of root model', default=None,
 )
 
@@ -181,6 +191,17 @@ class Config(BaseModel):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
+    @root_validator
+    def validate_literal_option(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('enum_field_as_literal'):
+            target_python_version: PythonVersion = values['target_python_version']
+            if not target_python_version.has_literal_type:
+                raise Error(
+                    f"`--enum-field-as-literal` isn't compatible with `--target-python-version {target_python_version.value}`.\n"  # type: ignore
+                    f"You have to set `--target-python-version {target_python_version.PY_38.value}` or later version."
+                )
+        return values
+
     input: Optional[Path]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
@@ -203,6 +224,7 @@ class Config(BaseModel):
     use_schema_description: bool = False
     reuse_model: bool = False
     encoding: str = 'utf-8'
+    enum_field_as_literal: Optional[LiteralType] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -242,8 +264,12 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     else:
         pyproject_toml = {}
 
-    config = Config.parse_obj(pyproject_toml)
-    config.merge_args(namespace)
+    try:
+        config = Config.parse_obj(pyproject_toml)
+        config.merge_args(namespace)
+    except Error as e:
+        print(e.message, file=sys.stderr)
+        return Exit.ERROR
 
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(
@@ -311,10 +337,11 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_schema_description=config.use_schema_description,
             reuse_model=config.reuse_model,
             encoding=config.encoding,
+            enum_field_as_literal=config.enum_field_as_literal,
         )
         return Exit.OK
     except InvalidClassNameError as e:
-        print(f'{e} You have to set --class-name option', file=sys.stderr)
+        print(f'{e} You have to set `--class-name` option', file=sys.stderr)
         return Exit.ERROR
     except Error as e:
         print(str(e), file=sys.stderr)
