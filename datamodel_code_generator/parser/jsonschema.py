@@ -30,6 +30,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
+from datamodel_code_generator.parser import LiteralType
 
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
@@ -231,6 +232,7 @@ class JsonSchemaParser(Parser):
         use_schema_description: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
+        enum_field_as_literal: Optional[LiteralType] = None,
     ):
         super().__init__(
             source=source,
@@ -257,6 +259,7 @@ class JsonSchemaParser(Parser):
             use_schema_description=use_schema_description,
             reuse_model=reuse_model,
             encoding=encoding,
+            enum_field_as_literal=enum_field_as_literal,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -282,6 +285,11 @@ class JsonSchemaParser(Parser):
     @property
     def root_id_base_path(self) -> Optional[str]:
         return self._root_id_base_path
+
+    def should_parse_enum_as_literal(self, obj: JsonSchemaObject) -> bool:
+        return self.enum_field_as_literal == LiteralType.All or (
+            self.enum_field_as_literal == LiteralType.One and len(obj.enum) == 1
+        )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:
@@ -491,8 +499,13 @@ class JsonSchemaParser(Parser):
                 else:
                     field_type = self.data_type_manager.get_data_type(Types.object)
             elif field.enum:
-                enum = self.parse_enum(field_name, field, [*path, field_name])
-                field_type = self.data_type.from_model_name(enum.name)
+                if self.should_parse_enum_as_literal(field):
+                    field_type = self.data_type_manager.data_type.create_literal(
+                        field.enum
+                    )
+                else:
+                    enum = self.parse_enum(field_name, field, [*path, field_name])
+                    field_type = self.data_type.from_model_name(enum.name)
             else:
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
@@ -599,7 +612,9 @@ class JsonSchemaParser(Parser):
                 )
             elif item.enum:
                 item_obj_data_types.append(
-                    self.data_type.from_model_name(
+                    self.data_type_manager.data_type.create_literal(item.enum)
+                    if self.should_parse_enum_as_literal(item)
+                    else self.data_type.from_model_name(
                         self.parse_enum(
                             name, item, field_path, singular_name=True
                         ).name,

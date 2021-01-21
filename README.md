@@ -42,10 +42,10 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 - decimal
 
 #### Other schema
-- enum
+- enum (as enum.Enum or typing.Literal)
 - allOf (as Multiple inheritance)
-- anyOf (as Union)
-- oneOf (as Union)
+- anyOf (as typing.Union)
+- oneOf (as typing.Union)
 - $ref ([http extra](#http-extra-option) is required when resolving $ref for remote files.)
 - $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
 
@@ -71,8 +71,8 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--output OUTPUT] [--base-class BASE_CLASS] [--field-constraints]
                          [--snake-case-field] [--strip-default-none]
                          [--allow-population-by-field-name] [--use-default] [--force-optional]
-                         [--disable-timestamp] [--use-standard-collections]
-                         [--use-schema-description] [--reuse-model] [--class-name CLASS_NAME]
+                         [--disable-timestamp] [--use-standard-collections] [--use-schema-description] [--reuse-model]
+                         [--enum-field-as-literal {all,one}] [--class-name CLASS_NAME]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
                          [--target-python-version {3.6,3.7,3.8,3.9}]
@@ -100,6 +100,9 @@ optional arguments:
   --use-schema-description
                         Use schema description to populate class docstring
   --reuse-model         Re-use models on the field when a module has the model with the same content
+  --enum-field-as-literal {all,one}
+                        Parse enum field as literal. all: all enum field type are Literal. one: field type is Literal when an enum has only
+                        one possible value
   --class-name CLASS_NAME
                         Set class name of root model
   --custom-template-dir CUSTOM_TEMPLATE_DIR

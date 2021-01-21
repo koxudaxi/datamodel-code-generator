@@ -29,9 +29,9 @@ This codegen supports major data types to OpenAPI/JSON Schema
 - decimal
 
 ### Other schema
-- enum
+- enum (as enum.Enum or typing.Literal)
 - allOf (as Multiple inheritance)
-- anyOf (as Union)
-- oneOf (as Union)
+- anyOf (as typing.Union)
+- oneOf (as typing.Union)
 - $ref ([http extra](../#http-extra-option) is required when resolving $ref for remote files.)
 - $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))

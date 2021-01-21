@@ -8,6 +8,7 @@ from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_DICT,
     IMPORT_LIST,
+    IMPORT_LITERAL,
     IMPORT_OPTIONAL,
     IMPORT_UNION,
     Import,
@@ -28,6 +29,7 @@ class DataType(BaseModel):
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
+    literals: List[str] = []
     use_standard_collections: bool = False
 
     @classmethod
@@ -37,6 +39,10 @@ class DataType(BaseModel):
     @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
         return cls(type=reference.name, reference=reference, is_list=is_list)
+
+    @classmethod
+    def create_literal(cls, literals: List[str]) -> 'DataType':
+        return cls(literals=literals)
 
     @property
     def module_name(self) -> Optional[str]:
@@ -82,6 +88,7 @@ class DataType(BaseModel):
         imports: Tuple[Tuple[bool, Import], ...] = (
             (self.is_optional, IMPORT_OPTIONAL),
             (len(self.data_types) > 1, IMPORT_UNION),
+            (any(self.literals), IMPORT_LITERAL),
         )
         if not self.use_standard_collections:
             imports = (
@@ -110,6 +117,10 @@ class DataType(BaseModel):
                 type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
+            elif self.literals:
+                type_ = (
+                    f"Literal[{', '.join(repr(literal) for literal in self.literals)}]"
+                )
             else:
                 # TODO support strict Any
                 # type_ = 'Any'
