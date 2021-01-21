@@ -792,8 +792,10 @@ class JsonSchemaParser(Parser):
         else:
             full_path = self.base_path / ref
 
+        ref_full_path = str(full_path)
+
         cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(
-            str(full_path)
+            ref_full_path
         )
         if cached_ref_body:
             return cached_ref_body
@@ -801,7 +803,7 @@ class JsonSchemaParser(Parser):
         # yaml loader can parse json data.
         with full_path.open(encoding=self.encoding) as f:
             ref_body = load_yaml(f)
-        self.remote_object_cache[ref] = ref_body
+        self.remote_object_cache[ref_full_path] = ref_body
         return ref_body
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
