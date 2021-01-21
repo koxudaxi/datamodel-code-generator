@@ -785,15 +785,19 @@ class JsonSchemaParser(Parser):
         return ref_body
 
     def _get_ref_body_from_remote(self, ref: str) -> Dict[Any, Any]:
-        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
-        if cached_ref_body:
-            return cached_ref_body
         # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
         # the same location. TODO treat edge case
         if self.current_source_path and len(self.current_source_path.parts) > 1:
             full_path = self.base_path / self.current_source_path.parent / ref
         else:
             full_path = self.base_path / ref
+
+        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(
+            str(full_path)
+        )
+        if cached_ref_body:
+            return cached_ref_body
+
         # yaml loader can parse json data.
         with full_path.open(encoding=self.encoding) as f:
             ref_body = load_yaml(f)
