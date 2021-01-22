@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Any, DefaultDict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
+from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 
 
 class CustomRootType(DataModel):
@@ -39,6 +39,18 @@ class CustomRootType(DataModel):
             path=path,
             description=description,
         )
+
+        config_parameters: Dict[str, Any] = {}
+
+        if 'additionalProperties' in self.extra_template_data:
+            config_parameters['extra'] = 'Extra.allow'
+            self.imports.append(IMPORT_EXTRA)
+
+        if config_parameters:
+            from datamodel_code_generator.model.pydantic import Config
+
+            self.extra_template_data['config'] = Config.parse_obj(config_parameters)
+
         for field in fields:
             if field.field:
                 self.imports.append(IMPORT_FIELD)

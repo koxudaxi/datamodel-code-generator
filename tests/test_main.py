@@ -1564,3 +1564,32 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
             == "`--enum-field-as-literal` isn't compatible with `--target-python-version 3.7`.\n"
             "You have to set `--target-python-version 3.8` or later version.\n"
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_root_model_with_additional_properties():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+                ),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()

@@ -57,10 +57,10 @@ class Broken(Base):
 
 
 class Failing(Base):
-    pass
-
     class Config:
         extra = Extra.allow
+
+    __root__: str
 
 
 class Test(Base):
