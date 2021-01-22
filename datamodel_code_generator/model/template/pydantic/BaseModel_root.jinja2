@@ -8,7 +8,9 @@ class {{ class_name }}({{ base_class }}):
     """
 {%- endif %}
 {%- if config %}
+{%- filter indent(4) %}
 {% include 'Config.jinja2' %}
+{%- endfilter %}
 {%- endif %}
 {%- if not fields %}
     pass

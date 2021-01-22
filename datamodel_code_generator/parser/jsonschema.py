@@ -477,7 +477,7 @@ class JsonSchemaParser(Parser):
                                 field.additionalProperties,
                                 [*path, field_name],
                             ).name
-                    else:
+                    elif field.additionalProperties.is_object:
                         additional_properties_type = (
                             unresolved_type
                         ) = self.parse_object(
@@ -486,7 +486,18 @@ class JsonSchemaParser(Parser):
                             [*path, field_name],
                             additional_properties=None
                             if field.additionalProperties.ref
-                            or field.additionalProperties.is_object
+                            else field,
+                        ).name
+
+                    else:
+                        additional_properties_type = (
+                            unresolved_type
+                        ) = self.parse_root_type(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                            additional_properties=None
+                            if field.additionalProperties.ref
                             else field,
                         ).name
 
@@ -666,7 +677,11 @@ class JsonSchemaParser(Parser):
         return data_model_root
 
     def parse_root_type(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataModel:
         if obj.type:
             data_type: DataType = self.get_data_type(obj)
@@ -683,6 +698,8 @@ class JsonSchemaParser(Parser):
                 obj.has_default and self.apply_default_values_for_required_fields
             )
         self.model_resolver.add(path, name, loaded=True)
+        self.set_title(name, obj)
+        self.set_additional_properties(name, additional_properties or obj)
         data_model_root_type = self.data_model_root_type(
             name,
             [

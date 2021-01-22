@@ -52,9 +52,9 @@ class Broken(BaseModel):
 
 
 class Failing(BaseModel):
-    pass
     class Config:
         extra = Extra.allow
+    __root__: str
 
 
 class Test(BaseModel):
