@@ -7,7 +7,8 @@
     "test_id",
     "test_ip",
     "result",
-    "nested_object_result"
+    "nested_object_result",
+    "nested_enum_result"
   ],
   "properties": {
     "test_id": {
@@ -34,6 +35,12 @@
           }
         },
         "required": ["status"]
+      }
+    },
+    "nested_enum_result": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": ["red", "green"]
       }
     }
   }

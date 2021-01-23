@@ -32,6 +32,7 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import LiteralType
 
+from ..imports import IMPORT_LITERAL, Import
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
 from ..reference import is_url
@@ -450,33 +451,29 @@ class JsonSchemaParser(Parser):
                     )
 
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
-                    unresolved_type: str
+                    unresolved_type: Optional[str]
+                    imports_: List[Import] = []
                     field_class_name = self.model_resolver.add(
                         [*path, field_name], field_name, class_name=True
                     ).name
 
                     # TODO: supports other type
-                    if field.additionalProperties.is_array:
-                        if (
-                            isinstance(
-                                field.additionalProperties.items, JsonSchemaObject
-                            )
-                            and field.additionalProperties.items.ref
-                        ):
-                            unresolved_type = self.model_resolver.add_ref(
-                                field.additionalProperties.items.ref,
-                            ).name
-                            additional_properties_type = self.data_type.from_model_name(
-                                unresolved_type, is_list=True
-                            ).type_hint
-                        else:
-                            additional_properties_type = (
-                                unresolved_type
-                            ) = self.parse_array(
-                                field_class_name,
-                                field.additionalProperties,
-                                [*path, field_name],
-                            ).name
+                    if (
+                        isinstance(field.additionalProperties.items, JsonSchemaObject)
+                        and field.additionalProperties.items.ref
+                    ):
+                        unresolved_type = self.model_resolver.add_ref(
+                            field.additionalProperties.items.ref,
+                        ).name
+                        additional_properties_type = self.data_type.from_model_name(
+                            unresolved_type, is_list=True
+                        ).type_hint
+                    elif field.additionalProperties.is_array:
+                        additional_properties_type = unresolved_type = self.parse_array(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                        ).name
                     elif field.additionalProperties.is_object:
                         additional_properties_type = (
                             unresolved_type
@@ -488,6 +485,23 @@ class JsonSchemaParser(Parser):
                             if field.additionalProperties.ref
                             else field,
                         ).name
+                    elif field.additionalProperties.enum:
+                        if self.should_parse_enum_as_literal(
+                            field.additionalProperties
+                        ):
+                            additional_properties_type = self.data_type.create_literal(
+                                field.additionalProperties.enum
+                            ).type_hint
+                            unresolved_type = None
+                            imports_.append(IMPORT_LITERAL)
+                        else:
+                            additional_properties_type = (
+                                unresolved_type
+                            ) = self.parse_enum(
+                                field_class_name,
+                                field.additionalProperties,
+                                [*path, field_name],
+                            ).name
 
                     else:
                         additional_properties_type = (
@@ -500,11 +514,16 @@ class JsonSchemaParser(Parser):
                             if field.additionalProperties.ref
                             else field,
                         ).name
-
+                    self.parse_ref(
+                        field.additionalProperties, [*path, field_name],
+                    )
                     field_type = self.data_type(
                         type=additional_properties_type,
                         is_dict=True,
-                        unresolved_types={unresolved_type},
+                        unresolved_types={unresolved_type}
+                        if unresolved_type
+                        else {*()},
+                        imports_=imports_,
                     )
 
                 else:
