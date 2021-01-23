@@ -1593,3 +1593,36 @@ def test_main_root_model_with_additional_properties():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_root_model_with_additional_properties_literal():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+                ),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--enum-field-as-literal',
+                'all',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_literal'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
