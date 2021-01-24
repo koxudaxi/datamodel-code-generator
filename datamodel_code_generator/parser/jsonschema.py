@@ -129,6 +129,14 @@ class JsonSchemaObject(BaseModel):
             del values['exclusiveMinimum']
         return values
 
+    @validator('ref')
+    def validate_ref(cls, value: Any) -> Any:
+        if isinstance(value, str) and '#' in value:
+            if '#/' in value or value[0] == '#' or value[-1] == '#':
+                return value
+            return value.replace('#', '#/')
+        return value
+
     items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
     uniqueItem: Optional[bool]
     type: Union[str, List[str], None]
@@ -863,15 +871,9 @@ class JsonSchemaParser(Parser):
                         relative_path, object_path = ref[:-1], ''
                     else:
                         relative_path, object_path = ref, ''
-                    object_paths = object_path.split('/')
-                    ref_body = self._get_ref_body(relative_path)
 
-                    if object_path:
-                        models = get_model_by_path(ref_body, object_paths)
-                        model_name = object_paths[-1]
-                    else:
-                        models = ref_body
-                        model_name = self.model_resolver.add_ref(obj.ref).name
+                    models = self._get_ref_body(relative_path)
+                    model_name = self.model_resolver.add_ref(obj.ref).name
                     if obj.ref_type == JSONReference.REMOTE:
                         previous_base_path: Optional[Path] = self.base_path
                         self.base_path = (self.base_path / relative_path).parent
@@ -881,8 +883,8 @@ class JsonSchemaParser(Parser):
                     self._parse_file(
                         models,
                         model_name,
-                        [*relative_paths, '#', *object_paths],
                         relative_paths,
+                        object_path.split('/') if object_path else None,
                     )
                     if previous_base_path:
                         self.base_path = previous_base_path
@@ -983,7 +985,7 @@ class JsonSchemaParser(Parser):
                     obj_name = self.raw_obj.get('title', 'Model')
                     if not self.model_resolver.validate_name(obj_name):
                         raise InvalidClassNameError(obj_name)
-                self._parse_file(self.raw_obj, obj_name, [*path_parts], path_parts)
+                self._parse_file(self.raw_obj, obj_name, path_parts)
 
         # resolve unparsed json pointer
         for source in self.iter_source:
@@ -1028,10 +1030,17 @@ class JsonSchemaParser(Parser):
         raw: Dict[str, Any],
         obj_name: str,
         path_parts: List[str],
-        root_path: List[str],
+        object_paths: Optional[List[str]] = None,
     ) -> None:
-        with self.model_resolver.current_root_context(root_path):
-            obj_name = self.model_resolver.add(path_parts, obj_name, unique=False).name
+        if object_paths:
+            path = [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
+        else:
+            path = path_parts
+        reference = self.model_resolver.get(path)
+        if reference and reference.loaded:
+            return
+        with self.model_resolver.current_root_context(path_parts):
+            obj_name = self.model_resolver.add(path, obj_name, unique=False).name
             with self.root_id_context(raw):
 
                 # parse $id before parsing $ref
@@ -1042,6 +1051,14 @@ class JsonSchemaParser(Parser):
                     obj = JsonSchemaObject.parse_obj(model)
                     self.parse_id(obj, [*path_parts, '#/definitions', key])
 
-                self.parse_obj(obj_name, root_obj, path_parts)
+                if object_paths:
+                    models = get_model_by_path(raw, object_paths)
+                    model_name = object_paths[-1]
+                    self.parse_obj(model_name, JsonSchemaObject.parse_obj(models), path)
+                else:
+                    self.parse_obj(obj_name, root_obj, path_parts)
                 for key, model in definitions.items():
-                    self.parse_raw_obj(key, model, [*path_parts, '#/definitions', key])
+                    path = [*path_parts, '#/definitions', key]
+                    reference = self.model_resolver.get(path)
+                    if not reference or not reference.loaded:
+                        self.parse_raw_obj(key, model, path)

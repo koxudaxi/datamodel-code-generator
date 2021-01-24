@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 import yaml
@@ -66,7 +66,7 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
 def test_json_schema_object_ref_url_json(mocker):
     parser = JsonSchemaParser('')
     obj = JsonSchemaObject.parse_obj(
-        {'$ref': 'https://example.org/schema.json#/definitions/User'}
+        {'$ref': 'https://example.org/person.schema.json#/definitions/User'}
     )
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = json.dumps(
@@ -86,7 +86,12 @@ def test_json_schema_object_ref_url_json(mocker):
     name: Optional[str] = None'''
     )
     parser.parse_ref(obj, ['Model'])
-    mock_get.assert_called_once_with('https://example.org/schema.json',)
+    mock_get.assert_has_calls(
+        [
+            call('https://example.org/person.schema.json'),
+            call('https://example.com/person.schema.json'),
+        ]
+    )
 
 
 def test_json_schema_object_ref_url_yaml(mocker):
@@ -103,7 +108,11 @@ def test_json_schema_object_ref_url_yaml(mocker):
     assert (
         dump_templates(list(parser.results))
         == '''class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')'''
+    name: Optional[str] = Field(None, example='ken')
+
+
+class Pet(BaseModel):
+    name: Optional[str] = Field(None, examples=['dog', 'cat'])'''
     )
     parser.parse_ref(obj, [])
     mock_get.assert_called_once_with('https://example.org/schema.yaml',)
@@ -158,7 +167,11 @@ def test_json_schema_ref_url_json(mocker):
 
 
 class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')'''
+    name: Optional[str] = Field(None, example='ken')
+
+
+class Pet(BaseModel):
+    name: Optional[str] = Field(None, examples=['dog', 'cat'])'''
     )
     mock_get.assert_called_once_with('https://example.org/schema.json',)
 

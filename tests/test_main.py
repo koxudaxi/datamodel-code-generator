@@ -1626,3 +1626,55 @@ def test_main_root_model_with_additional_properties_literal():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_multiple_files_ref():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'multiple_files_self_ref'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'multiple_files_self_ref'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_multiple_files_ref_test_json():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        with chdir(JSON_SCHEMA_DATA_PATH / 'multiple_files_self_ref'):
+            return_code: Exit = main(
+                [
+                    '--input',
+                    'test.json',
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'jsonschema',
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
+                ).read_text()
+            )
+    with pytest.raises(SystemExit):
+        main()

@@ -135,21 +135,14 @@ class ModelResolver:
                 if self.is_external_root_ref(ref)
                 else split_ref[1]
             )
-        if self.is_after_load(ref):
-            loaded: bool = False
-        else:
-            loaded = not self.is_external_ref(ref) and not self.is_external_root_ref(
-                ref
-            )
         if not original_name:
             original_name = Path(parents).stem  # type: ignore
-            loaded = False
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
             path=path,
             original_name=original_name,
             name=name,
-            loaded=loaded,
+            loaded=False,
             actual_module_name=actual_module_name,
         )
 
@@ -193,7 +186,7 @@ class ModelResolver:
     ) -> Optional[Reference]:  # pragma: no cover
         if isinstance(path, str):
             return self.references.get(path)
-        return self.references[self._get_path(path)]
+        return self.references.get(self._get_path(path))
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
         if '.' in field_name:
