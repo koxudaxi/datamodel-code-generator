@@ -28,6 +28,7 @@ from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
+from ..model.pydantic.imports import IMPORT_FIELD
 from ..reference import ModelResolver
 from ..types import DataType, DataTypeManager
 from . import LiteralType
@@ -54,16 +55,18 @@ def to_hashable(item: Any) -> Any:
     return item
 
 
-def snakify_field(field: DataModelFieldBase) -> None:
+def snakify_field(field: DataModelFieldBase, model: DataModel) -> None:
     if not field.name:
         return
     original_name = field.name
     field.name = camel_to_snake(original_name)
     if field.name != original_name:
         field.alias = original_name
+        if IMPORT_FIELD not in model.fields:  # pragma: no cover
+            model.imports.append(IMPORT_FIELD)
 
 
-def set_strip_default_none(field: DataModelFieldBase) -> None:
+def set_strip_default_none(field: DataModelFieldBase, _: DataModel) -> None:
     field.strip_default_none = True
 
 
@@ -280,7 +283,9 @@ class Parser(ABC):
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
 
         self.model_resolver = ModelResolver(aliases=aliases)
-        self.field_preprocessors: List[Callable[[DataModelFieldBase], None]] = []
+        self.field_preprocessors: List[
+            Callable[[DataModelFieldBase, DataModel], None]
+        ] = []
         if self.snake_case_field:
             self.field_preprocessors.append(snakify_field)
         if self.strip_default_none:
@@ -305,7 +310,7 @@ class Parser(ABC):
     def append_result(self, data_model: DataModel) -> None:
         for field_preprocessor in self.field_preprocessors:
             for field in data_model.fields:
-                field_preprocessor(field)
+                field_preprocessor(field, data_model)
         self.results.append(data_model)
 
     @property
