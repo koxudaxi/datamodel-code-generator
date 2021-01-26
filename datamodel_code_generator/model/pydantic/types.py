@@ -154,7 +154,7 @@ class DataTypeManager(_DataTypeManager):
                 return self.data_type(
                     type='NegativeFloat', imports_=[IMPORT_NEGATIVE_FLOAT]
                 )
-            return DataType(
+            return self.data_type(
                 type='confloat',
                 is_func=True,
                 kwargs={k: float(v) for k, v in data_type_kwargs.items()},
