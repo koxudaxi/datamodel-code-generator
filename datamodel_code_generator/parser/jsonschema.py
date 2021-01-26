@@ -175,7 +175,13 @@ class JsonSchemaObject(BaseModel):
 
     @cached_property
     def is_object(self) -> bool:
-        return self.properties is not None or self.type == 'object'
+        return (
+            self.properties is not None
+            or self.type == 'object'
+            and not self.allOf
+            and not self.oneOf
+            and not self.anyOf
+        )
 
     @cached_property
     def is_array(self) -> bool:
