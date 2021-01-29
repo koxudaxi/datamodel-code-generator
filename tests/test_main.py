@@ -922,6 +922,33 @@ def test_main_subclass_enum():
 
 
 @freeze_time('2019-07-26')
+def test_main_complicated_enum_default_member():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
+                '--output',
+                str(output_file),
+                '--set-default-enum-member',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_complicated_enum_default_member'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_invalid_model_name_failed(capsys):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

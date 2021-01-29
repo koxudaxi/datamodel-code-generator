@@ -248,6 +248,7 @@ class JsonSchemaParser(Parser):
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
+        set_default_enum_member: bool = False,
     ):
         super().__init__(
             source=source,
@@ -275,6 +276,7 @@ class JsonSchemaParser(Parser):
             reuse_model=reuse_model,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            set_default_enum_member=set_default_enum_member,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -374,7 +376,7 @@ class JsonSchemaParser(Parser):
                     self.data_type.from_model_name(
                         self.parse_object(
                             name, item, [*path, str(index)], singular_name=True,
-                        ).name,
+                        ).name
                     )
                 )
         return self.data_type(data_types=data_types)
@@ -406,9 +408,10 @@ class JsonSchemaParser(Parser):
                 base_classes.append(self.get_ref_data_type(all_of_item.ref))
             else:
                 fields.extend(self.parse_object_fields(all_of_item, path))
-        class_name = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path, name, class_name=True, unique=True, loaded=True
-        ).name
+        )
+        class_name = reference.name
         self.set_additional_properties(class_name, obj)
         data_model_type = self.data_model_type(
             class_name,
@@ -421,6 +424,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
+        reference.source = data_model_type
         # add imports for the fields
         for f in fields:
             data_model_type.imports.extend(f.imports)
@@ -476,11 +480,12 @@ class JsonSchemaParser(Parser):
                         isinstance(field.additionalProperties.items, JsonSchemaObject)
                         and field.additionalProperties.items.ref
                     ):
-                        unresolved_type = self.model_resolver.add_ref(
+                        reference = self.model_resolver.add_ref(
                             field.additionalProperties.items.ref,
-                        ).name
-                        additional_properties_type = self.data_type.from_model_name(
-                            unresolved_type, is_list=True
+                        )
+                        unresolved_type = reference.name
+                        additional_properties_type = self.data_type.from_reference(
+                            reference, is_list=True
                         ).type_hint
                     elif field.additionalProperties.is_array:
                         additional_properties_type = unresolved_type = self.parse_array(
@@ -591,14 +596,15 @@ class JsonSchemaParser(Parser):
                 f'An object name must be unique.'
                 f'This argument will be removed in a future version'
             )
-        class_name = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path,
             name,
             class_name=True,
             singular_name=singular_name,
             unique=True,
             loaded=True,
-        ).name
+        )
+        class_name = reference.name
         self.set_title(class_name, obj)
         self.set_additional_properties(class_name, additional_properties or obj)
         data_model_type = self.data_model_type(
@@ -610,6 +616,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
+        reference.source = data_model_type
         self.append_result(data_model_type)
         return data_model_type
 
@@ -695,7 +702,7 @@ class JsonSchemaParser(Parser):
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> DataModel:
         field = self.parse_array_fields(name, obj, [*path, name])
-        self.model_resolver.add(path, name, loaded=True)
+        reference = self.model_resolver.add(path, name, loaded=True)
         data_model_root = self.data_model_root_type(
             name,
             [field],
@@ -705,7 +712,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
-
+        reference.source = data_model_root
         self.append_result(data_model_root)
         return data_model_root
 
@@ -730,7 +737,7 @@ class JsonSchemaParser(Parser):
             required = not obj.nullable and not (
                 obj.has_default and self.apply_default_values_for_required_fields
             )
-        self.model_resolver.add(path, name, loaded=True)
+        reference = self.model_resolver.add(path, name, loaded=True)
         self.set_title(name, obj)
         self.set_additional_properties(name, additional_properties or obj)
         data_model_root_type = self.data_model_root_type(
@@ -751,6 +758,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
         )
+        reference.source = data_model_root_type
         self.append_result(data_model_root_type)
         return data_model_root_type
 
@@ -793,7 +801,7 @@ class JsonSchemaParser(Parser):
                     required=True,
                 )
             )
-        enum_name = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path,
             name,
             class_name=True,
@@ -801,13 +809,14 @@ class JsonSchemaParser(Parser):
             singular_name_suffix='Enum',
             unique=True,
             loaded=True,
-        ).name
+        )
         enum = Enum(
-            enum_name,
+            reference.name,
             fields=enum_fields,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
+        reference.source = enum
         self.append_result(enum)
         return enum
 
@@ -858,7 +867,7 @@ class JsonSchemaParser(Parser):
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
-            reference = self.model_resolver.get(obj.ref)
+            reference = self.model_resolver.add_ref(obj.ref)
             if not reference or not reference.loaded:
                 # https://swagger.io/docs/specification/using-ref/
                 if obj.ref_type == JSONReference.LOCAL:

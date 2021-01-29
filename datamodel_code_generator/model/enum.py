@@ -31,3 +31,21 @@ class Enum(DataModel):
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
         raise NotImplementedError
+
+    def get_member(self, field: DataModelFieldBase) -> 'Member':
+        return Member(self, field)
+
+    def find_member(self, value: Any) -> Optional['Member']:
+        repr_value = repr(value)
+        for field in self.fields:  # pragma: no cover
+            if field.default == repr_value:
+                return self.get_member(field)
+
+
+class Member:
+    def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
+        self.enum: Enum = enum
+        self.field: DataModelFieldBase = field
+
+    def __repr__(self) -> str:
+        return f'{self.enum.name}.{self.field.name}'

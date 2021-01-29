@@ -450,70 +450,77 @@ def test_openapi_model_resolver():
     parser = OpenAPIParser(source=(DATA_PATH / 'api.yaml'))
     parser.parse()
 
-    assert parser.model_resolver.references == {
-        '#/components/schemas/Event': Reference(
-            path='#/components/schemas/Event',
-            original_name='Event',
-            name='Event',
-            loaded=True,
-        ),
-        '#/components/schemas/Pet': Reference(
-            path='#/components/schemas/Pet',
-            original_name='Pet',
-            name='Pet',
-            loaded=True,
-        ),
-        '#/components/schemas/Error': Reference(
-            path='#/components/schemas/Error',
-            original_name='Error',
-            name='Error',
-            loaded=True,
-        ),
-        '#/components/schemas/Id': Reference(
-            path='#/components/schemas/Id', original_name='Id', name='Id', loaded=True,
-        ),
-        '#/components/schemas/Pets': Reference(
-            path='#/components/schemas/Pets',
-            original_name='Pets',
-            name='Pets',
-            loaded=True,
-        ),
-        '#/components/schemas/Result': Reference(
-            path='#/components/schemas/Result',
-            original_name='Result',
-            name='Result',
-            loaded=True,
-        ),
-        '#/components/schemas/Rules': Reference(
-            path='#/components/schemas/Rules',
-            original_name='Rules',
-            name='Rules',
-            loaded=True,
-        ),
-        '#/components/schemas/Users': Reference(
-            path='#/components/schemas/Users',
-            original_name='Users',
-            name='Users',
-            loaded=True,
-        ),
-        '#/components/schemas/Users/Users/0': Reference(
-            path='#/components/schemas/Users/Users/0',
-            original_name='Users',
-            name='User',
-            loaded=True,
-        ),
-        '#/components/schemas/apis': Reference(
-            path='#/components/schemas/apis',
-            original_name='apis',
-            name='Apis',
-            loaded=True,
-        ),
-        '#/components/schemas/apis/Apis/0': Reference(
-            path='#/components/schemas/apis/Apis/0',
-            original_name='Apis',
-            name='Api',
-            loaded=True,
-        ),
+    references = {
+        k: v.dict(exclude={'source', 'module_name', 'actual_module_name'},)
+        for k, v in parser.model_resolver.references.items()
+    }
+    assert references == {
+        'api.yaml#/components/schemas/Error': {
+            'loaded': True,
+            'name': 'Error',
+            'original_name': 'Error',
+            'path': 'api.yaml#/components/schemas/Error',
+        },
+        'api.yaml#/components/schemas/Event': {
+            'loaded': True,
+            'name': 'Event',
+            'original_name': 'Event',
+            'path': 'api.yaml#/components/schemas/Event',
+        },
+        'api.yaml#/components/schemas/Id': {
+            'loaded': True,
+            'name': 'Id',
+            'original_name': 'Id',
+            'path': 'api.yaml#/components/schemas/Id',
+        },
+        'api.yaml#/components/schemas/Pet': {
+            'loaded': True,
+            'name': 'Pet',
+            'original_name': 'Pet',
+            'path': 'api.yaml#/components/schemas/Pet',
+        },
+        'api.yaml#/components/schemas/Pets': {
+            'loaded': True,
+            'name': 'Pets',
+            'original_name': 'Pets',
+            'path': 'api.yaml#/components/schemas/Pets',
+        },
+        'api.yaml#/components/schemas/Result': {
+            'loaded': True,
+            'name': 'Result',
+            'original_name': 'Result',
+            'path': 'api.yaml#/components/schemas/Result',
+        },
+        'api.yaml#/components/schemas/Rules': {
+            'loaded': True,
+            'name': 'Rules',
+            'original_name': 'Rules',
+            'path': 'api.yaml#/components/schemas/Rules',
+        },
+        'api.yaml#/components/schemas/Users': {
+            'loaded': True,
+            'name': 'Users',
+            'original_name': 'Users',
+            'path': 'api.yaml#/components/schemas/Users',
+        },
+        'api.yaml#/components/schemas/Users/Users/0': {
+            'loaded': True,
+            'name': 'User',
+            'original_name': 'Users',
+            'path': 'api.yaml#/components/schemas/Users/Users/0',
+        },
+        'api.yaml#/components/schemas/apis': {
+            'loaded': True,
+            'name': 'Apis',
+            'original_name': 'apis',
+            'path': 'api.yaml#/components/schemas/apis',
+        },
+        'api.yaml#/components/schemas/apis/Apis/0': {
+            'loaded': True,
+            'name': 'Api',
+            'original_name': 'Apis',
+            'path': 'api.yaml#/components/schemas/apis/Apis/0',
+        },
     }
 
 

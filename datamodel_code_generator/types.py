@@ -32,13 +32,19 @@ class DataType(BaseModel):
     literals: List[str] = []
     use_standard_collections: bool = False
 
+    class Config:
+        keep_untouched = (Reference,)
+
     @classmethod
     def from_model_name(cls, model_name: str, is_list: bool = False) -> 'DataType':
         return cls(type=model_name, ref=True, is_list=is_list)
 
     @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
-        return cls(type=reference.name, reference=reference, is_list=is_list)
+        # return cls(type=reference.name, reference=reference, is_list=is_list)
+        data_type = cls(type=reference.name, reference=reference, is_list=is_list)
+        data_type.reference = reference
+        return data_type
 
     @classmethod
     def create_literal(cls, literals: List[str]) -> 'DataType':

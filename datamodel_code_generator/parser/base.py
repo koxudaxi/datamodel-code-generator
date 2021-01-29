@@ -237,6 +237,7 @@ class Parser(ABC):
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
+        set_default_enum_member: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -261,6 +262,7 @@ class Parser(ABC):
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
+        self.set_default_enum_member: bool = set_default_enum_member
 
         self.current_source_path: Optional[Path] = None
 
@@ -393,25 +395,33 @@ class Parser(ABC):
                         models_to_update += [model.name]
                         processed_models.add(model.name)
                 imports.append(model.imports)
+                model.reference_classes = {
+                    r for r in model.reference_classes if r not in model_names
+                }
                 for data_type in model.all_data_types:
+                    # To change from/import
+
                     if not data_type.is_modular:
+                        # No need to import non-modular model.
                         continue
-                    full_name = data_type.full_name
-                    from_, import_ = relative(module_path, full_name)
-                    name = data_type.name
-                    if data_type.reference:
-                        reference = self.model_resolver.get(data_type.reference.path)
-                        if reference and (
-                            (
-                                isinstance(self.source, Path)
-                                and self.source.is_file()
-                                and self.source.name == reference.path.split('#/')[0]
-                            )
-                            or reference.actual_module_name == module_path
-                        ):
-                            if name in model.reference_classes:  # pragma: no cover
-                                model.reference_classes.remove(name)
+                    elif data_type.reference:
+                        if data_type.reference.source in models:
+                            # Referenced model is in the same file. we don't need to import the model
+                            data_type.type = data_type.name
                             continue
+                        elif (
+                            isinstance(self.source, Path)
+                            and self.source.is_file()
+                            and self.source.name
+                            == data_type.reference.path.split('#/')[0]
+                        ):
+                            full_name = data_type.type
+                        else:
+                            full_name = data_type.full_name
+                    else:
+                        full_name = data_type.full_name
+                    from_, import_ = relative(module_path, full_name)  # type: ignore
+                    name = data_type.name
                     full_path = f'{from_}/{import_}'
                     if full_path in alias_map:
                         alias = alias_map[full_path] or import_
@@ -420,21 +430,28 @@ class Parser(ABC):
                             full_path.split('/'), import_, unique=True
                         ).name
                         alias_map[full_path] = None if alias == import_ else alias
-                    new_name = f'{alias}.{name}' if from_ and import_ else name
-                    if data_type.module_name and not full_name.startswith(from_):
-                        import_map[new_name] = (
-                            f'.{full_name[:len(new_name) * - 1 - 1]}',
-                            new_name.split('.')[0],
-                        )
+                    new_name = (
+                        f'{alias}.{name}'
+                        if (from_ and import_ and alias != name)
+                        else name
+                    )
                     if name in model.reference_classes:
                         model.reference_classes.remove(name)
                         model.reference_classes.add(new_name)
                     data_type.type = new_name
 
+                    if (
+                        full_name
+                        and full_name.startswith(from_)
+                        or f'.{full_name}'.startswith(from_)
+                    ):
+                        import_map[new_name] = (
+                            f'.{full_name[:len(new_name) * - 1 - 1]}',
+                            new_name.split('.')[0],
+                        )
+
                 for ref_name in model.reference_classes:
-                    if ref_name in model_names:
-                        continue
-                    elif ref_name in import_map:
+                    if ref_name in import_map:
                         from_, import_ = import_map[ref_name]
                     else:
                         from_, import_ = relative(module_path, ref_name)
@@ -484,7 +501,18 @@ class Parser(ABC):
                             )
                             if duplicated_model_name:
                                 data_type.type = duplicated_model_name
-
+            if self.set_default_enum_member:
+                for model in models:  # pragma: no cover
+                    for model_field in model.fields:
+                        if model_field.default:
+                            for data_type in model_field.data_type.all_data_types:
+                                if data_type.reference:
+                                    if isinstance(data_type.reference.source, Enum):
+                                        enum_member = data_type.reference.source.find_member(
+                                            model_field.default
+                                        )
+                                        if enum_member:
+                                            model_field.default = enum_member
             if with_import:
                 result += [str(imports), str(self.imports), '\n']
 
