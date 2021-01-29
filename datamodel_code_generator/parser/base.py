@@ -446,7 +446,7 @@ class Parser(ABC):
                         or f'.{full_name}'.startswith(from_)
                     ):
                         import_map[new_name] = (
-                            f'.{full_name[:len(new_name) * - 1 - 1]}',
+                            f'.{full_name[:len(new_name) * - 1 - 1]}',  # type: ignore
                             new_name.split('.')[0],
                         )
 
