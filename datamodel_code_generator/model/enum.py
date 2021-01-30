@@ -3,6 +3,7 @@ from typing import Any, List, Optional
 
 from datamodel_code_generator.imports import IMPORT_ENUM
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
@@ -17,6 +18,7 @@ class Enum(DataModel):
         decorators: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
+        reference: Optional[Reference] = None,
     ):
         super().__init__(
             name=name,
@@ -25,6 +27,7 @@ class Enum(DataModel):
             auto_import=False,
             path=path,
             description=description,
+            reference=reference,
         )
         self.imports.append(IMPORT_ENUM)
 

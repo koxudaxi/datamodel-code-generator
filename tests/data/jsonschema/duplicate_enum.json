@@ -12,7 +12,8 @@
             "dog",
             "cat",
             "snake"
-        ]
+        ],
+        "default": "dog"
     },
       "pet": {
         "type": "string",
@@ -20,7 +21,8 @@
             "dog",
             "cat",
             "snake"
-        ]
+        ],
+        "default": "cat"
     }
   }
 }

@@ -11,6 +11,7 @@ from datamodel_code_generator.model import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
+from datamodel_code_generator.reference import Reference
 
 
 class Constraints(ConstraintsBase):
@@ -88,6 +89,7 @@ class BaseModel(DataModel):
         imports: Optional[List[Import]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
+        reference: Optional[Reference] = None,
     ):
 
         methods: List[str] = [field.method for field in fields if field.method]
@@ -106,6 +108,7 @@ class BaseModel(DataModel):
             methods=methods,
             path=path,
             description=description,
+            reference=reference,
         )
 
         config_parameters: Dict[str, Any] = {}

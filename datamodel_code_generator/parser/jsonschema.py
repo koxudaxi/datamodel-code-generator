@@ -421,8 +421,8 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
-        reference.source = data_model_type
         # add imports for the fields
         for f in fields:
             data_model_type.imports.extend(f.imports)
@@ -611,8 +611,8 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
-        reference.source = data_model_type
         self.append_result(data_model_type)
         return self.data_type.from_reference(reference)
 
@@ -703,8 +703,8 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
-        reference.source = data_model_root
         self.append_result(data_model_root)
         return self.data_type.from_reference(reference)
 
@@ -749,8 +749,8 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            reference=reference,
         )
-        reference.source = data_model_root_type
         self.append_result(data_model_root_type)
         return self.data_type.from_reference(reference)
 
@@ -807,8 +807,8 @@ class JsonSchemaParser(Parser):
             fields=enum_fields,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
-        reference.source = enum
         self.append_result(enum)
         return self.data_type.from_reference(reference)
 

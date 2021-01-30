@@ -24,5 +24,5 @@ class Pet(Enum):
 
 class User(BaseModel):
     name: Optional[str] = None
-    animal: Optional[Animal] = 'dog'
-    pet: Optional[Animal] = 'cat'
+    animal: Optional[Animal] = Animal.dog
+    pet: Optional[Animal] = Animal.cat

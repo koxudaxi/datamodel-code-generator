@@ -11,6 +11,7 @@ from pydantic import BaseModel, root_validator
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
@@ -137,6 +138,7 @@ class DataModel(TemplateBase, ABC):
         methods: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
+        reference: Optional[Reference] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -155,6 +157,10 @@ class DataModel(TemplateBase, ABC):
         base_classes = [base_class for base_class in base_classes or [] if base_class]
         self.base_classes: List[str] = base_classes
         self.path: Optional[Path] = path
+        self.reference: Optional[Reference] = reference
+
+        if self.reference:
+            self.reference.source = self
 
         self.reference_classes: Set[str] = {
             r for r in base_classes if r != self.BASE_CLASS

@@ -381,8 +381,8 @@ class Parser(ABC):
             import_map: Dict[str, Tuple[str, str]] = {}
             model_names: Set[str] = {m.name for m in models}
             processed_models: Set[str] = set()
-            model_cache: Dict[Tuple[str, ...], str] = {}
-            duplicated_model_names: Dict[str, str] = {}
+            model_cache: Dict[Tuple[str, ...], DataModel] = {}
+            duplicated_models: Dict[str, DataModel] = {}
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.name in require_update_action_models:
@@ -471,33 +471,32 @@ class Parser(ABC):
                             model.fields,
                         )
                     )
-                    cached_model_name = model_cache.get(model_key)
-                    if cached_model_name:
+                    cached_model = model_cache.get(model_key)
+                    if cached_model:
                         if isinstance(model, Enum):
-                            duplicated_model_names[model.name] = cached_model_name
+                            duplicated_models[model.name] = cached_model
                         else:
                             index = models.index(model)
                             inherited_model = model.__class__(
                                 name=model.name,
                                 fields=[],
-                                base_classes=[cached_model_name],
+                                base_classes=[cached_model.name],
                                 description=model.description,
                             )
                             models.insert(index, inherited_model)
                             models.remove(model)
 
                     else:
-                        model_cache[model_key] = model.name
+                        model_cache[model_key] = model
 
             if self.reuse_model:
                 for model in models:
                     for data_type in model.all_data_types:  # pragma: no cover
                         if data_type.type:
-                            duplicated_model_name = duplicated_model_names.get(
-                                data_type.type
-                            )
-                            if duplicated_model_name:
-                                data_type.type = duplicated_model_name
+                            duplicated_model = duplicated_models.get(data_type.type)
+                            if duplicated_model:
+                                data_type.type = duplicated_model.name
+                                data_type.reference = duplicated_model.reference
             if self.set_default_enum_member:
                 for model in models:  # pragma: no cover
                     for model_field in model.fields:
