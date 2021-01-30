@@ -40,7 +40,7 @@ class Enum(DataModel):
         for field in self.fields:  # pragma: no cover
             if field.default == repr_value:
                 return self.get_member(field)
-        return None
+        return None  # pragma: no cover
 
 
 class Member:
