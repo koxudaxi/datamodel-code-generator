@@ -402,7 +402,7 @@ class Parser(ABC):
                     # To change from/import
 
                     if not data_type.reference:
-                        # No need to import non-modular model.
+                        # No need to import non-reference model.
                         continue
 
                     if data_type.reference.source in models:

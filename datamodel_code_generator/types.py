@@ -58,8 +58,9 @@ class DataType(BaseModel):
 
     @property
     def full_name(self) -> str:
-        if self.module_name:
-            return f'{self.module_name}.{self.type}'
+        module_name = self.module_name
+        if module_name:
+            return f'{module_name}.{self.type}'
         return self.type  # type: ignore
 
     @property

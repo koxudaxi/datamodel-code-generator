@@ -372,10 +372,11 @@ class JsonSchemaParser(Parser):
                     )
                 )
             else:
-                self.parse_object(
-                    name, item, [*path, str(index)], singular_name=True,
+                data_types.append(
+                    self.parse_object(
+                        name, item, [*path, str(index)], singular_name=True,
+                    )
                 )
-                data_types.append(self.get_ref_data_type([*path, str(index)]))
         return self.data_type(data_types=data_types)
 
     def parse_any_of(
@@ -461,9 +462,9 @@ class JsonSchemaParser(Parser):
                 field_type = self.parse_all_of(field_name, field, [*path, field_name])
             elif field.is_object:
                 if field.properties:
-                    self.parse_object(field_name, field, [*path, field_name])
-                    field_type = self.get_ref_data_type([*path, field_name])
-
+                    field_type = self.parse_object(
+                        field_name, field, [*path, field_name]
+                    )
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
                     unresolved_type: Optional[str]
                     imports_: List[Import] = []
@@ -549,8 +550,7 @@ class JsonSchemaParser(Parser):
                         field.enum
                     )
                 else:
-                    enum = self.parse_enum(field_name, field, [*path, field_name])
-                    field_type = self.get_ref_data_type([*path, field_name])
+                    field_type = self.parse_enum(field_name, field, [*path, field_name])
             else:
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
@@ -585,7 +585,7 @@ class JsonSchemaParser(Parser):
         singular_name: bool = False,
         unique: bool = True,
         additional_properties: Optional[JsonSchemaObject] = None,
-    ) -> DataModel:
+    ) -> DataType:
         if not unique:  # pragma: no cover
             warn(
                 f'{self.__class__.__name__}.parse_object() ignore `unique` argument.'
@@ -614,7 +614,7 @@ class JsonSchemaParser(Parser):
         )
         reference.source = data_model_type
         self.append_result(data_model_type)
-        return data_model_type
+        return self.data_type.from_reference(reference)
 
     def parse_array_fields(
         self, name: str, obj: JsonSchemaObject, path: List[str]
@@ -633,14 +633,15 @@ class JsonSchemaParser(Parser):
                 self.parse_root_type(
                     model.name, item, field_path,
                 )
-                item_obj_data_types.append(self.get_ref_data_type(field_path))
+                item_obj_data_types.append(
+                    self.parse_root_type(model.name, item, field_path,)
+                )
             elif item.ref:
                 item_obj_data_types.append(self.get_ref_data_type(item.ref))
             elif isinstance(item, JsonSchemaObject) and item.properties:
-                self.parse_object(
-                    name, item, field_path, singular_name=True,
+                item_obj_data_types.append(
+                    self.parse_object(name, item, field_path, singular_name=True,)
                 )
-                item_obj_data_types.append(self.get_ref_data_type(field_path))
             elif item.anyOf:
                 item_obj_data_types.append(self.parse_any_of(name, item, field_path))
             elif item.allOf:
@@ -659,8 +660,9 @@ class JsonSchemaParser(Parser):
                         self.data_type_manager.data_type.create_literal(item.enum)
                     )
                 else:
-                    self.parse_enum(name, item, field_path, singular_name=True)
-                    item_obj_data_types.append(self.get_ref_data_type(field_path))
+                    item_obj_data_types.append(
+                        self.parse_enum(name, item, field_path, singular_name=True)
+                    )
             elif item.is_array:
                 array_field = self.parse_array_fields(
                     self.model_resolver.add(field_path, name, class_name=True).name,
@@ -690,7 +692,7 @@ class JsonSchemaParser(Parser):
 
     def parse_array(
         self, name: str, obj: JsonSchemaObject, path: List[str]
-    ) -> DataModel:
+    ) -> DataType:
         field = self.parse_array_fields(name, obj, [*path, name])
         reference = self.model_resolver.add(path, name, loaded=True)
         data_model_root = self.data_model_root_type(
@@ -704,7 +706,7 @@ class JsonSchemaParser(Parser):
         )
         reference.source = data_model_root
         self.append_result(data_model_root)
-        return data_model_root
+        return self.data_type.from_reference(reference)
 
     def parse_root_type(
         self,
@@ -712,7 +714,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: List[str],
         additional_properties: Optional[JsonSchemaObject] = None,
-    ) -> DataModel:
+    ) -> DataType:
         if obj.type:
             data_type: DataType = self.get_data_type(obj)
         elif obj.anyOf:
@@ -750,7 +752,7 @@ class JsonSchemaParser(Parser):
         )
         reference.source = data_model_root_type
         self.append_result(data_model_root_type)
-        return data_model_root_type
+        return self.data_type.from_reference(reference)
 
     def parse_enum(
         self,
@@ -759,7 +761,7 @@ class JsonSchemaParser(Parser):
         path: List[str],
         singular_name: bool = False,
         unique: bool = True,
-    ) -> DataModel:
+    ) -> DataType:
         if not unique:  # pragma: no cover
             warn(
                 f'{self.__class__.__name__}.parse_enum() ignore `unique` argument.'
@@ -808,7 +810,7 @@ class JsonSchemaParser(Parser):
         )
         reference.source = enum
         self.append_result(enum)
-        return enum
+        return self.data_type.from_reference(reference)
 
     def _get_ref_body(self, ref: str) -> Dict[Any, Any]:
         if is_url(ref):
