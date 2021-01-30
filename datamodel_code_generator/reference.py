@@ -120,8 +120,14 @@ class ModelResolver:
     def is_external_root_ref(ref: str) -> bool:
         return ref[-1] == '#'
 
-    def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
-        path = self._get_path(ref.split('/'))
+    def add_ref(
+        self, ref: Union[str, List[str]], actual_module_name: Optional[str] = None
+    ) -> Reference:
+        if isinstance(ref, list):
+            path = self._get_path(ref)
+            ref = '/'.join(ref)
+        else:
+            path = self._get_path(ref.split('/'))
         reference = self.references.get(path)
         if reference:
             reference.actual_module_name = actual_module_name

@@ -401,23 +401,20 @@ class Parser(ABC):
                 for data_type in model.all_data_types:
                     # To change from/import
 
-                    if not data_type.is_modular:
+                    if not data_type.reference:
                         # No need to import non-modular model.
                         continue
-                    elif data_type.reference:
-                        if data_type.reference.source in models:
-                            # Referenced model is in the same file. we don't need to import the model
-                            data_type.type = data_type.name
-                            continue
-                        elif (
-                            isinstance(self.source, Path)
-                            and self.source.is_file()
-                            and self.source.name
-                            == data_type.reference.path.split('#/')[0]
-                        ):
-                            full_name = data_type.type
-                        else:
-                            full_name = data_type.full_name
+
+                    if data_type.reference.source in models:
+                        # Referenced model is in the same file. we don't need to import the model
+                        data_type.type = data_type.name
+                        continue
+                    elif (
+                        isinstance(self.source, Path)
+                        and self.source.is_file()
+                        and self.source.name == data_type.reference.path.split('#/')[0]
+                    ):
+                        full_name = data_type.type
                     else:
                         full_name = data_type.full_name
                     from_, import_ = relative(module_path, full_name)  # type: ignore

@@ -335,7 +335,7 @@ class JsonSchemaParser(Parser):
             )
         return _get_data_type(obj.type, obj.format or 'default')
 
-    def get_ref_data_type(self, ref: str) -> DataType:
+    def get_ref_data_type(self, ref: Union[str, List[str]]) -> DataType:
         reference = self.model_resolver.add_ref(ref)
         return self.data_type.from_reference(reference)
 
@@ -372,13 +372,10 @@ class JsonSchemaParser(Parser):
                     )
                 )
             else:
-                data_types.append(
-                    self.data_type.from_model_name(
-                        self.parse_object(
-                            name, item, [*path, str(index)], singular_name=True,
-                        ).name
-                    )
+                self.parse_object(
+                    name, item, [*path, str(index)], singular_name=True,
                 )
+                data_types.append(self.get_ref_data_type([*path, str(index)]))
         return self.data_type(data_types=data_types)
 
     def parse_any_of(
@@ -430,7 +427,7 @@ class JsonSchemaParser(Parser):
             data_model_type.imports.extend(f.imports)
         self.append_result(data_model_type)
 
-        return self.data_type.from_model_name(class_name)
+        return self.data_type.from_reference(reference)
 
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str]
@@ -464,9 +461,8 @@ class JsonSchemaParser(Parser):
                 field_type = self.parse_all_of(field_name, field, [*path, field_name])
             elif field.is_object:
                 if field.properties:
-                    field_type = self.data_type.from_model_name(
-                        self.parse_object(field_name, field, [*path, field_name]).name
-                    )
+                    self.parse_object(field_name, field, [*path, field_name])
+                    field_type = self.get_ref_data_type([*path, field_name])
 
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
                     unresolved_type: Optional[str]
@@ -554,7 +550,7 @@ class JsonSchemaParser(Parser):
                     )
                 else:
                     enum = self.parse_enum(field_name, field, [*path, field_name])
-                    field_type = self.data_type.from_model_name(enum.name)
+                    field_type = self.get_ref_data_type([*path, field_name])
             else:
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
@@ -634,21 +630,17 @@ class JsonSchemaParser(Parser):
                 model = self.model_resolver.add(
                     field_path, name, class_name=True, singular_name=True, unique=True,
                 )
-                item_obj_data_types.append(
-                    self.data_type.from_model_name(
-                        self.parse_root_type(model.name, item, field_path,).name
-                    )
+                self.parse_root_type(
+                    model.name, item, field_path,
                 )
+                item_obj_data_types.append(self.get_ref_data_type(field_path))
             elif item.ref:
                 item_obj_data_types.append(self.get_ref_data_type(item.ref))
             elif isinstance(item, JsonSchemaObject) and item.properties:
-                item_obj_data_types.append(
-                    self.data_type.from_model_name(
-                        self.parse_object(
-                            name, item, field_path, singular_name=True,
-                        ).name,
-                    )
+                self.parse_object(
+                    name, item, field_path, singular_name=True,
                 )
+                item_obj_data_types.append(self.get_ref_data_type(field_path))
             elif item.anyOf:
                 item_obj_data_types.append(self.parse_any_of(name, item, field_path))
             elif item.allOf:
@@ -662,15 +654,13 @@ class JsonSchemaParser(Parser):
                     )
                 )
             elif item.enum:
-                item_obj_data_types.append(
-                    self.data_type_manager.data_type.create_literal(item.enum)
-                    if self.should_parse_enum_as_literal(item)
-                    else self.data_type.from_model_name(
-                        self.parse_enum(
-                            name, item, field_path, singular_name=True
-                        ).name,
+                if self.should_parse_enum_as_literal(item):
+                    item_obj_data_types.append(
+                        self.data_type_manager.data_type.create_literal(item.enum)
                     )
-                )
+                else:
+                    self.parse_enum(name, item, field_path, singular_name=True)
+                    item_obj_data_types.append(self.get_ref_data_type(field_path))
             elif item.is_array:
                 array_field = self.parse_array_fields(
                     self.model_resolver.add(field_path, name, class_name=True).name,
@@ -1071,7 +1061,7 @@ class JsonSchemaParser(Parser):
                     model_name = object_paths[-1]
                     self.parse_obj(model_name, JsonSchemaObject.parse_obj(models), path)
                 else:
-                    self.parse_obj(obj_name, root_obj, path_parts)
+                    self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
                     path = [*path_parts, '#/definitions', key]
                     reference = self.model_resolver.get(path)
