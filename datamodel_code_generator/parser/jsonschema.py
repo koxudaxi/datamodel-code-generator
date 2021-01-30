@@ -335,7 +335,7 @@ class JsonSchemaParser(Parser):
             )
         return _get_data_type(obj.type, obj.format or 'default')
 
-    def get_ref_data_type(self, ref: Union[str, List[str]]) -> DataType:
+    def get_ref_data_type(self, ref: str) -> DataType:
         reference = self.model_resolver.add_ref(ref)
         return self.data_type.from_reference(reference)
 
