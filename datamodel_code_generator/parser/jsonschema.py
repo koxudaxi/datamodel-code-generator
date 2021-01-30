@@ -926,12 +926,12 @@ class JsonSchemaParser(Parser):
             else:
                 for item in obj.items:
                     self.parse_id(item, path)
-        if isinstance(obj.additionalProperties, JsonSchemaObject):  # pragma: no cover
+        if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_id(obj.additionalProperties, path)
-        for item in obj.anyOf:  # pragma: no cover
-            self.parse_id(item, path)  # pragma: no cover
+        for item in obj.anyOf:
+            self.parse_id(item, path)
         for item in obj.allOf:
-            self.parse_id(item, path)  # pragma: no cover
+            self.parse_id(item, path)
         if obj.properties:
             for value in obj.properties.values():
                 self.parse_id(value, path)
@@ -1012,7 +1012,7 @@ class JsonSchemaParser(Parser):
                     if (
                         len(valid_path_parts) == 1
                         and self.model_resolver.add_ref(f'{file_path}#').loaded
-                    ):  # pragma: no cover
+                    ):
                         continue
                     # for root model
                     self.raw_obj = load_yaml(source.text)
