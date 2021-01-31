@@ -140,6 +140,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--set-default-enum-member',
+    help='Set enum members as default values for enum field',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--class-name', help='Set class name of root model', default=None,
 )
 
@@ -225,6 +232,7 @@ class Config(BaseModel):
     reuse_model: bool = False
     encoding: str = 'utf-8'
     enum_field_as_literal: Optional[LiteralType] = None
+    set_default_enum_member: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -338,6 +346,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             reuse_model=config.reuse_model,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
+            set_default_enum_member=config.set_default_enum_member,
         )
         return Exit.OK
     except InvalidClassNameError as e:

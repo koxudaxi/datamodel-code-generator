@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -76,3 +76,15 @@ class MultipleTypeEnum(Enum):
 
 class SingleEnum(Enum):
     pet = 'pet'
+
+
+class ArrayEnumEnum(Enum):
+    cat = 'cat'
+
+
+class ArrayEnumEnum1(Enum):
+    dog = 'dog'
+
+
+class ArrayEnum(BaseModel):
+    __root__: List[Union[ArrayEnumEnum, ArrayEnumEnum1]]

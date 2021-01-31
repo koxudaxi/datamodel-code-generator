@@ -33,12 +33,10 @@ class DataType(BaseModel):
     use_standard_collections: bool = False
 
     @classmethod
-    def from_model_name(cls, model_name: str, is_list: bool = False) -> 'DataType':
-        return cls(type=model_name, ref=True, is_list=is_list)
-
-    @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
-        return cls(type=reference.name, reference=reference, is_list=is_list)
+        data_type = cls(type=reference.name, ref=True, is_list=is_list)
+        data_type.reference = reference
+        return data_type
 
     @classmethod
     def create_literal(cls, literals: List[str]) -> 'DataType':
@@ -49,15 +47,10 @@ class DataType(BaseModel):
         return self.reference.module_name if self.reference else None
 
     @property
-    def is_modular(self) -> bool:
-        if self.type:
-            return '.' in self.type or self.module_name is not None
-        return False
-
-    @property
     def full_name(self) -> str:
-        if self.module_name:
-            return f'{self.module_name}.{self.type}'
+        module_name = self.module_name
+        if module_name:
+            return f'{module_name}.{self.type}'
         return self.type  # type: ignore
 
     @property

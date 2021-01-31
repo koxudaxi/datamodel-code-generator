@@ -5,6 +5,7 @@ from functools import lru_cache
 from keyword import iskeyword
 from pathlib import Path
 from typing import (
+    Any,
     DefaultDict,
     Dict,
     Generator,
@@ -29,6 +30,7 @@ class Reference(BaseModel):
     name: str
     loaded: bool = True
     actual_module_name: Optional[str]
+    source: Optional[Any] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -93,6 +95,8 @@ class ModelResolver:
         if ID_PATTERN.match(joined_path):
             return self.ids['/'.join(self.current_root)][joined_path]
         elif '#' in joined_path:
+            if joined_path[0] == '#':
+                joined_path = f'{"/".join(self.current_root)}{joined_path}'
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         elif self.root_id_base_path and self.current_root != path:
@@ -152,7 +156,7 @@ class ModelResolver:
     def add(
         self,
         path: List[str],
-        original_name: str,
+        original_name: Optional[str] = None,
         *,
         class_name: bool = False,
         singular_name: bool = False,

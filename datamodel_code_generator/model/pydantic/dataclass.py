@@ -3,6 +3,7 @@ from typing import Any, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.reference import Reference
 
 
 class DataClass(DataModel):
@@ -21,6 +22,7 @@ class DataClass(DataModel):
         reference_classes: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
+        reference: Optional[Reference] = None,
     ):
 
         super().__init__(
@@ -35,5 +37,6 @@ class DataClass(DataModel):
             reference_classes=reference_classes,
             path=path,
             description=description,
+            reference=reference,
         )
         self.imports.append(Import.from_full_path('pydantic.dataclasses.dataclass'))

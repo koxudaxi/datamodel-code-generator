@@ -35,7 +35,7 @@ from datamodel_code_generator.parser import LiteralType
 from ..imports import IMPORT_LITERAL, Import
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
-from ..reference import is_url
+from ..reference import Reference, is_url
 from ..types import DataType, DataTypeManager, Types
 
 
@@ -248,6 +248,7 @@ class JsonSchemaParser(Parser):
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
+        set_default_enum_member: bool = False,
     ):
         super().__init__(
             source=source,
@@ -275,6 +276,7 @@ class JsonSchemaParser(Parser):
             reuse_model=reuse_model,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            set_default_enum_member=set_default_enum_member,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -371,10 +373,8 @@ class JsonSchemaParser(Parser):
                 )
             else:
                 data_types.append(
-                    self.data_type.from_model_name(
-                        self.parse_object(
-                            name, item, [*path, str(index)], singular_name=True,
-                        ).name,
+                    self.parse_object(
+                        name, item, [*path, str(index)], singular_name=True,
                     )
                 )
         return self.data_type(data_types=data_types)
@@ -406,9 +406,10 @@ class JsonSchemaParser(Parser):
                 base_classes.append(self.get_ref_data_type(all_of_item.ref))
             else:
                 fields.extend(self.parse_object_fields(all_of_item, path))
-        class_name = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path, name, class_name=True, unique=True, loaded=True
-        ).name
+        )
+        class_name = reference.name
         self.set_additional_properties(class_name, obj)
         data_model_type = self.data_model_type(
             class_name,
@@ -420,13 +421,14 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
         # add imports for the fields
         for f in fields:
             data_model_type.imports.extend(f.imports)
         self.append_result(data_model_type)
 
-        return self.data_type.from_model_name(class_name)
+        return self.data_type.from_reference(reference)
 
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str]
@@ -438,7 +440,6 @@ class JsonSchemaParser(Parser):
         fields: List[DataModelFieldBase] = []
 
         for field_name, field in properties.items():
-            field_type: DataType
             original_field_name: str = field_name
             constraints: Optional[Mapping[str, Any]] = None
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
@@ -447,10 +448,9 @@ class JsonSchemaParser(Parser):
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
             elif field.is_array:
-                array_field = self.parse_array_fields(
+                field_type = self.parse_array_fields(
                     field_name, field, [*path, field_name]
-                )
-                field_type = array_field.data_type
+                ).data_type
                 constraints = field.dict()
             elif field.anyOf:
                 field_type = self.parse_any_of(field_name, field, [*path, field_name])
@@ -460,13 +460,10 @@ class JsonSchemaParser(Parser):
                 field_type = self.parse_all_of(field_name, field, [*path, field_name])
             elif field.is_object:
                 if field.properties:
-                    field_type = self.data_type.from_model_name(
-                        self.parse_object(field_name, field, [*path, field_name]).name
+                    field_type = self.parse_object(
+                        field_name, field, [*path, field_name]
                     )
-
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
-                    unresolved_type: Optional[str]
-                    imports_: List[Import] = []
                     field_class_name = self.model_resolver.add(
                         [*path, field_name], field_name, class_name=True
                     ).name
@@ -476,70 +473,56 @@ class JsonSchemaParser(Parser):
                         isinstance(field.additionalProperties.items, JsonSchemaObject)
                         and field.additionalProperties.items.ref
                     ):
-                        unresolved_type = self.model_resolver.add_ref(
-                            field.additionalProperties.items.ref,
-                        ).name
-                        additional_properties_type = self.data_type.from_model_name(
-                            unresolved_type, is_list=True
-                        ).type_hint
+                        additional_properties_type = self.data_type.from_reference(
+                            self.model_resolver.add_ref(
+                                field.additionalProperties.items.ref,
+                            ),
+                            is_list=True,
+                        )
                     elif field.additionalProperties.is_array:
-                        additional_properties_type = unresolved_type = self.parse_array(
+                        additional_properties_type = self.parse_array(
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
-                        ).name
+                        )
                     elif field.additionalProperties.is_object:
-                        additional_properties_type = (
-                            unresolved_type
-                        ) = self.parse_object(
+                        additional_properties_type = self.parse_object(
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
                             additional_properties=None
                             if field.additionalProperties.ref
                             else field,
-                        ).name
+                        )
                     elif field.additionalProperties.enum:
                         if self.should_parse_enum_as_literal(
                             field.additionalProperties
                         ):
                             additional_properties_type = self.data_type.create_literal(
                                 field.additionalProperties.enum
-                            ).type_hint
-                            unresolved_type = None
-                            imports_.append(IMPORT_LITERAL)
+                            )
                         else:
-                            additional_properties_type = (
-                                unresolved_type
-                            ) = self.parse_enum(
+                            additional_properties_type = self.parse_enum(
                                 field_class_name,
                                 field.additionalProperties,
                                 [*path, field_name],
-                            ).name
+                            )
 
                     else:
-                        additional_properties_type = (
-                            unresolved_type
-                        ) = self.parse_root_type(
+                        additional_properties_type = self.parse_root_type(
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
                             additional_properties=None
                             if field.additionalProperties.ref
                             else field,
-                        ).name
+                        )
                     self.parse_ref(
                         field.additionalProperties, [*path, field_name],
                     )
                     field_type = self.data_type(
-                        type=additional_properties_type,
-                        is_dict=True,
-                        unresolved_types={unresolved_type}
-                        if unresolved_type
-                        else {*()},
-                        imports_=imports_,
+                        data_types=[additional_properties_type], is_dict=True
                     )
-
                 else:
                     field_type = self.data_type_manager.get_data_type(Types.object)
             elif field.enum:
@@ -548,8 +531,7 @@ class JsonSchemaParser(Parser):
                         field.enum
                     )
                 else:
-                    enum = self.parse_enum(field_name, field, [*path, field_name])
-                    field_type = self.data_type.from_model_name(enum.name)
+                    field_type = self.parse_enum(field_name, field, [*path, field_name])
             else:
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
@@ -584,21 +566,22 @@ class JsonSchemaParser(Parser):
         singular_name: bool = False,
         unique: bool = True,
         additional_properties: Optional[JsonSchemaObject] = None,
-    ) -> DataModel:
+    ) -> DataType:
         if not unique:  # pragma: no cover
             warn(
                 f'{self.__class__.__name__}.parse_object() ignore `unique` argument.'
                 f'An object name must be unique.'
                 f'This argument will be removed in a future version'
             )
-        class_name = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path,
             name,
             class_name=True,
             singular_name=singular_name,
             unique=True,
             loaded=True,
-        ).name
+        )
+        class_name = reference.name
         self.set_title(class_name, obj)
         self.set_additional_properties(class_name, additional_properties or obj)
         data_model_type = self.data_model_type(
@@ -609,9 +592,10 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
         self.append_result(data_model_type)
-        return data_model_type
+        return self.data_type.from_reference(reference)
 
     def parse_array_fields(
         self, name: str, obj: JsonSchemaObject, path: List[str]
@@ -624,23 +608,24 @@ class JsonSchemaParser(Parser):
         for index, item in enumerate(items):
             field_path = [*path, str(index)]
             if item.has_constraint:
-                model = self.model_resolver.add(
-                    field_path, name, class_name=True, singular_name=True, unique=True,
-                )
                 item_obj_data_types.append(
-                    self.data_type.from_model_name(
-                        self.parse_root_type(model.name, item, field_path,).name
+                    self.parse_root_type(
+                        self.model_resolver.add(
+                            field_path,
+                            name,
+                            class_name=True,
+                            singular_name=True,
+                            unique=True,
+                        ).name,
+                        item,
+                        field_path,
                     )
                 )
             elif item.ref:
                 item_obj_data_types.append(self.get_ref_data_type(item.ref))
             elif isinstance(item, JsonSchemaObject) and item.properties:
                 item_obj_data_types.append(
-                    self.data_type.from_model_name(
-                        self.parse_object(
-                            name, item, field_path, singular_name=True,
-                        ).name,
-                    )
+                    self.parse_object(name, item, field_path, singular_name=True,)
                 )
             elif item.anyOf:
                 item_obj_data_types.append(self.parse_any_of(name, item, field_path))
@@ -655,22 +640,22 @@ class JsonSchemaParser(Parser):
                     )
                 )
             elif item.enum:
-                item_obj_data_types.append(
-                    self.data_type_manager.data_type.create_literal(item.enum)
-                    if self.should_parse_enum_as_literal(item)
-                    else self.data_type.from_model_name(
-                        self.parse_enum(
-                            name, item, field_path, singular_name=True
-                        ).name,
+                if self.should_parse_enum_as_literal(item):
+                    item_obj_data_types.append(
+                        self.data_type_manager.data_type.create_literal(item.enum)
                     )
-                )
+                else:
+                    item_obj_data_types.append(
+                        self.parse_enum(name, item, field_path, singular_name=True)
+                    )
             elif item.is_array:
-                array_field = self.parse_array_fields(
-                    self.model_resolver.add(field_path, name, class_name=True).name,
-                    item,
-                    field_path,
+                item_obj_data_types.append(
+                    self.parse_array_fields(
+                        self.model_resolver.add(field_path, name, class_name=True).name,
+                        item,
+                        field_path,
+                    ).data_type
                 )
-                item_obj_data_types.append(array_field.data_type)
             else:
                 item_obj_data_types.append(self.get_data_type(item))
         if self.force_optional_for_required_fields:
@@ -679,7 +664,7 @@ class JsonSchemaParser(Parser):
             required = not obj.nullable and not (
                 obj.has_default and self.apply_default_values_for_required_fields
             )
-        field = self.data_model_field_type(
+        return self.data_model_field_type(
             data_type=self.data_type(data_types=item_obj_data_types, is_list=True,),
             example=obj.example,
             examples=obj.examples,
@@ -689,13 +674,12 @@ class JsonSchemaParser(Parser):
             required=required,
             constraints=obj.dict(),
         )
-        return field
 
     def parse_array(
         self, name: str, obj: JsonSchemaObject, path: List[str]
-    ) -> DataModel:
+    ) -> DataType:
         field = self.parse_array_fields(name, obj, [*path, name])
-        self.model_resolver.add(path, name, loaded=True)
+        reference = self.model_resolver.add(path, name, loaded=True)
         data_model_root = self.data_model_root_type(
             name,
             [field],
@@ -704,10 +688,10 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
-
         self.append_result(data_model_root)
-        return data_model_root
+        return self.data_type.from_reference(reference)
 
     def parse_root_type(
         self,
@@ -715,7 +699,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: List[str],
         additional_properties: Optional[JsonSchemaObject] = None,
-    ) -> DataModel:
+    ) -> DataType:
         if obj.type:
             data_type: DataType = self.get_data_type(obj)
         elif obj.anyOf:
@@ -730,7 +714,7 @@ class JsonSchemaParser(Parser):
             required = not obj.nullable and not (
                 obj.has_default and self.apply_default_values_for_required_fields
             )
-        self.model_resolver.add(path, name, loaded=True)
+        reference = self.model_resolver.add(path, name, loaded=True)
         self.set_title(name, obj)
         self.set_additional_properties(name, additional_properties or obj)
         data_model_root_type = self.data_model_root_type(
@@ -750,9 +734,10 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            reference=reference,
         )
         self.append_result(data_model_root_type)
-        return data_model_root_type
+        return self.data_type.from_reference(reference)
 
     def parse_enum(
         self,
@@ -761,7 +746,7 @@ class JsonSchemaParser(Parser):
         path: List[str],
         singular_name: bool = False,
         unique: bool = True,
-    ) -> DataModel:
+    ) -> DataType:
         if not unique:  # pragma: no cover
             warn(
                 f'{self.__class__.__name__}.parse_enum() ignore `unique` argument.'
@@ -793,7 +778,7 @@ class JsonSchemaParser(Parser):
                     required=True,
                 )
             )
-        enum_name = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path,
             name,
             class_name=True,
@@ -801,15 +786,16 @@ class JsonSchemaParser(Parser):
             singular_name_suffix='Enum',
             unique=True,
             loaded=True,
-        ).name
+        )
         enum = Enum(
-            enum_name,
+            reference.name,
             fields=enum_fields,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            reference=reference,
         )
         self.append_result(enum)
-        return enum
+        return self.data_type.from_reference(reference)
 
     def _get_ref_body(self, ref: str) -> Dict[Any, Any]:
         if is_url(ref):
@@ -858,7 +844,7 @@ class JsonSchemaParser(Parser):
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
-            reference = self.model_resolver.get(obj.ref)
+            reference = self.model_resolver.add_ref(obj.ref)
             if not reference or not reference.loaded:
                 # https://swagger.io/docs/specification/using-ref/
                 if obj.ref_type == JSONReference.LOCAL:
@@ -925,12 +911,12 @@ class JsonSchemaParser(Parser):
             else:
                 for item in obj.items:
                     self.parse_id(item, path)
-        if isinstance(obj.additionalProperties, JsonSchemaObject):  # pragma: no cover
+        if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_id(obj.additionalProperties, path)
-        for item in obj.anyOf:  # pragma: no cover
-            self.parse_id(item, path)  # pragma: no cover
+        for item in obj.anyOf:
+            self.parse_id(item, path)
         for item in obj.allOf:
-            self.parse_id(item, path)  # pragma: no cover
+            self.parse_id(item, path)
         if obj.properties:
             for value in obj.properties.values():
                 self.parse_id(value, path)
@@ -1011,7 +997,7 @@ class JsonSchemaParser(Parser):
                     if (
                         len(valid_path_parts) == 1
                         and self.model_resolver.add_ref(f'{file_path}#').loaded
-                    ):  # pragma: no cover
+                    ):
                         continue
                     # for root model
                     self.raw_obj = load_yaml(source.text)
@@ -1062,7 +1048,7 @@ class JsonSchemaParser(Parser):
                     model_name = object_paths[-1]
                     self.parse_obj(model_name, JsonSchemaObject.parse_obj(models), path)
                 else:
-                    self.parse_obj(obj_name, root_obj, path_parts)
+                    self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
                     path = [*path_parts, '#/definitions', key]
                     reference = self.model_resolver.get(path)
