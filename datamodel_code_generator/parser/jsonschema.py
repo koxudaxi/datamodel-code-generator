@@ -371,12 +371,14 @@ class JsonSchemaParser(Parser):
                         data_types=[self.get_data_type(item.items)], is_list=True,
                     )
                 )
-            else:
+            elif item.is_object:
                 data_types.append(
                     self.parse_object(
                         name, item, [*path, str(index)], singular_name=True,
                     )
                 )
+            else:
+                data_types.append(self.get_data_type(item))
         return self.data_type(data_types=data_types)
 
     def parse_any_of(

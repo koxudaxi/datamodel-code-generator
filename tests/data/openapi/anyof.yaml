@@ -131,7 +131,8 @@ components:
           properties:
               name:
                 type: string
-
+        - type: string
+          maxLength: 5000
     AnyOfobj:
       type: object
       properties:
@@ -143,6 +144,8 @@ components:
               properties:
                 name:
                   type: string
+            - type: string
+              maxLength: 5000
     AnyOfArray:
       type: array
       items:
@@ -156,6 +159,8 @@ components:
                 birthday:
                   type: string
                   format: date
+            - type: string
+              maxLength: 5000
     Error:
       required:
         - code
