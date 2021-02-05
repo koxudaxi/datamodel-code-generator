@@ -128,6 +128,5 @@ class BaseModel(DataModel):
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 
         for field in fields:
-            field_value = field.field
-            if field_value and field_value != '...':
+            if field.field:
                 self.imports.append(IMPORT_FIELD)
