@@ -238,6 +238,7 @@ class Parser(ABC):
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
         set_default_enum_member: bool = False,
+        strict_nullable: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections
@@ -263,6 +264,7 @@ class Parser(ABC):
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
         self.set_default_enum_member: bool = set_default_enum_member
+        self.strict_nullable: bool = strict_nullable
 
         self.current_source_path: Optional[Path] = None
 

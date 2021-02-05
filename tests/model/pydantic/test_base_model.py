@@ -32,6 +32,43 @@ def test_base_model_optional():
     )
 
 
+def test_base_model_nullable_required():
+    field = DataModelField(
+        name='a',
+        data_type=DataType(type='str'),
+        default='abc',
+        required=True,
+        nullable=True,
+    )
+
+    base_model = BaseModel(name='test_model', fields=[field])
+
+    assert base_model.name == 'test_model'
+    assert base_model.fields == [field]
+    assert base_model.decorators == []
+    assert (
+        base_model.render() == 'class test_model(BaseModel):\n'
+        '    a: Optional[str] = Field(...)'
+    )
+
+
+def test_base_model_strict_non_nullable_required():
+    field = DataModelField(
+        name='a',
+        data_type=DataType(type='str'),
+        default='abc',
+        required=True,
+        nullable=False,
+    )
+
+    base_model = BaseModel(name='test_model', fields=[field])
+
+    assert base_model.name == 'test_model'
+    assert base_model.fields == [field]
+    assert base_model.decorators == []
+    assert base_model.render() == 'class test_model(BaseModel):\n' '    a: str'
+
+
 def test_base_model_decorator():
     field = DataModelField(
         name='a', data_type=DataType(type='str'), default='abc', required=False
