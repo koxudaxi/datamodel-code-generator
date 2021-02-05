@@ -32,10 +32,9 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import LiteralType
 
-from ..imports import IMPORT_LITERAL, Import
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
-from ..reference import Reference, is_url
+from ..reference import is_url
 from ..types import DataType, DataTypeManager, Types
 
 
@@ -249,6 +248,7 @@ class JsonSchemaParser(Parser):
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
         set_default_enum_member: bool = False,
+        strict_nullable: bool = False,
     ):
         super().__init__(
             source=source,
@@ -277,6 +277,7 @@ class JsonSchemaParser(Parser):
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             set_default_enum_member=set_default_enum_member,
+            strict_nullable=strict_nullable,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
@@ -556,6 +557,7 @@ class JsonSchemaParser(Parser):
                     required=required,
                     alias=alias,
                     constraints=constraints,
+                    nullable=field.nullable if self.strict_nullable else None,
                 )
             )
         return fields
@@ -663,9 +665,14 @@ class JsonSchemaParser(Parser):
         if self.force_optional_for_required_fields:
             required: bool = False
         else:
-            required = not obj.nullable and not (
-                obj.has_default and self.apply_default_values_for_required_fields
-            )
+            if self.strict_nullable:
+                required = not (
+                    obj.has_default and self.apply_default_values_for_required_fields
+                )
+            else:
+                required = not obj.nullable and not (
+                    obj.has_default and self.apply_default_values_for_required_fields
+                )
         return self.data_model_field_type(
             data_type=self.data_type(data_types=item_obj_data_types, is_list=True,),
             example=obj.example,
@@ -675,6 +682,7 @@ class JsonSchemaParser(Parser):
             title=obj.title,
             required=required,
             constraints=obj.dict(),
+            nullable=obj.nullable if self.strict_nullable else None,
         )
 
     def parse_array(
@@ -713,9 +721,14 @@ class JsonSchemaParser(Parser):
         if self.force_optional_for_required_fields:
             required: bool = False
         else:
-            required = not obj.nullable and not (
-                obj.has_default and self.apply_default_values_for_required_fields
-            )
+            if self.strict_nullable:
+                required = not (
+                    obj.has_default and self.apply_default_values_for_required_fields
+                )
+            else:
+                required = not obj.nullable and not (
+                    obj.has_default and self.apply_default_values_for_required_fields
+                )
         reference = self.model_resolver.add(path, name, loaded=True)
         self.set_title(name, obj)
         self.set_additional_properties(name, additional_properties or obj)
@@ -730,6 +743,7 @@ class JsonSchemaParser(Parser):
                     default=obj.default,
                     required=required,
                     constraints=obj.dict() if self.field_constraints else {},
+                    nullable=obj.nullable if self.strict_nullable else None,
                 )
             ],
             custom_base_class=self.base_class,

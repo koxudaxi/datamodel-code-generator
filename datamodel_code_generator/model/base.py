@@ -37,19 +37,28 @@ class DataModelFieldBase(BaseModel):
     data_type: DataType
     constraints: Any = None
     strip_default_none: bool = False
+    nullable: Optional[bool] = None
 
     @property
     def type_hint(self) -> str:
         type_hint = self.data_type.type_hint
-        if self.required:
-            return type_hint
-        if type_hint is None or type_hint == '':
+
+        if not type_hint:
             return OPTIONAL
+        elif self.nullable is not None:
+            if self.nullable:
+                return f'{OPTIONAL}[{type_hint}]'
+            return type_hint
+        elif self.required:
+            return type_hint
         return f'{OPTIONAL}[{type_hint}]'
 
     @property
     def imports(self) -> List[Import]:
-        if not self.required:
+        if self.nullable is None:
+            if not self.required:
+                return self.data_type.imports_ + [IMPORT_OPTIONAL]
+        elif self.nullable:
             return self.data_type.imports_ + [IMPORT_OPTIONAL]
         return self.data_type.imports_
 

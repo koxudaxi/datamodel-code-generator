@@ -64,6 +64,8 @@ class DataModelField(DataModelFieldBase):
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
         )
         if not field_arguments:
+            if self.nullable and self.required:
+                return 'Field(...)'  # Field() is for mypy
             return ""
 
         value_arg = "..." if self.required else repr(self.default)
@@ -126,5 +128,6 @@ class BaseModel(DataModel):
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 
         for field in fields:
-            if field.field:
+            field_value = field.field
+            if field_value and field_value != '...':
                 self.imports.append(IMPORT_FIELD)

@@ -193,6 +193,7 @@ def generate(
     encoding: str = 'utf-8',
     enum_field_as_literal: Optional[LiteralType] = None,
     set_default_enum_member: bool = False,
+    strict_nullable: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -283,6 +284,7 @@ def generate(
         reuse_model=reuse_model,
         enum_field_as_literal=enum_field_as_literal,
         set_default_enum_member=set_default_enum_member,
+        strict_nullable=strict_nullable,
     )
 
     with chdir(output):

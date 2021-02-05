@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: testapi
+  license:
+    name: proprietary
+servers: []
+paths: {}
+components:
+  schemas:
+    TopLevel:
+      type: object
+      properties:
+        cursors:
+          type: object
+          properties:
+            prev:
+              type: string
+              nullable: true
+            next:
+              type: string
+              default: last
+            index:
+              type: number
+          required:
+          - prev
+          - index
+      required:
+      - cursors
+    User:
+      type: object
+      properties:
+        info:
+          type: object
+          properties:
+            name:
+              type: string
+          required:
+            - name
+      required:
+        - info
+    apis:
+      type: array
+      nullable: true
+      items:
+        type: object
+        properties:
+          apiKey:
+            type: string
+            description: To be used as a dataset parameter value
+          apiVersionNumber:
+            type: string
+            description: To be used as a version parameter value
+          apiUrl:
+            type: string
+            format: uri
+            description: "The URL describing the dataset's fields"
+            nullable: true
+          apiDocumentationUrl:
+            type: string
+            format: uri
+            description: A URL to the API console for each API
+            nullable: true
+    email:
+      type: array
+      items:
+        type: object
+        properties:
+          author:
+            type: string
+          address:
+            type: string
+            description: email address
+          description:
+            type: string
+            default: empty
+        required:
+          - author
+          - address
+    id:
+      type: integer
+      default: 1

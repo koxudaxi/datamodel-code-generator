@@ -37,7 +37,7 @@ usage: datamodel-codegen [-h] [--input INPUT]
                          [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
                          [--output OUTPUT] [--base-class BASE_CLASS] [--field-constraints]
                          [--snake-case-field] [--strip-default-none]
-                         [--allow-population-by-field-name] [--use-default] [--force-optional]
+                         [--allow-population-by-field-name] [--use-default] [--force-optional] [--strict-nullable]
                          [--disable-timestamp] [--use-standard-collections] [--use-schema-description] [--reuse-model]
                          [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--class-name CLASS_NAME]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
@@ -61,6 +61,7 @@ optional arguments:
                         Allow population by field name
   --use-default         Use default value even if a field is required
   --force-optional      Force optional for required fields
+  --strict-nullable     Treat default field as a non-nullable field (only OpenAPI)
   --disable-timestamp   Disable timestamp on file headers
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)

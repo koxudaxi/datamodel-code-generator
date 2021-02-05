@@ -103,6 +103,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--strict-nullable',
+    help='Treat default field as a non-nullable field (Only OpenAPI)',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--disable-timestamp',
     help='Disable timestamp on file headers',
     action='store_true',
@@ -233,6 +240,7 @@ class Config(BaseModel):
     encoding: str = 'utf-8'
     enum_field_as_literal: Optional[LiteralType] = None
     set_default_enum_member: bool = False
+    strict_nullable: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -347,6 +355,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
             set_default_enum_member=config.set_default_enum_member,
+            strict_nullable=config.strict_nullable,
         )
         return Exit.OK
     except InvalidClassNameError as e:
