@@ -22,6 +22,8 @@ components:
               default: last
             index:
               type: number
+            tag:
+              type: string
           required:
           - prev
           - index
@@ -74,9 +76,20 @@ components:
           description:
             type: string
             default: empty
+          tag:
+            type: string
         required:
           - author
           - address
     id:
       type: integer
       default: 1
+    description:
+      type: string
+      nullable: true
+      default: example
+    name:
+      type: string
+      nullable: true
+    tag:
+      type: string
