@@ -557,7 +557,9 @@ class JsonSchemaParser(Parser):
                     required=required,
                     alias=alias,
                     constraints=constraints,
-                    nullable=field.nullable if self.strict_nullable else None,
+                    nullable=field.nullable
+                    if self.strict_nullable and (field.has_default or required)
+                    else None,
                 )
             )
         return fields
@@ -664,15 +666,16 @@ class JsonSchemaParser(Parser):
                 item_obj_data_types.append(self.get_data_type(item))
         if self.force_optional_for_required_fields:
             required: bool = False
+            nullable: Optional[bool] = None
         else:
+            required = not (
+                obj.has_default and self.apply_default_values_for_required_fields
+            )
             if self.strict_nullable:
-                required = not (
-                    obj.has_default and self.apply_default_values_for_required_fields
-                )
+                nullable = obj.nullable if obj.has_default or required else True
             else:
-                required = not obj.nullable and not (
-                    obj.has_default and self.apply_default_values_for_required_fields
-                )
+                required = not obj.nullable and required
+                nullable = None
         return self.data_model_field_type(
             data_type=self.data_type(data_types=item_obj_data_types, is_list=True,),
             example=obj.example,
@@ -682,7 +685,7 @@ class JsonSchemaParser(Parser):
             title=obj.title,
             required=required,
             constraints=obj.dict(),
-            nullable=obj.nullable if self.strict_nullable else None,
+            nullable=nullable,
         )
 
     def parse_array(
@@ -721,14 +724,9 @@ class JsonSchemaParser(Parser):
         if self.force_optional_for_required_fields:
             required: bool = False
         else:
-            if self.strict_nullable:
-                required = not (
-                    obj.has_default and self.apply_default_values_for_required_fields
-                )
-            else:
-                required = not obj.nullable and not (
-                    obj.has_default and self.apply_default_values_for_required_fields
-                )
+            required = not obj.nullable and not (
+                obj.has_default and self.apply_default_values_for_required_fields
+            )
         reference = self.model_resolver.add(path, name, loaded=True)
         self.set_title(name, obj)
         self.set_additional_properties(name, additional_properties or obj)

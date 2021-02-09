@@ -13,6 +13,7 @@ class Cursors(BaseModel):
     prev: Optional[str] = Field(...)
     next: str = 'last'
     index: float
+    tag: Optional[str] = None
 
 
 class TopLevel(BaseModel):
@@ -28,8 +29,10 @@ class User(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: str = Field(None, description='To be used as a dataset parameter value')
-    apiVersionNumber: str = Field(
+    apiKey: Optional[str] = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: Optional[str] = Field(
         None, description='To be used as a version parameter value'
     )
     apiUrl: Optional[AnyUrl] = Field(
@@ -48,6 +51,7 @@ class EmailItem(BaseModel):
     author: str
     address: str = Field(..., description='email address')
     description: str = 'empty'
+    tag: Optional[str] = None
 
 
 class Email(BaseModel):
@@ -56,3 +60,15 @@ class Email(BaseModel):
 
 class Id(BaseModel):
     __root__: int
+
+
+class Description(BaseModel):
+    __root__: Optional[str] = 'example'
+
+
+class Name(BaseModel):
+    __root__: Optional[str] = None
+
+
+class Tag(BaseModel):
+    __root__: str

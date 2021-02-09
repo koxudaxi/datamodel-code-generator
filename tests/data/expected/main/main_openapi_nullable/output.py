@@ -13,6 +13,7 @@ class Cursors(BaseModel):
     prev: str
     next: Optional[str] = 'last'
     index: float
+    tag: Optional[str] = None
 
 
 class TopLevel(BaseModel):
@@ -50,6 +51,7 @@ class EmailItem(BaseModel):
     author: str
     address: str = Field(..., description='email address')
     description: Optional[str] = 'empty'
+    tag: Optional[str] = None
 
 
 class Email(BaseModel):
@@ -58,3 +60,15 @@ class Email(BaseModel):
 
 class Id(BaseModel):
     __root__: int
+
+
+class Description(BaseModel):
+    __root__: Optional[str] = 'example'
+
+
+class Name(BaseModel):
+    __root__: Optional[str] = None
+
+
+class Tag(BaseModel):
+    __root__: str
