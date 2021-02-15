@@ -12,7 +12,7 @@ components:
             contents:
               type: array
               items:
-                anyOf:
+                oneOf:
                   - $ref: '#/components/schemas/Type1'
                   - $ref: '#/components/schemas/Type2'
     Type1:
