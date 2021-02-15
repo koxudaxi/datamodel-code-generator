@@ -124,6 +124,14 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-generic-container-types',
+    help='Use generic container types for type hinting (typing.Sequence, typing.Mapping). '
+    'If --use-standard-collections option is set, then import from collections.abc instead of typing',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--use-schema-description',
     help='Use schema description to populate class docstring',
     action='store_true',
@@ -216,6 +224,19 @@ class Config(BaseModel):
                 )
         return values
 
+    @root_validator
+    def validate_use_generic_container_types(
+        cls, values: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        if values.get('use_generic_container_types'):
+            target_python_version: PythonVersion = values['target_python_version']
+            if target_python_version == target_python_version.PY_36:
+                raise Error(
+                    f"`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n"  # type: ignore
+                    " The version will be not supported in a future version"
+                )
+        return values
+
     input: Optional[Path]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
@@ -241,6 +262,7 @@ class Config(BaseModel):
     enum_field_as_literal: Optional[LiteralType] = None
     set_default_enum_member: bool = False
     strict_nullable: bool = False
+    use_generic_container_types: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -356,6 +378,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             enum_field_as_literal=config.enum_field_as_literal,
             set_default_enum_member=config.set_default_enum_member,
             strict_nullable=config.strict_nullable,
+            use_generic_container_types=config.use_generic_container_types,
         )
         return Exit.OK
     except InvalidClassNameError as e:

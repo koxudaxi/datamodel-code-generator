@@ -194,6 +194,7 @@ def generate(
     enum_field_as_literal: Optional[LiteralType] = None,
     set_default_enum_member: bool = False,
     strict_nullable: bool = False,
+    use_generic_container_types: bool = False,
 ) -> None:
     input_text: Optional[str] = None
     if input_file_type == InputFileType.Auto:
@@ -285,6 +286,7 @@ def generate(
         enum_field_as_literal=enum_field_as_literal,
         set_default_enum_member=set_default_enum_member,
         strict_nullable=strict_nullable,
+        use_generic_container_types=use_generic_container_types,
     )
 
     with chdir(output):
