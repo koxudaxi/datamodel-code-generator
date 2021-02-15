@@ -123,8 +123,8 @@ components:
           type: string
         tag:
           type: string
-    AnyOfItem:
-      anyOf:
+    OneOfItem:
+      oneOf:
         - $ref: "#/components/schemas/Pet"
         - $ref: "#/components/schemas/Car"
         - type: object
@@ -133,11 +133,11 @@ components:
                 type: string
         - type: string
           maxLength: 5000
-    AnyOfobj:
+    OneOfobj:
       type: object
       properties:
         item:
-          anyOf:
+          oneOf:
             - $ref: "#/components/schemas/Pet"
             - $ref: "#/components/schemas/Car"
             - type: object
@@ -146,10 +146,10 @@ components:
                   type: string
             - type: string
               maxLength: 5000
-    AnyOfArray:
+    OneOfArray:
       type: array
       items:
-          anyOf:
+          oneOf:
             - $ref: "#/components/schemas/Pet"
             - $ref: "#/components/schemas/Car"
             - type: object
@@ -176,7 +176,7 @@ components:
         setting:
           type: object
           additionalProperties:
-            anyOf:
+            oneOf:
             - type: string
             - type: array
               items:
