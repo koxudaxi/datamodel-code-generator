@@ -340,6 +340,26 @@ def test_openapi_parser_parse_nested_anyof():
     )
 
 
+def test_openapi_parser_parse_oneof():
+    parser = OpenAPIParser(Path(DATA_PATH / 'oneof.yaml'),)
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_oneof' / 'output.py'
+        ).read_text()
+    )
+
+
+def test_openapi_parser_parse_nested_oneof():
+    parser = OpenAPIParser(Path(DATA_PATH / 'nested_oneof.yaml').read_text(),)
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_nested_oneof' / 'output.py'
+        ).read_text()
+    )
+
+
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(Path(DATA_PATH / 'allof.yaml'),)
     assert (

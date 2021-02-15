@@ -635,6 +635,8 @@ class JsonSchemaParser(Parser):
                 )
             elif item.anyOf:
                 item_obj_data_types.append(self.parse_any_of(name, item, field_path))
+            elif item.oneOf:
+                item_obj_data_types.append(self.parse_one_of(name, item, field_path))
             elif item.allOf:
                 item_obj_data_types.append(
                     self.parse_all_of(
@@ -717,6 +719,8 @@ class JsonSchemaParser(Parser):
             data_type: DataType = self.get_data_type(obj)
         elif obj.anyOf:
             data_type = self.parse_any_of(name, obj, [*path, name])
+        elif obj.oneOf:
+            data_type = self.parse_one_of(name, obj, [*path, name])
         elif obj.ref:
             data_type = self.get_ref_data_type(obj.ref)
         else:
