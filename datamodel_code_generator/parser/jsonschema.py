@@ -634,7 +634,7 @@ class JsonSchemaParser(Parser):
         item_obj_data_types: List[DataType] = []
         for index, item in enumerate(items):
             field_path = [*path, str(index)]
-            if item.has_constraint:
+            if item.has_constraint and (obj.has_constraint or self.field_constraints):
                 item_obj_data_types.append(
                     self.parse_root_type(
                         self.model_resolver.add(
