@@ -33,6 +33,7 @@ class User(BaseModel):
     tag: Optional[constr(max_length=64)] = None
     uid: UID
     phones: Optional[List[Phone]] = Field(None, max_items=10)
+    fax: Optional[List[constr(min_length=3)]] = None
 
 
 class Users(BaseModel):

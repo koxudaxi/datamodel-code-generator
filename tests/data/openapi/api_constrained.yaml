@@ -151,6 +151,11 @@ components:
               type: string
               minLength: 3
             maxItems: 10
+          fax:
+            type: array
+            items:
+              type: string
+              minLength: 3
     Id:
       type: string
     Rules:
