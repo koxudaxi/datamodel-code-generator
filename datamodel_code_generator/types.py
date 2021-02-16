@@ -117,13 +117,12 @@ class DataType(BaseModel):
 
     @property
     def type_hint(self) -> str:
-        if self.type or self.alias:
+        type_: Optional[str] = self.alias or self.type
+        if type_:
             if (
                 self.reference or self.ref
             ) and self.python_version == PythonVersion.PY_36:
-                type_: str = f"'{self.alias or self.type}'"
-            else:
-                type_ = self.alias or self.type
+                type_ = f"'{type_}'"
         else:
             if len(self.data_types) > 1:
                 type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
