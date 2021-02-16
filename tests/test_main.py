@@ -1180,6 +1180,82 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
+def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--use-generic-container-types',
+            ]
+        )
+    main_use_generic_container_types_dir = (
+        EXPECTED_MAIN_PATH / 'main_use_generic_container_types'
+    )
+    for path in main_use_generic_container_types_dir.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_use_generic_container_types_dir)
+        ).read_text()
+        assert result == path.read_text()
+
+
+def test_main_use_generic_container_types_standard_collections(
+    tmpdir_factory: TempdirFactory,
+) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--use-generic-container-types',
+                '--use-standard-collections',
+            ]
+        )
+    main_use_generic_container_types_standard_collections_dir = (
+        EXPECTED_MAIN_PATH / 'main_use_generic_container_types_standard_collections'
+    )
+    for path in main_use_generic_container_types_standard_collections_dir.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_use_generic_container_types_standard_collections_dir)
+        ).read_text()
+        assert result == path.read_text()
+
+
+def test_main_use_generic_container_types_py36(capsys) -> None:
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+
+    return_code: Exit = main(
+        [
+            '--input',
+            str(input_filename),
+            '--use-generic-container-types',
+            '--target-python-version',
+            '3.6',
+        ]
+    )
+    captured = capsys.readouterr()
+    assert return_code == Exit.ERROR
+    assert (
+        captured.err == '`--use-generic-container-types` can not be used with '
+        '`--target-python_version` 3.6.\n '
+        'The version will be not supported in a future version\n'
+    )
+
+
 @freeze_time('2019-07-26')
 def test_main_external_definitions():
     with TemporaryDirectory() as output_dir:

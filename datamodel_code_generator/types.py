@@ -6,10 +6,14 @@ from pydantic import BaseModel
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
+    IMPORT_ABC_MAPPING,
+    IMPORT_ABC_SEQUENCE,
     IMPORT_DICT,
     IMPORT_LIST,
     IMPORT_LITERAL,
+    IMPORT_MAPPING,
     IMPORT_OPTIONAL,
+    IMPORT_SEQUENCE,
     IMPORT_UNION,
     Import,
 )
@@ -31,6 +35,7 @@ class DataType(BaseModel):
     is_list: bool = False
     literals: List[str] = []
     use_standard_collections: bool = False
+    use_generic_container: bool = False
 
     @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
@@ -83,7 +88,20 @@ class DataType(BaseModel):
             (len(self.data_types) > 1, IMPORT_UNION),
             (any(self.literals), IMPORT_LITERAL),
         )
-        if not self.use_standard_collections:
+        if self.use_generic_container:
+            if self.use_standard_collections:
+                imports = (
+                    *imports,
+                    (self.is_list, IMPORT_ABC_SEQUENCE),
+                    (self.is_dict, IMPORT_ABC_MAPPING),
+                )
+            else:
+                imports = (
+                    *imports,
+                    (self.is_list, IMPORT_SEQUENCE),
+                    (self.is_dict, IMPORT_MAPPING),
+                )
+        elif not self.use_standard_collections:
             imports = (
                 *imports,
                 (self.is_list, IMPORT_LIST),
@@ -119,13 +137,17 @@ class DataType(BaseModel):
                 # type_ = 'Any'
                 type_ = ''
         if self.is_list:
-            if self.use_standard_collections:
+            if self.use_generic_container:
+                list_ = 'Sequence'
+            elif self.use_standard_collections:
                 list_ = 'list'
             else:
                 list_ = 'List'
             type_ = f'{list_}[{type_}]' if type_ else list_
         elif self.is_dict:
-            if self.use_standard_collections:
+            if self.use_generic_container:
+                dict_ = 'Mapping'
+            elif self.use_standard_collections:
                 dict_ = 'dict'
             else:
                 dict_ = 'Dict'
@@ -149,6 +171,15 @@ class DataTypePy36(DataType):
 
 class DataTypeStandardCollections(DataType):
     use_standard_collections: bool = True
+
+
+class DataTypeGenericContainer(DataType):
+    use_generic_container: bool = True
+
+
+class DataTypeGenericContainerStandardCollections(DataType):
+    use_standard_collections: bool = True
+    use_generic_container: bool = True
 
 
 class Types(Enum):
@@ -189,10 +220,25 @@ class DataTypeManager(ABC):
         self,
         python_version: PythonVersion = PythonVersion.PY_37,
         use_standard_collections: bool = False,
+        use_generic_container_types: bool = False,
     ) -> None:
         self.python_version = python_version
-        if use_standard_collections:
-            self.data_type: Type[DataType] = DataTypeStandardCollections
+        self.use_standard_collections: bool = use_standard_collections
+        self.use_generic_container_types: bool = use_generic_container_types
+
+        self.data_type: Type[DataType]
+        if use_generic_container_types:
+            if python_version == PythonVersion.PY_36:  # pragma: no cover
+                raise Exception(
+                    "use_generic_container_types can not be used with target_python_version 3.6.\n"
+                    " The verison will be not supported in a future version"
+                )
+            if use_standard_collections:
+                self.data_type = DataTypeGenericContainerStandardCollections
+            else:
+                self.data_type = DataTypeGenericContainer
+        elif use_standard_collections:
+            self.data_type = DataTypeStandardCollections
         elif python_version == PythonVersion.PY_36:
             self.data_type = DataTypePy36
         else:
