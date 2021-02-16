@@ -36,6 +36,7 @@ class DataType(BaseModel):
     literals: List[str] = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
+    alias: Optional[str] = None
 
     @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
@@ -116,13 +117,13 @@ class DataType(BaseModel):
 
     @property
     def type_hint(self) -> str:
-        if self.type:
+        if self.type or self.alias:
             if (
                 self.reference or self.ref
             ) and self.python_version == PythonVersion.PY_36:
-                type_: str = f"'{self.type}'"
+                type_: str = f"'{self.alias or self.type}'"
             else:
-                type_ = self.type
+                type_ = self.alias or self.type
         else:
             if len(self.data_types) > 1:
                 type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
