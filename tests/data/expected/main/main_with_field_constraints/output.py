@@ -27,12 +27,17 @@ class Phone(BaseModel):
     __root__: str = Field(..., min_length=3)
 
 
+class FaxItem(BaseModel):
+    __root__: str = Field(..., min_length=3)
+
+
 class User(BaseModel):
     id: int = Field(..., ge=0.0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
     uid: UID
     phones: Optional[List[Phone]] = Field(None, max_items=10)
+    fax: Optional[List[FaxItem]] = None
 
 
 class Users(BaseModel):
