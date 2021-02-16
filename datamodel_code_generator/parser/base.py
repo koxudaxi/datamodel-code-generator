@@ -416,7 +416,7 @@ class Parser(ABC):
 
                     if data_type.reference.source in models:
                         # Referenced model is in the same file. we don't need to import the model
-                        data_type.type = data_type.name
+                        data_type.alias = data_type.name
                         continue
                     elif (
                         isinstance(self.source, Path)
@@ -444,7 +444,7 @@ class Parser(ABC):
                     if name in model.reference_classes:
                         model.reference_classes.remove(name)
                         model.reference_classes.add(new_name)
-                    data_type.type = new_name
+                    data_type.alias = new_name
 
                     if (
                         full_name
@@ -504,7 +504,7 @@ class Parser(ABC):
                         if data_type.type:
                             duplicated_model = duplicated_models.get(data_type.type)
                             if duplicated_model:
-                                data_type.type = duplicated_model.name
+                                data_type.alias = duplicated_model.name
                                 data_type.reference = duplicated_model.reference
             if self.set_default_enum_member:
                 for model in models:  # pragma: no cover
