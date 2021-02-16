@@ -42,6 +42,58 @@
       "additionalProperties": {
         "enum": ["red", "green"]
       }
+    },
+    "all_of_result" :{
+      "type" : "object",
+      "additionalProperties" :
+      {
+        "allOf" : [
+          { "$ref" : "#/definitions/User" },
+          { "type" : "object",
+            "properties": {
+              "description": {"type" : "string" }
+            }
+          }
+        ]
+      }
+    },
+    "one_of_result" :{
+      "type" : "object",
+      "additionalProperties" :
+      {
+        "oneOf" : [
+          { "$ref" : "#/definitions/User" },
+          { "type" : "object",
+            "properties": {
+              "description": {"type" : "string" }
+            }
+          }
+        ]
+      }
+    },
+    "any_of_result" :{
+      "type" : "object",
+      "additionalProperties" :
+      {
+        "anyOf" : [
+          { "$ref" : "#/definitions/User" },
+          { "type" : "object",
+            "properties": {
+              "description": {"type" : "string" }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
     }
   }
 }

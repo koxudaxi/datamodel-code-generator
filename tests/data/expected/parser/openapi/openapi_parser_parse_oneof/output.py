@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, Extra, constr
+from pydantic import BaseModel, constr
 
 
 class Pet(BaseModel):
@@ -48,12 +48,5 @@ class Error(BaseModel):
     message: str
 
 
-class Setting(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    __root__: Union[str, List[str]]
-
-
 class Config(BaseModel):
-    setting: Optional[Dict[str, Setting]] = None
+    setting: Optional[Dict[str, Union[str, List[str]]]] = None

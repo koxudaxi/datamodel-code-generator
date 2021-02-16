@@ -514,7 +514,24 @@ class JsonSchemaParser(Parser):
                                 field.additionalProperties,
                                 [*path, field_name],
                             )
-
+                    elif field.additionalProperties.anyOf:
+                        additional_properties_type = self.parse_any_of(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                        )
+                    elif field.additionalProperties.oneOf:
+                        additional_properties_type = self.parse_one_of(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                        )
+                    elif field.additionalProperties.allOf:
+                        additional_properties_type = self.parse_all_of(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                        )
                     else:
                         additional_properties_type = self.parse_root_type(
                             field_class_name,
