@@ -126,7 +126,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--use-generic-container-types',
     help='Use generic container types for type hinting (typing.Sequence, typing.Mapping). '
-    'If --use-standard-collections option is set, then import from collections.abc instead of typing',
+    'If `--use-standard-collections` option is set, then import from collections.abc instead of typing',
     action='store_true',
     default=None,
 )

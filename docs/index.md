@@ -33,18 +33,13 @@ $ pip install datamodel-code-generator[http]
 
 The `datamodel-codegen` command:
 ```
-usage: datamodel-codegen [-h] [--input INPUT]
-                         [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
-                         [--output OUTPUT] [--base-class BASE_CLASS] [--field-constraints]
-                         [--snake-case-field] [--strip-default-none]
+usage: datamodel-codegen [-h] [--input INPUT] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
+                         [--base-class BASE_CLASS] [--field-constraints] [--snake-case-field] [--strip-default-none]
                          [--allow-population-by-field-name] [--use-default] [--force-optional] [--strict-nullable]
-                         [--disable-timestamp] [--use-standard-collections] [--use-schema-description] [--reuse-model]
-                         [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--class-name CLASS_NAME]
-                         [--custom-template-dir CUSTOM_TEMPLATE_DIR]
-                         [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7,3.8,3.9}]
-                         [--validation] [--encoding ENCODING] [--debug]
-                         [--version]
+                         [--disable-timestamp] [--use-standard-collections] [--use-generic-container-types] [--use-schema-description]
+                         [--reuse-model] [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--class-name CLASS_NAME]
+                         [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
+                         [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--encoding ENCODING] [--debug] [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -65,6 +60,9 @@ optional arguments:
   --disable-timestamp   Disable timestamp on file headers
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
+  --use-generic-container-types
+                        Use generic container types for type hinting (typing.Sequence, typing.Mapping). If `--use-standard-
+                        collections` option is set, then import from collections.abc instead of typing
   --use-schema-description
                         Use schema description to populate class docstring
   --reuse-model         Re-use models on the field when a module has the model with the same content
