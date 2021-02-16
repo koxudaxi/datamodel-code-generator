@@ -250,6 +250,7 @@ class JsonSchemaParser(Parser):
         set_default_enum_member: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
+        enable_faux_immutability: bool = False,
     ):
         super().__init__(
             source=source,
@@ -280,6 +281,7 @@ class JsonSchemaParser(Parser):
             set_default_enum_member=set_default_enum_member,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
+            enable_faux_immutability=enable_faux_immutability,
         )
 
         self.remote_object_cache: Dict[str, Dict[str, Any]] = {}

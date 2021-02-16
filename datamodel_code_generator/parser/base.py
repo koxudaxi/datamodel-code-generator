@@ -240,6 +240,7 @@ class Parser(ABC):
         set_default_enum_member: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
+        enable_faux_immutability: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections, use_generic_container_types
@@ -267,6 +268,7 @@ class Parser(ABC):
         self.set_default_enum_member: bool = set_default_enum_member
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
+        self.enable_faux_immutability: bool = enable_faux_immutability
 
         self.current_source_path: Optional[Path] = None
 
@@ -287,6 +289,9 @@ class Parser(ABC):
 
         if allow_population_by_field_name:
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
+
+        if enable_faux_immutability:
+            self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
 
         self.model_resolver = ModelResolver(aliases=aliases)
         self.field_preprocessors: List[

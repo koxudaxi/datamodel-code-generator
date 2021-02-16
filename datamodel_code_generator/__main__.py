@@ -89,6 +89,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--enable-faux-immutability',
+    help='Enable faux immutability',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--use-default',
     help='Use default value even if a field is required',
     action='store_true',
@@ -263,6 +270,7 @@ class Config(BaseModel):
     set_default_enum_member: bool = False
     strict_nullable: bool = False
     use_generic_container_types: bool = False
+    enable_faux_immutability: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -379,6 +387,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             set_default_enum_member=config.set_default_enum_member,
             strict_nullable=config.strict_nullable,
             use_generic_container_types=config.use_generic_container_types,
+            enable_faux_immutability=config.enable_faux_immutability,
         )
         return Exit.OK
     except InvalidClassNameError as e:

@@ -124,10 +124,6 @@ class TemplateBase(ABC):
         return self.render()
 
 
-class Config(BaseModel):
-    extra: Optional[str] = None
-
-
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: str = ''
     BASE_CLASS: str = ''

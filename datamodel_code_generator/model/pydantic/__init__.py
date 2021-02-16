@@ -18,6 +18,7 @@ class Config(_BaseModel):
     extra: Optional[str] = None
     title: Optional[str] = None
     allow_population_by_field_name: Optional[bool] = None
+    allow_mutation: Optional[bool] = None
 
 
 # def get_validator_template() -> Template:
