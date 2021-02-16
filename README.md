@@ -68,7 +68,7 @@ The `datamodel-codegen` command:
 ```
 usage: datamodel-codegen [-h] [--input INPUT] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
                          [--base-class BASE_CLASS] [--field-constraints] [--snake-case-field] [--strip-default-none]
-                         [--allow-population-by-field-name] [--use-default] [--force-optional] [--strict-nullable]
+                         [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default] [--force-optional] [--strict-nullable]
                          [--disable-timestamp] [--use-standard-collections] [--use-generic-container-types] [--use-schema-description]
                          [--reuse-model] [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--class-name CLASS_NAME]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
@@ -87,6 +87,8 @@ optional arguments:
   --strip-default-none  Strip default None on fields
   --allow-population-by-field-name
                         Allow population by field name
+  --enable-faux-immutability
+                        Enable faux immutability
   --use-default         Use default value even if a field is required
   --force-optional      Force optional for required fields
   --strict-nullable     Treat default field as a non-nullable field (only OpenAPI)
