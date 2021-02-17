@@ -84,6 +84,16 @@
           }
         ]
       }
+    },
+    "all_of_with_unknown_object" :{
+      "type" : "object",
+      "additionalProperties" :
+      {
+        "allOf" : [
+          { "$ref" : "#/definitions/User" },
+          { "description": "TODO" }
+        ]
+      }
     }
   },
   "definitions": {

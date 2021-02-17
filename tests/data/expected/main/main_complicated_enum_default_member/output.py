@@ -20,12 +20,8 @@ class Kind(BaseModel):
     __root__: str
 
 
-class ProcessingStatusUnion(ProcessingStatus):
-    pass
-
-
 class ProcessingTask(BaseModel):
-    processing_status_union: Optional[ProcessingStatusUnion] = 'COMPLETED'
+    processing_status_union: Optional[ProcessingStatus] = ProcessingStatus.COMPLETED
     processing_status: Optional[ProcessingStatus] = ProcessingStatus.COMPLETED
     name: Optional[str] = None
     kind: Optional[Kind] = None
