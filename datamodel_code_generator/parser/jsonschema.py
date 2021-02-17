@@ -397,7 +397,11 @@ class JsonSchemaParser(Parser):
         return self.parse_list_item(name, obj.oneOf, path)
 
     def parse_all_of(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        ignore_duplicate_model: bool = False,
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
         base_classes: List[DataType] = []
@@ -413,6 +417,9 @@ class JsonSchemaParser(Parser):
                 base_classes.append(self.get_ref_data_type(all_of_item.ref))
             else:
                 fields.extend(self.parse_object_fields(all_of_item, path))
+        # ignore an undetected object
+        if ignore_duplicate_model and not fields and len(base_classes) == 1:
+            return base_classes[0]
         reference = self.model_resolver.add(
             path, name, class_name=True, unique=True, loaded=True
         )
@@ -464,7 +471,9 @@ class JsonSchemaParser(Parser):
             elif field.oneOf:
                 field_type = self.parse_one_of(field_name, field, [*path, field_name])
             elif field.allOf:
-                field_type = self.parse_all_of(field_name, field, [*path, field_name])
+                field_type = self.parse_all_of(
+                    field_name, field, [*path, field_name], ignore_duplicate_model=True
+                )
             elif field.is_object:
                 if field.properties:
                     field_type = self.parse_object(
@@ -531,6 +540,7 @@ class JsonSchemaParser(Parser):
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
+                            ignore_duplicate_model=True,
                         )
                     else:
                         additional_properties_type = self.parse_root_type(
@@ -666,6 +676,7 @@ class JsonSchemaParser(Parser):
                         ).name,
                         item,
                         field_path,
+                        ignore_duplicate_model=True,
                     )
                 )
             elif item.enum:

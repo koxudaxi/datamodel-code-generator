@@ -203,6 +203,16 @@ components:
             birthdate:
               type: string
               format: date-time
+    AnyOfCombineUnknownObjectInRoot:
+      type: array
+      items:
+        allOf:
+          - $ref: "#/components/schemas/Pet"
+          - description: 'TODO'
+    AnyOfCombineUnknownObjectInArray:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - description: 'TODO'
     Error:
       required:
         - code

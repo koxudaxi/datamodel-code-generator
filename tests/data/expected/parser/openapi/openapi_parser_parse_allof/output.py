@@ -55,6 +55,14 @@ class AnyOfCombineInRoot(Pet, Car):
     birthdate: Optional[datetime] = None
 
 
+class AnyOfCombineUnknownObjectInRoot(BaseModel):
+    __root__: List[Pet]
+
+
+class AnyOfCombineUnknownObjectInArray(Pet):
+    pass
+
+
 class Error(BaseModel):
     code: int
     message: str

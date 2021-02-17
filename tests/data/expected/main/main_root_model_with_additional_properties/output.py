@@ -54,3 +54,4 @@ class Model(BaseModel):
     all_of_result: Optional[Dict[str, AllOfResult]] = None
     one_of_result: Optional[Dict[str, Union[User, OneOfResultItem]]] = None
     any_of_result: Optional[Dict[str, Union[User, AnyOfResultItem]]] = None
+    all_of_with_unknown_object: Optional[Dict[str, User]] = None
