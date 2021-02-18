@@ -180,6 +180,7 @@ class JsonSchemaObject(BaseModel):
             and not self.allOf
             and not self.oneOf
             and not self.anyOf
+            and not self.ref
         )
 
     @cached_property
@@ -747,14 +748,14 @@ class JsonSchemaParser(Parser):
         path: List[str],
         additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataType:
-        if obj.type:
+        if obj.ref:
+            data_type = self.get_ref_data_type(obj.ref)
+        elif obj.type:
             data_type: DataType = self.get_data_type(obj)
         elif obj.anyOf:
             data_type = self.parse_any_of(name, obj, [*path, name])
         elif obj.oneOf:
             data_type = self.parse_one_of(name, obj, [*path, name])
-        elif obj.ref:
-            data_type = self.get_ref_data_type(obj.ref)
         else:
             data_type = self.data_type_manager.get_data_type(Types.any)
         if self.force_optional_for_required_fields:
