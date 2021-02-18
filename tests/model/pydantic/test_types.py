@@ -220,7 +220,7 @@ def test_get_data_decimal_type(types, params, data_type):
             DataType(
                 type='constr',
                 is_func=True,
-                kwargs={'regex': "'^abc'"},
+                kwargs={'regex': "r'^abc'"},
                 imports_=[IMPORT_CONSTR],
             ),
         ),

@@ -68,7 +68,7 @@ type_map: Dict[Types, DataType] = {
         is_func=True,
         # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
         kwargs={
-            'regex': "'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'"
+            'regex': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'"
         },
     ),
     Types.ipv4: DataType(type='IPv4Address', imports_=[IMPORT_IPV4ADDRESS]),
@@ -212,7 +212,7 @@ class DataTypeManager(_DataTypeManager):
         data_type_kwargs = transform_kwargs(kwargs, string_kwargs)
         if data_type_kwargs:
             if 'regex' in data_type_kwargs:
-                data_type_kwargs['regex'] = f'\'{data_type_kwargs["regex"]}\''
+                data_type_kwargs['regex'] = f'r\'{data_type_kwargs["regex"]}\''
             return self.data_type(
                 type='constr',
                 is_func=True,
