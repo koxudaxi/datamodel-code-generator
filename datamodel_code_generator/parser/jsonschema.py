@@ -749,9 +749,9 @@ class JsonSchemaParser(Parser):
         additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataType:
         if obj.ref:
-            data_type = self.get_ref_data_type(obj.ref)
+            data_type: DataType = self.get_ref_data_type(obj.ref)
         elif obj.type:
-            data_type: DataType = self.get_data_type(obj)
+            data_type = self.get_data_type(obj)
         elif obj.anyOf:
             data_type = self.parse_any_of(name, obj, [*path, name])
         elif obj.oneOf:
