@@ -1991,9 +1991,7 @@ def test_main_generate():
         input_ = (JSON_SCHEMA_DATA_PATH / 'person.json').relative_to(Path.cwd())
         assert not input_.is_absolute()
         generate(
-            input_=input_,
-            input_file_type=InputFileType.JsonSchema,
-            output=output_file,
+            input_=input_, input_file_type=InputFileType.JsonSchema, output=output_file,
         )
 
         assert (
@@ -2006,13 +2004,13 @@ def test_main_generate():
 def test_main_generate_from_directory():
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
-        input_ = (JSON_SCHEMA_DATA_PATH / 'external_files_in_directory').relative_to(Path.cwd())
+        input_ = (JSON_SCHEMA_DATA_PATH / 'external_files_in_directory').relative_to(
+            Path.cwd()
+        )
         assert not input_.is_absolute()
         assert input_.is_dir()
         generate(
-            input_=input_,
-            input_file_type=InputFileType.JsonSchema,
-            output=output_path,
+            input_=input_, input_file_type=InputFileType.JsonSchema, output=output_path,
         )
 
         main_nested_directory = EXPECTED_MAIN_PATH / 'main_nested_directory'
@@ -2022,4 +2020,3 @@ def test_main_generate_from_directory():
                 path.relative_to(main_nested_directory)
             ).read_text()
             assert result == path.read_text()
-
