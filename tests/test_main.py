@@ -9,7 +9,7 @@ from _pytest.capture import CaptureFixture
 from _pytest.tmpdir import TempdirFactory
 from freezegun import freeze_time
 
-from datamodel_code_generator import chdir
+from datamodel_code_generator import InputFileType, chdir, generate
 from datamodel_code_generator.__main__ import Exit, main
 
 DATA_PATH: Path = Path(__file__).parent / 'data'
@@ -1982,3 +1982,41 @@ def test_main_jsonschema_pattern():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_generate():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        input_ = (JSON_SCHEMA_DATA_PATH / 'person.json').relative_to(Path.cwd())
+        assert not input_.is_absolute()
+        generate(
+            input_=input_, input_file_type=InputFileType.JsonSchema, output=output_file,
+        )
+
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_generate_from_directory():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        input_ = (JSON_SCHEMA_DATA_PATH / 'external_files_in_directory').relative_to(
+            Path.cwd()
+        )
+        assert not input_.is_absolute()
+        assert input_.is_dir()
+        generate(
+            input_=input_, input_file_type=InputFileType.JsonSchema, output=output_path,
+        )
+
+        main_nested_directory = EXPECTED_MAIN_PATH / 'main_nested_directory'
+
+        for path in main_nested_directory.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_nested_directory)
+            ).read_text()
+            assert result == path.read_text()

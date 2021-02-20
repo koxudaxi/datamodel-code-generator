@@ -198,6 +198,9 @@ def generate(
     enable_faux_immutability: bool = False,
 ) -> None:
     input_text: Optional[str] = None
+    if isinstance(input_, Path) and not input_.is_absolute():
+        input_ = input_.expanduser().resolve()
+
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
