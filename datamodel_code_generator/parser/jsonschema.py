@@ -806,7 +806,15 @@ class JsonSchemaParser(Parser):
             )
         enum_fields: List[DataModelFieldBase] = []
 
-        for i, enum_part in enumerate(obj.enum):
+        if None in obj.enum and obj.type == 'string':
+            # Nullable is valid in only OpenAPI
+            nullable: bool = True
+            enum_times = [e for e in obj.enum if e]
+        else:
+            enum_times = obj.enum
+            nullable = False
+
+        for i, enum_part in enumerate(enum_times):
             if obj.type == 'string' or isinstance(enum_part, str):
                 default = f"'{enum_part}'"
                 field_name = enum_part
@@ -829,7 +837,28 @@ class JsonSchemaParser(Parser):
                     required=True,
                 )
             )
-        reference = self.model_resolver.add(
+
+        if not nullable:
+            reference = self.model_resolver.add(
+                path,
+                name,
+                class_name=True,
+                singular_name=singular_name,
+                singular_name_suffix='Enum',
+                unique=True,
+                loaded=True,
+            )
+            enum = Enum(
+                reference.name,
+                fields=enum_fields,
+                path=self.current_source_path,
+                description=obj.description if self.use_schema_description else None,
+                reference=reference,
+            )
+            self.append_result(enum)
+            return self.data_type.from_reference(reference)
+
+        root_reference = self.model_resolver.add(
             path,
             name,
             class_name=True,
@@ -838,15 +867,44 @@ class JsonSchemaParser(Parser):
             unique=True,
             loaded=True,
         )
+        enum_reference = self.model_resolver.add(
+            [*path, 'Enum'],
+            f'{root_reference.name}Enum',
+            class_name=True,
+            singular_name=singular_name,
+            singular_name_suffix='Enum',
+            unique=True,
+            loaded=True,
+        )
         enum = Enum(
-            reference.name,
+            enum_reference.name,
             fields=enum_fields,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
-            reference=reference,
+            reference=enum_reference,
         )
         self.append_result(enum)
-        return self.data_type.from_reference(reference)
+        data_model_root_type = self.data_model_root_type(
+            name,
+            [
+                self.data_model_field_type(
+                    data_type=self.data_type.from_reference(enum_reference),
+                    description=obj.description,
+                    example=obj.example,
+                    examples=obj.examples,
+                    default=obj.default,
+                    required=False,
+                    nullable=True,
+                )
+            ],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            reference=root_reference,
+        )
+        self.append_result(data_model_root_type)
+        return self.data_type.from_reference(root_reference)
 
     def _get_ref_body(self, ref: str) -> Dict[Any, Any]:
         if is_url(ref):

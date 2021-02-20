@@ -112,3 +112,17 @@ components:
         { enum: [ "cat" ] },
         { enum: [ "dog"]}
       ]
+    version:
+      type: string
+      nullable: true
+      default: RC1
+      description: nullable enum
+      example: RC2
+      enum:
+      - RC1
+      - RC1N
+      - RC2
+      - RC2N
+      - RC3
+      - RC4
+      - null
