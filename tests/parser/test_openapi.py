@@ -306,10 +306,7 @@ class Results(BaseModel):
 
 
 def test_openapi_parser_parse_enum_models():
-    parser = OpenAPIParser(
-        Path(DATA_PATH / 'enum_models.yaml').read_text(),
-        data_model_field_type=DataModelFieldBase,
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / 'enum_models.yaml').read_text(),)
     expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_enum_models'
     assert parser.parse() == (expected_dir / 'output_py37.py').read_text()
 

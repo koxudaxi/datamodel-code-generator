@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Kind(Enum):
@@ -88,3 +88,18 @@ class ArrayEnumEnum1(Enum):
 
 class ArrayEnum(BaseModel):
     __root__: List[Union[ArrayEnumEnum, ArrayEnumEnum1]]
+
+
+class VersionEnum(Enum):
+    RC1 = 'RC1'
+    RC1N = 'RC1N'
+    RC2 = 'RC2'
+    RC2N = 'RC2N'
+    RC3 = 'RC3'
+    RC4 = 'RC4'
+
+
+class Version(BaseModel):
+    __root__: Optional[VersionEnum] = Field(
+        'RC1', description='nullable enum', example='RC2'
+    )
