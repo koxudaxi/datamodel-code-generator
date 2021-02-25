@@ -1612,6 +1612,31 @@ def test_main_json_pointer():
 
 
 @freeze_time('2019-07-26')
+def test_main_nested_json_pointer():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'nested_json_pointer.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_nested_json_pointer' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_jsonschema_multiple_files_json_pointer():
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)

@@ -1088,7 +1088,10 @@ class JsonSchemaParser(Parser):
                         raise InvalidClassNameError(obj_name)
                 self._parse_file(self.raw_obj, obj_name, path_parts)
 
-        # resolve unparsed json pointer
+        self._resolve_unparsed_json_pointer()
+
+    def _resolve_unparsed_json_pointer(self) -> None:
+        model_count: int = len(self.results)
         for source in self.iter_source:
             path_parts = list(source.path.parts)
             reserved_refs = self.reserved_refs.get(tuple(path_parts))  # type: ignore
@@ -1111,6 +1114,10 @@ class JsonSchemaParser(Parser):
                     # for root model
                     self.raw_obj = load_yaml(source.text)
                     self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
+
+        if model_count != len(self.results):
+            # New model have been generated. It try to resolve json pointer again.
+            self._resolve_unparsed_json_pointer()
 
     def parse_json_pointer(
         self, raw: Dict[str, Any], ref: str, path_parts: List[str]
