@@ -30,17 +30,17 @@ jobs:
       run: |
         pip install -e ".[all]"
     - name: Install isort ${{ matrix.isort-version }}
-      run: |
       if: runner.os != 'Windows'
+      run: |
         pip install isort=="$isort_version"
       env: 
-       isort_version: ${{ matrix.isort-version }}
+        isort_version: ${{ matrix.isort-version }}
     - name: Install isort ${{ matrix.isort-version }}
-      run: |
       if: runner.os == 'Windows'
+      run: |
         pip install isort==${env:isort_version}
       env: 
-       isort_version: ${{ matrix.isort-version }}
+        isort_version: ${{ matrix.isort-version }}
     - name: Lint
       if: matrix.os != 'windows-latest'
       run: |
