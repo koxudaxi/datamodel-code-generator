@@ -1776,6 +1776,66 @@ def test_main_root_model_with_additional_properties():
 
 
 @freeze_time('2019-07-26')
+def test_main_root_model_with_additional_properties_use_generic_container_types():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+                ),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--use-generic-container-types',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_use_generic_container_types'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_root_model_with_additional_properties_use_standard_collections():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+                ),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--use-standard-collections',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_use_standard_collections'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_root_model_with_additional_properties_literal():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
