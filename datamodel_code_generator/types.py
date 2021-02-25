@@ -75,7 +75,9 @@ class DataType(BaseModel):
             self.unresolved_types.add(self.type)
         for type_ in self.data_types:
             if type_.type == 'Any' and type_.is_optional:
-                if any(t for t in self.data_types if t.type != 'Any'):  # pragma: no cover
+                if any(
+                    t for t in self.data_types if t.type != 'Any'
+                ):  # pragma: no cover
                     self.is_optional = True
                     self.data_types = [
                         t
