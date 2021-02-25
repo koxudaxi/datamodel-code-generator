@@ -5,14 +5,15 @@ on:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }}
+    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }} and ${{ matrix.isort-version }} 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
-
+        isort-version: [4.3.21, 5.6.4]
+        
     steps:
     - uses: actions/checkout@v1
     - uses: actions/cache@v1
@@ -26,23 +27,18 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
+      env: 
+       isort_version: ${{ matrix.isort-version }}
       run: |
         pip install -e ".[all]"
+        pip install isort=="$isort_version"
     - name: Lint
       if: matrix.os != 'windows-latest'
       run: |
-        pip install isort==4.3.21
-        ./scripts/lint.sh
-        pip install isort==5.6.4
         ./scripts/lint.sh
     - name: Unit Test on Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
-        ./scripts/test.sh
-    - name: Unit Test on Linux (old isort)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        pip install isort==4.3.21
         ./scripts/test.sh
     - name: Unit Test on macOS
       if: matrix.os == 'macos-latest'
