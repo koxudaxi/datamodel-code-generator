@@ -39,6 +39,11 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         ./scripts/test.sh
+    - name: Unit Test on Linux (old isort)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        pip install isort==4.3.21
+        ./scripts/test.sh
     - name: Unit Test on macOS
       if: matrix.os == 'macos-latest'
       run: |
