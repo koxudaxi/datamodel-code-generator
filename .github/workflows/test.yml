@@ -5,14 +5,18 @@ on:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }}
+    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }} and isort ${{ matrix.isort-version }} 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
-
+        isort-version: [4.3.21, 5.6.4]
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+      ISORT: ${{ matrix.isort-version }}
     steps:
     - uses: actions/checkout@v1
     - uses: actions/cache@v1
@@ -28,13 +32,14 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -e ".[all]"
-    - name: Lint
-      if: matrix.os != 'windows-latest'
+    - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
+      if: runner.os != 'Windows'
       run: |
-        pip install isort==4.3.21
-        ./scripts/lint.sh
-        pip install isort==5.6.4
-        ./scripts/lint.sh
+        pip install isort=="$ISORT"
+    - name: Install isort ${{ matrix.isort-version }} for Windows
+      if: runner.os == 'Windows'
+      run: |
+        pip install isort==${env:ISORT}
     - name: Unit Test on Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
@@ -47,6 +52,10 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         ./scripts/test.bat
+    - name: Lint
+      if: matrix.os != 'windows-latest'
+      run: |
+        ./scripts/lint.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1
@@ -54,3 +63,4 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests
         fail_ci_if_error: true
+        env_vars: OS,PYTHON,ISORT

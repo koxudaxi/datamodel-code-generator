@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 else:
     try:
         from yaml import CSafeLoader as SafeLoader
-    except ImportError:
+    except ImportError:  # pragma: no cover
         from yaml import SafeLoader
 
     try:
