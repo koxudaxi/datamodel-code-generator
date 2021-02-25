@@ -13,7 +13,10 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
-        
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+      ISORT: ${{ matrix.isort-version }}
     steps:
     - uses: actions/checkout@v1
     - uses: actions/cache@v1
@@ -32,15 +35,11 @@ jobs:
     - name: Install isort ${{ matrix.isort-version }}
       if: runner.os != 'Windows'
       run: |
-        pip install isort=="$isort_version"
-      env: 
-        isort_version: ${{ matrix.isort-version }}
+        pip install isort=="$ISORT"
     - name: Install isort ${{ matrix.isort-version }}
       if: runner.os == 'Windows'
       run: |
-        pip install isort==${env:isort_version}
-      env: 
-        isort_version: ${{ matrix.isort-version }}
+        pip install isort==${env:ISORT}
     - name: Lint
       if: matrix.os != 'windows-latest'
       run: |
@@ -64,3 +63,4 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests
         fail_ci_if_error: true
+        env_vars: OS,PYTHON,ISORT
