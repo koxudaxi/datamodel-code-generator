@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }} and ${{ matrix.isort-version }} 
+    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }} and isort ${{ matrix.isort-version }} 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
