@@ -32,18 +32,14 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -e ".[all]"
-    - name: Install isort ${{ matrix.isort-version }}
+    - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
         pip install isort=="$ISORT"
-    - name: Install isort ${{ matrix.isort-version }}
+    - name: Install isort ${{ matrix.isort-version }} for Windows
       if: runner.os == 'Windows'
       run: |
         pip install isort==${env:ISORT}
-    - name: Lint
-      if: matrix.os != 'windows-latest'
-      run: |
-        ./scripts/lint.sh
     - name: Unit Test on Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
@@ -56,6 +52,10 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         ./scripts/test.bat
+    - name: Lint
+      if: matrix.os != 'windows-latest'
+      run: |
+        ./scripts/lint.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1
