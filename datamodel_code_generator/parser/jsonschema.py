@@ -34,7 +34,7 @@ from datamodel_code_generator.parser import LiteralType
 
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
-from ..reference import is_url
+from ..reference import Reference, is_url
 from ..types import DataType, DataTypeManager, Types
 
 
@@ -405,7 +405,7 @@ class JsonSchemaParser(Parser):
         ignore_duplicate_model: bool = False,
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
-        base_classes: List[DataType] = []
+        base_classes: List[Reference] = []
         if len(obj.allOf) == 1:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
@@ -415,12 +415,12 @@ class JsonSchemaParser(Parser):
                     return self.get_ref_data_type(single_obj.ref)
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                base_classes.append(self.get_ref_data_type(all_of_item.ref))
+                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
             else:
                 fields.extend(self.parse_object_fields(all_of_item, path))
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
-            return base_classes[0]
+            return self.data_type.from_reference(base_classes[0])
         reference = self.model_resolver.add(
             path, name, class_name=True, unique=True, loaded=True
         )
@@ -429,7 +429,7 @@ class JsonSchemaParser(Parser):
         data_model_type = self.data_model_type(
             class_name,
             fields=fields,
-            base_classes=[b.type_hint for b in base_classes],
+            base_classes=base_classes,
             auto_import=False,
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
@@ -967,7 +967,7 @@ class JsonSchemaParser(Parser):
                     else:
                         ref = obj.ref
                     if self.model_resolver.is_external_ref(ref):
-                        relative_path, object_path = ref.split('#/')
+                        relative_path, object_path = ref.split('#')
                     elif self.model_resolver.is_external_root_ref(ref):
                         relative_path, object_path = ref[:-1], ''
                     else:
@@ -980,7 +980,16 @@ class JsonSchemaParser(Parser):
                         self.base_path = (self.base_path / relative_path).parent
                     else:
                         previous_base_path = None
-                    relative_paths = relative_path.split('/')
+                    if self.model_resolver.is_external_ref(ref):
+                        resolved_ref = self.model_resolver.resolve_external_ref(obj.ref)
+                        relative_path, object_path = resolved_ref.split('#')
+                    elif self.model_resolver.is_external_root_ref(ref):
+                        resolved_ref = self.model_resolver.resolve_external_ref(obj.ref)
+                        relative_path, object_path = resolved_ref[:-1], ''
+                    if obj.ref_type == JSONReference.REMOTE:
+                        relative_paths = [relative_path]
+                    else:
+                        relative_paths = relative_path.split('/')
                     self._parse_file(
                         models,
                         model_name,
@@ -1123,6 +1132,8 @@ class JsonSchemaParser(Parser):
         self, raw: Dict[str, Any], ref: str, path_parts: List[str]
     ) -> None:
         path = ref.split('#', 1)[-1]
+        if not path:
+            return
         if path[0] == '/':  # pragma: no cover
             path = path[1:]
         object_paths = path.split('/')
@@ -1140,6 +1151,7 @@ class JsonSchemaParser(Parser):
         path_parts: List[str],
         object_paths: Optional[List[str]] = None,
     ) -> None:
+        object_paths = [a for a in object_paths or [] if a]
         if object_paths:
             path = [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
         else:

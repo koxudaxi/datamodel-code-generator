@@ -15,19 +15,19 @@ class Enum(DataModel):
         self,
         name: str,
         fields: List[DataModelFieldBase],
+        reference: Reference,
         decorators: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
-        reference: Optional[Reference] = None,
     ):
         super().__init__(
             name=name,
             fields=fields,
+            reference=reference,
             decorators=decorators,
             auto_import=False,
             path=path,
             description=description,
-            reference=reference,
         )
         self.imports.append(IMPORT_ENUM)
 

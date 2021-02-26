@@ -1,13 +1,20 @@
 from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic.dataclass import DataClass
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
 def test_data_class():
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
 
-    data_class = DataClass(name='test_model', fields=[field])
+    data_class = DataClass(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert data_class.name == 'test_model'
     assert data_class.fields == [field]
@@ -18,7 +25,14 @@ def test_data_class():
 def test_data_class_base_class():
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
 
-    data_class = DataClass(name='test_model', fields=[field], base_classes=['Base'])
+    data_class = DataClass(
+        name='test_model',
+        fields=[field],
+        base_classes=[Reference(name='Base', original_name='Base', path='Base')],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert data_class.name == 'test_model'
     assert data_class.fields == [field]
@@ -33,7 +47,13 @@ def test_data_class_optional():
         name='a', data_type=DataType(type='str'), default="'abc'", required=True
     )
 
-    data_class = DataClass(name='test_model', fields=[field])
+    data_class = DataClass(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert data_class.name == 'test_model'
     assert data_class.fields == [field]

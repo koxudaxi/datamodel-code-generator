@@ -49,11 +49,6 @@ class Result(BaseModel):
     event: Optional[Event] = None
 
 
-class Broken(BaseModel):
-    foo: Optional[str] = None
-    bar: Optional[int] = None
-
-
 class Failing(BaseModel):
     class Config:
         extra = Extra.allow
@@ -61,9 +56,9 @@ class Failing(BaseModel):
     __root__: str
 
 
-class Test(BaseModel):
-    broken: Optional[Dict[str, Broken]] = None
-    failing: Optional[Dict[str, Failing]] = {}
+class Broken(BaseModel):
+    foo: Optional[str] = None
+    bar: Optional[int] = None
 
 
 class BrokenArray(BaseModel):
@@ -77,3 +72,8 @@ class Tags(BaseModel):
 class FileSetUpload(BaseModel):
     task_id: Optional[str] = None
     tags: Dict[str, Tags]
+
+
+class Test(BaseModel):
+    broken: Optional[Dict[str, Broken]] = None
+    failing: Optional[Dict[str, Failing]] = {}

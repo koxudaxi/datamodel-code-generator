@@ -81,17 +81,16 @@ class BaseModel(DataModel):
         self,
         name: str,
         fields: List[DataModelField],
+        reference: Reference,
         decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[str]] = None,
+        base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Any]] = None,
         auto_import: bool = True,
-        reference_classes: Optional[List[str]] = None,
         imports: Optional[List[Import]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
-        reference: Optional[Reference] = None,
     ):
 
         methods: List[str] = [field.method for field in fields if field.method]
@@ -99,18 +98,17 @@ class BaseModel(DataModel):
         super().__init__(
             name=name,
             fields=fields,  # type: ignore
+            reference=reference,
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
             custom_template_dir=custom_template_dir,
             extra_template_data=extra_template_data,
             auto_import=auto_import,
-            reference_classes=reference_classes,
             imports=imports,
             methods=methods,
             path=path,
             description=description,
-            reference=reference,
         )
 
         config_parameters: Dict[str, Any] = {}

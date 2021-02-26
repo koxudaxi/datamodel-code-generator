@@ -36,7 +36,7 @@ class Reference(BaseModel):
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
 
-    @cached_property
+    @property
     def module_name(self) -> Optional[str]:
         if is_url(self.path):  # pragma: no cover
             return None
@@ -106,21 +106,28 @@ class ModelResolver:
     def is_after_load(self, ref: str) -> bool:
         if self.current_root and len(self.current_root) > 1:
             ref = f"{'/'.join(self.current_root[:-1])}/{ref}"
-        if self.is_external_ref(ref):
-            return ref.split('#/', 1)[0] in self.after_load_files
-        elif self.is_external_root_ref(ref):
+        if self.is_external_root_ref(ref):
             return ref[:-1] in self.after_load_files
+        elif self.is_external_ref(ref):
+            return ref.split('#/', 1)[0] in self.after_load_files
+
         return False
 
     @staticmethod
     def is_external_ref(ref: str) -> bool:
-        return '#/' in ref
+        return '#' in ref and ref[0] != '#'
 
     @staticmethod
     def is_external_root_ref(ref: str) -> bool:
         return ref[-1] == '#'
 
-    def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
+    def resolve_external_ref(self, ref: str) -> str:
+        if self.is_external_ref(ref) and not is_url(ref) and len(self.current_root) > 1:
+            return f'{"/".join(self.current_root[:-1])}/{ref}'
+        return ref
+
+    def add_ref(self, ref: str, actual_module_name: Optional[str] = None,) -> Reference:
+        ref = self.resolve_external_ref(ref)
         path = self._get_path(ref.split('/'))
         reference = self.references.get(path)
         if reference:
@@ -165,11 +172,16 @@ class ModelResolver:
         loaded: bool = False,
     ) -> Reference:
         joined_path: str = self._get_path(path)
-        if joined_path in self.references:
-            reference = self.references[joined_path]
+        reference: Optional[Reference] = self.references.get(joined_path)
+        if reference:
             if loaded and not reference.loaded:
                 reference.loaded = True
-            return reference
+            if (
+                not original_name
+                or original_name == reference.original_name
+                or original_name == reference.name
+            ):
+                return reference
         elif not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
@@ -179,10 +191,15 @@ class ModelResolver:
             name = self.get_class_name(name, unique)
         elif unique:
             name = self._get_uniq_name(name)
-        reference = Reference(
-            path=joined_path, original_name=original_name, name=name, loaded=loaded
-        )
-        self.references[joined_path] = reference
+        if reference:
+            reference.original_name = original_name
+            reference.name = name
+            reference.loaded = loaded
+        else:
+            reference = Reference(
+                path=joined_path, original_name=original_name, name=name, loaded=loaded
+            )
+            self.references[joined_path] = reference
         return reference
 
     def get(

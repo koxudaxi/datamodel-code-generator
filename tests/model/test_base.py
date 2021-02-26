@@ -9,6 +9,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
     TemplateBase,
 )
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
@@ -73,7 +74,10 @@ def test_data_model():
             name='test_model',
             fields=[field],
             decorators=['@validate'],
-            base_classes=['Base'],
+            base_classes=[Reference(path='base', original_name='base', name='Base')],
+            reference=Reference(
+                path='test_model', original_name='test_model', name='test_model'
+            ),
         )
 
     assert data_model.name == 'test_model'
@@ -93,7 +97,11 @@ def test_data_model_exception():
         name='a', data_type=DataType(type='str'), default="" 'abc' "", required=True
     )
     with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
-        C(name='abc', fields=[field])
+        C(
+            name='abc',
+            fields=[field],
+            reference=Reference(path='abc', original_name='abc', name='abc'),
+        )
 
 
 def test_data_field():

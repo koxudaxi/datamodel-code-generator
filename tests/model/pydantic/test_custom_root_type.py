@@ -1,6 +1,7 @@
 from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic.custom_root_type import CustomRootType
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
@@ -12,6 +13,9 @@ def test_custom_root_type():
                 name='a', data_type=DataType(type='str'), default='abc', required=False,
             )
         ],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
     )
 
     assert custom_root_type.name == 'test_model'
@@ -30,6 +34,9 @@ def test_custom_root_type_required():
     custom_root_type = CustomRootType(
         name='test_model',
         fields=[DataModelFieldBase(data_type=DataType(type='str'), required=True)],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
     )
 
     assert custom_root_type.name == 'test_model'
@@ -47,7 +54,10 @@ def test_custom_root_type_decorator():
         name='test_model',
         fields=[DataModelFieldBase(data_type=DataType(type='str'), required=True)],
         decorators=['@validate'],
-        base_classes=['Base'],
+        base_classes=[Reference(name='Base', original_name='Base', path='Base')],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
     )
 
     assert custom_root_type.name == 'test_model'
