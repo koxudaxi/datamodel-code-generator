@@ -51,6 +51,10 @@ class Reference(BaseModel):
             return None
         return module_name
 
+    @property
+    def short_name(self) -> str:
+        return self.name.rsplit('.', 1)[-1]
+
 
 ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 
@@ -66,6 +70,8 @@ class ModelResolver:
 
     @property
     def current_root(self) -> List[str]:
+        if len(self._current_root) > 1:
+            return self._current_root
         return self._current_root
 
     def set_current_root(self, current_root: List[str]) -> None:

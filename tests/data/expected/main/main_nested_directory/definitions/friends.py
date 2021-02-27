@@ -8,6 +8,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Extra, Field
 
+from . import fur
+
 
 class Friend(BaseModel):
     class Config:
@@ -15,6 +17,7 @@ class Friend(BaseModel):
 
     name: str = Field(..., example='John Doe')
     phone_number: Optional[str] = Field(None, example='(555) 555-1234')
+    fur: Optional[fur.Fur] = None
 
 
 class Friends(BaseModel):

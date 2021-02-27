@@ -29,7 +29,6 @@ class DataType(BaseModel):
     imports_: List[Import] = []
     python_version: PythonVersion = PythonVersion.PY_37
     unresolved_types: Set[str] = {*()}
-    ref: bool = False
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
@@ -40,7 +39,7 @@ class DataType(BaseModel):
 
     @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
-        data_type = cls(ref=True, is_list=is_list)
+        data_type = cls(is_list=is_list)
         data_type.reference = reference
         data_type.unresolved_types.add(reference.path)
         return data_type
@@ -59,14 +58,6 @@ class DataType(BaseModel):
         if module_name:
             return f'{module_name}.{self.type}'
         return self.type  # type: ignore
-
-    @property
-    def name(self) -> str:
-        if self.alias:
-            return self.alias.rsplit('.', 1)[-1]
-        elif self.reference:
-            return self.reference.name.rsplit('.', 1)[-1]
-        return self.type.rsplit('.', 1)[-1]  # type: ignore
 
     @property
     def all_data_types(self) -> Iterator['DataType']:
@@ -119,22 +110,11 @@ class DataType(BaseModel):
         for data_type in self.data_types:
             self.imports_.extend(data_type.imports_)
             self.unresolved_types.update(data_type.unresolved_types)
-        if self.reference:
-            self.unresolved_types.add(self.reference.path)
 
     @property
     def type_hint(self) -> str:
         type_: Optional[str] = self.alias or self.type
-        if type_:
-            if self.alias:
-                type_ = self.alias
-            elif self.type:
-                type_ = self.type
-            else:
-                type_ = ''
-            if self.ref and self.python_version == PythonVersion.PY_36:
-                type_ = f"'{type_}'"
-        else:
+        if not type_:
             if len(self.data_types) > 1:
                 type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
             elif len(self.data_types) == 1:
@@ -145,11 +125,13 @@ class DataType(BaseModel):
                 )
             else:
                 if self.reference:
-                    type_ = self.name
+                    type_ = self.reference.short_name
                 else:
                     # TODO support strict Any
                     # type_ = 'Any'
                     type_ = ''
+        if self.reference and self.python_version == PythonVersion.PY_36:
+            type_ = f"'{type_}'"
         if self.is_list:
             if self.use_generic_container:
                 list_ = 'Sequence'

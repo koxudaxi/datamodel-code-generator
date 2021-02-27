@@ -21,6 +21,7 @@ class Friend(BaseModel):
 
     name: str = Field(..., example='John Doe')
     phone_number: Optional[str] = Field(None, example='(555) 555-1234')
+    fur: Optional[Fur] = None
 
 
 class Friends(BaseModel):

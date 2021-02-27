@@ -12,7 +12,10 @@
       "phone_number": {
         "type": "string",
         "example": "(555) 555-1234"
-      }
+      },
+      "fur": {
+        "$ref": "fur.json#"
+    }
     },
     "additionalProperties": true,
     "required": [

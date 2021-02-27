@@ -413,14 +413,11 @@ class Parser(ABC):
                 for data_type in model.all_data_types:
                     # To change from/import
 
-                    if not data_type.reference:
+                    if not data_type.reference or data_type.reference.source in models:
                         # No need to import non-reference model.
+                        # Or, Referenced model is in the same file. we don't need to import the model
                         continue
 
-                    if data_type.reference.source in models:
-                        # Referenced model is in the same file. we don't need to import the model
-                        data_type.alias = data_type.name
-                        continue
                     elif (
                         isinstance(self.source, Path)
                         and self.source.is_file()
@@ -432,16 +429,13 @@ class Parser(ABC):
                     from_, import_ = relative(module_path, full_name)
 
                     full_path = f'{from_}/{import_}'
-                    if data_type.reference.path in alias_map:
-                        alias = alias_map[data_type.reference.path] or import_
-                    else:
-                        alias = scoped_model_resolver.add(
-                            full_path.split('/'), import_, unique=True
-                        ).name
-                        alias_map[data_type.reference.path] = (
-                            None if alias == import_ else alias
-                        )
-                    name = data_type.name
+                    alias = scoped_model_resolver.add(
+                        full_path.split('/'), import_, unique=True
+                    ).name
+                    alias_map[data_type.reference.path] = (
+                        None if alias == import_ else alias
+                    )
+                    name = data_type.reference.short_name
                     new_name = (
                         f'{alias}.{name}'
                         if (from_ and import_ and alias != name)
@@ -506,10 +500,7 @@ class Parser(ABC):
             # Remove duplicated name model
             generated_models: Dict[str, DataModel] = {}
             for model in models:
-                if model.name in generated_models:
-                    if generated_models[model.name].path in model.reference_classes:
-                        generated_models[model.name] = model
-                else:
+                if model.name not in generated_models:
                     generated_models[model.name] = model
             models = list(generated_models.values())
             if self.reuse_model:
