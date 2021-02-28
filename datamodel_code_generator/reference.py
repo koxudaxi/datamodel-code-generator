@@ -100,30 +100,29 @@ class ModelResolver:
         if isinstance(path, str):
             joined_path = path
         else:
-            joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+            joined_path = self.join_path(path)
         if ID_PATTERN.match(joined_path):
             return self.ids['/'.join(self.current_root)][joined_path]
         elif '#' in joined_path:
             if joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
-            if (
-                self.is_external_ref(joined_path)
-                and not is_url(joined_path)
-                and len(self.current_root) > 1
-            ):
+            if self.is_remote_ref(joined_path):
                 return f'{"/".join(self.current_root[:-1])}/{joined_path}'
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         elif self.root_id_base_path and self.current_root != path:
             return f'{self.root_id_base_path}/{joined_path}#'
         joined_path = f'{joined_path}#'
-        if (
-            self.is_external_ref(joined_path)
-            and not is_url(joined_path)
-            and len(self.current_root) > 1
-        ):
+        if self.is_remote_ref(joined_path):
             return f'{"/".join(self.current_root[:-1])}/{joined_path}'
         return joined_path
+
+    def is_remote_ref(self, resolved_ref: str) -> bool:
+        return (
+            self.is_external_ref(resolved_ref)
+            and not is_url(resolved_ref)
+            and len(self.current_root) > 1
+        )
 
     def is_after_load(self, ref: str) -> bool:
         ref = self.resolve_ref(ref)
