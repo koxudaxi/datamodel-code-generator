@@ -94,30 +94,44 @@ class ModelResolver:
         self._root_id_base_path = root_id_base_path
 
     def add_id(self, id_: str, path: List[str]) -> None:
-        self.ids['/'.join(self.current_root)][id_] = self._get_path(path)
+        self.ids['/'.join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def _get_path(self, path: List[str]) -> str:
-        joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+    def resolve_ref(self, path: Union[List[str], str]) -> str:
+        if isinstance(path, str):
+            joined_path = path
+        else:
+            joined_path = '/'.join(p for p in path if p).replace('/#', '#')
         if ID_PATTERN.match(joined_path):
             return self.ids['/'.join(self.current_root)][joined_path]
         elif '#' in joined_path:
             if joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
+            if (
+                self.is_external_ref(joined_path)
+                and not is_url(joined_path)
+                and len(self.current_root) > 1
+            ):
+                return f'{"/".join(self.current_root[:-1])}/{joined_path}'
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         elif self.root_id_base_path and self.current_root != path:
             return f'{self.root_id_base_path}/{joined_path}#'
-        return f'{joined_path}#'
+        joined_path = f'{joined_path}#'
+        if (
+            self.is_external_ref(joined_path)
+            and not is_url(joined_path)
+            and len(self.current_root) > 1
+        ):
+            return f'{"/".join(self.current_root[:-1])}/{joined_path}'
+        return joined_path
 
     def is_after_load(self, ref: str) -> bool:
-        if self.current_root and len(self.current_root) > 1:
-            ref = f"{'/'.join(self.current_root[:-1])}/{ref}"
+        ref = self.resolve_ref(ref)
         if self.is_external_root_ref(ref):
             return ref[:-1] in self.after_load_files
         elif self.is_external_ref(ref):
             return ref.split('#/', 1)[0] in self.after_load_files
-
-        return False
+        return False  # pragma: no cover
 
     @staticmethod
     def is_external_ref(ref: str) -> bool:
@@ -127,33 +141,35 @@ class ModelResolver:
     def is_external_root_ref(ref: str) -> bool:
         return ref[-1] == '#'
 
-    def resolve_external_ref(self, ref: str) -> str:
-        if self.is_external_ref(ref) and not is_url(ref) and len(self.current_root) > 1:
-            return f'{"/".join(self.current_root[:-1])}/{ref}'
-        return ref
+    @staticmethod
+    def join_path(path: List[str]) -> str:
+        joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+        if '#' not in joined_path:
+            joined_path += '#'
+        return joined_path
 
-    def add_ref(self, ref: str, actual_module_name: Optional[str] = None,) -> Reference:
-        ref = self.resolve_external_ref(ref)
-        path = self._get_path(ref.split('/'))
+    def add_ref(
+        self, ref: str, actual_module_name: Optional[str] = None, resolved: bool = False
+    ) -> Reference:
+        if not resolved:
+            path = self.resolve_ref(ref)
+        else:
+            path = ref
         reference = self.references.get(path)
         if reference:
             reference.actual_module_name = actual_module_name
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
-            parents = self.root_id_base_path
             original_name = Path(
                 split_ref[0][:-1] if self.is_external_root_ref(ref) else split_ref[0]
             ).stem
         else:
-            parents = split_ref[0]
             original_name = (
                 Path(split_ref[1][:-1]).stem
                 if self.is_external_root_ref(ref)
                 else split_ref[1]
             )
-        if not original_name:
-            original_name = Path(parents).stem  # type: ignore
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
             path=path,
@@ -177,7 +193,7 @@ class ModelResolver:
         singular_name_suffix: str = 'Item',
         loaded: bool = False,
     ) -> Reference:
-        joined_path: str = self._get_path(path)
+        joined_path = self.join_path(path)
         reference: Optional[Reference] = self.references.get(joined_path)
         if reference:
             if loaded and not reference.loaded:
@@ -208,12 +224,8 @@ class ModelResolver:
             self.references[joined_path] = reference
         return reference
 
-    def get(
-        self, path: Union[List[str], str]
-    ) -> Optional[Reference]:  # pragma: no cover
-        if isinstance(path, str):
-            return self.references.get(path)
-        return self.references.get(self._get_path(path))
+    def get(self, path: Union[List[str], str]) -> Optional[Reference]:
+        return self.references.get(self.resolve_ref(path))
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
         if '.' in field_name:

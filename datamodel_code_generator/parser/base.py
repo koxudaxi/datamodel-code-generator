@@ -387,25 +387,16 @@ class Parser(ABC):
 
             result: List[str] = []
             imports = Imports()
-            models_to_update: List[str] = []
+            models_to_update: List[DataModel] = []
             scoped_model_resolver = ModelResolver()
             import_map: Dict[str, Tuple[str, str]] = {}
             model_paths: Set[str] = {m.path for m in models}
-            processed_models: Set[str] = set()
             model_cache: Dict[Tuple[str, ...], Reference] = {}
             duplicated_models: Dict[str, Reference] = {}
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.path in require_update_action_models:
-                    ref_model_paths = {
-                        d.reference.path for d in model.all_data_types if d.reference
-                    }
-                    if model.path in ref_model_paths or (
-                        not ref_model_paths - model_paths
-                        and ref_model_paths - processed_models
-                    ):
-                        models_to_update += [model.name]
-                        processed_models.add(model.path)
+                    models_to_update += [model]
                 imports.append(model.imports)
                 model.reference_classes = {
                     r for r in model.reference_classes if r not in model_paths
@@ -532,7 +523,12 @@ class Parser(ABC):
             result += [code]
 
             if self.dump_resolve_reference_action is not None:
-                result += ['\n', self.dump_resolve_reference_action(models_to_update)]
+                result += [
+                    '\n',
+                    self.dump_resolve_reference_action(
+                        [m.name for m in models_to_update]
+                    ),
+                ]
 
             body = '\n'.join(result)
             if code_formatter:

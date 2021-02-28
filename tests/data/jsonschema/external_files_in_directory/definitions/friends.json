@@ -13,8 +13,16 @@
         "type": "string",
         "example": "(555) 555-1234"
       },
-      "fur": {
-        "$ref": "fur.json#"
+     "food": {
+      "type": "array",
+      "items": [
+        {
+          "$ref": "food.json#/definitions/noodle"
+        },
+        {
+          "$ref": "food.json#/definitions/soup"
+        }
+      ]
     }
     },
     "additionalProperties": true,

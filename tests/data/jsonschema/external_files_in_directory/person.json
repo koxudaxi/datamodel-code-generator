@@ -38,7 +38,18 @@
           "$ref": "definitions/drink/coffee.json#"
         },
         {
-          "$ref": "definitions/drink/tea.json#"
+          "$ref": "definitions/drink/tea.json#/"
+        }
+      ]
+    },
+    "food": {
+      "type": "array",
+      "items": [
+        {
+          "$ref": "definitions/food.json#/definitions/noodle"
+        },
+        {
+          "$ref": "definitions/food.json#/definitions/soup"
         }
       ]
     }
@@ -46,5 +57,5 @@
   "required": [
       "first_name",
       "last_name"
-  ],
+  ]
 }

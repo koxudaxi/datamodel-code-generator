@@ -146,6 +146,7 @@ class DataModel(TemplateBase, ABC):
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
+
         template_file_path = Path(self.TEMPLATE_FILE_PATH)
         if custom_template_dir is not None:
             custom_template_file_path = custom_template_dir / template_file_path.name

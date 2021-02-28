@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 from datamodel_code_generator import load_yaml, snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -21,8 +21,11 @@ class OpenAPIParser(JsonSchemaParser):
             schemas: Dict[Any, Any] = specification.get('components', {}).get(
                 'schemas', {}
             )
-            with self.model_resolver.current_root_context(list(source.path.parts)):
+            path_parts: List[str] = list(source.path.parts)
+            with self.model_resolver.current_root_context(path_parts):
                 for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
                     self.parse_raw_obj(
-                        obj_name, raw_obj, ['#/components', 'schemas', obj_name]
+                        obj_name,
+                        raw_obj,
+                        [*path_parts, '#/components', 'schemas', obj_name],
                     )

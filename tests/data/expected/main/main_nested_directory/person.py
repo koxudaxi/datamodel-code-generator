@@ -8,7 +8,7 @@ from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
-from .definitions import friends, pet
+from .definitions import food, friends, pet
 from .definitions.drink import coffee, tea
 
 
@@ -20,3 +20,4 @@ class Person(BaseModel):
     friends: Optional[friends.Friends] = None
     comment: Optional[Any] = None
     drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
+    food: Optional[List[Union[food.Noodle, food.Soup]]] = None
