@@ -393,10 +393,18 @@ class Parser(ABC):
             model_paths: Set[str] = {m.path for m in models}
             model_cache: Dict[Tuple[str, ...], Reference] = {}
             duplicated_models: Dict[str, Reference] = {}
+
+            # Remove duplicated name model
+            unique_models: OrderedDict[str, DataModel] = OrderedDict()
+            for model in models:
+                if model.name not in unique_models:
+                    unique_models[model.name] = model
+            models = list(unique_models.values())
+
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.path in require_update_action_models:
-                    models_to_update += [model]
+                    models_to_update.append(model)
                 imports.append(model.imports)
                 model.reference_classes = {
                     r for r in model.reference_classes if r not in model_paths
@@ -414,32 +422,31 @@ class Parser(ABC):
                         and self.source.is_file()
                         and self.source.name == data_type.reference.path.split('#/')[0]
                     ):
+                        # The input file is no need to import
                         full_name = data_type.reference.name
                     else:
                         full_name = data_type.full_name or data_type.reference.name
-                    from_, import_ = relative(module_path, full_name)
+                    from_, import_ = full_path = relative(module_path, full_name)
 
-                    full_path = f'{from_}/{import_}'
                     alias = scoped_model_resolver.add(
-                        full_path.split('/'), import_, unique=True
+                        full_path, import_, unique=True
                     ).name
-                    alias_map[data_type.reference.path] = (
-                        None if alias == import_ else alias
-                    )
+                    if alias != import_:
+                        alias_map[data_type.reference.path] = alias
+
                     name = data_type.reference.short_name
-                    new_name = (
+                    data_type.alias = (
                         f'{alias}.{name}'
                         if (from_ and import_ and alias != name)
                         else name
                     )
-                    data_type.alias = new_name
 
                     if (
                         full_name
                         and full_name.startswith(from_)
                         or f'.{full_name}'.startswith(from_)
                     ):
-                        import_map[data_type.reference.path] = (from_, import_)
+                        import_map[data_type.reference.path] = full_path
                 for ref_path in model.reference_classes:
                     ref_name = self.model_resolver.get(ref_path).name  # type: ignore
                     if ref_path in import_map:
@@ -479,7 +486,7 @@ class Parser(ABC):
                                 reference=Reference(
                                     name=model.name,
                                     original_name=model.name,
-                                    path=model.reference.path + '/resuse',
+                                    path=model.reference.path + '/reuse',
                                 ),
                             )
                             models.insert(index, inherited_model)
@@ -488,12 +495,6 @@ class Parser(ABC):
                     else:
                         model_cache[model_key] = model.reference
 
-            # Remove duplicated name model
-            generated_models: Dict[str, DataModel] = {}
-            for model in models:
-                if model.name not in generated_models:
-                    generated_models[model.name] = model
-            models = list(generated_models.values())
             if self.reuse_model:
                 for model in models:
                     for data_type in model.all_data_types:  # pragma: no cover

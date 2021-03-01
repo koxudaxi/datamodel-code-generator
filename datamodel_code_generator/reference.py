@@ -9,10 +9,10 @@ from typing import (
     DefaultDict,
     Dict,
     Generator,
-    List,
     Mapping,
     Optional,
     Pattern,
+    Sequence,
     Set,
     Tuple,
     Union,
@@ -63,25 +63,25 @@ class ModelResolver:
     def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
-        self._current_root: List[str] = []
+        self._current_root: Sequence[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
         self.after_load_files: Set[str] = set()
 
     @property
-    def current_root(self) -> List[str]:
+    def current_root(self) -> Sequence[str]:
         if len(self._current_root) > 1:
             return self._current_root
         return self._current_root
 
-    def set_current_root(self, current_root: List[str]) -> None:
+    def set_current_root(self, current_root: Sequence[str]) -> None:
         self._current_root = current_root
 
     @contextmanager
     def current_root_context(
-        self, current_root: List[str]
+        self, current_root: Sequence[str]
     ) -> Generator[None, None, None]:
-        previous_root_path: List[str] = self.current_root
+        previous_root_path: Sequence[str] = self.current_root
         self.set_current_root(current_root)
         yield
         self.set_current_root(previous_root_path)
@@ -93,10 +93,10 @@ class ModelResolver:
     def set_root_id_base_path(self, root_id_base_path: Optional[str]) -> None:
         self._root_id_base_path = root_id_base_path
 
-    def add_id(self, id_: str, path: List[str]) -> None:
+    def add_id(self, id_: str, path: Sequence[str]) -> None:
         self.ids['/'.join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def resolve_ref(self, path: Union[List[str], str]) -> str:
+    def resolve_ref(self, path: Union[Sequence[str], str]) -> str:
         if isinstance(path, str):
             joined_path = path
         else:
@@ -141,7 +141,7 @@ class ModelResolver:
         return ref[-1] == '#'
 
     @staticmethod
-    def join_path(path: List[str]) -> str:
+    def join_path(path: Sequence[str]) -> str:
         joined_path = '/'.join(p for p in path if p).replace('/#', '#')
         if '#' not in joined_path:
             joined_path += '#'
@@ -183,7 +183,7 @@ class ModelResolver:
 
     def add(
         self,
-        path: List[str],
+        path: Sequence[str],
         original_name: Optional[str] = None,
         *,
         class_name: bool = False,
@@ -223,7 +223,7 @@ class ModelResolver:
             self.references[joined_path] = reference
         return reference
 
-    def get(self, path: Union[List[str], str]) -> Optional[Reference]:
+    def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
         return self.references.get(self.resolve_ref(path))
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
