@@ -5,11 +5,12 @@ from typing import Dict, List, Tuple
 
 import pytest
 
-from datamodel_code_generator import DataTypeManager
+from datamodel_code_generator import DataModelField, DataTypeManager
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
-from datamodel_code_generator.reference import snake_to_upper_camel
+from datamodel_code_generator.reference import Reference, snake_to_upper_camel
+from datamodel_code_generator.types import DataType
 
 
 class A(DataModel):
@@ -43,10 +44,31 @@ def test_parser():
 
 
 def test_sort_data_models():
+    reference_a = Reference(path='A', original_name='A', name='A')
+    reference_b = Reference(path='B', original_name='B', name='B')
+    reference_c = Reference(path='C', original_name='C', name='C')
+    data_type_a = DataType.from_reference(reference_a)
+    data_type_b = DataType.from_reference(reference_b)
+    data_type_c = DataType.from_reference(reference_c)
     reference = [
-        BaseModel(name='A', reference_classes={'A', 'C'}, fields=[]),
-        BaseModel(name='B', reference_classes={'B'}, fields=[]),
-        BaseModel(name='C', reference_classes={'B'}, fields=[]),
+        BaseModel(
+            name='A',
+            fields=[
+                DataModelField(data_type=data_type_a),
+                DataModelFieldBase(data_type=data_type_c),
+            ],
+            reference=reference_a,
+        ),
+        BaseModel(
+            name='B',
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_b,
+        ),
+        BaseModel(
+            name='C',
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_c,
+        ),
     ]
 
     unresolved, resolved, require_update_action_models = sort_data_models(reference)
@@ -61,12 +83,50 @@ def test_sort_data_models():
 
 
 def test_sort_data_models_unresolved():
+    reference_a = Reference(path='A', original_name='A', name='A')
+    reference_b = Reference(path='B', original_name='B', name='B')
+    reference_c = Reference(path='C', original_name='C', name='C')
+    reference_d = Reference(path='D', original_name='D', name='D')
+    reference_v = Reference(path='V', original_name='V', name='V')
+    reference_z = Reference(path='Z', original_name='Z', name='Z')
+    data_type_a = DataType.from_reference(reference_a)
+    data_type_b = DataType.from_reference(reference_b)
+    data_type_c = DataType.from_reference(reference_c)
+    data_type_v = DataType.from_reference(reference_v)
+    data_type_z = DataType.from_reference(reference_z)
     reference = [
-        BaseModel(name='A', reference_classes=['A', 'C'], fields=[]),
-        BaseModel(name='B', reference_classes=['B'], fields=[]),
-        BaseModel(name='C', reference_classes=['B'], fields=[]),
-        BaseModel(name='D', reference_classes=['A', 'C', 'v'], fields=[]),
-        BaseModel(name='z', reference_classes=['v'], fields=[]),
+        BaseModel(
+            name='A',
+            fields=[
+                DataModelField(data_type=data_type_a),
+                DataModelFieldBase(data_type=data_type_c),
+            ],
+            reference=reference_a,
+        ),
+        BaseModel(
+            name='B',
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_b,
+        ),
+        BaseModel(
+            name='C',
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_c,
+        ),
+        BaseModel(
+            name='D',
+            fields=[
+                DataModelField(data_type=data_type_a),
+                DataModelField(data_type=data_type_c),
+                DataModelField(data_type=data_type_z),
+            ],
+            reference=reference_d,
+        ),
+        BaseModel(
+            name='Z',
+            fields=[DataModelField(data_type=data_type_v)],
+            reference=reference_z,
+        ),
     ]
 
     with pytest.raises(Exception):
@@ -74,12 +134,50 @@ def test_sort_data_models_unresolved():
 
 
 def test_sort_data_models_unresolved_raise_recursion_error():
+    reference_a = Reference(path='A', original_name='A', name='A')
+    reference_b = Reference(path='B', original_name='B', name='B')
+    reference_c = Reference(path='C', original_name='C', name='C')
+    reference_d = Reference(path='D', original_name='D', name='D')
+    reference_v = Reference(path='V', original_name='V', name='V')
+    reference_z = Reference(path='Z', original_name='Z', name='Z')
+    data_type_a = DataType.from_reference(reference_a)
+    data_type_b = DataType.from_reference(reference_b)
+    data_type_c = DataType.from_reference(reference_c)
+    data_type_v = DataType.from_reference(reference_v)
+    data_type_z = DataType.from_reference(reference_z)
     reference = [
-        BaseModel(name='A', reference_classes=['A', 'C'], fields=[]),
-        BaseModel(name='B', reference_classes=['B'], fields=[]),
-        BaseModel(name='C', reference_classes=['B'], fields=[]),
-        BaseModel(name='D', reference_classes=['A', 'C', 'v'], fields=[]),
-        BaseModel(name='z', reference_classes=['v'], fields=[]),
+        BaseModel(
+            name='A',
+            fields=[
+                DataModelField(data_type=data_type_a),
+                DataModelFieldBase(data_type=data_type_c),
+            ],
+            reference=reference_a,
+        ),
+        BaseModel(
+            name='B',
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_b,
+        ),
+        BaseModel(
+            name='C',
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_c,
+        ),
+        BaseModel(
+            name='D',
+            fields=[
+                DataModelField(data_type=data_type_a),
+                DataModelField(data_type=data_type_c),
+                DataModelField(data_type=data_type_z),
+            ],
+            reference=reference_d,
+        ),
+        BaseModel(
+            name='Z',
+            fields=[DataModelField(data_type=data_type_v)],
+            reference=reference_z,
+        ),
     ]
 
     with pytest.raises(Exception):

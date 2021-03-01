@@ -132,18 +132,17 @@ class DataModel(TemplateBase, ABC):
         self,
         name: str,
         fields: List[DataModelFieldBase],
+        reference: Reference,
         decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[str]] = None,
+        base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         imports: Optional[List[Import]] = None,
         auto_import: bool = True,
-        reference_classes: Optional[List[str]] = None,
         methods: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
-        reference: Optional[Reference] = None,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -160,21 +159,18 @@ class DataModel(TemplateBase, ABC):
         self.imports: List[Import] = imports or []
         self.base_class: Optional[str] = None
         base_classes = [base_class for base_class in base_classes or [] if base_class]
-        self.base_classes: List[str] = base_classes
-        self.path: Optional[Path] = path
-        self.reference: Optional[Reference] = reference
+        self.base_classes: List[Reference] = base_classes
+        self.file_path: Optional[Path] = path
+        self.reference: Reference = reference
 
-        if self.reference:
-            self.reference.source = self
+        self.reference.source = self
 
         self.reference_classes: Set[str] = {
-            r for r in base_classes if r != self.BASE_CLASS
+            r.path for r in base_classes if r.name != self.BASE_CLASS
         } if base_classes else set()
-        if reference_classes:
-            self.reference_classes.update(reference_classes)
 
         if self.base_classes:
-            self.base_class = ', '.join(self.base_classes)
+            self.base_class = ', '.join(b.name for b in self.base_classes)
         else:
             base_class_full_path = custom_base_class or self.BASE_CLASS
             if auto_import:
@@ -219,10 +215,10 @@ class DataModel(TemplateBase, ABC):
 
     @cached_property
     def module_path(self) -> List[str]:
-        if self.path:
+        if self.file_path:
             return [
-                *self.path.parts[:-1],
-                self.path.stem,
+                *self.file_path.parts[:-1],
+                self.file_path.stem,
                 *self.name.split('.')[:-1],
             ]
         return self.name.split('.')[:-1]
@@ -231,6 +227,10 @@ class DataModel(TemplateBase, ABC):
     def all_data_types(self) -> Iterator['DataType']:
         for field in self.fields:
             yield from field.data_type.all_data_types
+
+    @cached_property
+    def path(self) -> str:
+        return self.reference.path
 
     def render(self) -> str:
         response = self._render(

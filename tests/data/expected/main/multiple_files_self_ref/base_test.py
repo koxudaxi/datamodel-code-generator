@@ -7,6 +7,10 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
+class Model(BaseModel):
+    pass
+
+
 class Second(BaseModel):
     __root__: str
 

@@ -34,7 +34,7 @@ from datamodel_code_generator.parser import LiteralType
 
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
-from ..reference import is_url
+from ..reference import Reference, is_url
 from ..types import DataType, DataTypeManager, Types
 
 
@@ -131,7 +131,9 @@ class JsonSchemaObject(BaseModel):
     @validator('ref')
     def validate_ref(cls, value: Any) -> Any:
         if isinstance(value, str) and '#' in value:
-            if '#/' in value or value[0] == '#' or value[-1] == '#':
+            if value.endswith('#/'):
+                return value[:-1]
+            elif '#/' in value or value[0] == '#' or value[-1] == '#':
                 return value
             return value.replace('#', '#/')
         return value
@@ -405,7 +407,7 @@ class JsonSchemaParser(Parser):
         ignore_duplicate_model: bool = False,
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
-        base_classes: List[DataType] = []
+        base_classes: List[Reference] = []
         if len(obj.allOf) == 1:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
@@ -415,12 +417,12 @@ class JsonSchemaParser(Parser):
                     return self.get_ref_data_type(single_obj.ref)
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                base_classes.append(self.get_ref_data_type(all_of_item.ref))
+                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
             else:
                 fields.extend(self.parse_object_fields(all_of_item, path))
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
-            return base_classes[0]
+            return self.data_type.from_reference(base_classes[0])
         reference = self.model_resolver.add(
             path, name, class_name=True, unique=True, loaded=True
         )
@@ -429,7 +431,7 @@ class JsonSchemaParser(Parser):
         data_model_type = self.data_model_type(
             class_name,
             fields=fields,
-            base_classes=[b.type_hint for b in base_classes],
+            base_classes=base_classes,
             auto_import=False,
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
@@ -906,12 +908,14 @@ class JsonSchemaParser(Parser):
         self.append_result(data_model_root_type)
         return self.data_type.from_reference(root_reference)
 
-    def _get_ref_body(self, ref: str) -> Dict[Any, Any]:
-        if is_url(ref):
-            return self._get_ref_body_from_url(ref)
-        return self._get_ref_body_from_remote(ref)
+    def _get_ref_body(self, resolved_ref: str) -> Dict[Any, Any]:
+        if is_url(resolved_ref):
+            return self._get_ref_body_from_url(resolved_ref)
+        return self._get_ref_body_from_remote(resolved_ref)
 
     def _get_ref_body_from_url(self, ref: str) -> Dict[Any, Any]:
+        if ref[-1] == '#':
+            ref = ref[:-1]
         cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
         if cached_ref_body:
             return cached_ref_body
@@ -929,14 +933,12 @@ class JsonSchemaParser(Parser):
         self.remote_object_cache[ref] = ref_body
         return ref_body
 
-    def _get_ref_body_from_remote(self, ref: str) -> Dict[Any, Any]:
+    def _get_ref_body_from_remote(self, resolved_ref: str) -> Dict[Any, Any]:
         # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
         # the same location. TODO treat edge case
-        if self.current_source_path and len(self.current_source_path.parts) > 1:
-            full_path = self.base_path / self.current_source_path.parent / ref
-        else:
-            full_path = self.base_path / ref
-
+        if resolved_ref[-1] == '#':
+            resolved_ref = resolved_ref[:-1]
+        full_path = self.base_path / resolved_ref
         ref_full_path = str(full_path)
 
         cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(
@@ -956,41 +958,38 @@ class JsonSchemaParser(Parser):
             reference = self.model_resolver.add_ref(obj.ref)
             if not reference or not reference.loaded:
                 # https://swagger.io/docs/specification/using-ref/
+                ref = self.model_resolver.resolve_ref(obj.ref)
                 if obj.ref_type == JSONReference.LOCAL:
                     # Local Reference – $ref: '#/definitions/myElement'
-                    self.reserved_refs[tuple(self.model_resolver.current_root)].add(obj.ref)  # type: ignore
+                    self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)  # type: ignore
                 elif self.model_resolver.is_after_load(obj.ref):
-                    self.reserved_refs[tuple(obj.ref.split('#')[0].split('/'))].add(obj.ref)  # type: ignore
+                    self.reserved_refs[tuple(ref.split('#')[0].split('/'))].add(ref)  # type: ignore
                 else:
-                    if obj.ref_type == JSONReference.REMOTE and self.root_id_base_path:
-                        ref = f'{self.root_id_base_path}/{obj.ref}'
-                    else:
-                        ref = obj.ref
-                    if self.model_resolver.is_external_ref(ref):
-                        relative_path, object_path = ref.split('#/')
-                    elif self.model_resolver.is_external_root_ref(ref):
+                    if self.model_resolver.is_external_root_ref(ref):
                         relative_path, object_path = ref[:-1], ''
                     else:
-                        relative_path, object_path = ref, ''
+                        relative_path, object_path = ref.split('#')
 
                     models = self._get_ref_body(relative_path)
                     model_name = self.model_resolver.add_ref(obj.ref).name
-                    if obj.ref_type == JSONReference.REMOTE:
-                        previous_base_path: Optional[Path] = self.base_path
-                        self.base_path = (self.base_path / relative_path).parent
+
+                    if is_url(ref):
+                        relative_path, object_path = ref.split('#')
+                        relative_paths = [relative_path]
                     else:
-                        previous_base_path = None
-                    relative_paths = relative_path.split('/')
+                        if self.model_resolver.is_external_root_ref(ref):
+                            relative_path, object_path = ref[:-1], ''
+                        else:
+                            relative_path, object_path = ref.split('#')
+                        relative_paths = relative_path.split('/')
                     self._parse_file(
                         models,
                         model_name,
                         relative_paths,
                         object_path.split('/') if object_path else None,
                     )
-                    if previous_base_path:
-                        self.base_path = previous_base_path
                     self.model_resolver.add_ref(
-                        ref, actual_module_name=''
+                        obj.ref, actual_module_name=''
                     ).loaded = True
 
         if obj.items:
@@ -1036,7 +1035,8 @@ class JsonSchemaParser(Parser):
         previous_root_id: Optional[str] = self.root_id
         if root_id:
             try:
-                self._get_ref_body(root_id)
+                resolved_ref = self.model_resolver.resolve_ref(root_id)
+                self._get_ref_body(resolved_ref)
             except Exception as e:
                 print(f'Parse $id failed. $id={root_id}\n {str(e)}', file=sys.stderr)
                 self.root_id = None
@@ -1102,14 +1102,7 @@ class JsonSchemaParser(Parser):
 
             with self.model_resolver.current_root_context(path_parts):
                 for reserved_ref in sorted(reserved_refs):
-                    if self.model_resolver.add_ref(reserved_ref).loaded:
-                        continue
-                    file_path, model_path = reserved_ref.split('#', 1)
-                    valid_path_parts = [p for p in model_path.split('/') if p]
-                    if (
-                        len(valid_path_parts) == 1
-                        and self.model_resolver.add_ref(f'{file_path}#').loaded
-                    ):
+                    if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
                     # for root model
                     self.raw_obj = load_yaml(source.text)
@@ -1140,13 +1133,11 @@ class JsonSchemaParser(Parser):
         path_parts: List[str],
         object_paths: Optional[List[str]] = None,
     ) -> None:
+        object_paths = [o for o in object_paths or [] if o]
         if object_paths:
             path = [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
         else:
             path = path_parts
-        reference = self.model_resolver.get(path)
-        if reference and reference.loaded:
-            return
         with self.model_resolver.current_root_context(path_parts):
             obj_name = self.model_resolver.add(path, obj_name, unique=False).name
             with self.root_id_context(raw):

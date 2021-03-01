@@ -15,16 +15,15 @@ class Fur(Enum):
     Long_hair = 'Long hair'
 
 
-class Friend(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    name: str = Field(..., example='John Doe')
-    phone_number: Optional[str] = Field(None, example='(555) 555-1234')
+class Noodle(Enum):
+    ramen = 'ramen'
+    spaghetti = 'spaghetti'
 
 
-class Friends(BaseModel):
-    __root__: List[Friend] = Field(..., title='Friends')
+class Soup(Enum):
+    bean = 'bean'
+    mushroom = 'mushroom'
+    tomato = 'tomato'
 
 
 class Coffee(Enum):
@@ -43,6 +42,19 @@ class Pet(BaseModel):
     fur: Optional[Fur] = None
 
 
+class Friend(BaseModel):
+    class Config:
+        extra = Extra.allow
+
+    name: str = Field(..., example='John Doe')
+    phone_number: Optional[str] = Field(None, example='(555) 555-1234')
+    food: Optional[List[Union[Noodle, Soup]]] = None
+
+
+class Friends(BaseModel):
+    __root__: List[Friend] = Field(..., title='Friends')
+
+
 class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
@@ -51,3 +63,4 @@ class Person(BaseModel):
     friends: Optional[Friends] = None
     comment: Optional[Any] = None
     drink: Optional[List[Union[Coffee, Tea]]] = None
+    food: Optional[List[Union[Noodle, Soup]]] = None

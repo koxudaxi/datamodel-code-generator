@@ -4,9 +4,11 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Extra, Field
+
+from . import food
 
 
 class Friend(BaseModel):
@@ -15,6 +17,7 @@ class Friend(BaseModel):
 
     name: str = Field(..., example='John Doe')
     phone_number: Optional[str] = Field(None, example='(555) 555-1234')
+    food: Optional[List[Union[food.Noodle, food.Soup]]] = None
 
 
 class Friends(BaseModel):

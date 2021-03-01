@@ -66,7 +66,7 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
 def test_json_schema_object_ref_url_json(mocker):
     parser = JsonSchemaParser('')
     obj = JsonSchemaObject.parse_obj(
-        {'$ref': 'https://example.org/person.schema.json#/definitions/User'}
+        {'$ref': 'https://example.com/person.schema.json#/definitions/User'}
     )
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = json.dumps(
@@ -87,10 +87,7 @@ def test_json_schema_object_ref_url_json(mocker):
     )
     parser.parse_ref(obj, ['Model'])
     mock_get.assert_has_calls(
-        [
-            call('https://example.org/person.schema.json'),
-            call('https://example.com/person.schema.json'),
-        ]
+        [call('https://example.com/person.schema.json'),]
     )
 
 

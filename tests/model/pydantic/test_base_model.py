@@ -2,13 +2,20 @@ import pytest
 
 from datamodel_code_generator import DataTypeManager
 from datamodel_code_generator.model.pydantic.base_model import BaseModel, DataModelField
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
 def test_base_model():
     field = DataModelField(name='a', data_type=DataType(type='str'), required=True)
 
-    base_model = BaseModel(name='test_model', fields=[field])
+    base_model = BaseModel(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
@@ -21,7 +28,13 @@ def test_base_model_optional():
         name='a', data_type=DataType(type='str'), default='abc', required=False
     )
 
-    base_model = BaseModel(name='test_model', fields=[field])
+    base_model = BaseModel(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
@@ -41,7 +54,13 @@ def test_base_model_nullable_required():
         nullable=True,
     )
 
-    base_model = BaseModel(name='test_model', fields=[field])
+    base_model = BaseModel(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
@@ -61,7 +80,13 @@ def test_base_model_strict_non_nullable_required():
         nullable=False,
     )
 
-    base_model = BaseModel(name='test_model', fields=[field])
+    base_model = BaseModel(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
@@ -78,7 +103,10 @@ def test_base_model_decorator():
         name='test_model',
         fields=[field],
         decorators=['@validate'],
-        base_classes=['Base'],
+        base_classes=[Reference(name='Base', original_name='Base', path='Base')],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
     )
 
     assert base_model.name == 'test_model'
@@ -99,7 +127,13 @@ def test_base_model_get_data_type():
 def test_base_model_reserved_name():
     field = DataModelField(name='except', data_type=DataType(type='str'), required=True)
 
-    base_model = BaseModel(name='test_model', fields=[field])
+    base_model = BaseModel(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
@@ -114,7 +148,13 @@ def test_base_model_reserved_name():
         name='def', data_type=DataType(type='str'), required=True, alias='def-field'
     )
 
-    base_model = BaseModel(name='test_model', fields=[field])
+    base_model = BaseModel(
+        name='test_model',
+        fields=[field],
+        reference=Reference(
+            name='test_model', original_name='test_model', path='test_model'
+        ),
+    )
 
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]

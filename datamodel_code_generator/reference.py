@@ -9,10 +9,10 @@ from typing import (
     DefaultDict,
     Dict,
     Generator,
-    List,
     Mapping,
     Optional,
     Pattern,
+    Sequence,
     Set,
     Tuple,
     Union,
@@ -36,7 +36,7 @@ class Reference(BaseModel):
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
 
-    @cached_property
+    @property
     def module_name(self) -> Optional[str]:
         if is_url(self.path):  # pragma: no cover
             return None
@@ -51,6 +51,10 @@ class Reference(BaseModel):
             return None
         return module_name
 
+    @property
+    def short_name(self) -> str:
+        return self.name.rsplit('.', 1)[-1]
+
 
 ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 
@@ -59,23 +63,25 @@ class ModelResolver:
     def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
-        self._current_root: List[str] = []
+        self._current_root: Sequence[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
         self.after_load_files: Set[str] = set()
 
     @property
-    def current_root(self) -> List[str]:
+    def current_root(self) -> Sequence[str]:
+        if len(self._current_root) > 1:
+            return self._current_root
         return self._current_root
 
-    def set_current_root(self, current_root: List[str]) -> None:
+    def set_current_root(self, current_root: Sequence[str]) -> None:
         self._current_root = current_root
 
     @contextmanager
     def current_root_context(
-        self, current_root: List[str]
+        self, current_root: Sequence[str]
     ) -> Generator[None, None, None]:
-        previous_root_path: List[str] = self.current_root
+        previous_root_path: Sequence[str] = self.current_root
         self.set_current_root(current_root)
         yield
         self.set_current_root(previous_root_path)
@@ -87,60 +93,82 @@ class ModelResolver:
     def set_root_id_base_path(self, root_id_base_path: Optional[str]) -> None:
         self._root_id_base_path = root_id_base_path
 
-    def add_id(self, id_: str, path: List[str]) -> None:
-        self.ids['/'.join(self.current_root)][id_] = self._get_path(path)
+    def add_id(self, id_: str, path: Sequence[str]) -> None:
+        self.ids['/'.join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def _get_path(self, path: List[str]) -> str:
-        joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+    def resolve_ref(self, path: Union[Sequence[str], str]) -> str:
+        if isinstance(path, str):
+            joined_path = path
+        else:
+            joined_path = self.join_path(path)
         if ID_PATTERN.match(joined_path):
             return self.ids['/'.join(self.current_root)][joined_path]
         elif '#' in joined_path:
             if joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
+            if self.is_remote_ref(joined_path):
+                return f'{"/".join(self.current_root[:-1])}/{joined_path}'
             delimiter = joined_path.index('#')
             return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         elif self.root_id_base_path and self.current_root != path:
             return f'{self.root_id_base_path}/{joined_path}#'
-        return f'{joined_path}#'
+        joined_path = f'{joined_path}#'
+        if self.is_remote_ref(joined_path):
+            return f'{"/".join(self.current_root[:-1])}/{joined_path}'
+        return joined_path
+
+    def is_remote_ref(self, resolved_ref: str) -> bool:
+        return (
+            self.is_external_ref(resolved_ref)
+            and not is_url(resolved_ref)
+            and len(self.current_root) > 1
+        )
 
     def is_after_load(self, ref: str) -> bool:
-        if self.current_root and len(self.current_root) > 1:
-            ref = f"{'/'.join(self.current_root[:-1])}/{ref}"
-        if self.is_external_ref(ref):
-            return ref.split('#/', 1)[0] in self.after_load_files
-        elif self.is_external_root_ref(ref):
+        ref = self.resolve_ref(ref)
+        if self.is_external_root_ref(ref):
             return ref[:-1] in self.after_load_files
-        return False
+        elif self.is_external_ref(ref):
+            return ref.split('#/', 1)[0] in self.after_load_files
+        return False  # pragma: no cover
 
     @staticmethod
     def is_external_ref(ref: str) -> bool:
-        return '#/' in ref
+        return '#' in ref and ref[0] != '#'
 
     @staticmethod
     def is_external_root_ref(ref: str) -> bool:
         return ref[-1] == '#'
 
-    def add_ref(self, ref: str, actual_module_name: Optional[str] = None) -> Reference:
-        path = self._get_path(ref.split('/'))
+    @staticmethod
+    def join_path(path: Sequence[str]) -> str:
+        joined_path = '/'.join(p for p in path if p).replace('/#', '#')
+        if '#' not in joined_path:
+            joined_path += '#'
+        return joined_path
+
+    def add_ref(
+        self, ref: str, actual_module_name: Optional[str] = None, resolved: bool = False
+    ) -> Reference:
+        if not resolved:
+            path = self.resolve_ref(ref)
+        else:
+            path = ref
         reference = self.references.get(path)
         if reference:
             reference.actual_module_name = actual_module_name
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
-            parents = self.root_id_base_path
             original_name = Path(
                 split_ref[0][:-1] if self.is_external_root_ref(ref) else split_ref[0]
             ).stem
         else:
-            parents = split_ref[0]
             original_name = (
                 Path(split_ref[1][:-1]).stem
                 if self.is_external_root_ref(ref)
                 else split_ref[1]
             )
-        if not original_name:
-            original_name = Path(parents).stem  # type: ignore
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
             path=path,
@@ -155,7 +183,7 @@ class ModelResolver:
 
     def add(
         self,
-        path: List[str],
+        path: Sequence[str],
         original_name: Optional[str] = None,
         *,
         class_name: bool = False,
@@ -164,12 +192,17 @@ class ModelResolver:
         singular_name_suffix: str = 'Item',
         loaded: bool = False,
     ) -> Reference:
-        joined_path: str = self._get_path(path)
-        if joined_path in self.references:
-            reference = self.references[joined_path]
+        joined_path = self.join_path(path)
+        reference: Optional[Reference] = self.references.get(joined_path)
+        if reference:
             if loaded and not reference.loaded:
                 reference.loaded = True
-            return reference
+            if (
+                not original_name
+                or original_name == reference.original_name
+                or original_name == reference.name
+            ):
+                return reference
         elif not original_name:
             original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
@@ -179,18 +212,19 @@ class ModelResolver:
             name = self.get_class_name(name, unique)
         elif unique:
             name = self._get_uniq_name(name)
-        reference = Reference(
-            path=joined_path, original_name=original_name, name=name, loaded=loaded
-        )
-        self.references[joined_path] = reference
+        if reference:
+            reference.original_name = original_name
+            reference.name = name
+            reference.loaded = loaded
+        else:
+            reference = Reference(
+                path=joined_path, original_name=original_name, name=name, loaded=loaded
+            )
+            self.references[joined_path] = reference
         return reference
 
-    def get(
-        self, path: Union[List[str], str]
-    ) -> Optional[Reference]:  # pragma: no cover
-        if isinstance(path, str):
-            return self.references.get(path)
-        return self.references.get(self._get_path(path))
+    def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
+        return self.references.get(self.resolve_ref(path))
 
     def get_class_name(self, field_name: str, unique: bool = True) -> str:
         if '.' in field_name:

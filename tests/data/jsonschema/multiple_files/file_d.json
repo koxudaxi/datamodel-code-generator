@@ -7,7 +7,7 @@
       "type": "string"
     },
     "modelA": {
-      "$ref": "file_a.json#/ModelA"
+      "$ref": "file_a.json#"
     }
   }
 }

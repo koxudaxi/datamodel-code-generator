@@ -29,7 +29,7 @@ from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
 from ..model.pydantic.imports import IMPORT_FIELD
-from ..reference import ModelResolver
+from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager
 from . import LiteralType
 
@@ -79,13 +79,15 @@ SortedDataModels = Dict[str, DataModel]
 
 MAX_RECURSION_COUNT: int = 100
 
+ModelPath = str
+
 
 def sort_data_models(
     unsorted_data_models: List[DataModel],
     sorted_data_models: Optional[SortedDataModels] = None,
-    require_update_action_models: Optional[List[str]] = None,
+    require_update_action_models: Optional[List[ModelPath]] = None,
     recursion_count: int = MAX_RECURSION_COUNT,
-) -> Tuple[List[DataModel], SortedDataModels, List[str]]:
+) -> Tuple[List[DataModel], SortedDataModels, List[ModelPath]]:
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
     if require_update_action_models is None:
@@ -94,18 +96,18 @@ def sort_data_models(
     unresolved_references: List[DataModel] = []
     for model in unsorted_data_models:
         if not model.reference_classes:
-            sorted_data_models[model.name] = model
+            sorted_data_models[model.path] = model
         elif (
-            model.name in model.reference_classes and len(model.reference_classes) == 1
+            model.path in model.reference_classes and len(model.reference_classes) == 1
         ):  # only self-referencing
-            sorted_data_models[model.name] = model
-            require_update_action_models.append(model.name)
+            sorted_data_models[model.path] = model
+            require_update_action_models.append(model.path)
         elif (
-            not model.reference_classes - {model.name} - set(sorted_data_models)
+            not model.reference_classes - {model.path} - set(sorted_data_models)
         ):  # reference classes have been resolved
-            sorted_data_models[model.name] = model
-            if model.name in model.reference_classes:
-                require_update_action_models.append(model.name)
+            sorted_data_models[model.path] = model
+            if model.path in model.reference_classes:
+                require_update_action_models.append(model.path)
         else:
             unresolved_references.append(model)
     if unresolved_references:
@@ -123,12 +125,12 @@ def sort_data_models(
         # sort on base_class dependency
         while True:
             ordered_models: List[Tuple[int, DataModel]] = []
-            unresolved_reference_model_names = [m.name for m in unresolved_references]
+            unresolved_reference_model_names = [m.path for m in unresolved_references]
             for model in unresolved_references:
                 indexes = [
-                    unresolved_reference_model_names.index(b)
+                    unresolved_reference_model_names.index(b.path)
                     for b in model.base_classes
-                    if b in unresolved_reference_model_names
+                    if b.path in unresolved_reference_model_names
                 ]
                 if indexes:
                     ordered_models.append((min(indexes), model,))
@@ -145,14 +147,14 @@ def sort_data_models(
         unsorted_data_model_names = set(unresolved_reference_model_names)
         for model in unresolved_references:
             unresolved_model = (
-                model.reference_classes - {model.name} - set(sorted_data_models)
+                model.reference_classes - {model.path} - set(sorted_data_models)
             )
             if not unresolved_model:
-                sorted_data_models[model.name] = model
+                sorted_data_models[model.path] = model
                 continue
             if not unresolved_model - unsorted_data_model_names:
-                sorted_data_models[model.name] = model
-                require_update_action_models.append(model.name)
+                sorted_data_models[model.path] = model
+                require_update_action_models.append(model.path)
                 continue
             # unresolved
             unresolved_classes = ', '.join(
@@ -385,89 +387,77 @@ class Parser(ABC):
 
             result: List[str] = []
             imports = Imports()
-            models_to_update: List[str] = []
+            models_to_update: List[DataModel] = []
             scoped_model_resolver = ModelResolver()
             import_map: Dict[str, Tuple[str, str]] = {}
-            model_names: Set[str] = {m.name for m in models}
-            processed_models: Set[str] = set()
-            model_cache: Dict[Tuple[str, ...], DataModel] = {}
-            duplicated_models: Dict[str, DataModel] = {}
+            model_paths: Set[str] = {m.path for m in models}
+            model_cache: Dict[Tuple[str, ...], Reference] = {}
+            duplicated_models: Dict[str, Reference] = {}
+
+            # Remove duplicated name model
+            unique_models: OrderedDict[str, DataModel] = OrderedDict()
+            for model in models:
+                if model.name not in unique_models:
+                    unique_models[model.name] = model
+            models = list(unique_models.values())
+
             for model in models:
                 alias_map: Dict[str, Optional[str]] = {}
-                if model.name in require_update_action_models:
-                    ref_names = {
-                        d.reference.name for d in model.all_data_types if d.reference
-                    }
-                    if model.name in ref_names or (
-                        not ref_names - model_names and ref_names - processed_models
-                    ):
-                        models_to_update += [model.name]
-                        processed_models.add(model.name)
+                if model.path in require_update_action_models:
+                    models_to_update.append(model)
                 imports.append(model.imports)
                 model.reference_classes = {
-                    r for r in model.reference_classes if r not in model_names
+                    r for r in model.reference_classes if r not in model_paths
                 }
                 for data_type in model.all_data_types:
                     # To change from/import
 
-                    if not data_type.reference:
+                    if not data_type.reference or data_type.reference.source in models:
                         # No need to import non-reference model.
+                        # Or, Referenced model is in the same file. we don't need to import the model
                         continue
 
-                    if data_type.reference.source in models:
-                        # Referenced model is in the same file. we don't need to import the model
-                        data_type.alias = data_type.name
-                        continue
                     elif (
                         isinstance(self.source, Path)
                         and self.source.is_file()
                         and self.source.name == data_type.reference.path.split('#/')[0]
                     ):
-                        full_name = data_type.type
+                        # The input file is no need to import
+                        full_name = data_type.reference.name
                     else:
-                        full_name = data_type.full_name
-                    from_, import_ = relative(module_path, full_name)  # type: ignore
-                    name = data_type.name
-                    full_path = f'{from_}/{import_}'
-                    if full_path in alias_map:
-                        alias = alias_map[full_path] or import_
-                    else:
-                        alias = scoped_model_resolver.add(
-                            full_path.split('/'), import_, unique=True
-                        ).name
-                        alias_map[full_path] = None if alias == import_ else alias
-                    new_name = (
+                        full_name = data_type.full_name or data_type.reference.name
+                    from_, import_ = full_path = relative(module_path, full_name)
+
+                    alias = scoped_model_resolver.add(
+                        full_path, import_, unique=True
+                    ).name
+                    if alias != import_:
+                        alias_map[data_type.reference.path] = alias
+
+                    name = data_type.reference.short_name
+                    data_type.alias = (
                         f'{alias}.{name}'
                         if (from_ and import_ and alias != name)
                         else name
                     )
-                    if name in model.reference_classes:
-                        model.reference_classes.remove(name)
-                        model.reference_classes.add(new_name)
-                    data_type.alias = new_name
 
                     if (
                         full_name
                         and full_name.startswith(from_)
                         or f'.{full_name}'.startswith(from_)
                     ):
-                        import_map[new_name] = (
-                            f'.{full_name[:len(new_name) * - 1 - 1]}',  # type: ignore
-                            new_name.split('.')[0],
-                        )
-
-                for ref_name in model.reference_classes:
-                    if ref_name in import_map:
-                        from_, import_ = import_map[ref_name]
+                        import_map[data_type.reference.path] = full_path
+                for ref_path in model.reference_classes:
+                    ref_name = self.model_resolver.get(ref_path).name  # type: ignore
+                    if ref_path in import_map:
+                        from_, import_ = import_map[ref_path]
                     else:
                         from_, import_ = relative(module_path, ref_name)
                     if init:
                         from_ += "."
                     imports.append(
                         Import(
-                            from_=from_,
-                            import_=import_,
-                            alias=alias_map.get(f'{from_}/{import_}'),
+                            from_=from_, import_=import_, alias=alias_map.get(ref_path),
                         )
                     )
 
@@ -480,32 +470,41 @@ class Parser(ABC):
                             model.fields,
                         )
                     )
-                    cached_model = model_cache.get(model_key)
-                    if cached_model:
+                    cached_model_reference = model_cache.get(model_key)
+                    if cached_model_reference:
                         if isinstance(model, Enum):
-                            duplicated_models[model.name] = cached_model
+                            duplicated_models[
+                                model.reference.path
+                            ] = cached_model_reference
                         else:
                             index = models.index(model)
                             inherited_model = model.__class__(
                                 name=model.name,
                                 fields=[],
-                                base_classes=[cached_model.name],
+                                base_classes=[cached_model_reference],
                                 description=model.description,
+                                reference=Reference(
+                                    name=model.name,
+                                    original_name=model.name,
+                                    path=model.reference.path + '/reuse',
+                                ),
                             )
                             models.insert(index, inherited_model)
                             models.remove(model)
 
                     else:
-                        model_cache[model_key] = model
+                        model_cache[model_key] = model.reference
 
             if self.reuse_model:
                 for model in models:
                     for data_type in model.all_data_types:  # pragma: no cover
-                        if data_type.type:
-                            duplicated_model = duplicated_models.get(data_type.type)
-                            if duplicated_model:
-                                data_type.alias = duplicated_model.name
-                                data_type.reference = duplicated_model.reference
+                        if data_type.reference:
+                            duplicated_model_reference = duplicated_models.get(
+                                data_type.reference.path
+                            )
+                            if duplicated_model_reference:
+                                data_type.alias = duplicated_model_reference.name
+                                data_type.reference = duplicated_model_reference
             if self.set_default_enum_member:
                 for model in models:  # pragma: no cover
                     for model_field in model.fields:
@@ -525,13 +524,18 @@ class Parser(ABC):
             result += [code]
 
             if self.dump_resolve_reference_action is not None:
-                result += ['\n', self.dump_resolve_reference_action(models_to_update)]
+                result += [
+                    '\n',
+                    self.dump_resolve_reference_action(
+                        [m.name for m in models_to_update]
+                    ),
+                ]
 
             body = '\n'.join(result)
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            results[module] = Result(body=body, source=models[0].path)
+            results[module] = Result(body=body, source=models[0].file_path)
 
         # retain existing behaviour
         if [*results] == [('__init__.py',)]:
