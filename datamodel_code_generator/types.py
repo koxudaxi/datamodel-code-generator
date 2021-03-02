@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type
-
-from pydantic import BaseModel
+from typing import Any, ClassVar, Dict, Iterator, List, Optional, Set, Tuple, Type
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -17,10 +15,10 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.reference import Reference, _BaseModel
 
 
-class DataType(BaseModel):
+class DataType(_BaseModel):
     type: Optional[str]
     reference: Optional[Reference]
     data_types: List['DataType'] = []
@@ -36,12 +34,30 @@ class DataType(BaseModel):
     use_standard_collections: bool = False
     use_generic_container: bool = False
     alias: Optional[str] = None
+    parent: Optional[Any] = None
+    children: List[Any] = []
+
+    _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
+    _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
+
+    def replace_reference(self, reference: Reference) -> None:
+        if not self.reference:  # pragma: no cover
+            raise Exception(
+                f'`{self.__class__.__name__}.replace_reference()` can\'t be called'
+                f' when `reference` field is empty.'
+            )
+
+        self.unresolved_types.remove(self.reference.path)
+        self.reference.children.remove(self)
+        self.reference = reference
+        self.unresolved_types.add(reference.path)
+        reference.children.append(self)
 
     @classmethod
     def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
-        data_type = cls(is_list=is_list)
-        data_type.reference = reference
+        data_type = cls(is_list=is_list, reference=reference)
         data_type.unresolved_types.add(reference.path)
+        reference.children.append(data_type)
         return data_type
 
     @classmethod
@@ -65,8 +81,9 @@ class DataType(BaseModel):
             yield from data_type.all_data_types
         yield self
 
-    def __init__(self, **values: Any) -> None:  # type: ignore
-        super().__init__(**values)
+    def __init__(self, **values: Any) -> None:
+        super().__init__(**values)  # type: ignore
+
         for type_ in self.data_types:
             if type_.type == 'Any' and type_.is_optional:
                 if any(
@@ -110,6 +127,7 @@ class DataType(BaseModel):
         for data_type in self.data_types:
             self.imports_.extend(data_type.imports_)
             self.unresolved_types.update(data_type.unresolved_types)
+            data_type.parent = self
 
     @property
     def type_hint(self) -> str:

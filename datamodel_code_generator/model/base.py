@@ -5,14 +5,24 @@ from collections import defaultdict
 from functools import lru_cache
 from itertools import chain
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Iterator, List, Optional, Set, Tuple
+from typing import (
+    Any,
+    ClassVar,
+    DefaultDict,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
-from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import DataType
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
@@ -26,7 +36,7 @@ class ConstraintsBase(BaseModel):
     ...
 
 
-class DataModelFieldBase(BaseModel):
+class DataModelFieldBase(_BaseModel):
     name: Optional[str]
     default: Optional[Any]
     required: bool = False
@@ -39,6 +49,15 @@ class DataModelFieldBase(BaseModel):
     constraints: Any = None
     strip_default_none: bool = False
     nullable: Optional[bool] = None
+    parent: Optional[Any] = None
+
+    _exclude_fields: ClassVar[Set[str]] = {'parent'}
+    _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
+
+    def __init__(self, **data: Any):  # type: ignore
+        super().__init__(**data)  # type: ignore
+        if isinstance(self.data_type, DataType) and self.data_type.reference:
+            self.data_type.parent = self
 
     @property
     def type_hint(self) -> str:
@@ -185,6 +204,9 @@ class DataModel(TemplateBase, ABC):
         self.methods: List[str] = methods or []
 
         self.description = description
+        for field in self.fields:
+            field.parent = self
+
         super().__init__(template_file_path=template_file_path)
 
     @property

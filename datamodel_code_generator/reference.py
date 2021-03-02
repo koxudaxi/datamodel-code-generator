@@ -5,10 +5,13 @@ from functools import lru_cache
 from keyword import iskeyword
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
+    ClassVar,
     DefaultDict,
     Dict,
     Generator,
+    List,
     Mapping,
     Optional,
     Pattern,
@@ -23,14 +26,51 @@ from pydantic import BaseModel, validator
 
 from datamodel_code_generator import cached_property
 
+if TYPE_CHECKING:
+    from pydantic.typing import AbstractSetIntStr, DictStrAny, MappingIntStrAny
 
-class Reference(BaseModel):
+
+class _BaseModel(BaseModel):
+    _exclude_fields: ClassVar[Set[str]] = set()
+    _pass_fields: ClassVar[Set[str]] = set()
+
+    def __init__(self, **values: Any) -> None:  # type: ignore
+        super().__init__(**values)
+        for pass_field_name in self._pass_fields:
+            if pass_field_name in values:
+                setattr(self, pass_field_name, values[pass_field_name])
+
+    def dict(
+        self,
+        *,
+        include: Union['AbstractSetIntStr', 'MappingIntStrAny'] = None,
+        exclude: Union['AbstractSetIntStr', 'MappingIntStrAny'] = None,
+        by_alias: bool = False,
+        skip_defaults: bool = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+    ) -> 'DictStrAny':
+        return super().dict(
+            include=include,
+            exclude=set(exclude or ()) | self._exclude_fields,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+
+
+class Reference(_BaseModel):
     path: str
     original_name: str = ''
     name: str
     loaded: bool = True
     actual_module_name: Optional[str]
     source: Optional[Any] = None
+    children: List[Any] = []
+    _exclude_fields: ClassVar = {'children'}
 
     @validator('original_name')
     def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:

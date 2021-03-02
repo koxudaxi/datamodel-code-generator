@@ -191,6 +191,13 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
+def get_most_of_parent(value: Any) -> Optional[Any]:
+    if not hasattr(value, 'parent'):
+        return value
+    parent = getattr(value, 'parent')
+    return get_most_of_parent(parent)
+
+
 class Result(BaseModel):
     body: str
     source: Optional[Path]
@@ -390,15 +397,15 @@ class Parser(ABC):
             model_paths: Set[str] = {m.path for m in models}
             model_cache: Dict[Tuple[str, ...], Reference] = {}
             duplicated_models: Dict[str, Reference] = {}
-
-            # Remove duplicated name model
-            unique_models: OrderedDict[str, DataModel] = OrderedDict()
-            for model in models:
-                if model.name not in unique_models:
-                    unique_models[model.name] = model
-            models = list(unique_models.values())
+            unique_model_names: Set[str] = set()
 
             for model in models:
+                if model.name in unique_model_names:
+                    # Remove duplicated name model
+                    models.remove(model)
+                    continue
+                unique_model_names.add(model.name)
+
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.path in require_update_action_models:
                     models_to_update.append(model)
@@ -469,9 +476,14 @@ class Parser(ABC):
                     cached_model_reference = model_cache.get(model_key)
                     if cached_model_reference:
                         if isinstance(model, Enum):
-                            duplicated_models[
-                                model.reference.path
-                            ] = cached_model_reference
+                            for child in model.reference.children:
+                                if isinstance(child, DataType):  # pragma: no cover
+                                    # child is resolved data_type by reference
+                                    data_model = get_most_of_parent(child)
+
+                                    # TODO: replace reference in all modules
+                                    if data_model in models:  # pragma: no cover
+                                        child.replace_reference(cached_model_reference)
                         else:
                             index = models.index(model)
                             inherited_model = model.__class__(
@@ -489,16 +501,6 @@ class Parser(ABC):
                     else:
                         model_cache[model_key] = model.reference
 
-            if self.reuse_model:
-                for model in models:
-                    for data_type in model.all_data_types:  # pragma: no cover
-                        if data_type.reference:
-                            duplicated_model_reference = duplicated_models.get(
-                                data_type.reference.path
-                            )
-                            if duplicated_model_reference:
-                                data_type.alias = duplicated_model_reference.name
-                                data_type.reference = duplicated_model_reference
             if self.set_default_enum_member:
                 for model in models:  # pragma: no cover
                     for model_field in model.fields:
