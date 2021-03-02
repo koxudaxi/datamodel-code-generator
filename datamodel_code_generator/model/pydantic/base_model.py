@@ -1,6 +1,7 @@
 from collections import ChainMap
+from itertools import chain
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
 
 from pydantic import Field
 
@@ -79,16 +80,14 @@ class BaseModel(DataModel):
 
     def __init__(
         self,
-        name: str,
-        fields: List[DataModelField],
+        *,
         reference: Reference,
+        fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        auto_import: bool = True,
-        imports: Optional[List[Import]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
     ):
@@ -96,7 +95,6 @@ class BaseModel(DataModel):
         methods: List[str] = [field.method for field in fields if field.method]
 
         super().__init__(
-            name=name,
             fields=fields,  # type: ignore
             reference=reference,
             decorators=decorators,
@@ -104,8 +102,6 @@ class BaseModel(DataModel):
             custom_base_class=custom_base_class,
             custom_template_dir=custom_template_dir,
             extra_template_data=extra_template_data,
-            auto_import=auto_import,
-            imports=imports,
             methods=methods,
             path=path,
             description=description,
@@ -115,7 +111,7 @@ class BaseModel(DataModel):
 
         if 'additionalProperties' in self.extra_template_data:
             config_parameters['extra'] = 'Extra.allow'
-            self.imports.append(IMPORT_EXTRA)
+            self._additional_imports.append(IMPORT_EXTRA)
 
         for config_attribute in 'allow_population_by_field_name', 'allow_mutation':
             if config_attribute in self.extra_template_data:
@@ -128,6 +124,8 @@ class BaseModel(DataModel):
 
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 
-        for field in fields:
-            if field.field:
-                self.imports.append(IMPORT_FIELD)
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        if any(f for f in self.fields if f.field):
+            return tuple(chain(super().imports, (IMPORT_FIELD,)))
+        return super().imports

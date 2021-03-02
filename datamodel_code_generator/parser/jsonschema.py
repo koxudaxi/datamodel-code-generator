@@ -426,13 +426,10 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(
             path, name, class_name=True, unique=True, loaded=True
         )
-        class_name = reference.name
-        self.set_additional_properties(class_name, obj)
+        self.set_additional_properties(reference.name, obj)
         data_model_type = self.data_model_type(
-            class_name,
             fields=fields,
             base_classes=base_classes,
-            auto_import=False,
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
@@ -440,9 +437,6 @@ class JsonSchemaParser(Parser):
             description=obj.description if self.use_schema_description else None,
             reference=reference,
         )
-        # add imports for the fields
-        for f in fields:
-            data_model_type.imports.extend(f.imports)
         self.append_result(data_model_type)
 
         return self.data_type.from_reference(reference)
@@ -625,7 +619,6 @@ class JsonSchemaParser(Parser):
         self.set_title(class_name, obj)
         self.set_additional_properties(class_name, additional_properties or obj)
         data_model_type = self.data_model_type(
-            class_name,
             fields=self.parse_object_fields(obj, path),
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
@@ -731,14 +724,13 @@ class JsonSchemaParser(Parser):
         field = self.parse_array_fields(name, obj, [*path, name])
         reference = self.model_resolver.add(path, name, loaded=True)
         data_model_root = self.data_model_root_type(
-            name,
-            [field],
+            reference=reference,
+            fields=[field],
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
-            reference=reference,
         )
         self.append_result(data_model_root)
         return self.data_type.from_reference(reference)
@@ -770,8 +762,8 @@ class JsonSchemaParser(Parser):
         self.set_title(name, obj)
         self.set_additional_properties(name, additional_properties or obj)
         data_model_root_type = self.data_model_root_type(
-            name,
-            [
+            reference=reference,
+            fields=[
                 self.data_model_field_type(
                     data_type=data_type,
                     description=obj.description,
@@ -787,7 +779,6 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
-            reference=reference,
         )
         self.append_result(data_model_root_type)
         return self.data_type.from_reference(reference)
@@ -851,7 +842,6 @@ class JsonSchemaParser(Parser):
                 loaded=True,
             )
             enum = Enum(
-                reference.name,
                 fields=enum_fields,
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
@@ -879,7 +869,6 @@ class JsonSchemaParser(Parser):
             loaded=True,
         )
         enum = Enum(
-            enum_reference.name,
             fields=enum_fields,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
@@ -887,8 +876,8 @@ class JsonSchemaParser(Parser):
         )
         self.append_result(enum)
         data_model_root_type = self.data_model_root_type(
-            name,
-            [
+            reference=root_reference,
+            fields=[
                 self.data_model_field_type(
                     data_type=self.data_type.from_reference(enum_reference),
                     description=obj.description,
@@ -903,7 +892,6 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
-            reference=root_reference,
         )
         self.append_result(data_model_root_type)
         return self.data_type.from_reference(root_reference)

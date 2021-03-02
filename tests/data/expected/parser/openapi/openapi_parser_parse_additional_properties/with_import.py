@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Extra
-from typing import Dict, List, Optional
 from __future__ import annotations
+from typing import Dict, List, Optional
+from pydantic import BaseModel, Extra
 
 
 class Pet(BaseModel):

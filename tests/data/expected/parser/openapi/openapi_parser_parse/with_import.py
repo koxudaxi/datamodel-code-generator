@@ -1,6 +1,6 @@
-from pydantic import AnyUrl, BaseModel
-from typing import List, Optional
 from __future__ import annotations
+from typing import List, Optional
+from pydantic import AnyUrl, BaseModel
 
 
 class Pet(BaseModel):

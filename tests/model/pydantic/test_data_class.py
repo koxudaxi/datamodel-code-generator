@@ -9,11 +9,7 @@ def test_data_class():
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
 
     data_class = DataClass(
-        name='test_model',
-        fields=[field],
-        reference=Reference(
-            name='test_model', original_name='test_model', path='test_model'
-        ),
+        fields=[field], reference=Reference(name='test_model', path='test_model'),
     )
 
     assert data_class.name == 'test_model'
@@ -26,12 +22,9 @@ def test_data_class_base_class():
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
 
     data_class = DataClass(
-        name='test_model',
         fields=[field],
         base_classes=[Reference(name='Base', original_name='Base', path='Base')],
-        reference=Reference(
-            name='test_model', original_name='test_model', path='test_model'
-        ),
+        reference=Reference(name='test_model', path='test_model'),
     )
 
     assert data_class.name == 'test_model'
@@ -48,11 +41,7 @@ def test_data_class_optional():
     )
 
     data_class = DataClass(
-        name='test_model',
-        fields=[field],
-        reference=Reference(
-            name='test_model', original_name='test_model', path='test_model'
-        ),
+        fields=[field], reference=Reference(name='test_model', path='test_model'),
     )
 
     assert data_class.name == 'test_model'

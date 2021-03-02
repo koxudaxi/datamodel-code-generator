@@ -28,7 +28,6 @@ from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
-from ..model.pydantic.imports import IMPORT_FIELD
 from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager
 from . import LiteralType
@@ -62,8 +61,6 @@ def snakify_field(field: DataModelFieldBase, model: DataModel) -> None:
     field.name = camel_to_snake(original_name)
     if field.name != original_name:
         field.alias = original_name
-        if IMPORT_FIELD not in model.fields:  # pragma: no cover
-            model.imports.append(IMPORT_FIELD)
 
 
 def set_strip_default_none(field: DataModelFieldBase, _: DataModel) -> None:
@@ -405,10 +402,7 @@ class Parser(ABC):
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.path in require_update_action_models:
                     models_to_update.append(model)
-                imports.append(model.imports)
-                model.reference_classes = {
-                    r for r in model.reference_classes if r not in model_paths
-                }
+                imports.append(list(model.imports))
                 for data_type in model.all_data_types:
                     # To change from/import
 
@@ -448,6 +442,8 @@ class Parser(ABC):
                     ):
                         import_map[data_type.reference.path] = full_path
                 for ref_path in model.reference_classes:
+                    if ref_path in model_paths:
+                        continue
                     ref_name = self.model_resolver.get(ref_path).name  # type: ignore
                     if ref_path in import_map:
                         from_, import_ = import_map[ref_path]
@@ -479,13 +475,11 @@ class Parser(ABC):
                         else:
                             index = models.index(model)
                             inherited_model = model.__class__(
-                                name=model.name,
                                 fields=[],
                                 base_classes=[cached_model_reference],
                                 description=model.description,
                                 reference=Reference(
                                     name=model.name,
-                                    original_name=model.name,
                                     path=model.reference.path + '/reuse',
                                 ),
                             )
@@ -518,7 +512,7 @@ class Parser(ABC):
                                         if enum_member:
                                             model_field.default = enum_member
             if with_import:
-                result += [str(imports), str(self.imports), '\n']
+                result += [str(self.imports), str(imports), '\n']
 
             code = dump_templates(models)
             result += [code]

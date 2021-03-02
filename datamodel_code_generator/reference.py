@@ -19,18 +19,27 @@ from typing import (
 )
 
 import inflect
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from datamodel_code_generator import cached_property
 
 
 class Reference(BaseModel):
     path: str
-    original_name: str
+    original_name: str = ''
     name: str
     loaded: bool = True
     actual_module_name: Optional[str]
     source: Optional[Any] = None
+
+    @validator('original_name')
+    def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:
+        """
+        If original_name is empty then, `original_name` is assigned `name`
+        """
+        if v:
+            return v
+        return values.get('name', v)
 
     class Config:
         arbitrary_types_allowed = True

@@ -3,8 +3,9 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import lru_cache
+from itertools import chain
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Iterator, List, Optional, Set
+from typing import Any, DefaultDict, Dict, Iterator, List, Optional, Set, Tuple
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
@@ -130,16 +131,14 @@ class DataModel(TemplateBase, ABC):
 
     def __init__(
         self,
-        name: str,
-        fields: List[DataModelFieldBase],
+        *,
         reference: Reference,
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        imports: Optional[List[Import]] = None,
-        auto_import: bool = True,
         methods: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
@@ -153,67 +152,79 @@ class DataModel(TemplateBase, ABC):
             if custom_template_file_path.exists():
                 template_file_path = custom_template_file_path
 
-        self.name: str = name
         self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
-        self.imports: List[Import] = imports or []
-        self.base_class: Optional[str] = None
-        base_classes = [base_class for base_class in base_classes or [] if base_class]
-        self.base_classes: List[Reference] = base_classes
+        self._additional_imports: List[Import] = []
+        self.base_classes: List[Reference] = [
+            base_class for base_class in base_classes or [] if base_class
+        ]
+        self.custom_base_class = custom_base_class
         self.file_path: Optional[Path] = path
         self.reference: Reference = reference
 
         self.reference.source = self
-
-        self.reference_classes: Set[str] = {
-            r.path for r in base_classes if r.name != self.BASE_CLASS
-        } if base_classes else set()
-
-        if self.base_classes:
-            self.base_class = ', '.join(b.name for b in self.base_classes)
-        else:
-            base_class_full_path = custom_base_class or self.BASE_CLASS
-            if auto_import:
-                if base_class_full_path:
-                    self.imports.append(Import.from_full_path(base_class_full_path))
-            self.base_class = base_class_full_path.rsplit('.', 1)[-1]
-
-        if '.' in name:
-            module, class_name = name.rsplit('.', 1)
-            prefix = f'{module}.'
-            if self.base_class.startswith(prefix):
-                self.base_class = self.base_class.replace(prefix, '', 1)
-        else:
-            class_name = name
-
-        self.class_name: str = class_name
 
         self.extra_template_data = (
             extra_template_data[self.name]
             if extra_template_data is not None
             else defaultdict(dict)
         )
+
+        if not self.base_classes:
+            base_class_full_path = custom_base_class or self.BASE_CLASS
+            if base_class_full_path:
+                self._additional_imports.append(
+                    Import.from_full_path(base_class_full_path)
+                )
+
         if extra_template_data:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
             if all_model_extra_template_data:
                 self.extra_template_data.update(all_model_extra_template_data)
-
-        unresolved_types: Set[str] = {*()}
-        for field in self.fields:
-            unresolved_types.update(field.unresolved_types)
-
-        self.reference_classes |= unresolved_types
-
-        if auto_import:
-            for field in self.fields:
-                self.imports.extend(field.imports)
 
         self.methods: List[str] = methods or []
 
         self.description = description
         super().__init__(template_file_path=template_file_path)
 
-    @cached_property
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        return tuple(
+            chain((i for f in self.fields for i in f.imports), self._additional_imports)
+        )
+
+    @property
+    def reference_classes(self) -> Set[str]:
+        return {r.path for r in self.base_classes if r.name != self.BASE_CLASS} | {
+            t for f in self.fields for t in f.unresolved_types
+        }
+
+    @property
+    def name(self) -> str:
+        return self.reference.name
+
+    @property
+    def base_class(self) -> str:
+        if self.base_classes:
+            base_class: str = ', '.join(b.name for b in self.base_classes)
+        else:
+            base_class_full_path = self.custom_base_class or self.BASE_CLASS
+            base_class = base_class_full_path.rsplit('.', 1)[-1]
+
+        if '.' in self.name:
+            module, class_name = self.name.rsplit('.', 1)
+            prefix = f'{module}.'
+            if base_class.startswith(prefix):
+                base_class = base_class.replace(prefix, '', 1)
+        return base_class
+
+    @property
+    def class_name(self) -> str:
+        if '.' in self.name:
+            return self.name.rsplit('.', 1)[-1]
+        return self.name
+
+    @property
     def module_path(self) -> List[str]:
         if self.file_path:
             return [

@@ -52,7 +52,6 @@ def test_sort_data_models():
     data_type_c = DataType.from_reference(reference_c)
     reference = [
         BaseModel(
-            name='A',
             fields=[
                 DataModelField(data_type=data_type_a),
                 DataModelFieldBase(data_type=data_type_c),
@@ -60,14 +59,10 @@ def test_sort_data_models():
             reference=reference_a,
         ),
         BaseModel(
-            name='B',
-            fields=[DataModelField(data_type=data_type_b)],
-            reference=reference_b,
+            fields=[DataModelField(data_type=data_type_b)], reference=reference_b,
         ),
         BaseModel(
-            name='C',
-            fields=[DataModelField(data_type=data_type_b)],
-            reference=reference_c,
+            fields=[DataModelField(data_type=data_type_b)], reference=reference_c,
         ),
     ]
 
@@ -96,7 +91,6 @@ def test_sort_data_models_unresolved():
     data_type_z = DataType.from_reference(reference_z)
     reference = [
         BaseModel(
-            name='A',
             fields=[
                 DataModelField(data_type=data_type_a),
                 DataModelFieldBase(data_type=data_type_c),
@@ -104,17 +98,12 @@ def test_sort_data_models_unresolved():
             reference=reference_a,
         ),
         BaseModel(
-            name='B',
-            fields=[DataModelField(data_type=data_type_b)],
-            reference=reference_b,
+            fields=[DataModelField(data_type=data_type_b)], reference=reference_b,
         ),
         BaseModel(
-            name='C',
-            fields=[DataModelField(data_type=data_type_b)],
-            reference=reference_c,
+            fields=[DataModelField(data_type=data_type_b)], reference=reference_c,
         ),
         BaseModel(
-            name='D',
             fields=[
                 DataModelField(data_type=data_type_a),
                 DataModelField(data_type=data_type_c),
@@ -123,9 +112,7 @@ def test_sort_data_models_unresolved():
             reference=reference_d,
         ),
         BaseModel(
-            name='Z',
-            fields=[DataModelField(data_type=data_type_v)],
-            reference=reference_z,
+            fields=[DataModelField(data_type=data_type_v)], reference=reference_z,
         ),
     ]
 
@@ -147,7 +134,6 @@ def test_sort_data_models_unresolved_raise_recursion_error():
     data_type_z = DataType.from_reference(reference_z)
     reference = [
         BaseModel(
-            name='A',
             fields=[
                 DataModelField(data_type=data_type_a),
                 DataModelFieldBase(data_type=data_type_c),
@@ -155,17 +141,12 @@ def test_sort_data_models_unresolved_raise_recursion_error():
             reference=reference_a,
         ),
         BaseModel(
-            name='B',
-            fields=[DataModelField(data_type=data_type_b)],
-            reference=reference_b,
+            fields=[DataModelField(data_type=data_type_b)], reference=reference_b,
         ),
         BaseModel(
-            name='C',
-            fields=[DataModelField(data_type=data_type_b)],
-            reference=reference_c,
+            fields=[DataModelField(data_type=data_type_b)], reference=reference_c,
         ),
         BaseModel(
-            name='D',
             fields=[
                 DataModelField(data_type=data_type_a),
                 DataModelField(data_type=data_type_c),
@@ -174,9 +155,7 @@ def test_sort_data_models_unresolved_raise_recursion_error():
             reference=reference_d,
         ),
         BaseModel(
-            name='Z',
-            fields=[DataModelField(data_type=data_type_v)],
-            reference=reference_z,
+            fields=[DataModelField(data_type=data_type_v)], reference=reference_z,
         ),
     ]
 
@@ -224,10 +203,8 @@ def test_snake_to_upper_camel(word, expected):
 
 
 class D(DataModel):
-    def __init__(
-        self, filename: str, data: str, name: str, fields: List[DataModelFieldBase]
-    ):
-        super().__init__(name, fields)
+    def __init__(self, filename: str, data: str, fields: List[DataModelFieldBase]):
+        super().__init__(fields)
         self._data = data
 
     def render(self) -> str:
