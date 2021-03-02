@@ -1,11 +1,11 @@
+from itertools import chain
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional, Tuple
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType
 
 
 class CustomRootType(DataModel):
@@ -14,21 +14,18 @@ class CustomRootType(DataModel):
 
     def __init__(
         self,
-        name: str,
-        fields: List[DataModelFieldBase],
+        *,
         reference: Reference,
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        imports: Optional[List[Import]] = None,
-        auto_import: bool = True,
         path: Optional[Path] = None,
         description: Optional[str] = None,
     ):
         super().__init__(
-            name,
             fields=fields,
             reference=reference,
             decorators=decorators,
@@ -36,8 +33,6 @@ class CustomRootType(DataModel):
             custom_base_class=custom_base_class,
             custom_template_dir=custom_template_dir,
             extra_template_data=extra_template_data,
-            imports=imports,
-            auto_import=auto_import,
             path=path,
             description=description,
         )
@@ -46,13 +41,15 @@ class CustomRootType(DataModel):
 
         if 'additionalProperties' in self.extra_template_data:
             config_parameters['extra'] = 'Extra.allow'
-            self.imports.append(IMPORT_EXTRA)
+            self._additional_imports.append(IMPORT_EXTRA)
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config
 
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 
-        for field in fields:
-            if field.field:
-                self.imports.append(IMPORT_FIELD)
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        if any(f for f in self.fields if f.field):
+            return tuple(chain(super().imports, (IMPORT_FIELD,)))
+        return super().imports

@@ -71,13 +71,10 @@ def test_data_model():
         dummy_template.close()
         B.TEMPLATE_FILE_PATH = dummy_template.name
         data_model = B(
-            name='test_model',
             fields=[field],
             decorators=['@validate'],
             base_classes=[Reference(path='base', original_name='base', name='Base')],
-            reference=Reference(
-                path='test_model', original_name='test_model', name='test_model'
-            ),
+            reference=Reference(path='test_model', name='test_model'),
         )
 
     assert data_model.name == 'test_model'
@@ -98,7 +95,6 @@ def test_data_model_exception():
     )
     with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
         C(
-            name='abc',
             fields=[field],
             reference=Reference(path='abc', original_name='abc', name='abc'),
         )

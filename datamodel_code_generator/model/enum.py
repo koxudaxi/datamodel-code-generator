@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
-from datamodel_code_generator.imports import IMPORT_ENUM
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
@@ -13,23 +13,21 @@ class Enum(DataModel):
 
     def __init__(
         self,
-        name: str,
-        fields: List[DataModelFieldBase],
+        *,
         reference: Reference,
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
     ):
         super().__init__(
-            name=name,
             fields=fields,
             reference=reference,
             decorators=decorators,
-            auto_import=False,
             path=path,
             description=description,
         )
-        self.imports.append(IMPORT_ENUM)
+        self._additional_imports.append(IMPORT_ENUM)
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
@@ -44,6 +42,10 @@ class Enum(DataModel):
             if field.default == repr_value:
                 return self.get_member(field)
         return None  # pragma: no cover
+
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        return tuple(i for i in super().imports if i != IMPORT_ANY)
 
 
 class Member:
