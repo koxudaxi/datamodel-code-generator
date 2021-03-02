@@ -1,17 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import (
-    Any,
-    ClassVar,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-)
-
+from typing import Any, ClassVar, Dict, Iterator, List, Optional, Set, Tuple, Type
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (

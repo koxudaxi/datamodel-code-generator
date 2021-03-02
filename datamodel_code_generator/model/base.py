@@ -18,7 +18,7 @@ from typing import (
 )
 
 from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, root_validator
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
