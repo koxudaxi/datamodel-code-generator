@@ -242,3 +242,11 @@ components:
           $ref: '#/components/schemas/Id'
         self:
           $ref: '#/components/schemas/nested.foo.Tea'
+    nested.foo.TeaClone:
+      properties:
+        flavour:
+          type: string
+        id:
+          $ref: '#/components/schemas/Id'
+        self:
+          $ref: '#/components/schemas/nested.foo.Tea'

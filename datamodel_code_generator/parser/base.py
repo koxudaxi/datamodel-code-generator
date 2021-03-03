@@ -77,15 +77,13 @@ SortedDataModels = Dict[str, DataModel]
 
 MAX_RECURSION_COUNT: int = 100
 
-ModelPath = str
-
 
 def sort_data_models(
     unsorted_data_models: List[DataModel],
     sorted_data_models: Optional[SortedDataModels] = None,
-    require_update_action_models: Optional[List[ModelPath]] = None,
+    require_update_action_models: Optional[List[str]] = None,
     recursion_count: int = MAX_RECURSION_COUNT,
-) -> Tuple[List[DataModel], SortedDataModels, List[ModelPath]]:
+) -> Tuple[List[DataModel], SortedDataModels, List[str]]:
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
     if require_update_action_models is None:
@@ -492,6 +490,13 @@ class Parser(ABC):
                                     path=model.reference.path + '/reuse',
                                 ),
                             )
+                            if (
+                                cached_model_reference.path
+                                in require_update_action_models
+                            ):
+                                require_update_action_models.append(
+                                    inherited_model.path
+                                )
                             models.insert(index, inherited_model)
                             models.remove(model)
 
