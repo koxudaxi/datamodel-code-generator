@@ -9,6 +9,7 @@ from typing import (
     Callable,
     DefaultDict,
     Dict,
+    Iterable,
     Iterator,
     List,
     Mapping,
@@ -227,7 +228,7 @@ class Parser(ABC):
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
-        dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
+        dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
         snake_case_field: bool = False,
@@ -259,7 +260,7 @@ class Parser(ABC):
         self.target_python_version: PythonVersion = target_python_version
         self.results: List[DataModel] = []
         self.dump_resolve_reference_action: Optional[
-            Callable[[List[str]], str]
+            Callable[[Iterable[str]], str]
         ] = dump_resolve_reference_action
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
@@ -391,12 +392,9 @@ class Parser(ABC):
 
             result: List[str] = []
             imports = Imports()
-            models_to_update: List[DataModel] = []
             scoped_model_resolver = ModelResolver()
             import_map: Dict[str, Tuple[str, str]] = {}
-            model_paths: Set[str] = {m.path for m in models}
             model_cache: Dict[Tuple[str, ...], Reference] = {}
-            duplicated_models: Dict[str, Reference] = {}
             unique_model_names: Set[str] = set()
 
             for model in models:
@@ -407,8 +405,6 @@ class Parser(ABC):
                 unique_model_names.add(model.name)
 
                 alias_map: Dict[str, Optional[str]] = {}
-                if model.path in require_update_action_models:
-                    models_to_update.append(model)
                 imports.append(model.imports)
                 for data_type in model.all_data_types:
                     # To change from/import
@@ -449,13 +445,13 @@ class Parser(ABC):
                     ):
                         import_map[data_type.reference.path] = full_path
                 for ref_path in model.reference_classes:
-                    if ref_path in model_paths:
+                    reference: Reference = self.model_resolver.get(ref_path)  # type: ignore
+                    if reference.source in models:
                         continue
-                    ref_name = self.model_resolver.get(ref_path).name  # type: ignore
-                    if ref_path in import_map:
+                    elif ref_path in import_map:
                         from_, import_ = import_map[ref_path]
                     else:
-                        from_, import_ = relative(module_path, ref_name)
+                        from_, import_ = relative(module_path, reference.name)
                     if init:
                         from_ += "."
                     imports.append(
@@ -504,17 +500,17 @@ class Parser(ABC):
             if self.set_default_enum_member:
                 for model in models:
                     for model_field in model.fields:
-                        if model_field.default:
-                            for data_type in model_field.data_type.all_data_types:
-                                if data_type.reference:
-                                    if isinstance(
-                                        data_type.reference.source, Enum
-                                    ):  # pragma: no cover
-                                        enum_member = data_type.reference.source.find_member(
-                                            model_field.default
-                                        )
-                                        if enum_member:
-                                            model_field.default = enum_member
+                        if not model_field.default:
+                            continue
+                        for data_type in model_field.data_type.all_data_types:
+                            if data_type.reference and isinstance(
+                                data_type.reference.source, Enum
+                            ):  # pragma: no cover
+                                enum_member = data_type.reference.source.find_member(
+                                    model_field.default
+                                )
+                                if enum_member:
+                                    model_field.default = enum_member
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
 
@@ -525,7 +521,7 @@ class Parser(ABC):
                 result += [
                     '\n',
                     self.dump_resolve_reference_action(
-                        [m.name for m in models_to_update]
+                        m.name for m in models if m.path in require_update_action_models
                     ),
                 ]
 

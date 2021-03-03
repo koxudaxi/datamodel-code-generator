@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from pydantic import BaseModel as _BaseModel
 
@@ -8,7 +8,7 @@ from .dataclass import DataClass
 from .types import DataTypeManager
 
 
-def dump_resolve_reference_action(class_names: List[str]) -> str:
+def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
     return '\n'.join(
         f'{class_name}.update_forward_refs()' for class_name in class_names
     )

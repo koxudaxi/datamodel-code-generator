@@ -82,10 +82,6 @@ class DataType(_BaseModel):
         self.reference = reference
         reference.children.append(self)
 
-    @classmethod
-    def create_literal(cls, literals: List[str]) -> 'DataType':
-        return cls(literals=literals)
-
     @property
     def module_name(self) -> Optional[str]:
         return self.reference.module_name if self.reference else None
@@ -105,7 +101,9 @@ class DataType(_BaseModel):
 
     @property
     def all_imports(self) -> Iterator[Import]:
-        return chain((i for d in self.data_types for i in d.all_imports), self.imports)
+        for data_type in self.data_types:
+            yield from data_type.all_imports
+        yield from self.imports
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)  # type: ignore

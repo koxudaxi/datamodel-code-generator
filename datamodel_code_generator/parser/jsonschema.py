@@ -9,6 +9,7 @@ from typing import (
     DefaultDict,
     Dict,
     Generator,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -234,7 +235,7 @@ class JsonSchemaParser(Parser):
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
-        dump_resolve_reference_action: Optional[Callable[[List[str]], str]] = None,
+        dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
         snake_case_field: bool = False,
@@ -511,8 +512,8 @@ class JsonSchemaParser(Parser):
                         if self.should_parse_enum_as_literal(
                             field.additionalProperties
                         ):
-                            additional_properties_type = self.data_type.create_literal(
-                                field.additionalProperties.enum
+                            additional_properties_type = self.data_type(
+                                literals=field.additionalProperties.enum
                             )
                         else:
                             additional_properties_type = self.parse_enum(
@@ -558,9 +559,7 @@ class JsonSchemaParser(Parser):
                     field_type = self.data_type_manager.get_data_type(Types.object)
             elif field.enum:
                 if self.should_parse_enum_as_literal(field):
-                    field_type = self.data_type_manager.data_type.create_literal(
-                        field.enum
-                    )
+                    field_type = self.data_type_manager.data_type(literals=field.enum)
                 else:
                     field_type = self.parse_enum(field_name, field, [*path, field_name])
             else:
@@ -678,7 +677,7 @@ class JsonSchemaParser(Parser):
             elif item.enum:
                 if self.should_parse_enum_as_literal(item):
                     item_obj_data_types.append(
-                        self.data_type_manager.data_type.create_literal(item.enum)
+                        self.data_type_manager.data_type(literals=item.enum)
                     )
                 else:
                     item_obj_data_types.append(
