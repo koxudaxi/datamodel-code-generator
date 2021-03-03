@@ -409,7 +409,7 @@ class Parser(ABC):
                 alias_map: Dict[str, Optional[str]] = {}
                 if model.path in require_update_action_models:
                     models_to_update.append(model)
-                imports.append(list(model.imports))
+                imports.append(model.imports)
                 for data_type in model.all_data_types:
                     # To change from/import
 
