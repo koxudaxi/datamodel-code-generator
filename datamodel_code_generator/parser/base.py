@@ -460,7 +460,8 @@ class Parser(ABC):
                         )
                     )
 
-                if self.reuse_model:
+            if self.reuse_model:
+                for model in models:
                     model_key = tuple(
                         to_hashable(v)
                         for v in (
