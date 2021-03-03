@@ -240,3 +240,5 @@ components:
           type: string
         id:
           $ref: '#/components/schemas/Id'
+        self:
+          $ref: '#/components/schemas/nested.foo.Tea'

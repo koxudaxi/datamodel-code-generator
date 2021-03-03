@@ -522,7 +522,9 @@ class Parser(ABC):
                 result += [
                     '\n',
                     self.dump_resolve_reference_action(
-                        m.name for m in models if m.path in require_update_action_models
+                        m.reference.short_name
+                        for m in models
+                        if m.path in require_update_action_models
                     ),
                 ]
 

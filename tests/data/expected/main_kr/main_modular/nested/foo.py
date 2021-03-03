@@ -14,3 +14,7 @@ from .. import Id
 class Tea(BaseModel):
     flavour: Optional[str] = None
     id: Optional[Id] = None
+    self: Optional[Tea] = None
+
+
+Tea.update_forward_refs()
