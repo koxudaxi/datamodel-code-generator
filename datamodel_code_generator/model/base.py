@@ -80,7 +80,7 @@ class DataModelFieldBase(_BaseModel):
                 return chain_as_tuple(self.data_type.all_imports, (IMPORT_OPTIONAL,))
         elif self.nullable:
             return chain_as_tuple(self.data_type.all_imports, (IMPORT_OPTIONAL,))
-        return self.data_type.all_imports
+        return tuple(self.data_type.all_imports)
 
     @property
     def unresolved_types(self) -> FrozenSet[str]:

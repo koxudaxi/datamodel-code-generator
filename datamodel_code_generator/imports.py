@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import lru_cache
-from typing import DefaultDict, Dict, List, Optional, Set, Union
+from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Union
 
 from pydantic import BaseModel
 
@@ -43,7 +43,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             self.create_line(from_, imports) for from_, imports in self.items()
         )
 
-    def append(self, imports: Union[Import, List[Import], None]) -> None:
+    def append(self, imports: Union[Import, Iterable[Import], None]) -> None:
         if imports:
             if isinstance(imports, Import):
                 imports = [imports]

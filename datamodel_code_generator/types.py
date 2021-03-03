@@ -104,10 +104,8 @@ class DataType(_BaseModel):
         yield self
 
     @property
-    def all_imports(self) -> Tuple[Import, ...]:
-        return chain_as_tuple(
-            (i for d in self.data_types for i in d.all_imports), self.imports
-        )
+    def all_imports(self) -> Iterator[Import]:
+        return chain((i for d in self.data_types for i in d.all_imports), self.imports)
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)  # type: ignore
