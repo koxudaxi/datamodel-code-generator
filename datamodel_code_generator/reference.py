@@ -233,7 +233,7 @@ class ModelResolver:
     def add(
         self,
         path: Sequence[str],
-        original_name: Optional[str] = None,
+        original_name: str,
         *,
         class_name: bool = False,
         singular_name: bool = False,
@@ -252,8 +252,6 @@ class ModelResolver:
                 or original_name == reference.name
             ):
                 return reference
-        elif not original_name:
-            original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
         if singular_name:
             name = get_singular_name(name, singular_name_suffix)
