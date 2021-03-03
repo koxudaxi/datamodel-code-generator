@@ -363,14 +363,14 @@ def test_parse_nested_array():
 )
 def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
     if from_ and import_:
-        imports_: Optional[List[Import]] = [Import(from_=from_, import_=import_)]
+        imports: Optional[List[Import]] = [Import(from_=from_, import_=import_)]
     else:
-        imports_ = []
+        imports = []
 
     parser = JsonSchemaParser('')
     assert parser.get_data_type(
         JsonSchemaObject(type=schema_type, format=schema_format)
-    ) == DataType(type=result_type, imports_=imports_)
+    ) == DataType(type=result_type, imports=imports)
 
 
 @pytest.mark.parametrize(
@@ -382,5 +382,5 @@ def test_get_data_type_array(schema_types, result_types):
     assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == DataType(
         data_types=[DataType(type=r,) for r in result_types],
         is_optional='null' in schema_types,
-        imports_=[IMPORT_OPTIONAL] if 'null' in schema_types else [],
+        imports=[IMPORT_OPTIONAL] if 'null' in schema_types else [],
     )

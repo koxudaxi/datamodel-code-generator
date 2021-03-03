@@ -24,28 +24,28 @@ from datamodel_code_generator.types import DataType, Types
             Types.integer,
             {'maximum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'le': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'le': 10}, imports=[IMPORT_CONINT]
             ),
         ),
         (
             Types.integer,
             {'exclusiveMaximum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'lt': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'lt': 10}, imports=[IMPORT_CONINT]
             ),
         ),
         (
             Types.integer,
             {'minimum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'ge': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'ge': 10}, imports=[IMPORT_CONINT]
             ),
         ),
         (
             Types.integer,
             {'exclusiveMinimum': 10},
             DataType(
-                type='conint', is_func=True, kwargs={'gt': 10}, imports_=[IMPORT_CONINT]
+                type='conint', is_func=True, kwargs={'gt': 10}, imports=[IMPORT_CONINT]
             ),
         ),
         (
@@ -55,18 +55,18 @@ from datamodel_code_generator.types import DataType, Types
                 type='conint',
                 is_func=True,
                 kwargs={'multiple_of': 10},
-                imports_=[IMPORT_CONINT],
+                imports=[IMPORT_CONINT],
             ),
         ),
         (
             Types.integer,
             {'exclusiveMinimum': 0},
-            DataType(type='PositiveInt', imports_=[IMPORT_POSITIVE_INT]),
+            DataType(type='PositiveInt', imports=[IMPORT_POSITIVE_INT]),
         ),
         (
             Types.integer,
             {'exclusiveMaximum': 0},
-            DataType(type='NegativeInt', imports_=[IMPORT_NEGATIVE_INT]),
+            DataType(type='NegativeInt', imports=[IMPORT_NEGATIVE_INT]),
         ),
     ],
 )
@@ -85,7 +85,7 @@ def test_get_data_int_type(types, params, data_type):
                 type='confloat',
                 is_func=True,
                 kwargs={'le': 10},
-                imports_=[IMPORT_CONFLOAT],
+                imports=[IMPORT_CONFLOAT],
             ),
         ),
         (
@@ -95,7 +95,7 @@ def test_get_data_int_type(types, params, data_type):
                 type='confloat',
                 is_func=True,
                 kwargs={'lt': 10.0},
-                imports_=[IMPORT_CONFLOAT],
+                imports=[IMPORT_CONFLOAT],
             ),
         ),
         (
@@ -105,7 +105,7 @@ def test_get_data_int_type(types, params, data_type):
                 type='confloat',
                 is_func=True,
                 kwargs={'ge': 10.0},
-                imports_=[IMPORT_CONFLOAT],
+                imports=[IMPORT_CONFLOAT],
             ),
         ),
         (
@@ -115,7 +115,7 @@ def test_get_data_int_type(types, params, data_type):
                 type='confloat',
                 is_func=True,
                 kwargs={'gt': 10.0},
-                imports_=[IMPORT_CONFLOAT],
+                imports=[IMPORT_CONFLOAT],
             ),
         ),
         (
@@ -125,18 +125,18 @@ def test_get_data_int_type(types, params, data_type):
                 type='confloat',
                 is_func=True,
                 kwargs={'multiple_of': 10.0},
-                imports_=[IMPORT_CONFLOAT],
+                imports=[IMPORT_CONFLOAT],
             ),
         ),
         (
             Types.float,
             {'exclusiveMinimum': 0},
-            DataType(type='PositiveFloat', imports_=[IMPORT_POSITIVE_FLOAT]),
+            DataType(type='PositiveFloat', imports=[IMPORT_POSITIVE_FLOAT]),
         ),
         (
             Types.float,
             {'exclusiveMaximum': 0},
-            DataType(type='NegativeFloat', imports_=[IMPORT_NEGATIVE_FLOAT]),
+            DataType(type='NegativeFloat', imports=[IMPORT_NEGATIVE_FLOAT]),
         ),
     ],
 )
@@ -151,7 +151,7 @@ def test_get_data_float_type(types, params, data_type):
             Types.decimal,
             {},
             DataType(
-                type='Decimal', imports_=[Import(from_='decimal', import_='Decimal')]
+                type='Decimal', imports=[Import(from_='decimal', import_='Decimal')]
             ),
         ),
         (
@@ -161,7 +161,7 @@ def test_get_data_float_type(types, params, data_type):
                 type='condecimal',
                 is_func=True,
                 kwargs={'le': 10},
-                imports_=[IMPORT_CONDECIMAL],
+                imports=[IMPORT_CONDECIMAL],
             ),
         ),
         (
@@ -171,7 +171,7 @@ def test_get_data_float_type(types, params, data_type):
                 type='condecimal',
                 is_func=True,
                 kwargs={'lt': 10},
-                imports_=[IMPORT_CONDECIMAL],
+                imports=[IMPORT_CONDECIMAL],
             ),
         ),
         (
@@ -181,7 +181,7 @@ def test_get_data_float_type(types, params, data_type):
                 type='condecimal',
                 is_func=True,
                 kwargs={'ge': 10},
-                imports_=[IMPORT_CONDECIMAL],
+                imports=[IMPORT_CONDECIMAL],
             ),
         ),
         (
@@ -191,7 +191,7 @@ def test_get_data_float_type(types, params, data_type):
                 type='condecimal',
                 is_func=True,
                 kwargs={'gt': 10},
-                imports_=[IMPORT_CONDECIMAL],
+                imports=[IMPORT_CONDECIMAL],
             ),
         ),
         (
@@ -201,7 +201,7 @@ def test_get_data_float_type(types, params, data_type):
                 type='condecimal',
                 is_func=True,
                 kwargs={'multiple_of': 10},
-                imports_=[IMPORT_CONDECIMAL],
+                imports=[IMPORT_CONDECIMAL],
             ),
         ),
     ],
@@ -221,7 +221,7 @@ def test_get_data_decimal_type(types, params, data_type):
                 type='constr',
                 is_func=True,
                 kwargs={'regex': "r'^abc'"},
-                imports_=[IMPORT_CONSTR],
+                imports=[IMPORT_CONSTR],
             ),
         ),
         (
@@ -231,7 +231,7 @@ def test_get_data_decimal_type(types, params, data_type):
                 type='constr',
                 is_func=True,
                 kwargs={'min_length': 10},
-                imports_=[IMPORT_CONSTR],
+                imports=[IMPORT_CONSTR],
             ),
         ),
         (
@@ -241,7 +241,7 @@ def test_get_data_decimal_type(types, params, data_type):
                 type='constr',
                 is_func=True,
                 kwargs={'max_length': 10},
-                imports_=[IMPORT_CONSTR],
+                imports=[IMPORT_CONSTR],
             ),
         ),
     ],
@@ -261,7 +261,7 @@ def test_get_data_str_type(types, params, data_type):
             Types.decimal,
             {},
             DataType(
-                type='Decimal', imports_=[Import(from_='decimal', import_='Decimal')]
+                type='Decimal', imports=[Import(from_='decimal', import_='Decimal')]
             ),
         ),
     ],
