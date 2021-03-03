@@ -47,7 +47,7 @@ def to_hashable(item: Any) -> Any:
         return tuple(to_hashable(i) for i in item)
     elif isinstance(item, dict):
         return tuple(sorted((k, to_hashable(v),) for k, v in item.items()))
-    elif isinstance(item, set):
+    elif isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)
     elif isinstance(item, BaseModel):
         return to_hashable(item.dict())
@@ -502,12 +502,14 @@ class Parser(ABC):
                         model_cache[model_key] = model.reference
 
             if self.set_default_enum_member:
-                for model in models:  # pragma: no cover
+                for model in models:
                     for model_field in model.fields:
                         if model_field.default:
                             for data_type in model_field.data_type.all_data_types:
                                 if data_type.reference:
-                                    if isinstance(data_type.reference.source, Enum):
+                                    if isinstance(
+                                        data_type.reference.source, Enum
+                                    ):  # pragma: no cover
                                         enum_member = data_type.reference.source.find_member(
                                             model_field.default
                                         )

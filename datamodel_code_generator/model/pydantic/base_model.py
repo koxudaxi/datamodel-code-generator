@@ -1,5 +1,4 @@
 from collections import ChainMap
-from itertools import chain
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
 
@@ -13,6 +12,7 @@ from datamodel_code_generator.model import (
 )
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.types import chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
@@ -127,5 +127,5 @@ class BaseModel(DataModel):
     @property
     def imports(self) -> Tuple[Import, ...]:
         if any(f for f in self.fields if f.field):
-            return tuple(chain(super().imports, (IMPORT_FIELD,)))
+            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports

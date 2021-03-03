@@ -47,9 +47,9 @@ def test_sort_data_models():
     reference_a = Reference(path='A', original_name='A', name='A')
     reference_b = Reference(path='B', original_name='B', name='B')
     reference_c = Reference(path='C', original_name='C', name='C')
-    data_type_a = DataType.from_reference(reference_a)
-    data_type_b = DataType.from_reference(reference_b)
-    data_type_c = DataType.from_reference(reference_c)
+    data_type_a = DataType(reference=reference_a)
+    data_type_b = DataType(reference=reference_b)
+    data_type_c = DataType(reference=reference_c)
     reference = [
         BaseModel(
             fields=[
@@ -84,11 +84,11 @@ def test_sort_data_models_unresolved():
     reference_d = Reference(path='D', original_name='D', name='D')
     reference_v = Reference(path='V', original_name='V', name='V')
     reference_z = Reference(path='Z', original_name='Z', name='Z')
-    data_type_a = DataType.from_reference(reference_a)
-    data_type_b = DataType.from_reference(reference_b)
-    data_type_c = DataType.from_reference(reference_c)
-    data_type_v = DataType.from_reference(reference_v)
-    data_type_z = DataType.from_reference(reference_z)
+    data_type_a = DataType(reference=reference_a)
+    data_type_b = DataType(reference=reference_b)
+    data_type_c = DataType(reference=reference_c)
+    data_type_v = DataType(reference=reference_v)
+    data_type_z = DataType(reference=reference_z)
     reference = [
         BaseModel(
             fields=[
@@ -127,11 +127,11 @@ def test_sort_data_models_unresolved_raise_recursion_error():
     reference_d = Reference(path='D', original_name='D', name='D')
     reference_v = Reference(path='V', original_name='V', name='V')
     reference_z = Reference(path='Z', original_name='Z', name='Z')
-    data_type_a = DataType.from_reference(reference_a)
-    data_type_b = DataType.from_reference(reference_b)
-    data_type_c = DataType.from_reference(reference_c)
-    data_type_v = DataType.from_reference(reference_v)
-    data_type_z = DataType.from_reference(reference_z)
+    data_type_a = DataType(reference=reference_a)
+    data_type_b = DataType(reference=reference_b)
+    data_type_c = DataType(reference=reference_c)
+    data_type_v = DataType(reference=reference_v)
+    data_type_z = DataType(reference=reference_z)
     reference = [
         BaseModel(
             fields=[

@@ -1,6 +1,20 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any, ClassVar, Dict, Iterator, List, Optional, Set, Tuple, Type
+from itertools import chain
+from typing import (
+    Any,
+    ClassVar,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -17,6 +31,12 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
 
+T = TypeVar('T')
+
+
+def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
+    return tuple(chain(*iterables))
+
 
 class DataType(_BaseModel):
     type: Optional[str]
@@ -24,9 +44,8 @@ class DataType(_BaseModel):
     data_types: List['DataType'] = []
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]]
-    imports_: List[Import] = []
+    imports: List[Import] = []
     python_version: PythonVersion = PythonVersion.PY_37
-    unresolved_types: Set[str] = {*()}
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
@@ -40,6 +59,18 @@ class DataType(_BaseModel):
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
 
+    @property
+    def unresolved_types(self) -> FrozenSet[str]:
+        return frozenset(
+            {
+                t.reference.path
+                for data_types in self.data_types
+                for t in data_types.all_data_types
+                if t.reference
+            }
+            | ({self.reference.path} if self.reference else set())
+        )
+
     def replace_reference(self, reference: Reference) -> None:
         if not self.reference:  # pragma: no cover
             raise Exception(
@@ -47,18 +78,9 @@ class DataType(_BaseModel):
                 f' when `reference` field is empty.'
             )
 
-        self.unresolved_types.remove(self.reference.path)
         self.reference.children.remove(self)
         self.reference = reference
-        self.unresolved_types.add(reference.path)
         reference.children.append(self)
-
-    @classmethod
-    def from_reference(cls, reference: Reference, is_list: bool = False) -> 'DataType':
-        data_type = cls(is_list=is_list, reference=reference)
-        data_type.unresolved_types.add(reference.path)
-        reference.children.append(data_type)
-        return data_type
 
     @classmethod
     def create_literal(cls, literals: List[str]) -> 'DataType':
@@ -80,6 +102,12 @@ class DataType(_BaseModel):
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
+
+    @property
+    def all_imports(self) -> Tuple[Import, ...]:
+        return chain_as_tuple(
+            (i for d in self.data_types for i in d.all_imports), self.imports
+        )
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)  # type: ignore
@@ -122,12 +150,15 @@ class DataType(_BaseModel):
                 (self.is_dict, IMPORT_DICT),
             )
         for field, import_ in imports:
-            if field and import_ not in self.imports_:
-                self.imports_.append(import_)
+            if field and import_ not in self.imports:
+                self.imports.append(import_)
+
         for data_type in self.data_types:
-            self.imports_.extend(data_type.imports_)
-            self.unresolved_types.update(data_type.unresolved_types)
-            data_type.parent = self
+            if data_type.reference:
+                data_type.parent = self
+
+        if self.reference:
+            self.reference.children.append(self)
 
     @property
     def type_hint(self) -> str:

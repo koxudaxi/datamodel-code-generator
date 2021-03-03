@@ -3,13 +3,13 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import lru_cache
-from itertools import chain
 from pathlib import Path
 from typing import (
     Any,
     ClassVar,
     DefaultDict,
     Dict,
+    FrozenSet,
     Iterator,
     List,
     Optional,
@@ -23,7 +23,7 @@ from pydantic import BaseModel, root_validator
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import DataType, chain_as_tuple
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
@@ -74,16 +74,16 @@ class DataModelFieldBase(_BaseModel):
         return f'{OPTIONAL}[{type_hint}]'
 
     @property
-    def imports(self) -> List[Import]:
+    def imports(self) -> Tuple[Import, ...]:
         if self.nullable is None:
             if not self.required:
-                return self.data_type.imports_ + [IMPORT_OPTIONAL]
+                return chain_as_tuple(self.data_type.all_imports, (IMPORT_OPTIONAL,))
         elif self.nullable:
-            return self.data_type.imports_ + [IMPORT_OPTIONAL]
-        return self.data_type.imports_
+            return chain_as_tuple(self.data_type.all_imports, (IMPORT_OPTIONAL,))
+        return self.data_type.all_imports
 
     @property
-    def unresolved_types(self) -> Set[str]:
+    def unresolved_types(self) -> FrozenSet[str]:
         return self.data_type.unresolved_types
 
     @property
@@ -211,15 +211,16 @@ class DataModel(TemplateBase, ABC):
 
     @property
     def imports(self) -> Tuple[Import, ...]:
-        return tuple(
-            chain((i for f in self.fields for i in f.imports), self._additional_imports)
+        return chain_as_tuple(
+            (i for f in self.fields for i in f.imports), self._additional_imports
         )
 
     @property
-    def reference_classes(self) -> Set[str]:
-        return {r.path for r in self.base_classes if r.name != self.BASE_CLASS} | {
-            t for f in self.fields for t in f.unresolved_types
-        }
+    def reference_classes(self) -> FrozenSet[str]:
+        return frozenset(
+            {r.path for r in self.base_classes if r.name != self.BASE_CLASS}
+            | {t for f in self.fields for t in f.unresolved_types}
+        )
 
     @property
     def name(self) -> str:
