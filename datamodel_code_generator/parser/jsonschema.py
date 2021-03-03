@@ -967,9 +967,7 @@ class JsonSchemaParser(Parser):
                         relative_paths,
                         object_path.split('/') if object_path else None,
                     )
-                    self.model_resolver.add_ref(
-                        obj.ref,
-                    ).loaded = True
+                    self.model_resolver.add_ref(obj.ref,).loaded = True
 
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
