@@ -17,10 +17,9 @@ class Tea(BaseModel):
     self: Optional[Tea] = None
 
 
-class TeaClone(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea] = None
+class TeaClone(Tea):
+    pass
 
 
 Tea.update_forward_refs()
+TeaClone.update_forward_refs()

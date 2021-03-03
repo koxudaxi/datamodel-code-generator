@@ -421,6 +421,30 @@ def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
+def test_main_modular_reuse_model(tmpdir_factory: TempdirFactory) -> None:
+    """Test main function on modular file."""
+
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--reuse-model',
+            ]
+        )
+    main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular_reuse_model'
+    for path in main_modular_dir.rglob('*.py'):
+        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
+        assert result == path.read_text()
+
+
 def test_main_modular_no_file() -> None:
     """Test main function on modular file with no output name."""
 

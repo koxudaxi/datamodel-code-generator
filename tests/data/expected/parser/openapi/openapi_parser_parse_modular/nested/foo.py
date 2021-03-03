@@ -10,3 +10,10 @@ from .. import Id
 class Tea(BaseModel):
     flavour: Optional[str] = None
     id: Optional[Id] = None
+    self: Optional[Tea] = None
+
+
+class TeaClone(BaseModel):
+    flavour: Optional[str] = None
+    id: Optional[Id] = None
+    self: Optional[Tea] = None
