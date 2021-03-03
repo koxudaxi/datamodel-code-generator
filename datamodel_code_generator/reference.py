@@ -67,7 +67,6 @@ class Reference(_BaseModel):
     original_name: str = ''
     name: str
     loaded: bool = True
-    actual_module_name: Optional[str]
     source: Optional[Any] = None
     children: List[Any] = []
     _exclude_fields: ClassVar = {'children'}
@@ -197,7 +196,7 @@ class ModelResolver:
         return joined_path
 
     def add_ref(
-        self, ref: str, actual_module_name: Optional[str] = None, resolved: bool = False
+        self, ref: str, resolved: bool = False
     ) -> Reference:
         if not resolved:
             path = self.resolve_ref(ref)
@@ -205,7 +204,6 @@ class ModelResolver:
             path = ref
         reference = self.references.get(path)
         if reference:
-            reference.actual_module_name = actual_module_name
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
@@ -224,7 +222,6 @@ class ModelResolver:
             original_name=original_name,
             name=name,
             loaded=False,
-            actual_module_name=actual_module_name,
         )
 
         self.references[path] = reference
