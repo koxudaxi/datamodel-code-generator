@@ -21,6 +21,6 @@ def test_dump(inputs: Sequence[Tuple[Optional[str], str]], value):
     """Test creating import lines."""
 
     imports = Imports()
-    imports.append([Import(from_=from_, import_=import_) for from_, import_ in inputs])
+    imports.append(Import(from_=from_, import_=import_) for from_, import_ in inputs)
 
     assert str(imports) == value

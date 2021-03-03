@@ -67,7 +67,6 @@ class Reference(_BaseModel):
     original_name: str = ''
     name: str
     loaded: bool = True
-    actual_module_name: Optional[str]
     source: Optional[Any] = None
     children: List[Any] = []
     _exclude_fields: ClassVar = {'children'}
@@ -77,9 +76,9 @@ class Reference(_BaseModel):
         """
         If original_name is empty then, `original_name` is assigned `name`
         """
-        if v:
+        if v:  # pragma: no cover
             return v
-        return values.get('name', v)
+        return values.get('name', v)  # pragma: no cover
 
     class Config:
         arbitrary_types_allowed = True
@@ -96,7 +95,7 @@ class Reference(_BaseModel):
         module_name = f'{".".join(path.parts[:-1])}.{path.stem.split(".")[0]}'
         if module_name.startswith(f'.{self.name.split(".", 1)[0]}'):
             return None
-        elif module_name == '.':
+        elif module_name == '.':  # pragma: no cover
             return None
         return module_name
 
@@ -196,16 +195,13 @@ class ModelResolver:
             joined_path += '#'
         return joined_path
 
-    def add_ref(
-        self, ref: str, actual_module_name: Optional[str] = None, resolved: bool = False
-    ) -> Reference:
+    def add_ref(self, ref: str, resolved: bool = False) -> Reference:
         if not resolved:
             path = self.resolve_ref(ref)
         else:
             path = ref
         reference = self.references.get(path)
         if reference:
-            reference.actual_module_name = actual_module_name
             return reference
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
@@ -220,11 +216,7 @@ class ModelResolver:
             )
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
-            path=path,
-            original_name=original_name,
-            name=name,
-            loaded=False,
-            actual_module_name=actual_module_name,
+            path=path, original_name=original_name, name=name, loaded=False,
         )
 
         self.references[path] = reference
@@ -233,7 +225,7 @@ class ModelResolver:
     def add(
         self,
         path: Sequence[str],
-        original_name: Optional[str] = None,
+        original_name: str,
         *,
         class_name: bool = False,
         singular_name: bool = False,
@@ -252,8 +244,6 @@ class ModelResolver:
                 or original_name == reference.name
             ):
                 return reference
-        elif not original_name:
-            original_name = Path(joined_path.split('#')[0]).stem
         name = original_name
         if singular_name:
             name = get_singular_name(name, singular_name_suffix)
