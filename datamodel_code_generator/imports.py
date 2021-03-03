@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import lru_cache
-from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Set, Union
+from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Union
 
 from pydantic import BaseModel
 
