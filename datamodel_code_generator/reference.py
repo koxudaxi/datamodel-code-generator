@@ -77,9 +77,9 @@ class Reference(_BaseModel):
         """
         If original_name is empty then, `original_name` is assigned `name`
         """
-        if v:
+        if v:  # pragma: no cover
             return v
-        return values.get('name', v)
+        return values.get('name', v)  # pragma: no cover
 
     class Config:
         arbitrary_types_allowed = True
@@ -96,7 +96,7 @@ class Reference(_BaseModel):
         module_name = f'{".".join(path.parts[:-1])}.{path.stem.split(".")[0]}'
         if module_name.startswith(f'.{self.name.split(".", 1)[0]}'):
             return None
-        elif module_name == '.':
+        elif module_name == '.':  # pragma: no cover
             return None
         return module_name
 
