@@ -12,8 +12,12 @@ from . import foo, models
 from .nested import foo as foo_1
 
 
-class Id(BaseModel):
+class OptionalModel(BaseModel):
     __root__: str
+
+
+class Id(OptionalModel):
+    pass
 
 
 class Error(BaseModel):

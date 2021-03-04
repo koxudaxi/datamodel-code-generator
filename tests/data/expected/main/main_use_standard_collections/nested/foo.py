@@ -8,19 +8,25 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from .. import Id
+from .. import Id, OptionalModel
 
 
 class Tea(BaseModel):
     flavour: Optional[str] = None
     id: Optional[Id] = None
     self: Optional[Tea] = None
+    optional: Optional[list[OptionalModel]] = None
 
 
 class TeaClone(BaseModel):
     flavour: Optional[str] = None
     id: Optional[Id] = None
     self: Optional[Tea] = None
+    optional: Optional[list[OptionalModel]] = None
+
+
+class List(BaseModel):
+    __root__: list[Tea]
 
 
 Tea.update_forward_refs()
