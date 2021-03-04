@@ -108,13 +108,20 @@ ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 
 
 class ModelResolver:
-    def __init__(self, aliases: Optional[Mapping[str, str]] = None) -> None:
+    def __init__(
+        self,
+        aliases: Optional[Mapping[str, str]] = None,
+        exclude_names: Set[str] = None,
+        duplicate_name_suffix: Optional[str] = None,
+    ) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self._current_root: Sequence[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
         self.after_load_files: Set[str] = set()
+        self.exclude_names: Set[str] = exclude_names or set()
+        self.duplicate_name_suffix: Optional[str] = duplicate_name_suffix
 
     @property
     def current_root(self) -> Sequence[str]:
@@ -285,12 +292,20 @@ class ModelResolver:
     def _get_uniq_name(self, name: str, camel: bool = False) -> str:
         uniq_name: str = name
         count: int = 1
-        reference_names = {r.name for r in self.references.values()}
+        reference_names = {
+            r.name for r in self.references.values()
+        } | self.exclude_names
         while uniq_name in reference_names:
-            if camel:
-                uniq_name = f'{name}{count}'
+            if self.duplicate_name_suffix:
+                name_parts: List[Union[str, int]] = [
+                    name,
+                    self.duplicate_name_suffix,
+                    count - 1,
+                ]
             else:
-                uniq_name = f'{name}_{count}'
+                name_parts = [name, count]
+            delimiter = '' if camel else '_'
+            uniq_name = delimiter.join(str(p) for p in name_parts if p)
             count += 1
         return uniq_name
 

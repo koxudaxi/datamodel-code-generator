@@ -370,9 +370,42 @@ class Parser(ABC):
             sorted(sorted_data_models.values(), key=module_key, reverse=True),
             key=module_key,
         )
+
+        module_models: List[Tuple[Tuple[str, ...], List[DataModel]]] = []
+
         for module, models in (
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
+
+            # Remove duplicated name model
+            unique_model_names: Set[str] = set()
+            for model in models:
+                if model.name in unique_model_names:
+                    # Remove duplicated name model
+                    models.remove(model)
+                    continue
+                unique_model_names.add(model.name)
+            module_models.append((module, models,))
+
+            scoped_model_resolver = ModelResolver(
+                exclude_names={i.alias or i.import_ for m in models for i in m.imports},
+                duplicate_name_suffix='Model',
+            )
+
+            for model in models:
+                class_name: str = model.class_name
+                generated_name: str = scoped_model_resolver.add(
+                    model.path, class_name, unique=True, class_name=True
+                ).name
+                if class_name != generated_name:
+                    if '.' in model.reference.name:
+                        model.reference.name = (
+                            f"{model.reference.name.rsplit('.', 1)[0]}.{generated_name}"
+                        )
+                    else:
+                        model.reference.name = generated_name
+
+        for module, models in module_models:
             module_path = '.'.join(module)
 
             init = False
@@ -392,16 +425,8 @@ class Parser(ABC):
             imports = Imports()
             scoped_model_resolver = ModelResolver()
             import_map: Dict[str, Tuple[str, str]] = {}
-            model_cache: Dict[Tuple[str, ...], Reference] = {}
-            unique_model_names: Set[str] = set()
 
             for model in models:
-                if model.name in unique_model_names:
-                    # Remove duplicated name model
-                    models.remove(model)
-                    continue
-                unique_model_names.add(model.name)
-
                 alias_map: Dict[str, Optional[str]] = {}
                 imports.append(model.imports)
                 for data_type in model.all_data_types:
@@ -459,6 +484,7 @@ class Parser(ABC):
                     )
 
             if self.reuse_model:
+                model_cache: Dict[Tuple[str, ...], Reference] = {}
                 for model in models:
                     model_key = tuple(
                         to_hashable(v)

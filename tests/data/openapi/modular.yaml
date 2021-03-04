@@ -139,6 +139,8 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/models.User"
+    optional:
+      type: string
     Id:
       type: string
     collections.Rules:
@@ -219,6 +221,9 @@ components:
       properties:
         quality:
           type: integer
+    bar.Field:
+      type: string
+      example: green
     woo.boo.Chocolate:
       properties:
         flavour:
@@ -227,6 +232,8 @@ components:
           $ref: '#/components/schemas/Source'
         cocoa:
           $ref: '#/components/schemas/foo.Cocoa'
+        field:
+          $ref: '#/components/schemas/bar.Field'
     differentTea:
       type: object
       properties:
@@ -242,6 +249,10 @@ components:
           $ref: '#/components/schemas/Id'
         self:
           $ref: '#/components/schemas/nested.foo.Tea'
+        optional:
+          type: array
+          items:
+            $ref: '#/components/schemas/optional'
     nested.foo.TeaClone:
       properties:
         flavour:
@@ -250,3 +261,11 @@ components:
           $ref: '#/components/schemas/Id'
         self:
           $ref: '#/components/schemas/nested.foo.Tea'
+        optional:
+          type: array
+          items:
+            $ref: '#/components/schemas/optional'
+    nested.foo.List:
+      type: array
+      items:
+        $ref: '#/components/schemas/nested.foo.Tea'
