@@ -953,9 +953,9 @@ class JsonSchemaParser(Parser):
                     previous_base_url = self.model_resolver.base_url
                     if self.model_resolver.base_url:
                         if not is_url(relative_path):
-                            from ..http import resolved_url
+                            from ..http import join_url
 
-                            relative_path = resolved_url(relative_path)
+                            relative_path = join_url(relative_path)
                         self.model_resolver.base_url = relative_path
                     self._parse_file(
                         self._get_ref_body(relative_path),

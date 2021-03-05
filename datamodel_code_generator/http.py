@@ -10,5 +10,5 @@ def get_body(url: str) -> str:
     return httpx.get(url).text
 
 
-def resolved_url(url: str, ref: str = '.') -> str:
+def join_url(url: str, ref: str = '.') -> str:
     return str(httpx.URL(url).join(ref))

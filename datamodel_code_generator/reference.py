@@ -177,9 +177,9 @@ class ModelResolver:
             else:
                 ref = joined_path
         if self.base_url:
-            from .http import resolved_url
+            from .http import join_url
 
-            return resolved_url(self.base_url, ref)
+            return join_url(self.base_url, ref)
         return ref
 
     def is_remote_ref(self, resolved_ref: str) -> bool:
