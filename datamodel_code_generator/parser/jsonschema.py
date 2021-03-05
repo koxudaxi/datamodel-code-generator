@@ -18,6 +18,7 @@ from typing import (
     Type,
     Union,
 )
+from urllib.parse import ParseResult
 from warnings import warn
 
 from pydantic import BaseModel, Field, root_validator, validator
@@ -225,7 +226,7 @@ JsonSchemaObject.update_forward_refs()
 class JsonSchemaParser(Parser):
     def __init__(
         self,
-        source: Union[str, Path, List[Path]],
+        source: Union[str, Path, List[Path], ParseResult],
         *,
         data_model_type: Type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
@@ -900,13 +901,9 @@ class JsonSchemaParser(Parser):
             return cached_ref_body
 
         # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-        try:
-            import httpx
-        except ImportError:  # pragma: no cover
-            raise Exception(
-                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
-            )
-        raw_body: str = httpx.get(ref).text
+        from ..http import get_body
+
+        raw_body = get_body(ref)
         # yaml loader can parse json data.
         ref_body = load_yaml(raw_body)
         self.remote_object_cache[ref] = ref_body
@@ -944,14 +941,6 @@ class JsonSchemaParser(Parser):
                 elif self.model_resolver.is_after_load(obj.ref):
                     self.reserved_refs[tuple(ref.split('#')[0].split('/'))].add(ref)  # type: ignore
                 else:
-                    if self.model_resolver.is_external_root_ref(ref):
-                        relative_path, object_path = ref[:-1], ''
-                    else:
-                        relative_path, object_path = ref.split('#')
-
-                    models = self._get_ref_body(relative_path)
-                    model_name = self.model_resolver.add_ref(obj.ref).name
-
                     if is_url(ref):
                         relative_path, object_path = ref.split('#')
                         relative_paths = [relative_path]
@@ -961,12 +950,20 @@ class JsonSchemaParser(Parser):
                         else:
                             relative_path, object_path = ref.split('#')
                         relative_paths = relative_path.split('/')
+                    previous_base_url = self.model_resolver.base_url
+                    if self.model_resolver.base_url:
+                        if not is_url(relative_path):
+                            from ..http import resolved_url
+
+                            relative_path = resolved_url(relative_path)
+                        self.model_resolver.base_url = relative_path
                     self._parse_file(
                         self._get_ref_body(relative_path),
-                        model_name,
+                        self.model_resolver.add_ref(obj.ref).name,
                         relative_paths,
                         object_path.split('/') if object_path else None,
                     )
+                    self.model_resolver.base_url = previous_base_url
                     self.model_resolver.add_ref(obj.ref,).loaded = True
 
         if obj.items:
@@ -1051,7 +1048,10 @@ class JsonSchemaParser(Parser):
             }
 
         for source in self.iter_source:
-            path_parts = list(source.path.parts)
+            if isinstance(self.source, ParseResult):
+                path_parts = self.get_url_path_parts(self.source)
+            else:
+                path_parts = list(source.path.parts)
             if self.current_source_path is not None:
                 self.current_source_path = source.path
             with self.model_resolver.current_root_context(path_parts):

@@ -20,6 +20,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from urllib.parse import ParseResult
 
 import pysnooper
 import yaml
@@ -168,7 +169,7 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
 
 
 def generate(
-    input_: Union[Path, str],
+    input_: Union[Path, str, ParseResult],
     *,
     input_filename: Optional[str] = None,
     input_file_type: InputFileType = InputFileType.Auto,
@@ -197,24 +198,30 @@ def generate(
     use_generic_container_types: bool = False,
     enable_faux_immutability: bool = False,
 ) -> None:
-    input_text: Optional[str] = None
+
+    if isinstance(input_, str):
+        input_text: Optional[str] = input_
+    elif isinstance(input_, ParseResult):
+        from .http import get_body
+
+        input_text = get_body(input_.geturl())
+    else:
+        input_text = None
+
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
-
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
-                input_
-                if isinstance(input_, str)
-                else get_first_file(input_).read_text(encoding=encoding)
+                get_first_file(input_).read_text(encoding=encoding)
+                if isinstance(input_, Path)
+                else input_text
             )
             input_file_type = (
                 InputFileType.OpenAPI
-                if is_openapi(input_text_)
+                if is_openapi(input_text_)  # type: ignore
                 else InputFileType.JsonSchema
             )
-            if isinstance(input_, str):
-                input_text = input_text_
         except:
             raise Error('Invalid file format')
 
@@ -244,18 +251,18 @@ def generate(
                         csv_reader = csv.DictReader(csv_file)
                         return dict(zip(csv_reader.fieldnames, next(csv_reader)))  # type: ignore
 
-                    if isinstance(input_, str):
-                        import io
-
-                        obj = get_header_and_first_line(io.StringIO(input_))
-                    else:
+                    if isinstance(input_, Path):
                         with input_.open(encoding=encoding) as f:
                             obj = get_header_and_first_line(f)
+                    else:
+                        import io
+
+                        obj = get_header_and_first_line(io.StringIO(input_text))
                 else:
                     obj = load_yaml(
-                        input_
-                        if isinstance(input_, str)
-                        else input_.read_text(encoding=encoding)
+                        input_.read_text(encoding=encoding)  # type: ignore
+                        if isinstance(input_, Path)
+                        else input_text
                     )
             except:
                 raise Error('Invalid file format')
@@ -266,7 +273,7 @@ def generate(
             input_text = json.dumps(builder.to_schema())
 
     parser = parser_class(
-        source=input_text or input_,
+        source=input_ if isinstance(input_, ParseResult) else input_text or input_,
         base_class=base_class,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
@@ -299,6 +306,8 @@ def generate(
     if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
             input_filename = '<stdin>'
+        elif isinstance(input_, ParseResult):
+            input_filename = input_.geturl()
         else:
             input_filename = input_.name
     if not results:

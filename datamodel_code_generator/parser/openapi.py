@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+from urllib.parse import ParseResult
 
 from datamodel_code_generator import load_yaml, snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -21,7 +22,10 @@ class OpenAPIParser(JsonSchemaParser):
             schemas: Dict[Any, Any] = specification.get('components', {}).get(
                 'schemas', {}
             )
-            path_parts: List[str] = list(source.path.parts)
+            if isinstance(self.source, ParseResult):
+                path_parts: List[str] = self.get_url_path_parts(self.source)
+            else:
+                path_parts = list(source.path.parts)
             with self.model_resolver.current_root_context(path_parts):
                 for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
                     self.parse_raw_obj(

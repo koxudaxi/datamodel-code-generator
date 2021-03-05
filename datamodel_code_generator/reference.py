@@ -113,6 +113,7 @@ class ModelResolver:
         aliases: Optional[Mapping[str, str]] = None,
         exclude_names: Set[str] = None,
         duplicate_name_suffix: Optional[str] = None,
+        base_url: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
@@ -122,6 +123,7 @@ class ModelResolver:
         self.after_load_files: Set[str] = set()
         self.exclude_names: Set[str] = exclude_names or set()
         self.duplicate_name_suffix: Optional[str] = duplicate_name_suffix
+        self.base_url: Optional[str] = base_url
 
     @property
     def current_root(self) -> Sequence[str]:
@@ -157,20 +159,28 @@ class ModelResolver:
         else:
             joined_path = self.join_path(path)
         if ID_PATTERN.match(joined_path):
-            return self.ids['/'.join(self.current_root)][joined_path]
+            ref: str = self.ids['/'.join(self.current_root)][joined_path]
         elif '#' in joined_path:
             if joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
             if self.is_remote_ref(joined_path):
-                return f'{"/".join(self.current_root[:-1])}/{joined_path}'
-            delimiter = joined_path.index('#')
-            return f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
+                ref = f'{"/".join(self.current_root[:-1])}/{joined_path}'
+            else:
+                delimiter = joined_path.index('#')
+                ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         elif self.root_id_base_path and self.current_root != path:
-            return f'{self.root_id_base_path}/{joined_path}#'
-        joined_path = f'{joined_path}#'
-        if self.is_remote_ref(joined_path):
-            return f'{"/".join(self.current_root[:-1])}/{joined_path}'
-        return joined_path
+            ref = f'{self.root_id_base_path}/{joined_path}#'
+        else:
+            joined_path = f'{joined_path}#'
+            if self.is_remote_ref(joined_path):
+                ref = f'{"/".join(self.current_root[:-1])}/{joined_path}'
+            else:
+                ref = joined_path
+        if self.base_url:
+            from .http import resolved_url
+
+            return resolved_url(self.base_url, ref)
+        return ref
 
     def is_remote_ref(self, resolved_ref: str) -> bool:
         return (
