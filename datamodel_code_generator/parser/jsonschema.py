@@ -950,20 +950,14 @@ class JsonSchemaParser(Parser):
                         else:
                             relative_path, object_path = ref.split('#')
                         relative_paths = relative_path.split('/')
-                    previous_base_url = self.model_resolver.base_url
-                    if self.model_resolver.base_url:
-                        if not is_url(relative_path):
-                            from ..http import join_url
 
-                            relative_path = join_url(relative_path)
-                        self.model_resolver.base_url = relative_path
-                    self._parse_file(
-                        self._get_ref_body(relative_path),
-                        self.model_resolver.add_ref(obj.ref).name,
-                        relative_paths,
-                        object_path.split('/') if object_path else None,
-                    )
-                    self.model_resolver.base_url = previous_base_url
+                    with self.model_resolver.base_url_context(relative_path):
+                        self._parse_file(
+                            self._get_ref_body(relative_path),
+                            self.model_resolver.add_ref(obj.ref).name,
+                            relative_paths,
+                            object_path.split('/') if object_path else None,
+                        )
                     self.model_resolver.add_ref(obj.ref,).loaded = True
 
         if obj.items:

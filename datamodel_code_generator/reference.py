@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     ClassVar,
     DefaultDict,
     Dict,
@@ -18,6 +19,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
 )
 
@@ -106,6 +108,20 @@ class Reference(_BaseModel):
 
 ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 
+T = TypeVar('T')
+
+
+@contextmanager
+def context_variable(
+    setter: Callable[[T], None], current_value: T, new_value: T
+) -> Generator[None, None, None]:
+    previous_value: T = current_value
+    setter(new_value)
+    try:
+        yield
+    finally:
+        setter(previous_value)
+
 
 class ModelResolver:
     def __init__(
@@ -123,7 +139,23 @@ class ModelResolver:
         self.after_load_files: Set[str] = set()
         self.exclude_names: Set[str] = exclude_names or set()
         self.duplicate_name_suffix: Optional[str] = duplicate_name_suffix
-        self.base_url: Optional[str] = base_url
+        self._base_url: Optional[str] = base_url
+
+    @property
+    def base_url(self) -> Optional[str]:
+        return self._base_url
+
+    def set_base_url(self, base_url: Optional[str]) -> None:
+        self._base_url = base_url
+
+    @contextmanager
+    def base_url_context(self, base_url: str) -> Generator[None, None, None]:
+
+        if self._base_url:
+            with context_variable(self.set_base_url, self.base_url, base_url):
+                yield
+        else:
+            yield
 
     @property
     def current_root(self) -> Sequence[str]:
@@ -138,10 +170,8 @@ class ModelResolver:
     def current_root_context(
         self, current_root: Sequence[str]
     ) -> Generator[None, None, None]:
-        previous_root_path: Sequence[str] = self.current_root
-        self.set_current_root(current_root)
-        yield
-        self.set_current_root(previous_root_path)
+        with context_variable(self.set_current_root, self.current_root, current_root):
+            yield
 
     @property
     def root_id_base_path(self) -> Optional[str]:
