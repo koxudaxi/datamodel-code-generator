@@ -88,7 +88,7 @@ arg_parser.add_argument(
 )
 arg_parser.add_argument(
     '--disable-appending-item-suffix',
-    help='Disable adding `Item` suffix to model name in an array',
+    help='Disable appending `Item` suffix to model name in an array',
     action='store_true',
     default=None,
 )

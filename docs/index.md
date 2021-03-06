@@ -54,7 +54,7 @@ optional arguments:
   --snake-case-field    Change camel-case field name to snake-case
   --strip-default-none  Strip default None on fields
   --disable-appending-item-suffix
-                        Disable adding `Item` suffix to model name in an array
+                        Disable appending `Item` suffix to model name in an array
   --allow-population-by-field-name
                         Allow population by field name
   --enable-faux-immutability
