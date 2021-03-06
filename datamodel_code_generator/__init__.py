@@ -59,7 +59,7 @@ from .model.pydantic import (
     dump_resolve_reference_action,
 )
 from .model.pydantic.types import DataTypeManager
-from .parser import LiteralType
+from .parser import DefaultPutDict, LiteralType
 from .parser.base import Parser
 from .version import version as __version__
 
@@ -77,6 +77,11 @@ SafeLoader.yaml_constructors[
 
 def load_yaml(stream: Union[str, TextIO]) -> Any:
     return yaml.load(stream, Loader=SafeLoader)
+
+
+def load_yaml_from_path(path: Path, encoding: str) -> Any:
+    with path.open(encoding=encoding) as f:
+        return load_yaml(f)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
@@ -199,12 +204,15 @@ def generate(
     enable_faux_immutability: bool = False,
 ) -> None:
 
+    remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
         input_text: Optional[str] = input_
     elif isinstance(input_, ParseResult):
         from .http import get_body
 
-        input_text = get_body(input_.geturl())
+        input_text = remote_text_cache.get_or_put(
+            input_.geturl(), default_factory=get_body
+        )
     else:
         input_text = None
 
@@ -299,6 +307,7 @@ def generate(
         strict_nullable=strict_nullable,
         use_generic_container_types=use_generic_container_types,
         enable_faux_immutability=enable_faux_immutability,
+        remote_text_cache=remote_text_cache,
     )
 
     with chdir(output):

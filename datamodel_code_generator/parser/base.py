@@ -32,7 +32,7 @@ from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
 from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager
-from . import LiteralType
+from . import DefaultPutDict, LiteralType
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
@@ -247,6 +247,7 @@ class Parser(ABC):
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
+        remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections, use_generic_container_types
@@ -280,6 +281,9 @@ class Parser(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.enable_faux_immutability: bool = enable_faux_immutability
 
+        self.remote_text_cache: DefaultPutDict[str, str] = (
+            remote_text_cache or DefaultPutDict()
+        )
         self.current_source_path: Optional[Path] = None
 
         if base_path:
@@ -331,14 +335,17 @@ class Parser(ABC):
             for path in self.source:
                 yield Source.from_path(path, self.base_path, self.encoding)
         else:
-            url: str = self.source.geturl()
-            try:
-                import httpx
-            except ImportError:  # pragma: no cover
-                raise Exception(
-                    f'Please run $pip install datamodel-code-generator[http] to get input URL. url={url}'
-                )
-            yield Source(path=Path(self.source.path), text=httpx.get(url).text)
+            yield Source(
+                path=Path(self.source.path),
+                text=self.remote_text_cache.get_or_put(
+                    self.source.geturl(), default_factory=self._get_text_from_url
+                ),
+            )
+
+    def _get_text_from_url(self, url: str) -> str:
+        from ..http import get_body
+
+        return self.remote_text_cache.get_or_put(url, default_factory=get_body)
 
     @classmethod
     def get_url_path_parts(cls, url: ParseResult) -> List[str]:
