@@ -230,7 +230,7 @@ class Config(BaseModel):
     def validate_url(cls, value: Any) -> Optional[ParseResult]:
         if isinstance(value, str) and is_url(value):  # pragma: no cover
             return urlparse(value)
-        elif value is None:
+        elif value is None:  # pragma: no cover
             return None
         raise Error(
             f'This protocol doesn\'t support only http/https. --input={value}'
