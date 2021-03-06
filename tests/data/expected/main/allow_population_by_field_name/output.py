@@ -36,21 +36,21 @@ class User(BaseModel):
 
 class Users(BaseModel):
     class Config:
-        allow_mutation = False
+        allow_population_by_field_name = True
 
     __root__: List[User]
 
 
 class Id(BaseModel):
     class Config:
-        allow_mutation = False
+        allow_population_by_field_name = True
 
     __root__: str
 
 
 class Rules(BaseModel):
     class Config:
-        allow_mutation = False
+        allow_population_by_field_name = True
 
     __root__: List[str]
 
@@ -83,7 +83,7 @@ class Api(BaseModel):
 
 class Apis(BaseModel):
     class Config:
-        allow_mutation = False
+        allow_population_by_field_name = True
 
     __root__: List[Api]
 
