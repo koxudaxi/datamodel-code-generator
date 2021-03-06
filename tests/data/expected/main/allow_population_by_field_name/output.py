@@ -35,14 +35,23 @@ class User(BaseModel):
 
 
 class Users(BaseModel):
+    class Config:
+        allow_mutation = False
+
     __root__: List[User]
 
 
 class Id(BaseModel):
+    class Config:
+        allow_mutation = False
+
     __root__: str
 
 
 class Rules(BaseModel):
+    class Config:
+        allow_mutation = False
+
     __root__: List[str]
 
 
@@ -73,6 +82,9 @@ class Api(BaseModel):
 
 
 class Apis(BaseModel):
+    class Config:
+        allow_mutation = False
+
     __root__: List[Api]
 
 
