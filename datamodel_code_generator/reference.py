@@ -106,6 +106,8 @@ class Reference(_BaseModel):
         return self.name.rsplit('.', 1)[-1]
 
 
+SINGULAR_NAME_SUFFIX: str = 'Item'
+
 ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
 
 T = TypeVar('T')
@@ -130,6 +132,7 @@ class ModelResolver:
         exclude_names: Set[str] = None,
         duplicate_name_suffix: Optional[str] = None,
         base_url: Optional[str] = None,
+        singular_name_suffix: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
@@ -140,6 +143,9 @@ class ModelResolver:
         self.exclude_names: Set[str] = exclude_names or set()
         self.duplicate_name_suffix: Optional[str] = duplicate_name_suffix
         self._base_url: Optional[str] = base_url
+        self.singular_name_suffix: str = singular_name_suffix if isinstance(
+            singular_name_suffix, str
+        ) else SINGULAR_NAME_SUFFIX
 
     @property
     def base_url(self) -> Optional[str]:
@@ -276,8 +282,8 @@ class ModelResolver:
         *,
         class_name: bool = False,
         singular_name: bool = False,
-        unique: bool = False,
-        singular_name_suffix: str = 'Item',
+        unique: bool = True,
+        singular_name_suffix: Optional[str] = None,
         loaded: bool = False,
     ) -> Reference:
         joined_path = self.join_path(path)
@@ -293,9 +299,13 @@ class ModelResolver:
                 return reference
         name = original_name
         if singular_name:
-            name = get_singular_name(name, singular_name_suffix)
+            name = get_singular_name(
+                name, singular_name_suffix or self.singular_name_suffix
+            )
         if class_name:
-            name = self.get_class_name(name, unique)
+            name = self.get_class_name(
+                name, unique, reference.name if reference else None
+            )
         elif unique:
             name = self._get_uniq_name(name)
         if reference:
@@ -312,7 +322,9 @@ class ModelResolver:
     def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
         return self.references.get(self.resolve_ref(path))
 
-    def get_class_name(self, field_name: str, unique: bool = True) -> str:
+    def get_class_name(
+        self, field_name: str, unique: bool = True, reserved_name: Optional[str] = None
+    ) -> str:
         if '.' in field_name:
             split_name = [self.get_valid_name(n) for n in field_name.split('.')]
             prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
@@ -323,6 +335,8 @@ class ModelResolver:
         field_name = self.get_valid_name(field_name)
         upper_camel_name = snake_to_upper_camel(field_name)
         if unique:
+            if reserved_name == upper_camel_name:
+                return upper_camel_name
             class_name = self._get_uniq_name(upper_camel_name, camel=True)
         else:
             class_name = upper_camel_name
@@ -377,7 +391,7 @@ class ModelResolver:
 
 
 @lru_cache()
-def get_singular_name(name: str, suffix: str = 'Item') -> str:
+def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
         singular_name = f'{name}{suffix}'

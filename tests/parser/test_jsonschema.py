@@ -6,10 +6,8 @@ from unittest.mock import Mock, call
 import pytest
 import yaml
 
-from datamodel_code_generator import DataModelField, DataTypeManager
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
 from datamodel_code_generator.model import DataModelFieldBase
-from datamodel_code_generator.model.pydantic import BaseModel, CustomRootType
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,

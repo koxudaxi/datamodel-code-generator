@@ -248,6 +248,7 @@ class Parser(ABC):
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
         remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
+        disable_appending_item_suffix: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections, use_generic_container_types
@@ -310,6 +311,7 @@ class Parser(ABC):
         self.model_resolver = ModelResolver(
             aliases=aliases,
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
+            singular_name_suffix='' if disable_appending_item_suffix else None,
         )
         self.field_preprocessors: List[
             Callable[[DataModelFieldBase, DataModel], None]
