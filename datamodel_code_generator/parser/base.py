@@ -19,6 +19,7 @@ from typing import (
     Type,
     Union,
 )
+from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
@@ -31,7 +32,7 @@ from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
 from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager
-from . import LiteralType
+from . import DefaultPutDict, LiteralType
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
@@ -154,7 +155,7 @@ def sort_data_models(
                 continue
             # unresolved
             unresolved_classes = ', '.join(
-                f"[class: {item.name} references: {item.reference_classes}]"
+                f"[class: {item.path} references: {item.reference_classes}]"
                 for item in unresolved_references
             )
             raise Exception(f'A Parser can not resolve classes: {unresolved_classes}.')
@@ -216,7 +217,7 @@ class Source(BaseModel):
 class Parser(ABC):
     def __init__(
         self,
-        source: Union[str, Path, List[Path]],
+        source: Union[str, Path, List[Path], ParseResult],
         *,
         data_model_type: Type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
@@ -246,6 +247,7 @@ class Parser(ABC):
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
+        remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version, use_standard_collections, use_generic_container_types
@@ -264,8 +266,12 @@ class Parser(ABC):
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
         self.strip_default_none: bool = strip_default_none
-        self.apply_default_values_for_required_fields: bool = apply_default_values_for_required_fields
-        self.force_optional_for_required_fields: bool = force_optional_for_required_fields
+        self.apply_default_values_for_required_fields: bool = (
+            apply_default_values_for_required_fields
+        )
+        self.force_optional_for_required_fields: bool = (
+            force_optional_for_required_fields
+        )
         self.use_schema_description: bool = use_schema_description
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
@@ -275,6 +281,9 @@ class Parser(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.enable_faux_immutability: bool = enable_faux_immutability
 
+        self.remote_text_cache: DefaultPutDict[str, str] = (
+            remote_text_cache or DefaultPutDict()
+        )
         self.current_source_path: Optional[Path] = None
 
         if base_path:
@@ -286,7 +295,7 @@ class Parser(ABC):
         else:
             self.base_path = Path.cwd()
 
-        self.source: Union[str, Path, List[Path]] = source
+        self.source: Union[str, Path, List[Path], ParseResult] = source
         self.custom_template_dir = custom_template_dir
         self.extra_template_data: DefaultDict[
             str, Any
@@ -298,7 +307,10 @@ class Parser(ABC):
         if enable_faux_immutability:
             self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
 
-        self.model_resolver = ModelResolver(aliases=aliases)
+        self.model_resolver = ModelResolver(
+            aliases=aliases,
+            base_url=source.geturl() if isinstance(source, ParseResult) else None,
+        )
         self.field_preprocessors: List[
             Callable[[DataModelFieldBase, DataModel], None]
         ] = []
@@ -322,6 +334,25 @@ class Parser(ABC):
         elif isinstance(self.source, list):  # pragma: no cover
             for path in self.source:
                 yield Source.from_path(path, self.base_path, self.encoding)
+        else:
+            yield Source(
+                path=Path(self.source.path),
+                text=self.remote_text_cache.get_or_put(
+                    self.source.geturl(), default_factory=self._get_text_from_url
+                ),
+            )
+
+    def _get_text_from_url(self, url: str) -> str:
+        from ..http import get_body
+
+        return self.remote_text_cache.get_or_put(url, default_factory=get_body)
+
+    @classmethod
+    def get_url_path_parts(cls, url: ParseResult) -> List[str]:
+        return [
+            f'{url.scheme}://{url.hostname}',
+            *url.path.split('/')[1:],
+        ]
 
     def append_result(self, data_model: DataModel) -> None:
         for field_preprocessor in self.field_preprocessors:

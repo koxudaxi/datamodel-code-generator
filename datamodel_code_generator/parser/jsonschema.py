@@ -18,6 +18,7 @@ from typing import (
     Type,
     Union,
 )
+from urllib.parse import ParseResult
 from warnings import warn
 
 from pydantic import BaseModel, Field, root_validator, validator
@@ -26,12 +27,13 @@ from datamodel_code_generator import (
     InvalidClassNameError,
     cached_property,
     load_yaml,
+    load_yaml_from_path,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
@@ -225,7 +227,7 @@ JsonSchemaObject.update_forward_refs()
 class JsonSchemaParser(Parser):
     def __init__(
         self,
-        source: Union[str, Path, List[Path]],
+        source: Union[str, Path, List[Path], ParseResult],
         *,
         data_model_type: Type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
@@ -255,6 +257,7 @@ class JsonSchemaParser(Parser):
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
+        remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
     ):
         super().__init__(
             source=source,
@@ -286,9 +289,10 @@ class JsonSchemaParser(Parser):
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
+            remote_text_cache=remote_text_cache,
         )
 
-        self.remote_object_cache: Dict[str, Dict[str, Any]] = {}
+        self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
         self.raw_obj: Dict[Any, Any] = {}
         self._root_id: Optional[str] = None
         self._root_id_base_path: Optional[str] = None
@@ -893,44 +897,20 @@ class JsonSchemaParser(Parser):
         return self._get_ref_body_from_remote(resolved_ref)
 
     def _get_ref_body_from_url(self, ref: str) -> Dict[Any, Any]:
-        if ref[-1] == '#':
-            ref = ref[:-1]
-        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(ref)
-        if cached_ref_body:
-            return cached_ref_body
-
         # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
-        try:
-            import httpx
-        except ImportError:  # pragma: no cover
-            raise Exception(
-                f'Please run $pip install datamodel-code-generator[http] to resolve URL Reference ref={ref}'
-            )
-        raw_body: str = httpx.get(ref).text
-        # yaml loader can parse json data.
-        ref_body = load_yaml(raw_body)
-        self.remote_object_cache[ref] = ref_body
-        return ref_body
+        return self.remote_object_cache.get_or_put(
+            ref, default_factory=lambda key: load_yaml(self._get_text_from_url(key))
+        )
 
     def _get_ref_body_from_remote(self, resolved_ref: str) -> Dict[Any, Any]:
         # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
         # the same location. TODO treat edge case
-        if resolved_ref[-1] == '#':
-            resolved_ref = resolved_ref[:-1]
         full_path = self.base_path / resolved_ref
-        ref_full_path = str(full_path)
 
-        cached_ref_body: Optional[Dict[str, Any]] = self.remote_object_cache.get(
-            ref_full_path
+        return self.remote_object_cache.get_or_put(
+            str(full_path),
+            default_factory=lambda _: load_yaml_from_path(full_path, self.encoding),
         )
-        if cached_ref_body:
-            return cached_ref_body
-
-        # yaml loader can parse json data.
-        with full_path.open(encoding=self.encoding) as f:
-            ref_body = load_yaml(f)
-        self.remote_object_cache[ref_full_path] = ref_body
-        return ref_body
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
@@ -944,14 +924,6 @@ class JsonSchemaParser(Parser):
                 elif self.model_resolver.is_after_load(obj.ref):
                     self.reserved_refs[tuple(ref.split('#')[0].split('/'))].add(ref)  # type: ignore
                 else:
-                    if self.model_resolver.is_external_root_ref(ref):
-                        relative_path, object_path = ref[:-1], ''
-                    else:
-                        relative_path, object_path = ref.split('#')
-
-                    models = self._get_ref_body(relative_path)
-                    model_name = self.model_resolver.add_ref(obj.ref).name
-
                     if is_url(ref):
                         relative_path, object_path = ref.split('#')
                         relative_paths = [relative_path]
@@ -961,12 +933,14 @@ class JsonSchemaParser(Parser):
                         else:
                             relative_path, object_path = ref.split('#')
                         relative_paths = relative_path.split('/')
-                    self._parse_file(
-                        self._get_ref_body(relative_path),
-                        model_name,
-                        relative_paths,
-                        object_path.split('/') if object_path else None,
-                    )
+
+                    with self.model_resolver.base_url_context(relative_path):
+                        self._parse_file(
+                            self._get_ref_body(relative_path),
+                            self.model_resolver.add_ref(obj.ref).name,
+                            relative_paths,
+                            object_path.split('/') if object_path else None,
+                        )
                     self.model_resolver.add_ref(obj.ref,).loaded = True
 
         if obj.items:
@@ -1012,7 +986,7 @@ class JsonSchemaParser(Parser):
         previous_root_id: Optional[str] = self.root_id
         if root_id:
             try:
-                resolved_ref = self.model_resolver.resolve_ref(root_id)
+                resolved_ref = self.model_resolver.resolve_ref(root_id).split('#')[0]
                 self._get_ref_body(resolved_ref)
             except Exception as e:
                 print(f'Parse $id failed. $id={root_id}\n {str(e)}', file=sys.stderr)
@@ -1051,7 +1025,10 @@ class JsonSchemaParser(Parser):
             }
 
         for source in self.iter_source:
-            path_parts = list(source.path.parts)
+            if isinstance(self.source, ParseResult):
+                path_parts = self.get_url_path_parts(self.source)
+            else:
+                path_parts = list(source.path.parts)
             if self.current_source_path is not None:
                 self.current_source_path = source.path
             with self.model_resolver.current_root_context(path_parts):

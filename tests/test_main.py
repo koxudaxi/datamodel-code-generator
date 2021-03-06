@@ -171,9 +171,9 @@ def test_main_jsonschema_nested_deep():
     with TemporaryDirectory() as output_dir:
         output_init_file: Path = Path(output_dir) / '__init__.py'
         output_nested_file: Path = Path(output_dir) / 'nested/deep.py'
-        output_empty_parent_nested_file: Path = Path(
-            output_dir
-        ) / 'empty_parent/nested/deep.py'
+        output_empty_parent_nested_file: Path = (
+            Path(output_dir) / 'empty_parent/nested/deep.py'
+        )
 
         return_code: Exit = main(
             [
@@ -2129,3 +2129,112 @@ def test_main_generate_from_directory():
                 path.relative_to(main_nested_directory)
             ).read_text()
             assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_http_jsonschema(mocker):
+    external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
+
+    def get_mock_response(path: str) -> mocker.Mock:
+        mock = mocker.Mock()
+        mock.text = (external_directory / path).read_text()
+        return mock
+
+    httpx_get_mock = mocker.patch(
+        'httpx.get',
+        side_effect=[
+            get_mock_response('person.json'),
+            get_mock_response('definitions/pet.json'),
+            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/friends.json'),
+            get_mock_response('definitions/food.json'),
+            get_mock_response('definitions/drink/coffee.json'),
+            get_mock_response('definitions/drink/tea.json'),
+            get_mock_response('person.json'),
+        ],
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--url',
+                'https://example.com/external_files_in_directory/person.json',
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+        ).read_text().replace(
+            '#   filename:  person.json',
+            '#   filename:  https://example.com/external_files_in_directory/person.json',
+        )
+        httpx_get_mock.assert_has_calls(
+            [
+                call('https://example.com/external_files_in_directory/person.json'),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/pet.json'
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/fur.json'
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/friends.json'
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/food.json'
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json'
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/tea.json'
+                ),
+            ]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_http_openapi(mocker):
+    def get_mock_response(path: str) -> mocker.Mock:
+        mock = mocker.Mock()
+        mock.text = (OPEN_API_DATA_PATH / path).read_text()
+        return mock
+
+    httpx_get_mock = mocker.patch(
+        'httpx.get',
+        side_effect=[
+            get_mock_response('refs.yaml'),
+            get_mock_response('definitions.yaml'),
+        ],
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--url',
+                'https://example.com/refs.yaml',
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_openapi_http_refs' / 'output.py').read_text()
+        )
+        httpx_get_mock.assert_has_calls(
+            [
+                call('https://example.com/refs.yaml'),
+                call('https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml'),
+            ]
+        )
+    with pytest.raises(SystemExit):
+        main()

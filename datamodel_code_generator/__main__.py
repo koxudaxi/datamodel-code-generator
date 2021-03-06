@@ -13,7 +13,8 @@ from collections import defaultdict
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Optional, Sequence, cast
+from typing import Any, DefaultDict, Dict, Optional, Sequence, Union, cast
+from urllib.parse import ParseResult, urlparse
 
 import argcomplete
 import black
@@ -29,6 +30,7 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.reference import is_url
 
 from .format import PythonVersion, is_supported_in_black
 
@@ -54,11 +56,15 @@ arg_parser.add_argument(
     '--input', help='Input file/directory (default: stdin)',
 )
 arg_parser.add_argument(
+    '--url', help='Input file URL. `--input` is ignore when `--url` is used',
+)
+arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
     choices=[i.value for i in InputFileType],
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
+
 arg_parser.add_argument(
     '--base-class', help='Base Class (default: pydantic.BaseModel)', type=str,
 )
@@ -220,6 +226,16 @@ class Config(BaseModel):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
+    @validator('url', pre=True)
+    def validate_url(cls, value: Any) -> Optional[ParseResult]:
+        if isinstance(value, str) and is_url(value):  # pragma: no cover
+            return urlparse(value)
+        elif value is None:  # pragma: no cover
+            return None
+        raise Error(
+            f'This protocol doesn\'t support only http/https. --input={value}'
+        )  # pragma: no cover
+
     @root_validator
     def validate_literal_option(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('enum_field_as_literal'):
@@ -244,7 +260,7 @@ class Config(BaseModel):
                 )
         return values
 
-    input: Optional[Path]
+    input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
     debug: bool = False
@@ -271,6 +287,7 @@ class Config(BaseModel):
     strict_nullable: bool = False
     use_generic_container_types: bool = False
     enable_faux_immutability: bool = False
+    url: Optional[ParseResult] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -362,7 +379,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     try:
         generate(
-            input_=config.input or sys.stdin.read(),
+            input_=config.url or config.input or sys.stdin.read(),
             input_file_type=config.input_file_type,
             output=config.output,
             target_python_version=config.target_python_version,

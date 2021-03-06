@@ -66,7 +66,7 @@ $ pip install datamodel-code-generator[http]
 
 The `datamodel-codegen` command:
 ```
-usage: datamodel-codegen [-h] [--input INPUT] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
+usage: datamodel-codegen [-h] [--url URL]  [--input INPUT] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
                          [--base-class BASE_CLASS] [--field-constraints] [--snake-case-field] [--strip-default-none]
                          [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default] [--force-optional] [--strict-nullable]
                          [--disable-timestamp] [--use-standard-collections] [--use-generic-container-types] [--use-schema-description]
@@ -77,6 +77,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--input-file-type {auto,openapi,j
 optional arguments:
   -h, --help            show this help message and exit
   --input INPUT         Input file/directory (default: stdin)
+  --url URL             Input file URL. `--input` is ignore when `--url` is used
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
