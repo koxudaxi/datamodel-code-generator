@@ -258,6 +258,7 @@ class JsonSchemaParser(Parser):
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
         remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
+        disable_appending_item_suffix: bool = False,
     ):
         super().__init__(
             source=source,
@@ -290,6 +291,7 @@ class JsonSchemaParser(Parser):
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
             remote_text_cache=remote_text_cache,
+            disable_appending_item_suffix=disable_appending_item_suffix,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -428,9 +430,7 @@ class JsonSchemaParser(Parser):
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             return self.data_type(reference=base_classes[0])
-        reference = self.model_resolver.add(
-            path, name, class_name=True, unique=True, loaded=True
-        )
+        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.name, obj)
         data_model_type = self.data_model_type(
             reference=reference,
@@ -611,12 +611,7 @@ class JsonSchemaParser(Parser):
                 f'This argument will be removed in a future version'
             )
         reference = self.model_resolver.add(
-            path,
-            name,
-            class_name=True,
-            singular_name=singular_name,
-            unique=True,
-            loaded=True,
+            path, name, class_name=True, singular_name=singular_name, loaded=True,
         )
         class_name = reference.name
         self.set_title(class_name, obj)
@@ -641,11 +636,7 @@ class JsonSchemaParser(Parser):
             if item.has_constraint and (obj.has_constraint or self.field_constraints):
                 return self.parse_root_type(
                     self.model_resolver.add(
-                        field_path,
-                        name,
-                        class_name=True,
-                        singular_name=True,
-                        unique=True,
+                        field_path, name, class_name=True, singular_name=True,
                     ).name,
                     item,
                     field_path,
@@ -833,7 +824,6 @@ class JsonSchemaParser(Parser):
                 class_name=True,
                 singular_name=singular_name,
                 singular_name_suffix='Enum',
-                unique=True,
                 loaded=True,
             )
             enum = Enum(
@@ -851,7 +841,6 @@ class JsonSchemaParser(Parser):
             class_name=True,
             singular_name=singular_name,
             singular_name_suffix='Enum',
-            unique=True,
             loaded=True,
         )
         enum_reference = self.model_resolver.add(
@@ -860,7 +849,6 @@ class JsonSchemaParser(Parser):
             class_name=True,
             singular_name=singular_name,
             singular_name_suffix='Enum',
-            unique=True,
             loaded=True,
         )
         enum = Enum(

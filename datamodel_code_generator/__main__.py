@@ -86,7 +86,12 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
-
+arg_parser.add_argument(
+    '--disable-appending-item-suffix',
+    help='Disable adding `Item` suffix to model name in an array',
+    action='store_true',
+    default=None,
+)
 arg_parser.add_argument(
     '--allow-population-by-field-name',
     help='Allow population by field name',
@@ -288,6 +293,7 @@ class Config(BaseModel):
     use_generic_container_types: bool = False
     enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None
+    disable_appending_item_suffix: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -405,6 +411,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             strict_nullable=config.strict_nullable,
             use_generic_container_types=config.use_generic_container_types,
             enable_faux_immutability=config.enable_faux_immutability,
+            disable_appending_item_suffix=config.disable_appending_item_suffix,
         )
         return Exit.OK
     except InvalidClassNameError as e:

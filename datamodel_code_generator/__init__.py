@@ -202,6 +202,7 @@ def generate(
     strict_nullable: bool = False,
     use_generic_container_types: bool = False,
     enable_faux_immutability: bool = False,
+    disable_appending_item_suffix: bool = False,
 ) -> None:
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
@@ -308,6 +309,7 @@ def generate(
         use_generic_container_types=use_generic_container_types,
         enable_faux_immutability=enable_faux_immutability,
         remote_text_cache=remote_text_cache,
+        disable_appending_item_suffix=disable_appending_item_suffix,
     )
 
     with chdir(output):
