@@ -124,6 +124,8 @@ class BaseModel(DataModel):
 
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 
+        # for field in self.fields:
+
     @property
     def imports(self) -> Tuple[Import, ...]:
         if any(f for f in self.fields if f.field):

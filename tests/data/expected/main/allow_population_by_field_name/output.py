@@ -19,6 +19,9 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
+    class Config:
+        allow_population_by_field_name = True
+
     __root__: List[Pet]
 
 

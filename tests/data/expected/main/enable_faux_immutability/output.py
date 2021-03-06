@@ -19,6 +19,9 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
+    class Config:
+        allow_mutation = False
+
     __root__: List[Pet]
 
 
