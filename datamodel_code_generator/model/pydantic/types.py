@@ -12,6 +12,7 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_ANYURL,
+    IMPORT_CONBYTES,
     IMPORT_CONDECIMAL,
     IMPORT_CONFLOAT,
     IMPORT_CONINT,
@@ -43,27 +44,9 @@ from datamodel_code_generator.types import StrictTypes, Types
 def type_map_factory(
     data_type: Type[DataType], strict_types: Sequence[StrictTypes],
 ) -> Dict[Types, DataType]:
-    if StrictTypes.int in strict_types:
-        data_type_int = data_type.from_import(IMPORT_STRICT_INT)
-    else:
-        data_type_int = data_type(type='int')
-    if StrictTypes.float in strict_types:
-        data_type_float = data_type.from_import(IMPORT_STRICT_FLOAT)
-    else:
-        data_type_float = data_type(type='float')
-    if StrictTypes.bytes in strict_types:
-        data_type_bytes = data_type.from_import(IMPORT_STRICT_BYTES)
-    else:
-        data_type_bytes = data_type(type='bytes')
-    if StrictTypes.bool in strict_types:
-        data_type_bool = data_type.from_import(IMPORT_STRICT_BOOL)
-    else:
-
-        data_type_bool = data_type(type='bool')
-    if StrictTypes.str in strict_types:
-        data_type_str = data_type.from_import(IMPORT_STRICT_STR)
-    else:
-        data_type_str = data_type(type='str')
+    data_type_int = data_type(type='int')
+    data_type_float = data_type(type='float')
+    data_type_str = data_type(type='str')
     return {
         Types.integer: data_type_int,
         Types.int32: data_type_int,
@@ -75,7 +58,7 @@ def type_map_factory(
         Types.time: data_type.from_import(IMPORT_TIME),
         Types.string: data_type_str,
         Types.byte: data_type_str,  # base64 encoded string
-        Types.binary: data_type_bytes,
+        Types.binary: data_type(type='bytes'),
         Types.date: data_type.from_import(IMPORT_DATE),
         Types.date_time: data_type.from_import(IMPORT_DATETIME),
         Types.password: data_type.from_import(IMPORT_SECRET_STR),
@@ -89,6 +72,7 @@ def type_map_factory(
         Types.uri: data_type.from_import(IMPORT_ANYURL),
         Types.hostname: data_type.from_import(
             IMPORT_CONSTR,
+            strict=StrictTypes.str in strict_types,
             # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
             kwargs={
                 'regex': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
@@ -97,11 +81,21 @@ def type_map_factory(
         ),
         Types.ipv4: data_type.from_import(IMPORT_IPV4ADDRESS),
         Types.ipv6: data_type.from_import(IMPORT_IPV6ADDRESS),
-        Types.boolean: data_type_bool,
+        Types.boolean: data_type(type='bool'),
         Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
         Types.null: data_type.from_import(IMPORT_ANY, is_optional=True),
         Types.array: data_type.from_import(IMPORT_ANY, is_list=True),
         Types.any: data_type.from_import(IMPORT_ANY),
+    }
+
+
+def strict_type_map_factory(data_type: Type[DataType]) -> Dict[StrictTypes, DataType]:
+    return {
+        StrictTypes.int: data_type.from_import(IMPORT_STRICT_INT, strict=True),
+        StrictTypes.float: data_type.from_import(IMPORT_STRICT_FLOAT, strict=True),
+        StrictTypes.bytes: data_type.from_import(IMPORT_STRICT_BYTES, strict=True),
+        StrictTypes.bool: data_type.from_import(IMPORT_STRICT_BOOL, strict=True),
+        StrictTypes.str: data_type.from_import(IMPORT_STRICT_STR, strict=True),
     }
 
 
@@ -127,6 +121,8 @@ number_kwargs = {
 }
 
 string_kwargs = {'minItems', 'maxItems', 'minLength', 'maxLength', 'pattern'}
+
+byes_kwargs = {'minLength', 'maxLength'}
 
 
 def transform_kwargs(kwargs: Dict[str, Any], filter: Set[str]) -> Dict[str, str]:
@@ -155,6 +151,9 @@ class DataTypeManager(_DataTypeManager):
         self.type_map: Dict[Types, DataType] = type_map_factory(
             self.data_type, strict_types=self.strict_types,
         )
+        self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
+            self.data_type,
+        )
 
     def get_data_int_type(self, types: Types, **kwargs: Any) -> DataType:
         data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, number_kwargs)
@@ -169,6 +168,8 @@ class DataTypeManager(_DataTypeManager):
             if strict:
                 kwargs['strict'] = True
             return self.data_type.from_import(IMPORT_CONINT, kwargs=kwargs)
+        if strict:
+            return self.strict_type_map[StrictTypes.int]
         return self.type_map[types]
 
     def get_data_float_type(self, types: Types, **kwargs: Any) -> DataType:
@@ -184,6 +185,8 @@ class DataTypeManager(_DataTypeManager):
             if strict:
                 kwargs['strict'] = True
             return self.data_type.from_import(IMPORT_CONFLOAT, kwargs=kwargs)
+        if strict:
+            return self.strict_type_map[StrictTypes.float]
         return self.type_map[types]
 
     def get_data_decimal_type(self, types: Types, **kwargs: Any) -> DataType:
@@ -197,12 +200,32 @@ class DataTypeManager(_DataTypeManager):
 
     def get_data_str_type(self, types: Types, **kwargs: Any) -> DataType:
         data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, string_kwargs)
+        strict = StrictTypes.str in self.strict_types
         if data_type_kwargs:
-            if StrictTypes.int in self.strict_types:
+            if strict:
                 data_type_kwargs['strict'] = True
             if 'regex' in data_type_kwargs:
                 data_type_kwargs['regex'] = f'r\'{data_type_kwargs["regex"]}\''
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
+        if strict:
+            return self.strict_type_map[StrictTypes.str]
+        return self.type_map[types]
+
+    def get_data_bytes_type(self, types: Types, **kwargs: Any) -> DataType:
+        data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, byes_kwargs)
+        strict = StrictTypes.bytes in self.strict_types
+        if data_type_kwargs:
+            if not strict:
+                return self.data_type.from_import(
+                    IMPORT_CONBYTES, kwargs=data_type_kwargs
+                )
+        # conbytes doesn't accept strict argument
+        # https://github.com/samuelcolvin/pydantic/issues/2489
+        #    if strict:
+        #         data_type_kwargs['strict'] = True
+        #     return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)
+        if strict:
+            return self.strict_type_map[StrictTypes.bytes]
         return self.type_map[types]
 
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
@@ -214,4 +237,10 @@ class DataTypeManager(_DataTypeManager):
             return self.get_data_float_type(types, **kwargs)
         elif types == Types.decimal:
             return self.get_data_decimal_type(types, **kwargs)
+        elif types == Types.binary:
+            return self.get_data_bytes_type(types, **kwargs)
+        elif types == Types.boolean:
+            if StrictTypes.bool in self.strict_types:
+                return self.strict_type_map[StrictTypes.bool]
+
         return self.type_map[types]

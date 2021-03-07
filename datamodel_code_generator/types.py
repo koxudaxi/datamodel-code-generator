@@ -64,6 +64,7 @@ class DataType(_BaseModel):
     alias: Optional[str] = None
     parent: Optional[Any] = None
     children: List[Any] = []
+    strict: bool = False
 
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
@@ -72,9 +73,11 @@ class DataType(_BaseModel):
     def from_import(
         cls,
         import_: Import,
+        *,
         is_optional: bool = False,
         is_dict: bool = False,
         is_list: bool = False,
+        strict: bool = False,
         kwargs: Optional[Dict[str, Any]] = None,
     ) -> 'DataType':
         return cls(
@@ -84,6 +87,7 @@ class DataType(_BaseModel):
             is_dict=is_dict,
             is_list=is_list,
             is_func=True if kwargs else False,
+            strict=strict,
             kwargs=kwargs,
         )
 
