@@ -13,6 +13,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -38,7 +39,7 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from ..model import pydantic as pydantic_model
 from ..parser.base import Parser
 from ..reference import Reference, is_url
-from ..types import DataType, DataTypeManager, Types
+from ..types import DataType, DataTypeManager, StrictTypes, Types
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
@@ -259,6 +260,7 @@ class JsonSchemaParser(Parser):
         enable_faux_immutability: bool = False,
         remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
         disable_appending_item_suffix: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
     ):
         super().__init__(
             source=source,
@@ -292,6 +294,7 @@ class JsonSchemaParser(Parser):
             enable_faux_immutability=enable_faux_immutability,
             remote_text_cache=remote_text_cache,
             disable_appending_item_suffix=disable_appending_item_suffix,
+            strict_types=strict_types,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()

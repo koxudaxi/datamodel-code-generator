@@ -10,6 +10,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -32,6 +33,14 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.reference import Reference, _BaseModel
 
 T = TypeVar('T')
+
+
+class StrictTypes(Enum):
+    str = 'str'
+    bytes = 'bytes'
+    int = 'int'
+    float = 'float'
+    bool = 'bool'
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
@@ -58,6 +67,25 @@ class DataType(_BaseModel):
 
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
+
+    @classmethod
+    def from_import(
+        cls,
+        import_: Import,
+        is_optional: bool = False,
+        is_dict: bool = False,
+        is_list: bool = False,
+        kwargs: Optional[Dict[str, Any]] = None,
+    ) -> 'DataType':
+        return cls(
+            type=import_.import_,
+            imports=[import_],
+            is_optional=is_optional,
+            is_dict=is_dict,
+            is_list=is_list,
+            is_func=True if kwargs else False,
+            kwargs=kwargs,
+        )
 
     @property
     def unresolved_types(self) -> FrozenSet[str]:
@@ -262,17 +290,19 @@ class DataTypeManager(ABC):
         python_version: PythonVersion = PythonVersion.PY_37,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
         self.use_generic_container_types: bool = use_generic_container_types
+        self.strict_types: Sequence[StrictTypes] = strict_types or ()
 
         self.data_type: Type[DataType]
         if use_generic_container_types:
             if python_version == PythonVersion.PY_36:  # pragma: no cover
                 raise Exception(
                     "use_generic_container_types can not be used with target_python_version 3.6.\n"
-                    " The verison will be not supported in a future version"
+                    " The version will be not supported in a future version"
                 )
             if use_standard_collections:
                 self.data_type = DataTypeGenericContainerStandardCollections

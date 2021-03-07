@@ -337,7 +337,7 @@ def test_parse_nested_array():
         ('integer', 'unix-time', 'int', None, None),
         ('number', 'float', 'float', None, None),
         ('number', 'double', 'float', None, None),
-        ('number', 'time', 'time', None, None),
+        ('number', 'time', 'time', 'datetime', 'time'),
         ('string', None, 'str', None, None),
         ('string', 'byte', 'str', None, None),
         ('string', 'binary', 'bytes', None, None),

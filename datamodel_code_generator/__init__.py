@@ -15,6 +15,7 @@ from typing import (
     Iterator,
     Mapping,
     Optional,
+    Sequence,
     TextIO,
     Type,
     TypeVar,
@@ -61,6 +62,7 @@ from .model.pydantic import (
 from .model.pydantic.types import DataTypeManager
 from .parser import DefaultPutDict, LiteralType
 from .parser.base import Parser
+from .types import StrictTypes
 from .version import version as __version__
 
 T = TypeVar('T')
@@ -203,6 +205,7 @@ def generate(
     use_generic_container_types: bool = False,
     enable_faux_immutability: bool = False,
     disable_appending_item_suffix: bool = False,
+    strict_types: Optional[Sequence[StrictTypes]] = None,
 ) -> None:
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
@@ -310,6 +313,7 @@ def generate(
         enable_faux_immutability=enable_faux_immutability,
         remote_text_cache=remote_text_cache,
         disable_appending_item_suffix=disable_appending_item_suffix,
+        strict_types=strict_types,
     )
 
     with chdir(output):

@@ -13,7 +13,7 @@ from collections import defaultdict
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Optional, Sequence, Union, cast
+from typing import Any, DefaultDict, Dict, List, Optional, Sequence, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
@@ -31,6 +31,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
+from datamodel_code_generator.types import StrictTypes
 
 from .format import PythonVersion, is_supported_in_black
 
@@ -125,6 +126,13 @@ arg_parser.add_argument(
     help='Treat default field as a non-nullable field (Only OpenAPI)',
     action='store_true',
     default=None,
+)
+
+arg_parser.add_argument(
+    '--strict-types',
+    help='Use strict types',
+    choices=[t.value for t in StrictTypes],
+    nargs='+',
 )
 
 arg_parser.add_argument(
@@ -294,6 +302,7 @@ class Config(BaseModel):
     enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None
     disable_appending_item_suffix: bool = False
+    strict_types: List[StrictTypes] = []
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -412,6 +421,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_generic_container_types=config.use_generic_container_types,
             enable_faux_immutability=config.enable_faux_immutability,
             disable_appending_item_suffix=config.disable_appending_item_suffix,
+            strict_types=config.strict_types,
         )
         return Exit.OK
     except InvalidClassNameError as e:

@@ -1,18 +1,13 @@
 from decimal import Decimal
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Sequence, Set, Type
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
-    IMPORT_ABC_MAPPING,
-    IMPORT_ABC_SEQUENCE,
     IMPORT_ANY,
     IMPORT_DATE,
     IMPORT_DATETIME,
     IMPORT_DECIMAL,
-    IMPORT_DICT,
-    IMPORT_LIST,
-    IMPORT_MAPPING,
-    IMPORT_SEQUENCE,
+    IMPORT_TIME,
     IMPORT_UUID,
 )
 from datamodel_code_generator.model.pydantic.imports import (
@@ -29,6 +24,11 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_POSITIVE_FLOAT,
     IMPORT_POSITIVE_INT,
     IMPORT_SECRET_STR,
+    IMPORT_STRICT_BOOL,
+    IMPORT_STRICT_BYTES,
+    IMPORT_STRICT_FLOAT,
+    IMPORT_STRICT_INT,
+    IMPORT_STRICT_STR,
     IMPORT_UUID1,
     IMPORT_UUID2,
     IMPORT_UUID3,
@@ -37,72 +37,73 @@ from datamodel_code_generator.model.pydantic.imports import (
 )
 from datamodel_code_generator.types import DataType
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.types import Types
+from datamodel_code_generator.types import StrictTypes, Types
 
-type_map: Dict[Types, DataType] = {
-    Types.integer: DataType(type='int'),
-    Types.int32: DataType(type='int'),
-    Types.int64: DataType(type='int'),
-    Types.number: DataType(type='float'),
-    Types.float: DataType(type='float'),
-    Types.double: DataType(type='float'),
-    Types.decimal: DataType(type='Decimal', imports=[IMPORT_DECIMAL]),
-    Types.time: DataType(type='time'),
-    Types.string: DataType(type='str'),
-    Types.byte: DataType(type='str'),  # base64 encoded string
-    Types.binary: DataType(type='bytes'),
-    Types.date: DataType(type='date', imports=[IMPORT_DATE]),
-    Types.date_time: DataType(type='datetime', imports=[IMPORT_DATETIME]),
-    Types.password: DataType(type='SecretStr', imports=[IMPORT_SECRET_STR]),
-    Types.email: DataType(type='EmailStr', imports=[IMPORT_EMAIL_STR]),
-    Types.uuid: DataType(type='UUID', imports=[IMPORT_UUID]),
-    Types.uuid1: DataType(type='UUID1', imports=[IMPORT_UUID1]),
-    Types.uuid2: DataType(type='UUID2', imports=[IMPORT_UUID2]),
-    Types.uuid3: DataType(type='UUID3', imports=[IMPORT_UUID3]),
-    Types.uuid4: DataType(type='UUID4', imports=[IMPORT_UUID4]),
-    Types.uuid5: DataType(type='UUID5', imports=[IMPORT_UUID5]),
-    Types.uri: DataType(type='AnyUrl', imports=[IMPORT_ANYURL]),
-    Types.hostname: DataType(
-        type='constr',
-        imports=[IMPORT_CONSTR],
-        is_func=True,
-        # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
-        kwargs={
-            'regex': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'"
-        },
-    ),
-    Types.ipv4: DataType(type='IPv4Address', imports=[IMPORT_IPV4ADDRESS]),
-    Types.ipv6: DataType(type='IPv6Address', imports=[IMPORT_IPV6ADDRESS]),
-    Types.boolean: DataType(type='bool'),
-    Types.object: DataType(type='Dict[str, Any]', imports=[IMPORT_ANY, IMPORT_DICT,],),
-    Types.null: DataType(type='Any', imports=[IMPORT_ANY], is_optional=True),
-    Types.array: DataType(type='List[Any]', imports=[IMPORT_LIST, IMPORT_ANY]),
-    Types.any: DataType(type='Any', imports=[IMPORT_ANY]),
-}
 
-standard_collections_type_map = {
-    **type_map,
-    Types.object: DataType(type='dict[str, Any]', imports=[IMPORT_ANY,],),
-    Types.array: DataType(type='list[Any]', imports=[IMPORT_ANY]),
-}
+def type_map_factory(
+    data_type: Type[DataType], strict_types: Sequence[StrictTypes],
+) -> Dict[Types, DataType]:
+    if StrictTypes.int in strict_types:
+        data_type_int = data_type.from_import(IMPORT_STRICT_INT)
+    else:
+        data_type_int = data_type(type='int')
+    if StrictTypes.float in strict_types:
+        data_type_float = data_type.from_import(IMPORT_STRICT_FLOAT)
+    else:
+        data_type_float = data_type(type='float')
+    if StrictTypes.bytes in strict_types:
+        data_type_bytes = data_type.from_import(IMPORT_STRICT_BYTES)
+    else:
+        data_type_bytes = data_type(type='bytes')
+    if StrictTypes.bool in strict_types:
+        data_type_bool = data_type.from_import(IMPORT_STRICT_BOOL)
+    else:
 
-generic_container_type_map = {
-    **type_map,
-    Types.object: DataType(
-        type='Mapping[str, Any]', imports=[IMPORT_MAPPING, IMPORT_ANY],
-    ),
-    Types.array: DataType(type='Sequence[Any]', imports=[IMPORT_SEQUENCE, IMPORT_ANY]),
-}
+        data_type_bool = data_type(type='bool')
+    if StrictTypes.str in strict_types:
+        data_type_str = data_type.from_import(IMPORT_STRICT_STR)
+    else:
+        data_type_str = data_type(type='str')
+    return {
+        Types.integer: data_type_int,
+        Types.int32: data_type_int,
+        Types.int64: data_type_int,
+        Types.number: data_type_float,
+        Types.float: data_type_float,
+        Types.double: data_type_float,
+        Types.decimal: data_type.from_import(IMPORT_DECIMAL),
+        Types.time: data_type.from_import(IMPORT_TIME),
+        Types.string: data_type_str,
+        Types.byte: data_type_str,  # base64 encoded string
+        Types.binary: data_type_bytes,
+        Types.date: data_type.from_import(IMPORT_DATE),
+        Types.date_time: data_type.from_import(IMPORT_DATETIME),
+        Types.password: data_type.from_import(IMPORT_SECRET_STR),
+        Types.email: data_type.from_import(IMPORT_EMAIL_STR),
+        Types.uuid: data_type.from_import(IMPORT_UUID),
+        Types.uuid1: data_type.from_import(IMPORT_UUID1),
+        Types.uuid2: data_type.from_import(IMPORT_UUID2),
+        Types.uuid3: data_type.from_import(IMPORT_UUID3),
+        Types.uuid4: data_type.from_import(IMPORT_UUID4),
+        Types.uuid5: data_type.from_import(IMPORT_UUID5),
+        Types.uri: data_type.from_import(IMPORT_ANYURL),
+        Types.hostname: data_type.from_import(
+            IMPORT_CONSTR,
+            # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
+            kwargs={
+                'regex': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
+                **({'strict': True} if StrictTypes.str in strict_types else {}),
+            },
+        ),
+        Types.ipv4: data_type.from_import(IMPORT_IPV4ADDRESS),
+        Types.ipv6: data_type.from_import(IMPORT_IPV6ADDRESS),
+        Types.boolean: data_type_bool,
+        Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
+        Types.null: data_type.from_import(IMPORT_ANY, is_optional=True),
+        Types.array: data_type.from_import(IMPORT_ANY, is_list=True),
+        Types.any: data_type.from_import(IMPORT_ANY),
+    }
 
-generic_container_standard_collections_type_map = {
-    **type_map,
-    Types.object: DataType(
-        type='Mapping[str, Any]', imports=[IMPORT_ABC_MAPPING, IMPORT_ANY],
-    ),
-    Types.array: DataType(
-        type='Sequence[Any]', imports=[IMPORT_ABC_SEQUENCE, IMPORT_ANY]
-    ),
-}
 
 kwargs_schema_to_model = {
     'exclusiveMinimum': 'gt',
@@ -142,79 +143,66 @@ class DataTypeManager(_DataTypeManager):
         python_version: PythonVersion = PythonVersion.PY_37,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
     ):
         super().__init__(
-            python_version, use_standard_collections, use_generic_container_types
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            strict_types,
         )
 
-        self.type_map: Dict[Types, DataType]
-        if use_standard_collections:
-            if use_generic_container_types:
-                self.type_map = generic_container_standard_collections_type_map
-            else:
-                self.type_map = standard_collections_type_map
-        else:
-            if use_generic_container_types:
-                self.type_map = generic_container_type_map
-            else:
-                self.type_map = type_map
+        self.type_map: Dict[Types, DataType] = type_map_factory(
+            self.data_type, strict_types=self.strict_types,
+        )
 
     def get_data_int_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, number_kwargs)
+        strict = StrictTypes.int in self.strict_types
         if data_type_kwargs:
-            if data_type_kwargs == {'gt': 0}:
-                return self.data_type(type='PositiveInt', imports=[IMPORT_POSITIVE_INT])
-            if data_type_kwargs == {'lt': 0}:
-                return self.data_type(type='NegativeInt', imports=[IMPORT_NEGATIVE_INT])
-            return self.data_type(
-                type='conint',
-                is_func=True,
-                kwargs={k: int(v) for k, v in data_type_kwargs.items()},
-                imports=[IMPORT_CONINT],
-            )
+            if not strict:
+                if data_type_kwargs == {'gt': 0}:
+                    return self.data_type.from_import(IMPORT_POSITIVE_INT)
+                if data_type_kwargs == {'lt': 0}:
+                    return self.data_type.from_import(IMPORT_NEGATIVE_INT)
+            kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
+            if strict:
+                kwargs['strict'] = True
+            return self.data_type.from_import(IMPORT_CONINT, kwargs=kwargs)
         return self.type_map[types]
 
     def get_data_float_type(self, types: Types, **kwargs: Any) -> DataType:
         data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        strict = StrictTypes.int in self.strict_types
         if data_type_kwargs:
-            if data_type_kwargs == {'gt': 0}:
-                return self.data_type(
-                    type='PositiveFloat', imports=[IMPORT_POSITIVE_FLOAT]
-                )
-            if data_type_kwargs == {'lt': 0}:
-                return self.data_type(
-                    type='NegativeFloat', imports=[IMPORT_NEGATIVE_FLOAT]
-                )
-            return self.data_type(
-                type='confloat',
-                is_func=True,
-                kwargs={k: float(v) for k, v in data_type_kwargs.items()},
-                imports=[IMPORT_CONFLOAT],
-            )
+            if not strict:
+                if data_type_kwargs == {'gt': 0}:
+                    return self.data_type.from_import(IMPORT_POSITIVE_FLOAT)
+                if data_type_kwargs == {'lt': 0}:
+                    return self.data_type.from_import(IMPORT_NEGATIVE_FLOAT)
+            kwargs = {k: float(v) for k, v in data_type_kwargs.items()}
+            if strict:
+                kwargs['strict'] = True
+            return self.data_type.from_import(IMPORT_CONFLOAT, kwargs=kwargs)
         return self.type_map[types]
 
     def get_data_decimal_type(self, types: Types, **kwargs: Any) -> DataType:
         data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
         if data_type_kwargs:
-            return self.data_type(
-                type='condecimal',
-                is_func=True,
+            return self.data_type.from_import(
+                IMPORT_CONDECIMAL,
                 kwargs={k: Decimal(v) for k, v in data_type_kwargs.items()},
-                imports=[IMPORT_CONDECIMAL],
             )
         return self.type_map[types]
 
     def get_data_str_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs = transform_kwargs(kwargs, string_kwargs)
+        data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, string_kwargs)
         if data_type_kwargs:
+            if StrictTypes.int in self.strict_types:
+                data_type_kwargs['strict'] = True
             if 'regex' in data_type_kwargs:
                 data_type_kwargs['regex'] = f'r\'{data_type_kwargs["regex"]}\''
-            return self.data_type(
-                type='constr',
-                is_func=True,
-                kwargs=data_type_kwargs,
-                imports=[IMPORT_CONSTR],
-            )
+            return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         return self.type_map[types]
 
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
