@@ -14,6 +14,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -31,7 +32,7 @@ from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
 from ..reference import ModelResolver, Reference
-from ..types import DataType, DataTypeManager
+from ..types import DataType, DataTypeManager, StrictTypes
 from . import DefaultPutDict, LiteralType
 
 _UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
@@ -249,9 +250,13 @@ class Parser(ABC):
         enable_faux_immutability: bool = False,
         remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
         disable_appending_item_suffix: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
-            target_python_version, use_standard_collections, use_generic_container_types
+            target_python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            strict_types,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type

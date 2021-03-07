@@ -2287,3 +2287,90 @@ def test_main_disable_appending_item_suffix():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_strict_types():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'strict_types.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_strict_types' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_strict_types_all():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'strict_types.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--strict-types',
+                'str',
+                'bytes',
+                'int',
+                'float',
+                'bool',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_strict_types_all' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_strict_types_all_with_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'strict_types.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--strict-types',
+                'str',
+                'bytes',
+                'int',
+                'float',
+                'bool',
+                '--field-constraints',
+            ]
+        )
+
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_strict_types_all_field_constraints'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
