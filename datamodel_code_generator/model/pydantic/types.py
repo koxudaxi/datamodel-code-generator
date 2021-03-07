@@ -174,7 +174,7 @@ class DataTypeManager(_DataTypeManager):
 
     def get_data_float_type(self, types: Types, **kwargs: Any) -> DataType:
         data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
-        strict = StrictTypes.int in self.strict_types
+        strict = StrictTypes.float in self.strict_types
         if data_type_kwargs:
             if not strict:
                 if data_type_kwargs == {'gt': 0}:
