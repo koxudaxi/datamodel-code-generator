@@ -124,6 +124,10 @@ string_kwargs = {'minItems', 'maxItems', 'minLength', 'maxLength', 'pattern'}
 
 byes_kwargs = {'minLength', 'maxLength'}
 
+escape_characters = str.maketrans(
+    {"'": r"\'", '\b': r'\b', '\f': r'\f', '\n': r'\n', '\r': r'\r', '\t': r'\t',}
+)
+
 
 def transform_kwargs(kwargs: Dict[str, Any], filter: Set[str]) -> Dict[str, str]:
     return {
@@ -205,7 +209,9 @@ class DataTypeManager(_DataTypeManager):
             if strict:
                 data_type_kwargs['strict'] = True
             if 'regex' in data_type_kwargs:
-                data_type_kwargs['regex'] = f'r\'{data_type_kwargs["regex"]}\''
+                escaped_regex = data_type_kwargs['regex'].translate(escape_characters)
+                # TODO: remove unneeded escaped characters
+                data_type_kwargs['regex'] = f"r'{escaped_regex}'"
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         if strict:
             return self.strict_type_map[StrictTypes.str]

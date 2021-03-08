@@ -14,6 +14,10 @@
     "tel": {
       "type": "string",
       "pattern": "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"
+    },
+    "comment": {
+        "type": "string",
+        "pattern": "[^\b\f\n\r\t\\\\a+.?|()]+$"
     }
   }
 }
