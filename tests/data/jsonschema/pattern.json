@@ -17,7 +17,7 @@
     },
     "comment": {
         "type": "string",
-        "pattern": "[^\b\f\n\r\t\\\\a+.?|()]+$"
+        "pattern": "[^\b\f\n\r\t\\\\a+.?'\"|()]+$"
     }
   }
 }
