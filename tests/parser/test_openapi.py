@@ -305,6 +305,57 @@ class Results(BaseModel):
     )
 
 
+def test_openapi_parser_parse_x_enum_varnames():
+    parser = OpenAPIParser(Path(DATA_PATH / 'x_enum_varnames.yaml'),)
+    print(parser.parse())
+    assert (
+        parser.parse()
+        == '''from __future__ import annotations
+
+from enum import Enum
+
+
+class String(Enum):
+    dog = 'dog'
+    cat = 'cat'
+    snake = 'snake'
+
+
+class UnknownTypeString(Enum):
+    dog = 'dog'
+    cat = 'cat'
+    snake = 'snake'
+
+
+class NamedString(Enum):
+    EQ = '='
+    NE = '!='
+    GT = '>'
+    LT = '<'
+    GE = '>='
+    LE = '<='
+
+
+class NamedNumber(Enum):
+    one = 1
+    two = 2
+    three = 3
+
+
+class Number(Enum):
+    number_1 = 1
+    number_2 = 2
+    number_3 = 3
+
+
+class UnknownTypeNumber(Enum):
+    int_1 = 1
+    int_2 = 2
+    int_3 = 3
+'''
+    )
+
+
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(Path(DATA_PATH / 'enum_models.yaml').read_text(),)
     expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_enum_models'
