@@ -1,6 +1,6 @@
 from collections import ChainMap
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, ClassVar, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
 
 from pydantic import Field
 
@@ -30,7 +30,13 @@ class Constraints(ConstraintsBase):
 
 
 class DataModelField(DataModelFieldBase):
-    _FIELDS_KEYS: Set[str] = {'alias', 'example', 'examples', 'description', 'title'}
+    _FIELDS_KEYS: ClassVar[Set[str]] = {
+        'alias',
+        'example',
+        'examples',
+        'description',
+        'title',
+    }
 
     constraints: Optional[Constraints] = None
 
@@ -84,8 +90,8 @@ class DataModelField(DataModelFieldBase):
 
 
 class BaseModel(DataModel):
-    TEMPLATE_FILE_PATH = 'pydantic/BaseModel.jinja2'
-    BASE_CLASS = 'pydantic.BaseModel'
+    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic/BaseModel.jinja2'
+    BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
 
     def __init__(
         self,

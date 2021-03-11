@@ -99,7 +99,7 @@ def strict_type_map_factory(data_type: Type[DataType]) -> Dict[StrictTypes, Data
     }
 
 
-kwargs_schema_to_model = {
+kwargs_schema_to_model: Dict[str, str] = {
     'exclusiveMinimum': 'gt',
     'minimum': 'ge',
     'exclusiveMaximum': 'lt',
@@ -112,7 +112,7 @@ kwargs_schema_to_model = {
     'pattern': 'regex',
 }
 
-number_kwargs = {
+number_kwargs: Set[str] = {
     'exclusiveMinimum',
     'minimum',
     'exclusiveMaximum',
@@ -120,9 +120,9 @@ number_kwargs = {
     'multipleOf',
 }
 
-string_kwargs = {'minItems', 'maxItems', 'minLength', 'maxLength', 'pattern'}
+string_kwargs: Set[str] = {'minItems', 'maxItems', 'minLength', 'maxLength', 'pattern'}
 
-byes_kwargs = {'minLength', 'maxLength'}
+byes_kwargs: Set[str] = {'minLength', 'maxLength'}
 
 escape_characters = str.maketrans(
     {"'": r"\'", '\b': r'\b', '\f': r'\f', '\n': r'\n', '\r': r'\r', '\t': r'\t',}
