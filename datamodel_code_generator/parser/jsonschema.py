@@ -797,7 +797,6 @@ class JsonSchemaParser(Parser):
             nullable = False
 
         for i, enum_part in enumerate(enum_times):
-
             if obj.type == 'string' or isinstance(enum_part, str):
                 default = f"'{enum_part}'"
                 if obj.x_enum_varnames:
