@@ -145,8 +145,8 @@ class TemplateBase(ABC):
 
 
 class DataModel(TemplateBase, ABC):
-    TEMPLATE_FILE_PATH: str = ''
-    BASE_CLASS: str = ''
+    TEMPLATE_FILE_PATH: ClassVar[str] = ''
+    BASE_CLASS: ClassVar[str] = ''
 
     def __init__(
         self,

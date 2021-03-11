@@ -14,6 +14,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Pattern,
     Sequence,
     Set,
     Tuple,
@@ -35,8 +36,8 @@ from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager, StrictTypes
 from . import DefaultPutDict, LiteralType
 
-_UNDER_SCORE_1 = re.compile(r'(.)([A-Z][a-z]+)')
-_UNDER_SCORE_2 = re.compile('([a-z0-9])([A-Z])')
+_UNDER_SCORE_1: Pattern[str] = re.compile(r'(.)([A-Z][a-z]+)')
+_UNDER_SCORE_2: Pattern[str] = re.compile('([a-z0-9])([A-Z])')
 
 
 @lru_cache()

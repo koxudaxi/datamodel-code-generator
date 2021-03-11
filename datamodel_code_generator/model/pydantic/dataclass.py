@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, DefaultDict, List, Optional
+from typing import Any, ClassVar, DefaultDict, List, Optional
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -7,7 +7,7 @@ from datamodel_code_generator.reference import Reference
 
 
 class DataClass(DataModel):
-    TEMPLATE_FILE_PATH = 'pydantic/dataclass.jinja2'
+    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic/dataclass.jinja2'
 
     def __init__(
         self,
