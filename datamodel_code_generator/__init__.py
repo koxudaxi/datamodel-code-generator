@@ -22,6 +22,7 @@ from typing import (
     Union,
 )
 from urllib.parse import ParseResult
+from .model import schematics as schematics_model
 
 import pysnooper
 import yaml
@@ -35,22 +36,7 @@ else:
     except ImportError:  # pragma: no cover
         from yaml import SafeLoader
 
-    try:
         from functools import cached_property
-    except ImportError:
-        _NOT_FOUND = object()
-
-        class cached_property:
-            def __init__(self, func: Callable) -> None:
-                self.func: Callable = func
-                self.__doc__: Any = func.__doc__
-
-            def __get__(self, instance: Any, owner: Any = None) -> Any:
-                value = instance.__dict__.get(self.func.__name__, _NOT_FOUND)
-                if value is _NOT_FOUND:  # pragma: no cover
-                    value = instance.__dict__[self.func.__name__] = self.func(instance)
-                return value
-
 
 from .format import PythonVersion
 from .model.pydantic import (
@@ -71,7 +57,6 @@ pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
-
 SafeLoader.yaml_constructors[
     'tag:yaml.org,2002:timestamp'
 ] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
@@ -91,15 +76,15 @@ def enable_debug_message() -> None:  # pragma: no cover
 
 
 def snooper_to_methods(  # type: ignore
-    output=None,
-    watch=(),
-    watch_explode=(),
-    depth=1,
-    prefix='',
-    overwrite=False,
-    thread_info=False,
-    custom_repr=(),
-    max_variable_length=100,
+        output=None,
+        watch=(),
+        watch_explode=(),
+        depth=1,
+        prefix='',
+        overwrite=False,
+        thread_info=False,
+        custom_repr=(),
+        max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
@@ -176,38 +161,38 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
 
 
 def generate(
-    input_: Union[Path, str, ParseResult],
-    *,
-    input_filename: Optional[str] = None,
-    input_file_type: InputFileType = InputFileType.Auto,
-    output: Optional[Path] = None,
-    target_python_version: PythonVersion = PythonVersion.PY_37,
-    base_class: str = DEFAULT_BASE_CLASS,
-    custom_template_dir: Optional[Path] = None,
-    extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-    validation: bool = False,
-    field_constraints: bool = False,
-    snake_case_field: bool = False,
-    strip_default_none: bool = False,
-    aliases: Optional[Mapping[str, str]] = None,
-    disable_timestamp: bool = False,
-    allow_population_by_field_name: bool = False,
-    apply_default_values_for_required_fields: bool = False,
-    force_optional_for_required_fields: bool = False,
-    class_name: Optional[str] = None,
-    use_standard_collections: bool = False,
-    use_schema_description: bool = False,
-    reuse_model: bool = False,
-    encoding: str = 'utf-8',
-    enum_field_as_literal: Optional[LiteralType] = None,
-    set_default_enum_member: bool = False,
-    strict_nullable: bool = False,
-    use_generic_container_types: bool = False,
-    enable_faux_immutability: bool = False,
-    disable_appending_item_suffix: bool = False,
-    strict_types: Optional[Sequence[StrictTypes]] = None,
+        input_: Union[Path, str, ParseResult],
+        *,
+        input_filename: Optional[str] = None,
+        input_file_type: InputFileType = InputFileType.Auto,
+        output: Optional[Path] = None,
+        target_python_version: PythonVersion = PythonVersion.PY_37,
+        use_schematics: bool = False,
+        base_class: str = DEFAULT_BASE_CLASS,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+        validation: bool = False,
+        field_constraints: bool = False,
+        snake_case_field: bool = False,
+        strip_default_none: bool = False,
+        aliases: Optional[Mapping[str, str]] = None,
+        disable_timestamp: bool = False,
+        allow_population_by_field_name: bool = False,
+        apply_default_values_for_required_fields: bool = False,
+        force_optional_for_required_fields: bool = False,
+        class_name: Optional[str] = None,
+        use_standard_collections: bool = False,
+        use_schema_description: bool = False,
+        reuse_model: bool = False,
+        encoding: str = 'utf-8',
+        enum_field_as_literal: Optional[LiteralType] = None,
+        set_default_enum_member: bool = False,
+        strict_nullable: bool = False,
+        use_generic_container_types: bool = False,
+        enable_faux_immutability: bool = False,
+        disable_appending_item_suffix: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
 ) -> None:
-
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
         input_text: Optional[str] = input_
@@ -247,10 +232,10 @@ def generate(
         parser_class = JsonSchemaParser
 
         if input_file_type in (
-            InputFileType.Json,
-            InputFileType.Yaml,
-            InputFileType.Dict,
-            InputFileType.CSV,
+                InputFileType.Json,
+                InputFileType.Yaml,
+                InputFileType.Dict,
+                InputFileType.CSV,
         ):
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
@@ -284,6 +269,16 @@ def generate(
             builder.add_object(obj)
             input_text = json.dumps(builder.to_schema())
 
+    models_to_use = {}
+
+    if use_schematics:
+        models_to_use = dict(
+            data_model_type=schematics_model.BaseModel,
+            data_model_root_type=schematics_model.CustomRootType,
+            data_type_manager_type=schematics_model.DataTypeManager,
+            data_model_field_type=schematics_model.SchematicsModelField,
+        )
+
     parser = parser_class(
         source=input_ if isinstance(input_, ParseResult) else input_text or input_,
         base_class=base_class,
@@ -314,6 +309,7 @@ def generate(
         remote_text_cache=remote_text_cache,
         disable_appending_item_suffix=disable_appending_item_suffix,
         strict_types=strict_types,
+        **models_to_use
     )
 
     with chdir(output):

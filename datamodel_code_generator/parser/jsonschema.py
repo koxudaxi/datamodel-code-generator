@@ -2,6 +2,7 @@ import enum as _enum
 import sys
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import cached_property
 from pathlib import Path
 from typing import (
     Any,
@@ -26,7 +27,6 @@ from pydantic import BaseModel, Field, root_validator, validator
 
 from datamodel_code_generator import (
     InvalidClassNameError,
-    cached_property,
     load_yaml,
     load_yaml_from_path,
     snooper_to_methods,

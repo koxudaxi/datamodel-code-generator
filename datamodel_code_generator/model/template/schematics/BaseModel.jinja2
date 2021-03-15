@@ -1,0 +1,23 @@
+{% for decorator in decorators -%}
+{{ decorator }}
+{% endfor -%}
+{%- if base_class %}
+class {{ class_name }}({{ base_class }}):
+{%- else %}
+class {{ class_name }}:
+{%- endif %}
+{%- if description %}
+    """
+    {{ description }}
+    """
+{%- endif %}
+{%- if not fields %}
+    pass
+{%- endif %}
+{%- for field in fields -%}
+    {%- if field.default %}
+    {{ field.name }} = {{field.default}}
+    {%- else %}
+    {{ field.name }} = {{field.schematics_type}}
+    {%- endif %}
+{%- endfor -%}

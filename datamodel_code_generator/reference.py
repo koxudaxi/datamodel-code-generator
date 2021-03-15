@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import lru_cache, cached_property
 from keyword import iskeyword
 from pathlib import Path
 from typing import (
@@ -26,7 +26,6 @@ from typing import (
 import inflect
 from pydantic import BaseModel, validator
 
-from datamodel_code_generator import cached_property
 
 if TYPE_CHECKING:
     from pydantic.typing import AbstractSetIntStr, DictStrAny, MappingIntStrAny

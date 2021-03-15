@@ -69,6 +69,10 @@ arg_parser.add_argument('--output', help='Output file (default: stdout)')
 arg_parser.add_argument(
     '--base-class', help='Base Class (default: pydantic.BaseModel)', type=str,
 )
+
+arg_parser.add_argument('--use-schematics', help="Use schematics typing instead of pydantic", action="store_true",
+                        default=None)
+
 arg_parser.add_argument(
     '--field-constraints',
     help='Use field constraints and not con* annotations',
@@ -152,7 +156,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--use-generic-container-types',
     help='Use generic container types for type hinting (typing.Sequence, typing.Mapping). '
-    'If `--use-standard-collections` option is set, then import from collections.abc instead of typing',
+         'If `--use-standard-collections` option is set, then import from collections.abc instead of typing',
     action='store_true',
     default=None,
 )
@@ -174,8 +178,8 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--enum-field-as-literal',
     help='Parse enum field as literal. '
-    'all: all enum field type are Literal. '
-    'one: field type is Literal when an enum has only one possible value',
+         'all: all enum field type are Literal. '
+         'one: field type is Literal when an enum has only one possible value',
     choices=[l.value for l in LiteralType],
     default=None,
 )
@@ -262,7 +266,7 @@ class Config(BaseModel):
 
     @root_validator
     def validate_use_generic_container_types(
-        cls, values: Dict[str, Any]
+            cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
         if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
@@ -278,6 +282,7 @@ class Config(BaseModel):
     output: Optional[Path]
     debug: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
+    use_schematics: bool = False
     base_class: str = DEFAULT_BASE_CLASS
     custom_template_dir: Optional[Path]
     extra_template_data: Optional[TextIOBase]
@@ -335,9 +340,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         pyproject_toml: Dict[str, Any] = {
             k.replace('-', '_'): v
             for k, v in toml.load(str(pyproject_toml_path))
-            .get('tool', {})
-            .get('datamodel-codegen', {})
-            .items()
+                .get('tool', {})
+                .get('datamodel-codegen', {})
+                .items()
         }
     else:
         pyproject_toml = {}
@@ -384,7 +389,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                 print(f"Unable to load alias mapping: {e}", file=sys.stderr)
                 return Exit.ERROR
         if not isinstance(aliases, dict) or not all(
-            isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+                isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
             print(
                 'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
@@ -398,6 +403,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             input_file_type=config.input_file_type,
             output=config.output,
             target_python_version=config.target_python_version,
+            use_schematics=config.use_schematics,
             base_class=config.base_class,
             custom_template_dir=config.custom_template_dir,
             validation=config.validation,
