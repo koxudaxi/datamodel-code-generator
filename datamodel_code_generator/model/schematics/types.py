@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Sequence, Set, Type
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model.schematics.imports import (
     IMPORT_ANY,
+    IMPORT_STRING,
     IMPORT_DATE,
     IMPORT_DATETIME,
     IMPORT_DECIMAL,
@@ -27,7 +28,8 @@ from datamodel_code_generator.model.schematics.imports import (
     IMPORT_UUID2,
     IMPORT_UUID3,
     IMPORT_UUID4,
-    IMPORT_UUID5, IMPORT_CONDECIMAL, IMPORT_CONBYTES, IMPORT_CONFLOAT, IMPORT_CONINT, IMPORT_CONSTR,
+    IMPORT_UUID5, IMPORT_CONDECIMAL, IMPORT_CONBYTES, IMPORT_CONFLOAT, IMPORT_CONINT, IMPORT_CONSTR, IMPORT_INT,
+    IMPORT_FLOAT, IMPORT_BOOLEAN,
 )
 from datamodel_code_generator.types import DataType
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
@@ -37,9 +39,9 @@ from datamodel_code_generator.types import StrictTypes, Types
 def type_map_factory(
     data_type: Type[DataType], strict_types: Sequence[StrictTypes],
 ) -> Dict[Types, DataType]:
-    data_type_int = data_type(type='int')
-    data_type_float = data_type(type='float')
-    data_type_str = data_type(type='str')
+    data_type_int = data_type.from_import(IMPORT_INT)
+    data_type_float = data_type.from_import(IMPORT_FLOAT)
+    data_type_str = data_type.from_import(IMPORT_STRING)
     return {
         Types.integer: data_type_int,
         Types.int32: data_type_int,
@@ -51,7 +53,7 @@ def type_map_factory(
         Types.time: data_type.from_import(IMPORT_TIME),
         Types.string: data_type_str,
         Types.byte: data_type_str,  # base64 encoded string
-        Types.binary: data_type(type='bytes'),
+        Types.binary: data_type_int,
         Types.date: data_type.from_import(IMPORT_DATE),
         Types.date_time: data_type.from_import(IMPORT_DATETIME),
         Types.password: data_type.from_import(IMPORT_SECRET_STR),
@@ -74,7 +76,7 @@ def type_map_factory(
         ),
         Types.ipv4: data_type.from_import(IMPORT_IPV4ADDRESS),
         Types.ipv6: data_type.from_import(IMPORT_IPV6ADDRESS),
-        Types.boolean: data_type(type='bool'),
+        Types.boolean: data_type.from_import(IMPORT_BOOLEAN),
         Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
         Types.null: data_type.from_import(IMPORT_ANY, is_optional=True),
         Types.array: data_type.from_import(IMPORT_ANY, is_list=True),

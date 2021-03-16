@@ -1,12 +1,16 @@
 from datamodel_code_generator.imports import Import
 
+IMPORT_STRING = Import.from_full_path('schematics.types.StringType')
+IMPORT_INT = Import.from_full_path('schematics.types.IntType')
+IMPORT_FLOAT = Import.from_full_path('schematics.types.FloatType')
+IMPORT_DECIMAL = Import.from_full_path('schematics.types.DecimalType')
+IMPORT_BOOLEAN = Import.from_full_path('schematics.types.BooleanType')
 IMPORT_ANY = Import.from_full_path('schematics.types.StringType')
 IMPORT_LIST = Import.from_full_path('schematics.types.ListType')
 IMPORT_SEQUENCE = Import.from_full_path('schematics.types.ListType')
 IMPORT_ENUM = Import.from_full_path('enum.Enum')
 IMPORT_ANNOTATIONS = Import.from_full_path('__future__.annotations')
 IMPORT_DICT = Import.from_full_path('schematics.types.DictType')
-IMPORT_DECIMAL = Import.from_full_path('schematics.types.DecimalType')
 IMPORT_DATE = Import.from_full_path('schematics.types.DateType')
 IMPORT_DATETIME = Import.from_full_path('schematics.types.DateTimeType')
 IMPORT_TIME = Import.from_full_path('schematics.types.DateTimeType')

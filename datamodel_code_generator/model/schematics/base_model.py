@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 from datamodel_code_generator.model.base import DataModelFieldBase, DataModel
 
@@ -6,22 +6,17 @@ from datamodel_code_generator.model.base import DataModelFieldBase, DataModel
 class SchematicsModelField(DataModelFieldBase):
 
     @property
-    def type_hint(self) -> str:
-        return ''
-
-    @property
-    def schematics_type(self) -> str:
-        return ''
-
-        # if not type_hint:
-        #     return OPTIONAL
-        # elif self.nullable is not None:
-        #     if self.nullable:
-        #         return f'{OPTIONAL}[{type_hint}]'
-        #     return type_hint
-        # elif self.required:
-        #     return type_hint
-        # return f'{OPTIONAL}[{type_hint}]'
+    def schematics_type(self) -> Optional[str]:
+        data_type = self.data_type.full_name
+        if not data_type:
+            return None
+        elif self.nullable is not None:
+            if self.nullable:
+                return f'{data_type}(required=False)'
+            return f'{data_type}(required=True)'
+        elif self.required:
+            return f'{data_type}(required=True)'
+        return f'{data_type}(required=False)'
 
 
 class BaseModel(DataModel):

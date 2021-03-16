@@ -15,9 +15,9 @@ class {{ class_name }}:
     pass
 {%- endif %}
 {%- for field in fields -%}
-    {%- if field.default %}
-    {{ field.name }} = {{field.default}}
-    {%- else %}
+    {%- if field.schematics_type %}
     {{ field.name }} = {{field.schematics_type}}
+    {%- else %}
+    {{ field.name }} # Uh-oh
     {%- endif %}
 {%- endfor -%}
