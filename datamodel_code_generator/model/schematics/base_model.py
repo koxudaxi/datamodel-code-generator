@@ -7,16 +7,22 @@ class SchematicsModelField(DataModelFieldBase):
 
     @property
     def schematics_type(self) -> Optional[str]:
-        data_type = self.data_type.full_name
-        if not data_type:
-            return None
-        elif self.nullable is not None:
-            if self.nullable:
-                return f'{data_type}(required=False)'
-            return f'{data_type}(required=True)'
-        elif self.required:
-            return f'{data_type}(required=True)'
-        return f'{data_type}(required=False)'
+
+        data_type_name = None
+
+        if self.data_type.is_list:
+            data_types = self.data_type.data_types
+            if self.data_type.is_list and len(data_types) > 0:
+                data_type_name = f'ListType(ModelType({data_types[-1].reference.name}), '
+        elif self.data_type.reference is not None:
+            data_type_name = f'ModelType({self.data_type.reference.name}, '
+        else:
+            data_type_name = f'{self.data_type.full_name}('
+
+        is_required = self.nullable is not None and self.nullable or self.required
+        schematic_args = f'required={"True" if is_required else "False"}, serialized_name="{self.name}")'
+        full_type = f'{data_type_name}{schematic_args}'
+        return full_type
 
 
 class BaseModel(DataModel):

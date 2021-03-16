@@ -15,6 +15,7 @@ IMPORT_DATE = Import.from_full_path('schematics.types.DateType')
 IMPORT_DATETIME = Import.from_full_path('schematics.types.DateTimeType')
 IMPORT_TIME = Import.from_full_path('schematics.types.DateTimeType')
 IMPORT_UUID = Import.from_full_path('schematics.types.UUIDType')
+IMPORT_MODEL = Import.from_full_path('schematics.types.ModelType')
 
 
 IMPORT_CONSTR = Import.from_full_path('schematics.types.StringType')

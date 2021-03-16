@@ -178,5 +178,5 @@ fabric.properties
 
 version.py
 
-output.json
+output.py
 test.json
