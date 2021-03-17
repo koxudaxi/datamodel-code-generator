@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
-from unittest.mock import Mock, call
+from unittest.mock import call
 
 import pytest
 import yaml

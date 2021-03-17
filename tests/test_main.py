@@ -1716,7 +1716,7 @@ def test_main_openapi_enum_models_as_literal_one():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_enum_models_as_literal_one():
+def test_main_openapi_enum_models_as_literal_all():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

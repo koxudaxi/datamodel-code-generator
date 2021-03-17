@@ -9,7 +9,6 @@ from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from datamodel_code_generator.reference import Reference
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 

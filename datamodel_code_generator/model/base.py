@@ -239,7 +239,7 @@ class DataModel(TemplateBase, ABC):
             base_class = base_class_full_path.rsplit('.', 1)[-1]
 
         if '.' in self.name:
-            module, class_name = self.name.rsplit('.', 1)
+            module, _ = self.name.rsplit('.', 1)
             prefix = f'{module}.'
             if base_class.startswith(prefix):
                 base_class = base_class.replace(prefix, '', 1)
