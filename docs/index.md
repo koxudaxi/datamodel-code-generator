@@ -9,7 +9,7 @@ This code generator creates pydantic model from an openapi file and others.
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/407c5bf3a44246c697feeecb774f2c03)](https://www.codacy.com/gh/koxudaxi/datamodel-code-generator/dashboard)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/koxudaxi/datamodel-code-generator.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/koxudaxi/datamodel-code-generator/context:python)
 
 ## Supported source types
 -  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
