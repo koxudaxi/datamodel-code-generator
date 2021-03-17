@@ -125,13 +125,13 @@ def get_template(template_file_path: Path) -> Template:
 
 
 class TemplateBase(ABC):
-    def __init__(self, template_file_path: Path) -> None:
-        self.template_file_path: Path = template_file_path
-        self._template: Template = get_template(template_file_path)
+    @abstractmethod
+    def get_template_file_path(self) -> Path:
+        raise NotImplementedError
 
-    @property
+    @cached_property
     def template(self) -> Template:
-        return self._template
+        return get_template(self.get_template_file_path())
 
     @abstractmethod
     def render(self) -> str:
@@ -170,6 +170,7 @@ class DataModel(TemplateBase, ABC):
             custom_template_file_path = custom_template_dir / template_file_path.name
             if custom_template_file_path.exists():
                 template_file_path = custom_template_file_path
+        self._template_file_path = template_file_path
 
         self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
@@ -207,7 +208,8 @@ class DataModel(TemplateBase, ABC):
         for field in self.fields:
             field.parent = self
 
-        super().__init__(template_file_path=template_file_path)
+    def get_template_file_path(self) -> Path:
+        return self._template_file_path
 
     @property
     def imports(self) -> Tuple[Import, ...]:

@@ -14,6 +14,13 @@ from datamodel_code_generator.types import DataType, Types
 
 
 class A(TemplateBase):
+    def __init__(self, path: Path):
+        self._path = path
+
+    @property
+    def template_file_path(self) -> Path:
+        return self._path
+
     def render(self) -> str:
         return ''
 
