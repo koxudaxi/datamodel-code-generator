@@ -127,7 +127,10 @@ optional arguments:
 ## Example
 ### OpenAPI
 ```sh
+# Generate models from a local file.
 $ datamodel-codegen --input api.yaml --output model.py
+# or directly from a URL.
+$ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
 
 <details>
@@ -333,6 +336,17 @@ class Apis(BaseModel):
     __root__: List[Api]
 ```
 
+## Related projects
+### fastapi-code-generator
+This code generator creates [FastAPI](https://github.com/tiangolo/fastapi) app from an openapi file.
+
+[https://github.com/koxudaxi/fastapi-code-generator](https://github.com/koxudaxi/fastapi-code-generator)
+
+
+### pydantic-pycharm-plugin
+[A JetBrains PyCharm plugin](https://plugins.jetbrains.com/plugin/12861-pydantic) for [`pydantic`](https://github.com/samuelcolvin/pydantic).
+
+[https://github.com/koxudaxi/pydantic-pycharm-plugin](https://github.com/koxudaxi/pydantic-pycharm-plugin)
 
 ## PyPi 
 
@@ -341,6 +355,3 @@ class Apis(BaseModel):
 ## License
 
 datamodel-code-generator is released under the MIT License. http://www.opensource.org/licenses/mit-license
-
-
-## This project is an experimental phase.
