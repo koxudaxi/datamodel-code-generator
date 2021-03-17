@@ -64,9 +64,6 @@ class CodeFormatter:
     def apply_black(self, code: str) -> str:
         return black.format_str(code, mode=self.back_mode,)
 
-    def apply_isort(self, code: str) -> str:
-        raise NotImplementedError
-
     if isort.__version__.startswith('4.'):
 
         def apply_isort(self, code: str) -> str:

@@ -1,6 +1,5 @@
 import pytest
 
-from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_CONDECIMAL,
