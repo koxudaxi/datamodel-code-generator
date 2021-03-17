@@ -8,9 +8,7 @@ from datamodel_code_generator.types import DataType, Types
 class Enum(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'Enum.jinja2'
     BASE_CLASS: ClassVar[str] = 'enum.Enum'
-
-    def __post_init__(self) -> None:
-        self._additional_imports.append(IMPORT_ENUM)
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_ENUM,)
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
