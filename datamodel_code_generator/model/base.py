@@ -148,6 +148,7 @@ class TemplateBase(ABC):
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ''
     BASE_CLASS: ClassVar[str] = ''
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()
 
     def __init__(
         self,
@@ -208,6 +209,8 @@ class DataModel(TemplateBase, ABC):
         self.description = description
         for field in self.fields:
             field.parent = self
+
+        self._additional_imports.extend(self.DEFAULT_IMPORTS)
 
     @property
     def template_file_path(self) -> Path:
