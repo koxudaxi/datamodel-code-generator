@@ -9,12 +9,13 @@ This code generator creates pydantic model from an openapi file and others.
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/407c5bf3a44246c697feeecb774f2c03)](https://www.codacy.com/gh/koxudaxi/datamodel-code-generator/dashboard)
 
 ## Supported source types
-- OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
-- JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) /[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
-- JSON/YAML/CSV Data (it will be converted to JSON Schema)
-- Python dictionary (it will be converted to JSON Schema)
+-  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
+-  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) /[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
+-  JSON/YAML/CSV Data (it will be converted to JSON Schema)
+-  Python dictionary (it will be converted to JSON Schema)
 
 ## Installation
 
@@ -32,7 +33,7 @@ $ pip install datamodel-code-generator[http]
 ## Usage
 
 The `datamodel-codegen` command:
-```
+```bash
 usage: datamodel-codegen [-h] [--input INPUT] [--url URL] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
                          [--base-class BASE_CLASS] [--field-constraints] [--snake-case-field] [--strip-default-none] [--disable-appending-item-suffix]
                          [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default] [--force-optional] [--strict-nullable]
@@ -300,6 +301,17 @@ class Apis(BaseModel):
     __root__: List[Api]
 ```
 
+## Related projects
+### fastapi-code-generator
+This code generator creates [FastAPI](https://github.com/tiangolo/fastapi) app from an openapi file.
+
+[https://github.com/koxudaxi/fastapi-code-generator](https://github.com/koxudaxi/fastapi-code-generator)
+
+### pydantic-pycharm-plugin
+[A JetBrains PyCharm plugin](https://plugins.jetbrains.com/plugin/12861-pydantic) for [`pydantic`](https://github.com/samuelcolvin/pydantic).
+
+[https://github.com/koxudaxi/pydantic-pycharm-plugin](https://github.com/koxudaxi/pydantic-pycharm-plugin)
+
 ## PyPi 
 
 [https://pypi.org/project/datamodel-code-generator](https://pypi.org/project/datamodel-code-generator)
@@ -311,5 +323,3 @@ class Apis(BaseModel):
 ## License
 
 datamodel-code-generator is released under the MIT License. http://www.opensource.org/licenses/mit-license
-
-## This project is an experimental phase.
