@@ -14,10 +14,6 @@ class {{ class_name }}:
 {%- if not fields %}
     pass
 {%- endif %}
-{%- for field in fields -%}
-    {%- if field.schematics_type %}
-    {{ field.name }} = {{field.schematics_type}}
-    {%- else %}
-    {{ field.name }} # Uh-oh
-    {%- endif %}
+{%- for field in fields %}
+    {{ field.name }} = {{field.inline_value}}
 {%- endfor -%}

@@ -77,7 +77,7 @@ def type_map_factory(
         Types.ipv4: data_type.from_import(IMPORT_IPV4ADDRESS),
         Types.ipv6: data_type.from_import(IMPORT_IPV6ADDRESS),
         Types.boolean: data_type.from_import(IMPORT_BOOLEAN),
-        Types.object: data_type.from_import(IMPORT_MODEL, is_dict=True),
+        Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
         Types.null: data_type.from_import(IMPORT_ANY, is_optional=True),
         Types.array: data_type.from_import(IMPORT_LIST, is_list=True),
         Types.any: data_type.from_import(IMPORT_ANY),
