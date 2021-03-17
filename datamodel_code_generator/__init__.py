@@ -53,12 +53,7 @@ else:
 
 
 from .format import PythonVersion
-from .model.pydantic import (
-    BaseModel,
-    CustomRootType,
-    DataModelField,
-    dump_resolve_reference_action,
-)
+from .model.pydantic import dump_resolve_reference_action
 from .parser import DefaultPutDict, LiteralType
 from .parser.base import Parser
 from .types import StrictTypes
@@ -68,7 +63,6 @@ T = TypeVar('T')
 pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
-
 
 SafeLoader.yaml_constructors[
     'tag:yaml.org,2002:timestamp'
@@ -205,7 +199,6 @@ def generate(
     disable_appending_item_suffix: bool = False,
     strict_types: Optional[Sequence[StrictTypes]] = None,
 ) -> None:
-
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
         input_text: Optional[str] = input_
