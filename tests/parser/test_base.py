@@ -1,11 +1,9 @@
 from collections import OrderedDict
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Dict, List, Tuple
 
 import pytest
 
-from datamodel_code_generator import DataModelField, DataTypeManager
+from datamodel_code_generator import DataModelField
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
@@ -204,7 +202,7 @@ def test_snake_to_upper_camel(word, expected):
 
 class D(DataModel):
     def __init__(self, filename: str, data: str, fields: List[DataModelFieldBase]):
-        super().__init__(fields)
+        super().__init__(fields=fields, reference=Reference(''))
         self._data = data
 
     def render(self) -> str:
