@@ -1,9 +1,7 @@
-from pathlib import Path
-from typing import Any, ClassVar, List, Optional, Tuple
+from typing import Any, ClassVar, Optional, Tuple
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
@@ -11,22 +9,7 @@ class Enum(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'Enum.jinja2'
     BASE_CLASS: ClassVar[str] = 'enum.Enum'
 
-    def __init__(
-        self,
-        *,
-        reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
-    ):
-        super().__init__(
-            fields=fields,
-            reference=reference,
-            decorators=decorators,
-            path=path,
-            description=description,
-        )
+    def __post_init__(self) -> None:
         self._additional_imports.append(IMPORT_ENUM)
 
     @classmethod

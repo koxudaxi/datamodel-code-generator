@@ -209,6 +209,11 @@ class DataModel(TemplateBase, ABC):
         for field in self.fields:
             field.parent = self
 
+        self.__post_init__()
+
+    def __post_init__(self) -> None:
+        pass
+
     @property
     def template_file_path(self) -> Path:
         return self._template_file_path
