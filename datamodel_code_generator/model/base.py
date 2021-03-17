@@ -125,13 +125,14 @@ def get_template(template_file_path: Path) -> Template:
 
 
 class TemplateBase(ABC):
+    @property
     @abstractmethod
-    def get_template_file_path(self) -> Path:
+    def template_file_path(self) -> Path:
         raise NotImplementedError
 
     @cached_property
     def template(self) -> Template:
-        return get_template(self.get_template_file_path())
+        return get_template(self.template_file_path)
 
     @abstractmethod
     def render(self) -> str:
@@ -208,7 +209,8 @@ class DataModel(TemplateBase, ABC):
         for field in self.fields:
             field.parent = self
 
-    def get_template_file_path(self) -> Path:
+    @property
+    def template_file_path(self) -> Path:
         return self._template_file_path
 
     @property
