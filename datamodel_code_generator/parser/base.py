@@ -445,7 +445,9 @@ class Parser(ABC):
                         model.reference.name = generated_name
 
         for module, models in module_models:
-            module_path = '.'.join(module)
+            for model in models:
+                model.reference.module_name = '.'.join(module)
+        for module, models in module_models:
 
             init = False
             if module:
@@ -463,10 +465,8 @@ class Parser(ABC):
             result: List[str] = []
             imports = Imports()
             scoped_model_resolver = ModelResolver()
-            import_map: Dict[str, Tuple[str, str]] = {}
 
             for model in models:
-                alias_map: Dict[str, Optional[str]] = {}
                 imports.append(model.imports)
                 for data_type in model.all_data_types:
                     # To change from/import
@@ -476,51 +476,19 @@ class Parser(ABC):
                         # Or, Referenced model is in the same file. we don't need to import the model
                         continue
 
-                    elif (
-                        isinstance(self.source, Path)
-                        and self.source.is_file()
-                        and self.source.name == data_type.reference.path.split('#/')[0]
-                    ):
-                        # The input file is no need to import
-                        full_name = data_type.reference.name
-                    else:
-                        full_name = data_type.full_name or data_type.reference.name
-                    from_, import_ = full_path = relative(module_path, full_name)
+                    from_, import_ = full_path = relative(
+                        model.reference.module_name, data_type.full_name
+                    )
 
-                    alias = scoped_model_resolver.add(
-                        full_path, import_, unique=True
-                    ).name
-                    if alias != import_:
-                        alias_map[data_type.reference.path] = alias
+                    alias = scoped_model_resolver.add(full_path, import_).name
 
                     name = data_type.reference.short_name
-                    data_type.alias = (
-                        f'{alias}.{name}'
-                        if (from_ and import_ and alias != name)
-                        else name
-                    )
+                    if from_ and import_ and alias != name:
+                        data_type.alias = f'{alias}.{name}'
 
-                    if (
-                        full_name
-                        and full_name.startswith(from_)
-                        or f'.{full_name}'.startswith(from_)
-                    ):
-                        import_map[data_type.reference.path] = full_path
-                for ref_path in model.reference_classes:
-                    reference: Reference = self.model_resolver.get(ref_path)  # type: ignore
-                    if reference.source in models:
-                        continue
-                    elif ref_path in import_map:
-                        from_, import_ = import_map[ref_path]
-                    else:
-                        from_, import_ = relative(module_path, reference.name)
                     if init:
                         from_ += "."
-                    imports.append(
-                        Import(
-                            from_=from_, import_=import_, alias=alias_map.get(ref_path),
-                        )
-                    )
+                    imports.append(Import(from_=from_, import_=import_, alias=alias))
 
             if self.reuse_model:
                 model_cache: Dict[Tuple[str, ...], Reference] = {}
