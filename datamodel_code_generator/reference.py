@@ -71,6 +71,7 @@ class Reference(_BaseModel):
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
+    module_name: str = ''
     _exclude_fields: ClassVar = {'children'}
 
     @validator('original_name')
@@ -85,21 +86,6 @@ class Reference(_BaseModel):
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
-
-    @property
-    def module_name(self) -> Optional[str]:
-        if is_url(self.path):  # pragma: no cover
-            return None
-        # TODO: Support file:///
-        path = Path(self.path.split('#')[0])
-
-        # workaround: If a file name has dot then, this method uses first part.
-        module_name = f'{".".join(path.parts[:-1])}.{path.stem.split(".")[0]}'
-        if module_name.startswith(f'.{self.name.split(".", 1)[0]}'):
-            return None
-        elif module_name == '.':  # pragma: no cover
-            return None
-        return module_name
 
     @property
     def short_name(self) -> str:

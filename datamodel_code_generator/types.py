@@ -122,8 +122,8 @@ class DataType(_BaseModel):
     def full_name(self) -> str:
         module_name = self.module_name
         if module_name:
-            return f'{module_name}.{self.type}'
-        return self.type  # type: ignore
+            return f'{module_name}.{self.reference.short_name}'  # type: ignore
+        return self.reference.short_name  # type: ignore
 
     @property
     def all_data_types(self) -> Iterator['DataType']:

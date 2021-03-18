@@ -29,7 +29,9 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
     def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
         return [
-            f'{i} as {self.alias[from_][i]}' if i in self.alias[from_] else i
+            f'{i} as {self.alias[from_][i]}'
+            if i in self.alias[from_] and i != self.alias[from_][i]
+            else i
             for i in sorted(imports)
         ]
 
