@@ -39,6 +39,18 @@ from . import DefaultPutDict, LiteralType
 _UNDER_SCORE_1: Pattern[str] = re.compile(r'(.)([A-Z][a-z]+)')
 _UNDER_SCORE_2: Pattern[str] = re.compile('([a-z0-9])([A-Z])')
 
+escape_characters = str.maketrans(
+    {
+        "\\": r"\\",
+        "'": r"\'",
+        '\b': r'\b',
+        '\f': r'\f',
+        '\n': r'\n',
+        '\r': r'\r',
+        '\t': r'\t',
+    }
+)
+
 
 @lru_cache()
 def camel_to_snake(string: str) -> str:
@@ -252,6 +264,7 @@ class Parser(ABC):
         remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
         disable_appending_item_suffix: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
+        empty_enum_field_name: Optional[str] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -318,6 +331,7 @@ class Parser(ABC):
             aliases=aliases,
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
             singular_name_suffix='' if disable_appending_item_suffix else None,
+            empty_field_name=empty_enum_field_name,
         )
         self.field_preprocessors: List[
             Callable[[DataModelFieldBase, DataModel], None]

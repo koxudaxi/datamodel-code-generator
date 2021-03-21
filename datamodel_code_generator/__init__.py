@@ -198,6 +198,7 @@ def generate(
     enable_faux_immutability: bool = False,
     disable_appending_item_suffix: bool = False,
     strict_types: Optional[Sequence[StrictTypes]] = None,
+    empty_enum_field_name: Optional[str] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -305,6 +306,7 @@ def generate(
         remote_text_cache=remote_text_cache,
         disable_appending_item_suffix=disable_appending_item_suffix,
         strict_types=strict_types,
+        empty_enum_field_name=empty_enum_field_name,
     )
 
     with chdir(output):

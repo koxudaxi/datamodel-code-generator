@@ -119,6 +119,7 @@ class ModelResolver:
         duplicate_name_suffix: Optional[str] = None,
         base_url: Optional[str] = None,
         singular_name_suffix: Optional[str] = None,
+        empty_field_name: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
@@ -132,6 +133,7 @@ class ModelResolver:
         self.singular_name_suffix: str = singular_name_suffix if isinstance(
             singular_name_suffix, str
         ) else SINGULAR_NAME_SUFFIX
+        self.empty_field_name: str = empty_field_name or '_'
 
     @property
     def base_url(self) -> Optional[str]:
@@ -353,19 +355,27 @@ class ModelResolver:
     def validate_name(cls, name: str) -> bool:
         return name.isidentifier() and not iskeyword(name)
 
-    @lru_cache()
-    def get_valid_name(self, name: str, camel: bool = False) -> str:
-        if name.isidentifier():
-            return name
+    def get_valid_name(
+        self, name: str, camel: bool = False, excludes: Optional[Set[str]] = None
+    ) -> str:
+        if not name:
+            name = self.empty_field_name
         if name[0] == '#':
             name = name[1:]
         # TODO: when first character is a number
-        replaced_name = re.sub(r'\W', '_', name)
-        if replaced_name[0].isnumeric():
-            replaced_name = f'field_{replaced_name}'
-        # if replaced_name.isidentifier() and not iskeyword(replaced_name):
-        # return self.get_uniq_name(replaced_name, camel)
-        return replaced_name
+        name = re.sub(r'\W', '_', name)
+        if name[0].isnumeric():
+            name = f'field_{name}'
+        count = 1
+        new_name = name
+        while (
+            not new_name.isidentifier()
+            and iskeyword(new_name)
+            or (excludes and new_name in excludes)
+        ):
+            new_name = f'{name}_{count}'
+            count += 1
+        return new_name
 
     def get_valid_field_name_and_alias(
         self, field_name: str
