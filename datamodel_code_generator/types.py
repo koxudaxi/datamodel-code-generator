@@ -297,7 +297,6 @@ class DataTypeManager(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.strict_types: Sequence[StrictTypes] = strict_types or ()
 
-        self.data_type: Type[DataType]
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36
         ):  # pragma: no cover
@@ -306,7 +305,7 @@ class DataTypeManager(ABC):
                 " The version will be not supported in a future version"
             )
 
-        self.data_type = create_model(  # type: ignore
+        self.data_type: Type[DataType] = create_model(  # type: ignore
             'ContextDataType',
             python_version=python_version,
             use_standard_collections=use_standard_collections,
