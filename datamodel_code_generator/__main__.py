@@ -257,17 +257,6 @@ class Config(BaseModel):
         )  # pragma: no cover
 
     @root_validator
-    def validate_literal_option(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('enum_field_as_literal'):
-            target_python_version: PythonVersion = values['target_python_version']
-            if not target_python_version.has_literal_type:
-                raise Error(
-                    f"`--enum-field-as-literal` isn't compatible with `--target-python-version {target_python_version.value}`.\n"  # type: ignore
-                    f"You have to set `--target-python-version {target_python_version.PY_38.value}` or later version."
-                )
-        return values
-
-    @root_validator
     def validate_use_generic_container_types(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
