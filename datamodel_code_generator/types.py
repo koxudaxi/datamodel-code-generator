@@ -159,7 +159,11 @@ class DataType(_BaseModel):
             (len(self.data_types) > 1, IMPORT_UNION),
         )
         if any(self.literals):
-            import_literal = IMPORT_LITERAL if self.python_version.has_literal_type else IMPORT_LITERAL_BACKPORT
+            import_literal = (
+                IMPORT_LITERAL
+                if self.python_version.has_literal_type
+                else IMPORT_LITERAL_BACKPORT
+            )
             imports = (
                 *imports,
                 (any(self.literals), import_literal),
