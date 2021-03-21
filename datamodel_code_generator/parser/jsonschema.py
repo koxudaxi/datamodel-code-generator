@@ -25,6 +25,7 @@ from warnings import warn
 from pydantic import BaseModel, Field, root_validator, validator
 
 from datamodel_code_generator import (
+    Error,
     InvalidClassNameError,
     cached_property,
     load_yaml,
@@ -814,6 +815,13 @@ class JsonSchemaParser(Parser):
                         else type(enum_part).__name__
                     )
                     field_name = f'{prefix}_{enum_part}'
+
+            if not field_name:
+                raise Error(
+                    f'Enum {name} contains empty string field.\n'
+                    f'Please use the `--enum-field-as-literal all` option.'
+                )
+
             enum_fields.append(
                 self.data_model_field_type(
                     name=self.model_resolver.get_valid_name(field_name),
