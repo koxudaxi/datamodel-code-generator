@@ -821,13 +821,6 @@ class JsonSchemaParser(Parser):
                     )
                     field_name = f'{prefix}_{enum_part}'
 
-            # TODO: remove this error once #380 gets resolved
-            if not field_name:
-                raise Error(
-                    f'Enum {name} contains empty string field.\n'
-                    f'Please use the `--enum-field-as-literal all` option.'
-                )
-
             enum_fields.append(
                 self.data_model_field_type(
                     name=self.model_resolver.get_valid_name(field_name),
