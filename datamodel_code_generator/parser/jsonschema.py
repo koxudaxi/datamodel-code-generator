@@ -25,7 +25,6 @@ from warnings import warn
 from pydantic import BaseModel, Field, root_validator, validator
 
 from datamodel_code_generator import (
-    Error,
     InvalidClassNameError,
     cached_property,
     load_yaml,
