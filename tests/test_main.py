@@ -1761,13 +1761,17 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
             ]
         )
 
-        captured = capsys.readouterr()
-        assert return_code == Exit.ERROR
+        assert return_code == Exit.OK
         assert (
-            captured.err
-            == "`--enum-field-as-literal` isn't compatible with `--target-python-version 3.7`.\n"
-            "You have to set `--target-python-version 3.8` or later version.\n"
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_enum_models_as_literal_py37'
+                / 'output.py'
+            ).read_text()
         )
+    with pytest.raises(SystemExit):
+        main()
 
 
 @freeze_time('2019-07-26')

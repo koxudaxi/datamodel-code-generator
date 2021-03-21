@@ -24,6 +24,7 @@ from datamodel_code_generator.imports import (
     IMPORT_DICT,
     IMPORT_LIST,
     IMPORT_LITERAL,
+    IMPORT_LITERAL_BACKPORT,
     IMPORT_MAPPING,
     IMPORT_OPTIONAL,
     IMPORT_SEQUENCE,
@@ -156,8 +157,18 @@ class DataType(_BaseModel):
         imports: Tuple[Tuple[bool, Import], ...] = (
             (self.is_optional, IMPORT_OPTIONAL),
             (len(self.data_types) > 1, IMPORT_UNION),
-            (any(self.literals), IMPORT_LITERAL),
         )
+        if any(self.literals):
+            import_literal = (
+                IMPORT_LITERAL
+                if self.python_version.has_literal_type
+                else IMPORT_LITERAL_BACKPORT
+            )
+            imports = (
+                *imports,
+                (any(self.literals), import_literal),
+            )
+
         if self.use_generic_container:
             if self.use_standard_collections:
                 imports = (
