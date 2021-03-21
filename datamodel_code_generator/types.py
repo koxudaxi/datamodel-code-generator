@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from itertools import chain
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Dict,
@@ -305,13 +306,16 @@ class DataTypeManager(ABC):
                 " The version will be not supported in a future version"
             )
 
-        self.data_type: Type[DataType] = create_model(  # type: ignore
-            'ContextDataType',
-            python_version=python_version,
-            use_standard_collections=use_standard_collections,
-            use_generic_container=use_generic_container_types,
-            __base__=DataType,
-        )
+        if TYPE_CHECKING:
+            self.data_type: Type[DataType]
+        else:
+            self.data_type: Type[DataType] = create_model(
+                'ContextDataType',
+                python_version=python_version,
+                use_standard_collections=use_standard_collections,
+                use_generic_container=use_generic_container_types,
+                __base__=DataType,
+            )
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
