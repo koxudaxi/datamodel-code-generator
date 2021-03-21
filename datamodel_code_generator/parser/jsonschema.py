@@ -523,7 +523,6 @@ class JsonSchemaParser(Parser):
                         ):
                             additional_properties_type = self.data_type(
                                 literals=field.additionalProperties.enum,
-                                python_version=self.target_python_version,
                             )
                         else:
                             additional_properties_type = self.parse_enum(
@@ -569,9 +568,7 @@ class JsonSchemaParser(Parser):
                     field_type = self.data_type_manager.get_data_type(Types.object)
             elif field.enum:
                 if self.should_parse_enum_as_literal(field):
-                    field_type = self.data_type(
-                        literals=field.enum, python_version=self.target_python_version
-                    )
+                    field_type = self.data_type(literals=field.enum)
                 else:
                     field_type = self.parse_enum(field_name, field, [*path, field_name])
             else:
@@ -666,9 +663,7 @@ class JsonSchemaParser(Parser):
                 )
             elif item.enum:
                 if self.should_parse_enum_as_literal(item):
-                    return self.data_type(
-                        literals=item.enum, python_version=self.target_python_version
-                    )
+                    return self.data_type(literals=item.enum)
                 else:
                     return self.parse_enum(name, item, field_path, singular_name=True)
             elif item.is_array:

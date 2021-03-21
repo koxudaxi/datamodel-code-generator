@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from itertools import chain
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Dict,
@@ -16,6 +17,8 @@ from typing import (
     Type,
     TypeVar,
 )
+
+from pydantic import create_model
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -249,23 +252,6 @@ class DataType(_BaseModel):
 DataType.update_forward_refs()
 
 
-class DataTypePy36(DataType):
-    python_version: PythonVersion = PythonVersion.PY_36
-
-
-class DataTypeStandardCollections(DataType):
-    use_standard_collections: bool = True
-
-
-class DataTypeGenericContainer(DataType):
-    use_generic_container: bool = True
-
-
-class DataTypeGenericContainerStandardCollections(DataType):
-    use_standard_collections: bool = True
-    use_generic_container: bool = True
-
-
 class Types(Enum):
     integer = auto()
     int32 = auto()
@@ -312,23 +298,24 @@ class DataTypeManager(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.strict_types: Sequence[StrictTypes] = strict_types or ()
 
-        self.data_type: Type[DataType]
-        if use_generic_container_types:
-            if python_version == PythonVersion.PY_36:  # pragma: no cover
-                raise Exception(
-                    "use_generic_container_types can not be used with target_python_version 3.6.\n"
-                    " The version will be not supported in a future version"
-                )
-            if use_standard_collections:
-                self.data_type = DataTypeGenericContainerStandardCollections
-            else:
-                self.data_type = DataTypeGenericContainer
-        elif use_standard_collections:
-            self.data_type = DataTypeStandardCollections
-        elif python_version == PythonVersion.PY_36:
-            self.data_type = DataTypePy36
+        if (
+            use_generic_container_types and python_version == PythonVersion.PY_36
+        ):  # pragma: no cover
+            raise Exception(
+                "use_generic_container_types can not be used with target_python_version 3.6.\n"
+                " The version will be not supported in a future version"
+            )
+
+        if TYPE_CHECKING:
+            self.data_type: Type[DataType]
         else:
-            self.data_type = DataType
+            self.data_type: Type[DataType] = create_model(
+                'ContextDataType',
+                python_version=python_version,
+                use_standard_collections=use_standard_collections,
+                use_generic_container=use_generic_container_types,
+                __base__=DataType,
+            )
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
