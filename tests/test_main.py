@@ -1765,7 +1765,9 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_as_literal_py37' / 'output.py'
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_enum_models_as_literal_py37'
+                / 'output.py'
             ).read_text()
         )
     with pytest.raises(SystemExit):
