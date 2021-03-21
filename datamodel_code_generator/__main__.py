@@ -188,6 +188,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--empty-enum-field-name',
+    help='Set field name when enum value is empty (default:  `_`)',
+    default=None,
+)
+
+
+arg_parser.add_argument(
     '--class-name', help='Set class name of root model', default=None,
 )
 
@@ -292,6 +299,7 @@ class Config(BaseModel):
     url: Optional[ParseResult] = None
     disable_appending_item_suffix: bool = False
     strict_types: List[StrictTypes] = []
+    empty_enum_field_name: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -411,6 +419,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             enable_faux_immutability=config.enable_faux_immutability,
             disable_appending_item_suffix=config.disable_appending_item_suffix,
             strict_types=config.strict_types,
+            empty_enum_field_name=config.empty_enum_field_name,
         )
         return Exit.OK
     except InvalidClassNameError as e:
