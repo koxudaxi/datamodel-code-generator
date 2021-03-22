@@ -1,8 +1,8 @@
 from typing import Any, Dict, List
 from urllib.parse import ParseResult
 
-from .. import load_yaml, snooper_to_methods
-from .jsonschema import JsonSchemaParser
+from datamodel_code_generator import load_yaml, snooper_to_methods
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 
 @snooper_to_methods(max_variable_length=None)

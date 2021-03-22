@@ -1,8 +1,8 @@
 from typing import ClassVar, Tuple
 
-from ...imports import Import
-from .. import DataModel
-from .imports import IMPORT_DATACLASS
+from datamodel_code_generator.imports import Import
+from datamodel_code_generator.model import DataModel
+from datamodel_code_generator.model.pydantic.imports import IMPORT_DATACLASS
 
 
 class DataClass(DataModel):

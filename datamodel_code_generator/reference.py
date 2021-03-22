@@ -26,7 +26,7 @@ from typing import (
 import inflect
 from pydantic import BaseModel, validator
 
-from . import cached_property
+from datamodel_code_generator import cached_property
 
 if TYPE_CHECKING:
     from pydantic.typing import AbstractSetIntStr, DictStrAny, MappingIntStrAny

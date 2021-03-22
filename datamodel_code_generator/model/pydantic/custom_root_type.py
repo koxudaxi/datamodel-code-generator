@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from . import BaseModel
+from datamodel_code_generator.model.pydantic.base_model import BaseModel
 
 
 class CustomRootType(BaseModel):

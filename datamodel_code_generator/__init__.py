@@ -230,11 +230,11 @@ def generate(
             raise Error('Invalid file format')
 
     if input_file_type == InputFileType.OpenAPI:
-        from .parser.openapi import OpenAPIParser
+        from datamodel_code_generator.parser.openapi import OpenAPIParser
 
         parser_class: Type[Parser] = OpenAPIParser
     else:
-        from .parser.jsonschema import JsonSchemaParser
+        from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
         parser_class = JsonSchemaParser
 

@@ -1,4 +1,4 @@
-from ...imports import Import
+from datamodel_code_generator.imports import Import
 
 IMPORT_CONSTR = Import.from_full_path('pydantic.constr')
 IMPORT_CONINT = Import.from_full_path('pydantic.conint')

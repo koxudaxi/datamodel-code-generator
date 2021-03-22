@@ -1,8 +1,8 @@
 from typing import Any, ClassVar, Optional, Tuple
 
-from ..imports import IMPORT_ANY, IMPORT_ENUM, Import
-from ..types import DataType, Types
-from . import DataModel, DataModelFieldBase
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.types import DataType, Types
 
 
 class Enum(DataModel):
