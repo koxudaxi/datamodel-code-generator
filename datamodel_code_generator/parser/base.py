@@ -60,7 +60,6 @@ def dump_templates(templates: List[DataModel]) -> str:
     return '\n\n\n'.join(str(m) for m in templates)
 
 
-ReferenceMapSet = Dict[str, Set[str]]
 SortedDataModels = Dict[str, DataModel]
 
 MAX_RECURSION_COUNT: int = 100

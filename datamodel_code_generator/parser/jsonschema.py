@@ -24,22 +24,21 @@ from warnings import warn
 
 from pydantic import BaseModel, Field, root_validator, validator
 
-from datamodel_code_generator import (
+from .. import (
     InvalidClassNameError,
     cached_property,
     load_yaml,
     load_yaml_from_path,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import PythonVersion
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-
+from ..format import PythonVersion
+from ..model import DataModel, DataModelFieldBase
 from ..model import pydantic as pydantic_model
-from ..parser.base import Parser, escape_characters
+from ..model.enum import Enum
 from ..reference import Reference, is_url
 from ..types import DataType, DataTypeManager, StrictTypes, Types
+from . import DefaultPutDict, LiteralType
+from .base import Parser, escape_characters
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
