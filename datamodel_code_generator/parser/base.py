@@ -27,7 +27,7 @@ from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
-from ..reference import FieldNameResolver, ModelResolver, Reference
+from ..reference import ModelResolver, Reference
 from ..types import DataType, DataTypeManager, StrictTypes
 from . import DefaultPutDict, LiteralType
 
@@ -303,8 +303,6 @@ class Parser(ABC):
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
             singular_name_suffix='' if disable_appending_item_suffix else None,
-        )
-        self.field_name_resolver = FieldNameResolver(
             aliases=aliases,
             empty_field_name=empty_enum_field_name,
             snake_case_field=snake_case_field,

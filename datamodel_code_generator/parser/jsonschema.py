@@ -464,7 +464,7 @@ class JsonSchemaParser(Parser):
         for field_name, field in properties.items():
             original_field_name: str = field_name
             constraints: Optional[Mapping[str, Any]] = None
-            field_name, alias = self.field_name_resolver.get_valid_field_name_and_alias(
+            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name, exclude_field_names
             )
             exclude_field_names.add(field_name)
@@ -827,7 +827,7 @@ class JsonSchemaParser(Parser):
                         else type(enum_part).__name__
                     )
                     field_name = f'{prefix}_{enum_part}'
-            field_name = self.field_name_resolver.get_valid_name(
+            field_name = self.model_resolver.get_valid_name(
                 field_name, excludes=exclude_field_names
             )
             exclude_field_names.add(field_name)

@@ -171,6 +171,9 @@ class ModelResolver:
         duplicate_name_suffix: Optional[str] = None,
         base_url: Optional[str] = None,
         singular_name_suffix: Optional[str] = None,
+        aliases: Optional[Mapping[str, str]] = None,
+        snake_case_field: bool = False,
+        empty_field_name: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -183,6 +186,11 @@ class ModelResolver:
         self.singular_name_suffix: str = singular_name_suffix if isinstance(
             singular_name_suffix, str
         ) else SINGULAR_NAME_SUFFIX
+        self.field_name_resolver = FieldNameResolver(
+            aliases=aliases,
+            snake_case_field=snake_case_field,
+            empty_field_name=empty_field_name,
+        )
 
     @property
     def base_url(self) -> Optional[str]:
@@ -362,17 +370,17 @@ class ModelResolver:
     def get_class_name(
         self, field_name: str, unique: bool = True, reserved_name: Optional[str] = None
     ) -> str:
-        field_name_resolver = FieldNameResolver()
         if '.' in field_name:
             split_name = [
-                field_name_resolver.get_valid_name(n) for n in field_name.split('.')
+                self.field_name_resolver.get_valid_name(n)
+                for n in field_name.split('.')
             ]
             prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
             prefix += '.'
         else:
             prefix = ''
 
-        field_name = field_name_resolver.get_valid_name(field_name)
+        field_name = self.field_name_resolver.get_valid_name(field_name)
         upper_camel_name = snake_to_upper_camel(field_name)
         if unique:
             if reserved_name == upper_camel_name:
@@ -406,6 +414,16 @@ class ModelResolver:
     @classmethod
     def validate_name(cls, name: str) -> bool:
         return name.isidentifier() and not iskeyword(name)
+
+    def get_valid_name(self, name: str, excludes: Optional[Set[str]] = None) -> str:
+        return self.field_name_resolver.get_valid_name(name, excludes)
+
+    def get_valid_field_name_and_alias(
+        self, field_name: str, excludes: Optional[Set[str]] = None
+    ) -> Tuple[str, Optional[str]]:
+        return self.field_name_resolver.get_valid_field_name_and_alias(
+            field_name, excludes
+        )
 
 
 @lru_cache()
