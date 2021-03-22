@@ -33,13 +33,12 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-
-from ..model import pydantic as pydantic_model
-from ..parser.base import Parser, escape_characters
-from ..reference import Reference, is_url
-from ..types import DataType, DataTypeManager, StrictTypes, Types
+from datamodel_code_generator.parser.base import Parser, escape_characters
+from datamodel_code_generator.reference import Reference, is_url
+from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
 
 
 def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
