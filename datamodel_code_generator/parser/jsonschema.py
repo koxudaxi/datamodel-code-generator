@@ -460,11 +460,10 @@ class JsonSchemaParser(Parser):
         fields: List[DataModelFieldBase] = []
 
         exclude_field_names: Set[str] = set()
-        for field_name, field in properties.items():
-            original_field_name: str = field_name
+        for original_field_name, field in properties.items():
             constraints: Optional[Mapping[str, Any]] = None
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name, exclude_field_names
+                original_field_name, exclude_field_names
             )
             exclude_field_names.add(field_name)
             if field.ref:

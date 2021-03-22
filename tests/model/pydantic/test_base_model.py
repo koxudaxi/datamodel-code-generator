@@ -105,40 +105,6 @@ def test_base_model_get_data_type():
     assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')
 
 
-def test_base_model_reserved_name():
-    field = DataModelField(name='except', data_type=DataType(type='str'), required=True)
-
-    base_model = BaseModel(
-        fields=[field], reference=Reference(name='test_model', path='test_model'),
-    )
-
-    assert base_model.name == 'test_model'
-    assert base_model.fields == [field]
-    assert base_model.decorators == []
-    assert (
-        base_model.render()
-        == """class test_model(BaseModel):
-    except_: str = Field(..., alias='except')"""
-    )
-
-    field = DataModelField(
-        name='def', data_type=DataType(type='str'), required=True, alias='def-field'
-    )
-
-    base_model = BaseModel(
-        fields=[field], reference=Reference(name='test_model', path='test_model'),
-    )
-
-    assert base_model.name == 'test_model'
-    assert base_model.fields == [field]
-    assert base_model.decorators == []
-    assert (
-        base_model.render()
-        == """class test_model(BaseModel):
-    def_: str = Field(..., alias='def-field')"""
-    )
-
-
 @pytest.mark.parametrize(
     'kwargs,expected',
     [
