@@ -1,7 +1,5 @@
-import re
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
-from functools import lru_cache
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -14,7 +12,6 @@ from typing import (
     List,
     Mapping,
     Optional,
-    Pattern,
     Sequence,
     Set,
     Tuple,
@@ -25,19 +22,14 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import CodeFormatter
-
-from ..format import PythonVersion
+from ..format import CodeFormatter, PythonVersion
 from ..imports import IMPORT_ANNOTATIONS, Import, Imports
 from ..model import pydantic as pydantic_model
 from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
 from ..model.enum import Enum
-from ..reference import ModelResolver, Reference
+from ..reference import FieldNameResolver, ModelResolver, Reference
 from ..types import DataType, DataTypeManager, StrictTypes
 from . import DefaultPutDict, LiteralType
-
-_UNDER_SCORE_1: Pattern[str] = re.compile(r'(.)([A-Z][a-z]+)')
-_UNDER_SCORE_2: Pattern[str] = re.compile('([a-z0-9])([A-Z])')
 
 escape_characters = str.maketrans(
     {
@@ -52,12 +44,6 @@ escape_characters = str.maketrans(
 )
 
 
-@lru_cache()
-def camel_to_snake(string: str) -> str:
-    subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
-    return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
-
-
 def to_hashable(item: Any) -> Any:
     if isinstance(item, list):
         return tuple(to_hashable(i) for i in item)
@@ -68,19 +54,6 @@ def to_hashable(item: Any) -> Any:
     elif isinstance(item, BaseModel):
         return to_hashable(item.dict())
     return item
-
-
-def snakify_field(field: DataModelFieldBase, model: DataModel) -> None:
-    if not field.name:
-        return
-    original_name = field.name
-    field.name = camel_to_snake(original_name)
-    if field.name != original_name:
-        field.alias = original_name
-
-
-def set_strip_default_none(field: DataModelFieldBase, _: DataModel) -> None:
-    field.strip_default_none = True
 
 
 def dump_templates(templates: List[DataModel]) -> str:
@@ -328,18 +301,14 @@ class Parser(ABC):
             self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
 
         self.model_resolver = ModelResolver(
-            aliases=aliases,
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
             singular_name_suffix='' if disable_appending_item_suffix else None,
-            empty_field_name=empty_enum_field_name,
         )
-        self.field_preprocessors: List[
-            Callable[[DataModelFieldBase, DataModel], None]
-        ] = []
-        if self.snake_case_field:
-            self.field_preprocessors.append(snakify_field)
-        if self.strip_default_none:
-            self.field_preprocessors.append(set_strip_default_none)
+        self.field_name_resolver = FieldNameResolver(
+            aliases=aliases,
+            empty_field_name=empty_enum_field_name,
+            snake_case_field=snake_case_field,
+        )
         self.class_name: Optional[str] = class_name
 
     @property
@@ -377,9 +346,6 @@ class Parser(ABC):
         ]
 
     def append_result(self, data_model: DataModel) -> None:
-        for field_preprocessor in self.field_preprocessors:
-            for field in data_model.fields:
-                field_preprocessor(field, data_model)
         self.results.append(data_model)
 
     @property

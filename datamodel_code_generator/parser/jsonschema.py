@@ -460,12 +460,14 @@ class JsonSchemaParser(Parser):
         requires: Set[str] = {*()} if obj.required is None else {*obj.required}
         fields: List[DataModelFieldBase] = []
 
+        exclude_field_names: Set[str] = set()
         for field_name, field in properties.items():
             original_field_name: str = field_name
             constraints: Optional[Mapping[str, Any]] = None
-            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name
+            field_name, alias = self.field_name_resolver.get_valid_field_name_and_alias(
+                field_name, exclude_field_names
             )
+            exclude_field_names.add(field_name)
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
             elif field.is_array:
@@ -596,6 +598,7 @@ class JsonSchemaParser(Parser):
                     nullable=field.nullable
                     if self.strict_nullable and (field.has_default or required)
                     else None,
+                    strip_default_none=self.strip_default_none,
                 )
             )
         return fields
@@ -707,6 +710,7 @@ class JsonSchemaParser(Parser):
             required=required,
             constraints=obj.dict(),
             nullable=nullable,
+            strip_default_none=self.strip_default_none,
         )
 
     def parse_array(
@@ -764,6 +768,7 @@ class JsonSchemaParser(Parser):
                     required=required,
                     constraints=obj.dict() if self.field_constraints else {},
                     nullable=obj.nullable if self.strict_nullable else None,
+                    strip_default_none=self.strip_default_none,
                 )
             ],
             custom_base_class=self.base_class,
@@ -822,7 +827,7 @@ class JsonSchemaParser(Parser):
                         else type(enum_part).__name__
                     )
                     field_name = f'{prefix}_{enum_part}'
-            field_name = self.model_resolver.get_valid_name(
+            field_name = self.field_name_resolver.get_valid_name(
                 field_name, excludes=exclude_field_names
             )
             exclude_field_names.add(field_name)
@@ -832,6 +837,7 @@ class JsonSchemaParser(Parser):
                     default=default,
                     data_type=self.data_type_manager.get_data_type(Types.any),
                     required=True,
+                    strip_default_none=self.strip_default_none,
                 )
             )
 
@@ -887,6 +893,7 @@ class JsonSchemaParser(Parser):
                     default=obj.default,
                     required=False,
                     nullable=True,
+                    strip_default_none=self.strip_default_none,
                 )
             ],
             custom_base_class=self.base_class,

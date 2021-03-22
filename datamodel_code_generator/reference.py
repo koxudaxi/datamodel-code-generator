@@ -1,3 +1,4 @@
+import keyword
 import re
 from collections import defaultdict
 from contextlib import contextmanager
@@ -111,18 +112,67 @@ def context_variable(
         setter(previous_value)
 
 
-class ModelResolver:
+_UNDER_SCORE_1: Pattern[str] = re.compile(r'(.)([A-Z][a-z]+)')
+_UNDER_SCORE_2: Pattern[str] = re.compile('([a-z0-9])([A-Z])')
+
+
+@lru_cache()
+def camel_to_snake(string: str) -> str:
+    subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
+    return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
+
+
+class FieldNameResolver:
     def __init__(
         self,
         aliases: Optional[Mapping[str, str]] = None,
+        snake_case_field: bool = False,
+        empty_field_name: Optional[str] = None,
+    ):
+        self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
+        self.empty_field_name: str = empty_field_name or '_'
+        self.snake_case_field = snake_case_field
+
+    def get_valid_name(self, name: str, excludes: Optional[Set[str]] = None) -> str:
+        if not name:
+            name = self.empty_field_name
+        if name[0] == '#':
+            name = name[1:]
+        # TODO: when first character is a number
+        name = re.sub(r'\W', '_', name)
+        if name[0].isnumeric():
+            name = f'field_{name}'
+        if self.snake_case_field:
+            name = camel_to_snake(name)
+        count = 1
+        new_name = name
+        while (
+            not new_name.isidentifier()
+            and keyword.iskeyword(new_name)
+            or (excludes and new_name in excludes)
+        ):
+            new_name = f'{name}_{count}'
+            count += 1
+        return new_name
+
+    def get_valid_field_name_and_alias(
+        self, field_name: str, excludes: Optional[Set[str]] = None
+    ) -> Tuple[str, Optional[str]]:
+        if field_name in self.aliases:
+            return self.aliases[field_name], field_name
+        valid_name = self.get_valid_name(field_name, excludes=excludes)
+        return valid_name, None if field_name == valid_name else field_name
+
+
+class ModelResolver:
+    def __init__(
+        self,
         exclude_names: Set[str] = None,
         duplicate_name_suffix: Optional[str] = None,
         base_url: Optional[str] = None,
         singular_name_suffix: Optional[str] = None,
-        empty_field_name: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
-        self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self._current_root: Sequence[str] = []
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
@@ -133,7 +183,6 @@ class ModelResolver:
         self.singular_name_suffix: str = singular_name_suffix if isinstance(
             singular_name_suffix, str
         ) else SINGULAR_NAME_SUFFIX
-        self.empty_field_name: str = empty_field_name or '_'
 
     @property
     def base_url(self) -> Optional[str]:
@@ -313,14 +362,17 @@ class ModelResolver:
     def get_class_name(
         self, field_name: str, unique: bool = True, reserved_name: Optional[str] = None
     ) -> str:
+        field_name_resolver = FieldNameResolver()
         if '.' in field_name:
-            split_name = [self.get_valid_name(n) for n in field_name.split('.')]
+            split_name = [
+                field_name_resolver.get_valid_name(n) for n in field_name.split('.')
+            ]
             prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
             prefix += '.'
         else:
             prefix = ''
 
-        field_name = self.get_valid_name(field_name)
+        field_name = field_name_resolver.get_valid_name(field_name)
         upper_camel_name = snake_to_upper_camel(field_name)
         if unique:
             if reserved_name == upper_camel_name:
@@ -354,36 +406,6 @@ class ModelResolver:
     @classmethod
     def validate_name(cls, name: str) -> bool:
         return name.isidentifier() and not iskeyword(name)
-
-    def get_valid_name(
-        self, name: str, camel: bool = False, excludes: Optional[Set[str]] = None
-    ) -> str:
-        if not name:
-            name = self.empty_field_name
-        if name[0] == '#':
-            name = name[1:]
-        # TODO: when first character is a number
-        name = re.sub(r'\W', '_', name)
-        if name[0].isnumeric():
-            name = f'field_{name}'
-        count = 1
-        new_name = name
-        while (
-            not new_name.isidentifier()
-            and iskeyword(new_name)
-            or (excludes and new_name in excludes)
-        ):
-            new_name = f'{name}_{count}'
-            count += 1
-        return new_name
-
-    def get_valid_field_name_and_alias(
-        self, field_name: str
-    ) -> Tuple[str, Optional[str]]:
-        if field_name in self.aliases:
-            return self.aliases[field_name], field_name
-        valid_name = self.get_valid_name(field_name)
-        return valid_name, None if field_name == valid_name else field_name
 
 
 @lru_cache()
