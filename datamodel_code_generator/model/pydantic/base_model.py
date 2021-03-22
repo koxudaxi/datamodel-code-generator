@@ -4,15 +4,11 @@ from typing import Any, ClassVar, DefaultDict, Dict, List, Mapping, Optional, Se
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
-from datamodel_code_generator.model import (
-    ConstraintsBase,
-    DataModel,
-    DataModelFieldBase,
-)
-from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
-from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple
+from ...imports import Import
+from ...reference import Reference
+from ...types import chain_as_tuple
+from .. import ConstraintsBase, DataModel, DataModelFieldBase
+from .imports import IMPORT_EXTRA, IMPORT_FIELD
 
 
 class Constraints(ConstraintsBase):
@@ -135,7 +131,7 @@ class BaseModel(DataModel):
                 ]
 
         if config_parameters:
-            from datamodel_code_generator.model.pydantic import Config
+            from ..pydantic import Config
 
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
 

@@ -21,7 +21,7 @@ import black
 import toml
 from pydantic import BaseModel, root_validator, validator
 
-from datamodel_code_generator import (
+from . import (
     DEFAULT_BASE_CLASS,
     Error,
     InputFileType,
@@ -29,11 +29,10 @@ from datamodel_code_generator import (
     enable_debug_message,
     generate,
 )
-from datamodel_code_generator.parser import LiteralType
-from datamodel_code_generator.reference import is_url
-from datamodel_code_generator.types import StrictTypes
-
 from .format import PythonVersion, is_supported_in_black
+from .parser import LiteralType
+from .reference import is_url
+from .types import StrictTypes
 
 
 class Exit(IntEnum):
@@ -321,7 +320,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     namespace: Namespace = arg_parser.parse_args(args)
 
     if namespace.version:  # pragma: no cover
-        from datamodel_code_generator.version import version
+        from .version import version
 
         print(version)
         exit(0)

@@ -20,8 +20,8 @@ from typing import (
 
 from pydantic import create_model
 
-from datamodel_code_generator.format import PythonVersion
-from datamodel_code_generator.imports import (
+from .format import PythonVersion
+from .imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
     IMPORT_DICT,
@@ -34,7 +34,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.reference import Reference, _BaseModel
+from .reference import Reference, _BaseModel
 
 T = TypeVar('T')
 

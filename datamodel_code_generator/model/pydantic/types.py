@@ -1,8 +1,8 @@
 from decimal import Decimal
 from typing import Any, Dict, Optional, Sequence, Set, Type
 
-from datamodel_code_generator.format import PythonVersion
-from datamodel_code_generator.imports import (
+from ...format import PythonVersion
+from ...imports import (
     IMPORT_ANY,
     IMPORT_DATE,
     IMPORT_DATETIME,
@@ -10,7 +10,10 @@ from datamodel_code_generator.imports import (
     IMPORT_TIME,
     IMPORT_UUID,
 )
-from datamodel_code_generator.model.pydantic.imports import (
+from ...types import DataType
+from ...types import DataTypeManager as _DataTypeManager
+from ...types import StrictTypes, Types
+from ..pydantic.imports import (
     IMPORT_ANYURL,
     IMPORT_CONBYTES,
     IMPORT_CONDECIMAL,
@@ -36,9 +39,6 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_UUID4,
     IMPORT_UUID5,
 )
-from datamodel_code_generator.types import DataType
-from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.types import StrictTypes, Types
 
 
 def type_map_factory(

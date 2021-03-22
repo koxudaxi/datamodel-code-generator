@@ -20,10 +20,10 @@ from typing import (
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, root_validator
 
-from datamodel_code_generator import cached_property
-from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
-from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.types import DataType, chain_as_tuple
+from .. import cached_property
+from ..imports import IMPORT_OPTIONAL, Import
+from ..reference import Reference, _BaseModel
+from ..types import DataType, chain_as_tuple
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
