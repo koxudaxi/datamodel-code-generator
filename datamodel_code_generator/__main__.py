@@ -29,11 +29,10 @@ from datamodel_code_generator import (
     enable_debug_message,
     generate,
 )
+from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
-
-from .format import PythonVersion, is_supported_in_black
 
 
 class Exit(IntEnum):

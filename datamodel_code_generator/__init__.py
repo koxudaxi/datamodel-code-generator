@@ -1,6 +1,4 @@
 import contextlib
-import inspect
-import json
 import os
 from datetime import datetime, timezone
 from enum import Enum
@@ -52,11 +50,11 @@ else:
                 return value
 
 
-from .format import PythonVersion
-from .model.pydantic import dump_resolve_reference_action
-from .parser import DefaultPutDict, LiteralType
-from .parser.base import Parser
-from .types import StrictTypes
+from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.model.pydantic import dump_resolve_reference_action
+from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.parser.base import Parser
+from datamodel_code_generator.types import StrictTypes
 
 T = TypeVar('T')
 
@@ -94,6 +92,8 @@ def snooper_to_methods(  # type: ignore
     max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
+        import inspect
+
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
             snooper_method = pysnooper.snoop(
@@ -122,6 +122,7 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
     else:
         prev_cwd = Path.cwd()
         try:
+
             os.chdir(path if path.is_dir() else path.parent)
             yield
         finally:
@@ -204,7 +205,7 @@ def generate(
     if isinstance(input_, str):
         input_text: Optional[str] = input_
     elif isinstance(input_, ParseResult):
-        from .http import get_body
+        from datamodel_code_generator.http import get_body
 
         input_text = remote_text_cache.get_or_put(
             input_.geturl(), default_factory=get_body
@@ -270,6 +271,8 @@ def generate(
                     )
             except:
                 raise Error('Invalid file format')
+            import json
+
             from genson import SchemaBuilder
 
             builder = SchemaBuilder()

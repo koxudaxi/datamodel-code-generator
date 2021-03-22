@@ -22,14 +22,14 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from ..format import CodeFormatter, PythonVersion
-from ..imports import IMPORT_ANNOTATIONS, Import, Imports
-from ..model import pydantic as pydantic_model
-from ..model.base import ALL_MODEL, DataModel, DataModelFieldBase
-from ..model.enum import Enum
-from ..reference import ModelResolver, Reference
-from ..types import DataType, DataTypeManager, StrictTypes
-from . import DefaultPutDict, LiteralType
+from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
+from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model.base import ALL_MODEL, DataModel, DataModelFieldBase
+from datamodel_code_generator.model.enum import Enum
+from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.reference import ModelResolver, Reference
+from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 escape_characters = str.maketrans(
     {
@@ -332,7 +332,7 @@ class Parser(ABC):
             )
 
     def _get_text_from_url(self, url: str) -> str:
-        from ..http import get_body
+        from datamodel_code_generator.http import get_body
 
         return self.remote_text_cache.get_or_put(url, default_factory=get_body)
 
