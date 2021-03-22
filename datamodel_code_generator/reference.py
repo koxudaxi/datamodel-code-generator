@@ -1,4 +1,3 @@
-import keyword
 import re
 from collections import defaultdict
 from contextlib import contextmanager
@@ -148,7 +147,7 @@ class FieldNameResolver:
         new_name = name
         while (
             not new_name.isidentifier()
-            and keyword.iskeyword(new_name)
+            and iskeyword(new_name)
             or (excludes and new_name in excludes)
         ):
             new_name = f'{name}_{count}'
