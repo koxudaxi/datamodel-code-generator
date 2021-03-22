@@ -1,6 +1,4 @@
 import contextlib
-import inspect
-import json
 import os
 from datetime import datetime, timezone
 from enum import Enum
@@ -94,6 +92,8 @@ def snooper_to_methods(  # type: ignore
     max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
+        import inspect
+
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
             snooper_method = pysnooper.snoop(
@@ -122,6 +122,7 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
     else:
         prev_cwd = Path.cwd()
         try:
+
             os.chdir(path if path.is_dir() else path.parent)
             yield
         finally:
@@ -270,6 +271,8 @@ def generate(
                     )
             except:
                 raise Error('Invalid file format')
+            import json
+
             from genson import SchemaBuilder
 
             builder = SchemaBuilder()
