@@ -343,9 +343,6 @@ class Parser(ABC):
             *url.path.split('/')[1:],
         ]
 
-    def append_result(self, data_model: DataModel) -> None:
-        self.results.append(data_model)
-
     @property
     def data_type(self) -> Type[DataType]:
         return self.data_type_manager.data_type

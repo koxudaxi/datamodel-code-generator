@@ -446,7 +446,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
-        self.append_result(data_model_type)
+        self.results.append(data_model_type)
 
         return self.data_type(reference=reference)
 
@@ -631,7 +631,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
-        self.append_result(data_model_type)
+        self.results.append(data_model_type)
         return self.data_type(reference=reference)
 
     def parse_array_fields(
@@ -725,7 +725,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
-        self.append_result(data_model_root)
+        self.results.append(data_model_root)
         return self.data_type(reference=reference)
 
     def parse_root_type(
@@ -774,7 +774,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
         )
-        self.append_result(data_model_root_type)
+        self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
 
     def parse_enum(
@@ -854,7 +854,7 @@ class JsonSchemaParser(Parser):
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
             )
-            self.append_result(enum)
+            self.results.append(enum)
             return self.data_type(reference=reference)
 
         root_reference = self.model_resolver.add(
@@ -879,7 +879,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
         )
-        self.append_result(enum)
+        self.results.append(enum)
         data_model_root_type = self.data_model_root_type(
             reference=root_reference,
             fields=[
@@ -899,7 +899,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
         )
-        self.append_result(data_model_root_type)
+        self.results.append(data_model_root_type)
         return self.data_type(reference=root_reference)
 
     def _get_ref_body(self, resolved_ref: str) -> Dict[Any, Any]:
