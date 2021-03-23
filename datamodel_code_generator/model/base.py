@@ -1,5 +1,3 @@
-import keyword
-import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import lru_cache
@@ -18,7 +16,7 @@ from typing import (
 )
 
 from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
@@ -94,23 +92,6 @@ class DataModelFieldBase(_BaseModel):
     @property
     def method(self) -> Optional[str]:
         return None
-
-    @root_validator
-    def validate_root(cls, values: Any) -> Dict[str, Any]:
-        name: Optional[str] = values.get('name')
-        if name:
-            if keyword.iskeyword(name):
-                alias = name
-                name += '_'
-            elif name.isidentifier():
-                return values
-            else:  # pragma: no cover
-                alias = name
-                name = re.sub(r'\W', '_', name)
-            if not values.get('alias'):
-                values['alias'] = alias
-            values['name'] = name
-        return values
 
     @property
     def represented_default(self) -> str:

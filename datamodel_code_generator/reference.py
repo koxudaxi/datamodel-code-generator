@@ -144,12 +144,10 @@ class FieldNameResolver:
         if self.snake_case_field:
             name = camel_to_snake(name)
         count = 1
+        if iskeyword(name):
+            name += '_'
         new_name = name
-        while (
-            not new_name.isidentifier()
-            and iskeyword(new_name)
-            or (excludes and new_name in excludes)
-        ):
+        while not new_name.isidentifier() or (excludes and new_name in excludes):
             new_name = f'{name}_{count}'
             count += 1
         return new_name
