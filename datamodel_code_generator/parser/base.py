@@ -22,6 +22,7 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
+from datamodel_code_generator import Protocol, runtime_checkable
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model import pydantic as pydantic_model
@@ -178,11 +179,17 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
+@runtime_checkable
+class Child(Protocol):
+    @property
+    def parent(self) -> Optional[Any]:
+        raise NotImplementedError
+
+
 def get_most_of_parent(value: Any) -> Optional[Any]:
-    if not hasattr(value, 'parent'):
-        return value
-    parent = getattr(value, 'parent')
-    return get_most_of_parent(parent)
+    if isinstance(value, Child):
+        return get_most_of_parent(value.parent)
+    return value
 
 
 class Result(BaseModel):
@@ -420,9 +427,6 @@ class Parser(ABC):
                         model.reference.name = generated_name
 
         for module, models in module_models:
-            for model in models:
-                model.reference.module_name = '.'.join(module)
-        for module, models in module_models:
 
             init = False
             if module:
@@ -452,7 +456,7 @@ class Parser(ABC):
                         continue
 
                     from_, import_ = full_path = relative(
-                        model.reference.module_name, data_type.full_name
+                        model.module_name, data_type.full_name
                     )
 
                     alias = scoped_model_resolver.add(full_path, import_).name

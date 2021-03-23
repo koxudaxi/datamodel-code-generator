@@ -27,7 +27,18 @@ import yaml
 if TYPE_CHECKING:
     cached_property = property
     from yaml import SafeLoader
+
+    Protocol = object
+    runtime_checkable: Callable[..., Any]
 else:
+    try:
+        from typing import Protocol
+    except ImportError:
+        from typing_extensions import Protocol
+    try:
+        from typing import runtime_checkable
+    except ImportError:
+        from typing_extensions import runtime_checkable
     try:
         from yaml import CSafeLoader as SafeLoader
     except ImportError:  # pragma: no cover

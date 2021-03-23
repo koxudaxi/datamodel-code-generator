@@ -246,6 +246,10 @@ class DataModel(TemplateBase, ABC):
         return self.name.split('.')[:-1]
 
     @property
+    def module_name(self) -> str:
+        return '.'.join(self.module_path)
+
+    @property
     def all_data_types(self) -> Iterator['DataType']:
         for field in self.fields:
             yield from field.data_type.all_data_types
