@@ -20,6 +20,7 @@ from typing import (
 
 from pydantic import create_model
 
+from datamodel_code_generator import Protocol, runtime_checkable
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
@@ -49,6 +50,13 @@ class StrictTypes(Enum):
 
 def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
     return tuple(chain(*iterables))
+
+
+@runtime_checkable
+class Modular(Protocol):
+    @property
+    def module_name(self) -> str:
+        raise NotImplementedError
 
 
 class DataType(_BaseModel):
@@ -120,7 +128,9 @@ class DataType(_BaseModel):
 
     @property
     def module_name(self) -> Optional[str]:
-        return self.reference.module_name if self.reference else None
+        if self.reference and isinstance(self.reference.source, Modular):
+            return self.reference.source.module_name
+        return None  # pragma: no cover
 
     @property
     def full_name(self) -> str:

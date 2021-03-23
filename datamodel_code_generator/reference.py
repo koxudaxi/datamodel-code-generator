@@ -71,7 +71,6 @@ class Reference(_BaseModel):
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
-    module_name: str = ''
     _exclude_fields: ClassVar = {'children'}
 
     @validator('original_name')
