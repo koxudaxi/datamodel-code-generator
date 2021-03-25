@@ -34,6 +34,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model.base import get_module_name
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser, escape_characters
@@ -430,7 +431,11 @@ class JsonSchemaParser(Parser):
             if all_of_item.ref:  # $ref
                 base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
             else:
-                fields.extend(self.parse_object_fields(all_of_item, path))
+                fields.extend(
+                    self.parse_object_fields(
+                        all_of_item, path, get_module_name(name, None),
+                    )
+                )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             return self.data_type(reference=base_classes[0])
@@ -451,7 +456,7 @@ class JsonSchemaParser(Parser):
         return self.data_type(reference=reference)
 
     def parse_object_fields(
-        self, obj: JsonSchemaObject, path: List[str]
+        self, obj: JsonSchemaObject, path: List[str], module_name: Optional[str] = None
     ) -> List[DataModelFieldBase]:
         properties: Dict[str, JsonSchemaObject] = (
             {} if obj.properties is None else obj.properties
@@ -461,34 +466,40 @@ class JsonSchemaParser(Parser):
 
         exclude_field_names: Set[str] = set()
         for original_field_name, field in properties.items():
+
             constraints: Optional[Mapping[str, Any]] = None
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 original_field_name, exclude_field_names
             )
+            modular_name = f'{module_name}.{field_name}' if module_name else field_name
+
             exclude_field_names.add(field_name)
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
             elif field.is_array:
                 field_type = self.parse_array_fields(
-                    field_name, field, [*path, field_name]
+                    modular_name, field, [*path, field_name]
                 ).data_type
                 constraints = field.dict()
             elif field.anyOf:
-                field_type = self.parse_any_of(field_name, field, [*path, field_name])
+                field_type = self.parse_any_of(modular_name, field, [*path, field_name])
             elif field.oneOf:
-                field_type = self.parse_one_of(field_name, field, [*path, field_name])
+                field_type = self.parse_one_of(modular_name, field, [*path, field_name])
             elif field.allOf:
                 field_type = self.parse_all_of(
-                    field_name, field, [*path, field_name], ignore_duplicate_model=True
+                    modular_name,
+                    field,
+                    [*path, field_name],
+                    ignore_duplicate_model=True,
                 )
             elif field.is_object:
                 if field.properties:
                     field_type = self.parse_object(
-                        field_name, field, [*path, field_name]
+                        modular_name, field, [*path, field_name]
                     )
                 elif isinstance(field.additionalProperties, JsonSchemaObject):
                     field_class_name = self.model_resolver.add(
-                        [*path, field_name], field_name, class_name=True
+                        [*path, field_name], modular_name, class_name=True
                     ).name
 
                     # TODO: supports other type
@@ -570,7 +581,9 @@ class JsonSchemaParser(Parser):
                 if self.should_parse_enum_as_literal(field):
                     field_type = self.data_type(literals=field.enum)
                 else:
-                    field_type = self.parse_enum(field_name, field, [*path, field_name])
+                    field_type = self.parse_enum(
+                        modular_name, field, [*path, field_name]
+                    )
             else:
                 field_type = self.get_data_type(field)
                 if self.field_constraints:
@@ -624,7 +637,9 @@ class JsonSchemaParser(Parser):
         self.set_additional_properties(class_name, additional_properties or obj)
         data_model_type = self.data_model_type(
             reference=reference,
-            fields=self.parse_object_fields(obj, path),
+            fields=self.parse_object_fields(
+                obj, path, get_module_name(class_name, None)
+            ),
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
@@ -712,7 +727,7 @@ class JsonSchemaParser(Parser):
         )
 
     def parse_array(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
+        self, name: str, obj: JsonSchemaObject, path: List[str],
     ) -> DataType:
         field = self.parse_array_fields(name, obj, [*path, name])
         reference = self.model_resolver.add(path, name, loaded=True)

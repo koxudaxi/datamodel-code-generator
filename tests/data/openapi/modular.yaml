@@ -176,6 +176,14 @@ components:
             type: string
             format: uri
             description: A URL to the API console for each API
+          stage:
+            type: string
+            enum: [
+              "test",
+              "dev",
+              "stg",
+              "prod"
+            ]
     models.Event:
       type: object
       properties:
@@ -207,6 +215,14 @@ components:
     foo.bar.Clone:
       allOf:
         - $ref: '#/components/schemas/foo.bar.Thing'
+        - type: object
+          properties:
+            others:
+              type: object
+              properties:
+                 name:
+                   type: string
+
     foo.Tea:
       properties:
         flavour:
