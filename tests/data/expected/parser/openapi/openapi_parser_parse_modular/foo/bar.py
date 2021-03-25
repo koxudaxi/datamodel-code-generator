@@ -13,5 +13,9 @@ class Thang(BaseModel):
     attributes: Optional[List[Dict[str, Any]]] = None
 
 
+class Others(BaseModel):
+    name: Optional[str] = None
+
+
 class Clone(Thing):
-    pass
+    others: Optional[Others] = None

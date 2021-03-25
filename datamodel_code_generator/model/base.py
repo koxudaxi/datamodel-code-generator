@@ -105,6 +105,20 @@ def get_template(template_file_path: Path) -> Template:
     return environment.get_template(template_file_path.name)
 
 
+def get_module_path(name: str, file_path: Optional[Path]) -> List[str]:
+    if file_path:
+        return [
+            *file_path.parts[:-1],
+            file_path.stem,
+            *name.split('.')[:-1],
+        ]
+    return name.split('.')[:-1]
+
+
+def get_module_name(name: str, file_path: Optional[Path]) -> str:
+    return '.'.join(get_module_path(name, file_path))
+
+
 class TemplateBase(ABC):
     @property
     @abstractmethod
@@ -237,17 +251,11 @@ class DataModel(TemplateBase, ABC):
 
     @property
     def module_path(self) -> List[str]:
-        if self.file_path:
-            return [
-                *self.file_path.parts[:-1],
-                self.file_path.stem,
-                *self.name.split('.')[:-1],
-            ]
-        return self.name.split('.')[:-1]
+        return get_module_path(self.name, self.file_path)
 
     @property
     def module_name(self) -> str:
-        return '.'.join(self.module_path)
+        return get_module_name(self.name, self.file_path)
 
     @property
     def all_data_types(self) -> Iterator['DataType']:

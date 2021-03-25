@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import AnyUrl, BaseModel, Field
@@ -23,6 +24,13 @@ class Rules(BaseModel):
     __root__: List[str]
 
 
+class Stage(Enum):
+    test = 'test'
+    dev = 'dev'
+    stg = 'stg'
+    prod = 'prod'
+
+
 class Api(BaseModel):
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
@@ -36,6 +44,7 @@ class Api(BaseModel):
     apiDocumentationUrl: Optional[AnyUrl] = Field(
         None, description='A URL to the API console for each API'
     )
+    stage: Optional[Stage] = None
 
 
 class Apis(BaseModel):

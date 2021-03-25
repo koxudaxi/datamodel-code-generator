@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import AnyUrl, BaseModel
@@ -19,11 +20,19 @@ class Rules(BaseModel):
     __root__: List[str]
 
 
+class Stage(Enum):
+    test = 'test'
+    dev = 'dev'
+    stg = 'stg'
+    prod = 'prod'
+
+
 class Api(BaseModel):
     apiKey: Optional[str] = None
     apiVersionNumber: Optional[str] = None
     apiUrl: Optional[AnyUrl] = None
     apiDocumentationUrl: Optional[AnyUrl] = None
+    stage: Optional[Stage] = None
 
 
 class Apis(BaseModel):
