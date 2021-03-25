@@ -173,6 +173,7 @@ class ModelResolver:
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
+        self._root_id: Optional[str] = None
         self._root_id_base_path: Optional[str] = None
         self.ids: DefaultDict[str, Dict[str, str]] = defaultdict(dict)
         self.after_load_files: Set[str] = set()
@@ -221,11 +222,20 @@ class ModelResolver:
             yield
 
     @property
+    def root_id(self) -> Optional[str]:
+        return self._root_id
+
+    @property
     def root_id_base_path(self) -> Optional[str]:
         return self._root_id_base_path
 
-    def set_root_id_base_path(self, root_id_base_path: Optional[str]) -> None:
-        self._root_id_base_path = root_id_base_path
+    def set_root_id(self, root_id: Optional[str]) -> None:
+        if root_id and '/' in root_id:
+            self._root_id_base_path = root_id.rsplit('/', 1)[0]
+        else:
+            self._root_id_base_path = None
+
+        self._root_id = root_id
 
     def add_id(self, id_: str, path: Sequence[str]) -> None:
         self.ids['/'.join(self.current_root)][id_] = self.resolve_ref(path)
@@ -257,6 +267,10 @@ class ModelResolver:
             from .http import join_url
 
             return join_url(self.base_url, ref)
+        if is_url(ref):
+            file_part, path_part = ref.split('#', 1)
+            if file_part == self.root_id:
+                return f'{"/".join(self.current_root)}#{path_part}'
         return ref
 
     def is_remote_ref(self, resolved_ref: str) -> bool:
