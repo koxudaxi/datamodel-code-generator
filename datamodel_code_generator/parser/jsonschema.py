@@ -307,21 +307,11 @@ class JsonSchemaParser(Parser):
 
     @property
     def root_id(self) -> Optional[str]:
-        return self._root_id
+        return self.model_resolver.root_id
 
     @root_id.setter
     def root_id(self, value: Optional[str]) -> None:
-        self._root_id = value
-        if value and '/' in value:
-            self._root_id_base_path = value.rsplit('/', 1)[0]
-        else:
-            self._root_id_base_path = None
-
-        self.model_resolver.set_root_id_base_path(self.root_id_base_path)
-
-    @property
-    def root_id_base_path(self) -> Optional[str]:
-        return self._root_id_base_path
+        self.model_resolver.set_root_id(value)
 
     def should_parse_enum_as_literal(self, obj: JsonSchemaObject) -> bool:
         return self.enum_field_as_literal == LiteralType.All or (
