@@ -1079,9 +1079,7 @@ def test_main_root_id_jsonschema(mocker):
     root_id_response.text = 'dummy'
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
-    httpx_get_mock = mocker.patch(
-        'httpx.get', side_effect=[root_id_response, person_response]
-    )
+    httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1100,37 +1098,7 @@ def test_main_root_id_jsonschema(mocker):
             == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
-            [
-                call('https://example.com/root_id.json'),
-                call('https://example.com/person.json'),
-            ]
-        )
-    with pytest.raises(SystemExit):
-        main()
-
-
-@freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_root_id_failed(mocker):
-    httpx_get_mock = mocker.patch('httpx.get', side_effect=[Exception])
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'root_id.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'jsonschema',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
-        )
-        httpx_get_mock.assert_has_calls(
-            [call('https://example.com/root_id.json'),]
+            [call('https://example.com/person.json'),]
         )
     with pytest.raises(SystemExit):
         main()
@@ -1138,13 +1106,9 @@ def test_main_root_id_jsonschema_root_id_failed(mocker):
 
 @freeze_time('2019-07-26')
 def test_main_root_id_jsonschema_self_refs(mocker):
-    root_id_response = mocker.Mock()
-    root_id_response.text = 'dummy'
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
-    httpx_get_mock = mocker.patch(
-        'httpx.get', side_effect=[root_id_response, person_response]
-    )
+    httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1164,10 +1128,7 @@ def test_main_root_id_jsonschema_self_refs(mocker):
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
         httpx_get_mock.assert_has_calls(
-            [
-                call('https://example.com/root_id_self_ref.json'),
-                call('https://example.com/person.json'),
-            ]
+            [call('https://example.com/person.json'),]
         )
     with pytest.raises(SystemExit):
         main()

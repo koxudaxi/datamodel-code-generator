@@ -35,7 +35,7 @@
       "type": "array",
       "items": [
         {
-          "$ref": "definitions/drink/coffee.json#"
+          "$ref": "definitions/drink/coffee.json"
         },
         {
           "$ref": "definitions/drink/tea.json#/"
