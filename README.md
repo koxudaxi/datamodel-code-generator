@@ -34,8 +34,10 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 ##### String Format 
 -  date
 -  datetime
+-  time
 -  password
 -  email
+-  idn-email 
 -  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 -  ipv4
 -  ipv6
