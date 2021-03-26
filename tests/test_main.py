@@ -1036,13 +1036,37 @@ def test_main_invalid_model_name_failed(capsys):
                 str(output_file),
                 '--input-file-type',
                 'jsonschema',
+                '--class-name',
+                'with',
             ]
         )
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
             captured.err
-            == 'title=\'1 xyz\' is invalid class name. You have to set `--class-name` option\n'
+            == 'title=\'with\' is invalid class name. You have to set `--class-name` option\n'
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_invalid_model_name_converted(capsys):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'invalid_model_name.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        captured = capsys.readouterr()
+        assert return_code == Exit.ERROR
+        assert (
+            captured.err
+            == 'title=\'1Xyz\' is invalid class name. You have to set `--class-name` option\n'
         )
 
 
@@ -2131,6 +2155,27 @@ def test_main_generate_from_directory():
                 path.relative_to(main_nested_directory)
             ).read_text()
             assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_generate_custom_class_name_generator():
+
+    custom_class_name_generator = lambda title: f'Custom{title}'
+
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        input_ = (JSON_SCHEMA_DATA_PATH / 'person.json').relative_to(Path.cwd())
+        assert not input_.is_absolute()
+        generate(
+            input_=input_,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            custom_class_name_generator=custom_class_name_generator,
+        )
+
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py'
+        ).read_text().replace('Person', 'CustomPerson')
 
 
 @freeze_time('2019-07-26')
