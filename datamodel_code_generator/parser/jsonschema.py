@@ -1,5 +1,4 @@
 import enum as _enum
-import sys
 from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path

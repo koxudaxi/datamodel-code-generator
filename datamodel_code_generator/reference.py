@@ -281,7 +281,6 @@ class ModelResolver:
         )
 
     def is_after_load(self, ref: str) -> bool:
-        ref = self.resolve_ref(ref)
         if self.is_external_root_ref(ref):
             return ref[:-1] in self.after_load_files
         elif self.is_external_ref(ref):
