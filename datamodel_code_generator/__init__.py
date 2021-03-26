@@ -211,6 +211,7 @@ def generate(
     disable_appending_item_suffix: bool = False,
     strict_types: Optional[Sequence[StrictTypes]] = None,
     empty_enum_field_name: Optional[str] = None,
+    custom_class_name_generator: Optional[Callable[[str], str]] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -321,6 +322,7 @@ def generate(
         disable_appending_item_suffix=disable_appending_item_suffix,
         strict_types=strict_types,
         empty_enum_field_name=empty_enum_field_name,
+        custom_class_name_generator=custom_class_name_generator,
     )
 
     with chdir(output):

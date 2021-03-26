@@ -36,7 +36,11 @@ from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import get_module_name
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.parser.base import Parser, escape_characters
+from datamodel_code_generator.parser.base import (
+    Parser,
+    escape_characters,
+    title_to_class_name,
+)
 from datamodel_code_generator.reference import Reference, is_url
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
 
@@ -261,6 +265,7 @@ class JsonSchemaParser(Parser):
         disable_appending_item_suffix: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
         empty_enum_field_name: Optional[str] = None,
+        custom_class_name_generator: Optional[Callable[[str], str]] = None,
     ):
         super().__init__(
             source=source,
@@ -296,6 +301,7 @@ class JsonSchemaParser(Parser):
             disable_appending_item_suffix=disable_appending_item_suffix,
             strict_types=strict_types,
             empty_enum_field_name=empty_enum_field_name,
+            custom_class_name_generator=custom_class_name_generator,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -1040,11 +1046,17 @@ class JsonSchemaParser(Parser):
                 self.raw_obj = load_yaml(source.text)
                 if self.class_name:
                     obj_name = self.class_name
+                elif self.custom_class_name_generator:
+                    obj_name = self.custom_class_name_generator(
+                        self.raw_obj.get('title', 'Model')
+                    )
                 else:
                     # backward compatible
                     obj_name = self.raw_obj.get('title', 'Model')
                     if not self.model_resolver.validate_name(obj_name):
-                        raise InvalidClassNameError(obj_name)
+                        obj_name = title_to_class_name(obj_name)
+                if not self.model_resolver.validate_name(obj_name):
+                    raise InvalidClassNameError(obj_name)
                 self._parse_file(self.raw_obj, obj_name, path_parts)
 
         self._resolve_unparsed_json_pointer()

@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
@@ -192,6 +193,12 @@ def get_most_of_parent(value: Any) -> Optional[Any]:
     return value
 
 
+def title_to_class_name(title: str) -> str:
+    classname = re.sub('[^A-Za-z0-9]+', ' ', title)
+    classname = ''.join(x for x in classname.title() if not x.isspace())
+    return classname
+
+
 class Result(BaseModel):
     body: str
     source: Optional[Path]
@@ -245,6 +252,9 @@ class Parser(ABC):
         disable_appending_item_suffix: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
         empty_enum_field_name: Optional[str] = None,
+        custom_class_name_generator: Optional[
+            Callable[[str], str]
+        ] = title_to_class_name,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -280,6 +290,9 @@ class Parser(ABC):
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
         self.enable_faux_immutability: bool = enable_faux_immutability
+        self.custom_class_name_generator: Optional[
+            Callable[[str], str]
+        ] = custom_class_name_generator
 
         self.remote_text_cache: DefaultPutDict[str, str] = (
             remote_text_cache or DefaultPutDict()
