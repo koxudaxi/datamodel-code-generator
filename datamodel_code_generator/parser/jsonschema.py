@@ -1,5 +1,4 @@
 import enum as _enum
-import sys
 from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
@@ -937,7 +936,7 @@ class JsonSchemaParser(Parser):
                 if obj.ref_type == JSONReference.LOCAL:
                     # Local Reference – $ref: '#/definitions/myElement'
                     self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)  # type: ignore
-                elif self.model_resolver.is_after_load(obj.ref):
+                elif self.model_resolver.is_after_load(ref):
                     self.reserved_refs[tuple(ref.split('#')[0].split('/'))].add(ref)  # type: ignore
                 else:
                     if is_url(ref):
@@ -1000,17 +999,7 @@ class JsonSchemaParser(Parser):
     def root_id_context(self, root_raw: Dict[str, Any]) -> Generator[None, None, None]:
         root_id: Optional[str] = root_raw.get('$id')
         previous_root_id: Optional[str] = self.root_id
-        if root_id:
-            try:
-                resolved_ref = self.model_resolver.resolve_ref(root_id).split('#')[0]
-                self._get_ref_body(resolved_ref)
-            except Exception as e:
-                print(f'Parse $id failed. $id={root_id}\n {str(e)}', file=sys.stderr)
-                self.root_id = None
-            else:
-                self.root_id = root_id
-        else:
-            self.root_id = None
+        self.root_id = root_id if root_id else None
         yield
         self.root_id = previous_root_id
 

@@ -247,7 +247,15 @@ class ModelResolver:
             joined_path = self.join_path(path)
         if ID_PATTERN.match(joined_path):
             ref: str = self.ids['/'.join(self.current_root)][joined_path]
-        elif '#' in joined_path:
+        elif (
+            '#' not in joined_path
+            and self.root_id_base_path
+            and self.current_root != path
+        ):
+            ref = f'{self.root_id_base_path}/{joined_path}#'
+        else:
+            if '#' not in joined_path:
+                joined_path += '#'
             if joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
             if self.is_remote_ref(joined_path):
@@ -255,14 +263,6 @@ class ModelResolver:
             else:
                 delimiter = joined_path.index('#')
                 ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
-        elif self.root_id_base_path and self.current_root != path:
-            ref = f'{self.root_id_base_path}/{joined_path}#'
-        else:
-            joined_path = f'{joined_path}#'
-            if self.is_remote_ref(joined_path):
-                ref = f'{"/".join(self.current_root[:-1])}/{joined_path}'
-            else:
-                ref = joined_path
         if self.base_url:
             from .http import join_url
 
@@ -281,7 +281,6 @@ class ModelResolver:
         )
 
     def is_after_load(self, ref: str) -> bool:
-        ref = self.resolve_ref(ref)
         if self.is_external_root_ref(ref):
             return ref[:-1] in self.after_load_files
         elif self.is_external_ref(ref):
@@ -314,12 +313,12 @@ class ModelResolver:
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
             original_name = Path(
-                split_ref[0][:-1] if self.is_external_root_ref(ref) else split_ref[0]
+                split_ref[0][:-1] if self.is_external_root_ref(path) else split_ref[0]
             ).stem
         else:
             original_name = (
                 Path(split_ref[1][:-1]).stem
-                if self.is_external_root_ref(ref)
+                if self.is_external_root_ref(path)
                 else split_ref[1]
             )
         name = self.get_class_name(original_name, unique=False)
