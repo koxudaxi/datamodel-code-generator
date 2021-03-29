@@ -15,5 +15,5 @@ class {{ class_name }}:
     pass
 {%- endif %}
 {%- for field in fields %}
-    {{ field.name }} = {{field.inline_value}}
+    {{ field.snakecase_name }} = {{field.inline_value}}
 {%- endfor -%}
