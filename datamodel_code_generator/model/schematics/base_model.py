@@ -1,5 +1,6 @@
 from typing import ClassVar, Optional, Any, Tuple
 import re
+import builtins
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModelFieldBase, DataModel
@@ -37,9 +38,17 @@ class SchematicsModelField(DataModelFieldBase):
     @property
     def snakecase_name(self) -> str:
         if not self.name:
+            # We don't want to this this case ever
             return 'NO_FIELD_SET'
+
+        builtin_names = dir(builtins)
         name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', self.name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+        snakecase = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+        # If var shadowing builtin, mutate. i.e. `id` > `_id`
+        if snakecase in builtin_names:
+            snakecase = f'_{snakecase}'
+        return snakecase
 
     @property
     def is_list(self) -> bool:
@@ -102,7 +111,6 @@ class SchematicsModelField(DataModelFieldBase):
                 extra_kwargs['required'] = not self.data_type.is_optional
                 # Uncomment for less serialized names # if self.name and self.name != self.snakecase_name:
                 if self.name:
-
                     extra_kwargs['serialized_name'] = self.name
                 if is_top_level:
                     extra_kwarg_string = ((', ' if inner_type and extra_kwargs else '') + ", ".join(f"{key}={value}"
