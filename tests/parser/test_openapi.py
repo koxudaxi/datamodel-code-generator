@@ -582,11 +582,11 @@ def test_openapi_model_resolver():
             'original_name': 'apis',
             'path': 'api.yaml#/components/schemas/apis',
         },
-        'api.yaml#/components/schemas/apis/Apis/0': {
+        'api.yaml#/components/schemas/apis/apis/0': {
             'loaded': True,
             'name': 'Api',
-            'original_name': 'Apis',
-            'path': 'api.yaml#/components/schemas/apis/Apis/0',
+            'original_name': 'apis',
+            'path': 'api.yaml#/components/schemas/apis/apis/0',
         },
     }
 

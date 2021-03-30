@@ -515,6 +515,7 @@ class JsonSchemaParser(Parser):
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
+                            modular_name,
                         )
                     elif field.additionalProperties.is_object:
                         additional_properties_type = self.parse_object(
@@ -540,13 +541,13 @@ class JsonSchemaParser(Parser):
                             )
                     elif field.additionalProperties.anyOf:
                         additional_properties_type = self.parse_any_of(
-                            field_class_name,
+                            modular_name,
                             field.additionalProperties,
                             [*path, field_name],
                         )
                     elif field.additionalProperties.oneOf:
                         additional_properties_type = self.parse_one_of(
-                            field_class_name,
+                            modular_name,
                             field.additionalProperties,
                             [*path, field_name],
                         )
@@ -669,7 +670,9 @@ class JsonSchemaParser(Parser):
                 return self.parse_one_of(name, item, field_path)
             elif item.allOf:
                 return self.parse_all_of(
-                    self.model_resolver.add(field_path, name, singular_name=True).name,
+                    self.model_resolver.add(
+                        field_path, name, singular_name=True, class_name=True
+                    ).name,
                     item,
                     field_path,
                     ignore_duplicate_model=True,
@@ -680,11 +683,7 @@ class JsonSchemaParser(Parser):
                 else:
                     return self.parse_enum(name, item, field_path, singular_name=True)
             elif item.is_array:
-                return self.parse_array_fields(
-                    self.model_resolver.add(field_path, name, class_name=True).name,
-                    item,
-                    field_path,
-                ).data_type
+                return self.parse_array_fields(name, item, field_path,).data_type
             else:
                 return self.get_data_type(item)
 
@@ -724,10 +723,14 @@ class JsonSchemaParser(Parser):
         )
 
     def parse_array(
-        self, name: str, obj: JsonSchemaObject, path: List[str],
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        original_name: Optional[str] = None,
     ) -> DataType:
-        field = self.parse_array_fields(name, obj, [*path, name])
-        reference = self.model_resolver.add(path, name, loaded=True)
+        field = self.parse_array_fields(original_name or name, obj, [*path, name])
+        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         data_model_root = self.data_model_root_type(
             reference=reference,
             fields=[field],
@@ -763,7 +766,7 @@ class JsonSchemaParser(Parser):
             required = not obj.nullable and not (
                 obj.has_default and self.apply_default_values_for_required_fields
             )
-        reference = self.model_resolver.add(path, name, loaded=True)
+        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self.set_title(name, obj)
         self.set_additional_properties(name, additional_properties or obj)
         data_model_root_type = self.data_model_root_type(
@@ -1015,7 +1018,6 @@ class JsonSchemaParser(Parser):
         self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
 
     def parse_obj(self, name: str, obj: JsonSchemaObject, path: List[str],) -> None:
-        name = self.model_resolver.add(path, name, class_name=True).name
         if obj.is_object:
             self.parse_object(name, obj, path)
         elif obj.is_array:
@@ -1046,19 +1048,18 @@ class JsonSchemaParser(Parser):
                 self.current_source_path = source.path
             with self.model_resolver.current_root_context(path_parts):
                 self.raw_obj = load_yaml(source.text)
-                if self.class_name:
-                    obj_name = self.class_name
-                elif self.custom_class_name_generator:
-                    obj_name = self.custom_class_name_generator(
-                        self.raw_obj.get('title', 'Model')
-                    )
-                else:
-                    # backward compatible
+                if self.custom_class_name_generator:
                     obj_name = self.raw_obj.get('title', 'Model')
+                else:
+                    if self.class_name:
+                        obj_name = self.class_name
+                    else:
+                        # backward compatible
+                        obj_name = self.raw_obj.get('title', 'Model')
+                        if not self.model_resolver.validate_name(obj_name):
+                            obj_name = title_to_class_name(obj_name)
                     if not self.model_resolver.validate_name(obj_name):
-                        obj_name = title_to_class_name(obj_name)
-                if not self.model_resolver.validate_name(obj_name):
-                    raise InvalidClassNameError(obj_name)
+                        raise InvalidClassNameError(obj_name)
                 self._parse_file(self.raw_obj, obj_name, path_parts)
 
         self._resolve_unparsed_json_pointer()
@@ -1112,7 +1113,9 @@ class JsonSchemaParser(Parser):
         else:
             path = path_parts
         with self.model_resolver.current_root_context(path_parts):
-            obj_name = self.model_resolver.add(path, obj_name, unique=False).name
+            obj_name = self.model_resolver.add(
+                path, obj_name, unique=False, class_name=True
+            ).name
             with self.root_id_context(raw):
 
                 # parse $id before parsing $ref

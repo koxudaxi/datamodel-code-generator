@@ -50,8 +50,6 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             if isinstance(imports, Import):
                 imports = [imports]
             for import_ in imports:
-                if not import_.import_:
-                    continue
                 if '.' in import_.import_:
                     self[None].add(import_.import_)
                 else:
