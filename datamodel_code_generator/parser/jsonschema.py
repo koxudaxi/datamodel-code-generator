@@ -417,7 +417,7 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
         base_classes: List[Reference] = []
-        if len(obj.allOf) == 1:
+        if len(obj.allOf) == 1 and not obj.properties:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
                 if get_model_by_path(self.raw_obj, single_obj.ref[2:].split('/')).get(
@@ -433,6 +433,10 @@ class JsonSchemaParser(Parser):
                         all_of_item, path, get_module_name(name, None),
                     )
                 )
+        if obj.properties:
+            fields.extend(
+                self.parse_object_fields(obj, path, get_module_name(name, None))
+            )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             return self.data_type(reference=base_classes[0])
@@ -473,11 +477,6 @@ class JsonSchemaParser(Parser):
             exclude_field_names.add(field_name)
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
-            elif field.is_array:
-                field_type = self.parse_array_fields(
-                    modular_name, field, [*path, field_name]
-                ).data_type
-                constraints = field.dict()
             elif field.anyOf:
                 field_type = self.parse_any_of(modular_name, field, [*path, field_name])
             elif field.oneOf:
@@ -489,6 +488,11 @@ class JsonSchemaParser(Parser):
                     [*path, field_name],
                     ignore_duplicate_model=True,
                 )
+            elif field.is_array:
+                field_type = self.parse_array_fields(
+                    modular_name, field, [*path, field_name]
+                ).data_type
+                constraints = field.dict()
             elif field.is_object:
                 if field.properties:
                     field_type = self.parse_object(
@@ -509,6 +513,13 @@ class JsonSchemaParser(Parser):
                                 field.additionalProperties.items.ref,
                             ),
                             is_list=True,
+                        )
+                    elif field.additionalProperties.allOf:
+                        additional_properties_type = self.parse_all_of(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                            ignore_duplicate_model=True,
                         )
                     elif field.additionalProperties.is_array:
                         additional_properties_type = self.parse_array(
@@ -550,13 +561,6 @@ class JsonSchemaParser(Parser):
                             modular_name,
                             field.additionalProperties,
                             [*path, field_name],
-                        )
-                    elif field.additionalProperties.allOf:
-                        additional_properties_type = self.parse_all_of(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                            ignore_duplicate_model=True,
                         )
                     else:
                         additional_properties_type = self.parse_root_type(
@@ -662,12 +666,6 @@ class JsonSchemaParser(Parser):
                 )
             elif item.ref:
                 return self.get_ref_data_type(item.ref)
-            elif isinstance(item, JsonSchemaObject) and item.properties:
-                return self.parse_object(name, item, field_path, singular_name=True,)
-            elif item.anyOf:
-                return self.parse_any_of(name, item, field_path)
-            elif item.oneOf:
-                return self.parse_one_of(name, item, field_path)
             elif item.allOf:
                 return self.parse_all_of(
                     self.model_resolver.add(
@@ -677,6 +675,12 @@ class JsonSchemaParser(Parser):
                     field_path,
                     ignore_duplicate_model=True,
                 )
+            elif isinstance(item, JsonSchemaObject) and item.properties:
+                return self.parse_object(name, item, field_path, singular_name=True,)
+            elif item.anyOf:
+                return self.parse_any_of(name, item, field_path)
+            elif item.oneOf:
+                return self.parse_one_of(name, item, field_path)
             elif item.enum:
                 if self.should_parse_enum_as_literal(item):
                     return self.data_type(literals=item.enum)
@@ -1018,14 +1022,14 @@ class JsonSchemaParser(Parser):
         self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
 
     def parse_obj(self, name: str, obj: JsonSchemaObject, path: List[str],) -> None:
-        if obj.is_object:
+        if obj.allOf:
+            self.parse_all_of(name, obj, path)
+        elif obj.is_object:
             self.parse_object(name, obj, path)
         elif obj.is_array:
             self.parse_array(name, obj, path)
         elif obj.enum:
             self.parse_enum(name, obj, path)
-        elif obj.allOf:
-            self.parse_all_of(name, obj, path)
         else:
             self.parse_root_type(name, obj, path)
         self.parse_ref(obj, path)

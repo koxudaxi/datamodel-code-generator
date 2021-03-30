@@ -2024,6 +2024,30 @@ def test_main_all_of_ref():
 
 
 @freeze_time('2019-07-26')
+def test_main_all_of_with_object():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        with chdir(JSON_SCHEMA_DATA_PATH):
+            return_code: Exit = main(
+                [
+                    '--input',
+                    'all_of_with_object.json',
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'jsonschema',
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'all_of_with_object' / 'output.py').read_text()
+            )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_openapi_nullable():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
