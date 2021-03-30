@@ -326,6 +326,7 @@ class Parser(ABC):
             aliases=aliases,
             empty_field_name=empty_enum_field_name,
             snake_case_field=snake_case_field,
+            custom_class_name_generator=custom_class_name_generator,
         )
         self.class_name: Optional[str] = class_name
 
@@ -411,14 +412,26 @@ class Parser(ABC):
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
 
-            # Remove duplicated name model
-            unique_model_names: Set[str] = set()
+            # backward compatible
+            # Remove duplicated root model
             for model in models:
-                if model.name in unique_model_names:
-                    # Remove duplicated name model
-                    models.remove(model)
-                    continue
-                unique_model_names.add(model.name)
+                if isinstance(model, self.data_model_root_type):
+                    root_data_type = model.fields[0].data_type
+                    if (
+                        root_data_type.reference
+                        and not root_data_type.is_dict
+                        and not root_data_type.is_list
+                        and root_data_type.reference.source in models
+                        and root_data_type.reference.name
+                        == self.model_resolver.get_class_name(
+                            model.reference.original_name, unique=False
+                        )
+                    ):
+                        # Replace referenced duplicate model to original model
+                        for child in model.reference.children[:]:
+                            child.replace_reference(root_data_type.reference)
+                        models.remove(model)
+                        continue
             module_models.append((module, models,))
 
             scoped_model_resolver = ModelResolver(
@@ -496,14 +509,13 @@ class Parser(ABC):
                     cached_model_reference = model_cache.get(model_key)
                     if cached_model_reference:
                         if isinstance(model, Enum):
-                            for child in model.reference.children:
-                                if isinstance(child, DataType):  # pragma: no cover
-                                    # child is resolved data_type by reference
-                                    data_model = get_most_of_parent(child)
+                            for child in model.reference.children[:]:
+                                # child is resolved data_type by reference
+                                data_model = get_most_of_parent(child)
 
-                                    # TODO: replace reference in all modules
-                                    if data_model in models:  # pragma: no cover
-                                        child.replace_reference(cached_model_reference)
+                                # TODO: replace reference in all modules
+                                if data_model in models:  # pragma: no cover
+                                    child.replace_reference(cached_model_reference)
                         else:
                             index = models.index(model)
                             inherited_model = model.__class__(

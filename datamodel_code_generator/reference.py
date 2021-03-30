@@ -170,6 +170,7 @@ class ModelResolver:
         aliases: Optional[Mapping[str, str]] = None,
         snake_case_field: bool = False,
         empty_field_name: Optional[str] = None,
+        custom_class_name_generator: Optional[Callable[[str], str]] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -187,6 +188,9 @@ class ModelResolver:
             aliases=aliases,
             snake_case_field=snake_case_field,
             empty_field_name=empty_field_name,
+        )
+        self.class_name_generator = (
+            custom_class_name_generator or self.default_class_name_generator
         )
 
     @property
@@ -352,16 +356,22 @@ class ModelResolver:
             ):
                 return reference
         name = original_name
-        if singular_name:
-            name = get_singular_name(
-                name, singular_name_suffix or self.singular_name_suffix
-            )
         if class_name:
             name = self.get_class_name(
-                name, unique, reference.name if reference else None
+                name=name,
+                unique=unique,
+                reserved_name=reference.name if reference else None,
+                singular_name=singular_name,
+                singular_name_suffix=singular_name_suffix,
             )
-        elif unique:
-            name = self._get_uniq_name(name)
+        else:
+            name = self.get_valid_name(name)
+            if singular_name:  # pragma: no cover
+                name = get_singular_name(
+                    name, singular_name_suffix or self.singular_name_suffix
+                )
+            elif unique:  # pragma: no cover
+                name = self._get_uniq_name(name)
         if reference:
             reference.original_name = original_name
             reference.name = name
@@ -376,27 +386,41 @@ class ModelResolver:
     def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
         return self.references.get(self.resolve_ref(path))
 
+    def default_class_name_generator(self, name: str) -> str:
+        name = self.field_name_resolver.get_valid_name(name)
+        return snake_to_upper_camel(name)
+
     def get_class_name(
-        self, field_name: str, unique: bool = True, reserved_name: Optional[str] = None
+        self,
+        name: str,
+        unique: bool = True,
+        reserved_name: Optional[str] = None,
+        singular_name: bool = False,
+        singular_name_suffix: Optional[str] = None,
     ) -> str:
-        if '.' in field_name:
-            split_name = [
-                self.field_name_resolver.get_valid_name(n)
-                for n in field_name.split('.')
-            ]
-            prefix, field_name = '.'.join(split_name[:-1]), split_name[-1]
+
+        if '.' in name:
+            split_name = name.split('.')
+            prefix = '.'.join(
+                self.field_name_resolver.get_valid_name(n) for n in split_name[:-1]
+            )
             prefix += '.'
+            class_name = split_name[-1]
         else:
             prefix = ''
+            class_name = name
 
-        field_name = self.field_name_resolver.get_valid_name(field_name)
-        upper_camel_name = snake_to_upper_camel(field_name)
+        class_name = self.class_name_generator(class_name)
+
+        if singular_name:
+            class_name = get_singular_name(
+                class_name, singular_name_suffix or self.singular_name_suffix
+            )
+
         if unique:
-            if reserved_name == upper_camel_name:
-                return upper_camel_name
-            class_name = self._get_uniq_name(upper_camel_name, camel=True)
-        else:
-            class_name = upper_camel_name
+            if reserved_name == class_name:
+                return class_name
+            class_name = self._get_uniq_name(class_name, camel=True)
 
         return f'{prefix}{class_name}'
 

@@ -2179,6 +2179,67 @@ def test_main_generate_custom_class_name_generator():
 
 
 @freeze_time('2019-07-26')
+def test_main_generate_custom_class_name_generator_modular(
+    tmpdir_factory: TempdirFactory,
+):
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    output_path = output_directory / 'model'
+    main_modular_custom_class_name_dir = (
+        EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
+    )
+
+    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+
+    with freeze_time(TIMESTAMP):
+        input_ = (OPEN_API_DATA_PATH / 'modular.yaml').relative_to(Path.cwd())
+        assert not input_.is_absolute()
+        generate(
+            input_=input_,
+            input_file_type=InputFileType.OpenAPI,
+            output=output_path,
+            custom_class_name_generator=custom_class_name_generator,
+        )
+
+        for path in main_modular_custom_class_name_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_custom_class_name_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_generate_custom_class_name_generator_additional_properties(
+    tmpdir_factory: TempdirFactory,
+):
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    output_file = output_directory / 'models.py'
+
+    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+
+    input_ = (
+        JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+    ).relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        custom_class_name_generator=custom_class_name_generator,
+    )
+
+    assert (
+        output_file.read_text()
+        == (
+            EXPECTED_MAIN_PATH
+            / 'main_root_model_with_additional_properties_custom_class_name'
+            / 'output.py'
+        ).read_text()
+    )
+
+
+@freeze_time('2019-07-26')
 def test_main_http_jsonschema(mocker):
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
