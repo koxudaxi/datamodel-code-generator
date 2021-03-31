@@ -1,5 +1,6 @@
 from typing import ClassVar, Optional, Any, Tuple
 import re
+from functools import lru_cache
 import builtins
 
 from datamodel_code_generator.imports import Import
@@ -12,7 +13,7 @@ class SchematicsModelField(DataModelFieldBase):
 
     @property
     def serialized_name(self) -> str:
-        return self.name
+        return f"'{self.name}'"
 
     @property
     def imports(self) -> Tuple[Import, ...]:
@@ -35,6 +36,7 @@ class SchematicsModelField(DataModelFieldBase):
     def is_required(self) -> bool:
         return self.nullable is not None and self.nullable or self.required
 
+    #@lru_cache
     @property
     def snakecase_name(self) -> str:
         if not self.name:
@@ -66,10 +68,7 @@ class SchematicsModelField(DataModelFieldBase):
     def data_types(self) -> list:
         return self.data_type.data_types
 
-    # @property
-    # def schematics_type(self) -> Optional[str]:
-    #     return self.model_name if self.is_model_type else self.data_type.full_name
-
+    #@lru_cache
     @property
     def inline_value(self) -> str:
         def _create_type_string(types_list: list) -> str:
@@ -109,14 +108,11 @@ class SchematicsModelField(DataModelFieldBase):
                 # i.e., {'required':True, 'serialized_name':'id'} > outputs > '(required=True, serialized_name=id)'
                 extra_kwargs = dict()
                 extra_kwargs['required'] = not self.data_type.is_optional
-                # Uncomment for less serialized names # if self.name and self.name != self.snakecase_name:
-                if self.name:
-                    extra_kwargs['serialized_name'] = self.name
-                if is_top_level:
-                    extra_kwarg_string = ((', ' if inner_type and extra_kwargs else '') + ", ".join(f"{key}={value}"
-                                          for key, value in extra_kwargs.items()))
-                else:
-                    extra_kwarg_string = ''
+                # Uncomment for all serialized names # if self.name:
+                if self.name and self.name != self.snakecase_name:
+                    extra_kwargs['serialized_name'] = self.serialized_name
+                extra_kwarg_string = ((', ' if inner_type and extra_kwargs else '') + ", ".join(f"{key}={value}"
+                                      for key, value in extra_kwargs.items()))
 
                 if is_model_type:
                     # If this is the top level, give it kwarg string, if its nested, don't
@@ -124,11 +120,8 @@ class SchematicsModelField(DataModelFieldBase):
                     return f'ModelType({outer.reference.name}{extra})'
 
                 return f'{outer_type}({f"{inner_type}" if inner_type else ""}{extra_kwarg_string})'
-
             return recurse(types_list, is_top_level=True)
 
-        # nested_type = 'ListType' if self.is_list else 'DictType'
-        # Else recurse through data_types
         data_types = [self.data_type] + self.data_type.data_types
         assembled_string = _create_type_string(data_types)
 

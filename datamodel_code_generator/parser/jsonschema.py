@@ -29,11 +29,13 @@ from datamodel_code_generator import (
     InvalidClassNameError,
     load_yaml,
     load_yaml_from_path,
+    model,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
+from datamodel_code_generator.model.schematics.base_model import SchematicsModelField
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 from ..model import pydantic as pydantic_model
@@ -234,6 +236,7 @@ class JsonSchemaParser(Parser):
         data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
+        enum_model_type: Type[Enum] = Enum,
         base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
@@ -297,6 +300,7 @@ class JsonSchemaParser(Parser):
             strict_types=strict_types,
         )
 
+        self.enum_model_type = enum_model_type
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
         self.raw_obj: Dict[Any, Any] = {}
         self._root_id: Optional[str] = None
@@ -306,6 +310,10 @@ class JsonSchemaParser(Parser):
     @property
     def root_id(self) -> Optional[str]:
         return self._root_id
+
+    @property
+    def is_using_schematics(self) -> bool:
+        return isinstance(self.data_model_field_type, SchematicsModelField)
 
     @root_id.setter
     def root_id(self, value: Optional[str]) -> None:
@@ -464,6 +472,8 @@ class JsonSchemaParser(Parser):
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name
             )
+            # if field.type == 'string' and field.child_is_enum:
+            #  make string type with enum property / choices
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
             elif field.is_array:
@@ -480,6 +490,7 @@ class JsonSchemaParser(Parser):
                     field_name, field, [*path, field_name], ignore_duplicate_model=True
                 )
             elif field.is_object:
+
                 if field.properties:
                     field_type = self.parse_object(
                         field_name, field, [*path, field_name]
@@ -814,14 +825,15 @@ class JsonSchemaParser(Parser):
                         else type(enum_part).__name__
                     )
                     field_name = f'{prefix}_{enum_part}'
-            enum_fields.append(
-                self.data_model_field_type(
-                    name=self.model_resolver.get_valid_name(field_name),
-                    default=default,
-                    data_type=self.data_type_manager.get_data_type(Types.any),
-                    required=True,
+            if not self.is_using_schematics:
+                enum_fields.append(
+                    self.data_model_field_type(
+                        name=self.model_resolver.get_valid_name(field_name),
+                        default=default,
+                        data_type=self.data_type_manager.get_data_type(Types.any),
+                        required=True,
+                    )
                 )
-            )
 
         if not nullable:
             reference = self.model_resolver.add(
@@ -832,7 +844,7 @@ class JsonSchemaParser(Parser):
                 singular_name_suffix='Enum',
                 loaded=True,
             )
-            enum = Enum(
+            enum = self.enum_model_type(
                 reference=reference,
                 fields=enum_fields,
                 path=self.current_source_path,
