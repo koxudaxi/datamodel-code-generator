@@ -187,7 +187,9 @@ class DataModel(TemplateBase, ABC):
             else defaultdict(dict)
         )
 
-        if not self.base_classes:
+        for base_class in self.base_classes:
+            base_class.children.append(self)
+        else:
             base_class_full_path = custom_base_class or self.BASE_CLASS
             if base_class_full_path:
                 self._additional_imports.append(
