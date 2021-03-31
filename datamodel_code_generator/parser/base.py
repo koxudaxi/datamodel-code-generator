@@ -412,11 +412,12 @@ class Parser(ABC):
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
 
-            # backward compatible
-            # Remove duplicated root model
             for model in models:
                 if isinstance(model, self.data_model_root_type):
                     root_data_type = model.fields[0].data_type
+
+                    # backward compatible
+                    # Remove duplicated root model
                     if (
                         root_data_type.reference
                         and not root_data_type.is_dict
@@ -432,6 +433,13 @@ class Parser(ABC):
                             child.replace_reference(root_data_type.reference)
                         models.remove(model)
                         continue
+
+                    #  Custom root model can't be inherited on restriction of Pydantic
+                    for child in model.reference.children:
+                        # inheritance model
+                        if isinstance(child, DataModel):
+                            child.base_classes.remove(model.reference)
+
             module_models.append((module, models,))
 
             scoped_model_resolver = ModelResolver(

@@ -477,6 +477,11 @@ class JsonSchemaParser(Parser):
             exclude_field_names.add(field_name)
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
+            elif field.is_array:
+                field_type = self.parse_array_fields(
+                    modular_name, field, [*path, field_name]
+                ).data_type
+                constraints = field.dict()
             elif field.anyOf:
                 field_type = self.parse_any_of(modular_name, field, [*path, field_name])
             elif field.oneOf:
@@ -488,11 +493,6 @@ class JsonSchemaParser(Parser):
                     [*path, field_name],
                     ignore_duplicate_model=True,
                 )
-            elif field.is_array:
-                field_type = self.parse_array_fields(
-                    modular_name, field, [*path, field_name]
-                ).data_type
-                constraints = field.dict()
             elif field.is_object:
                 if field.properties:
                     field_type = self.parse_object(
@@ -514,19 +514,19 @@ class JsonSchemaParser(Parser):
                             ),
                             is_list=True,
                         )
-                    elif field.additionalProperties.allOf:
-                        additional_properties_type = self.parse_all_of(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                            ignore_duplicate_model=True,
-                        )
                     elif field.additionalProperties.is_array:
                         additional_properties_type = self.parse_array(
                             field_class_name,
                             field.additionalProperties,
                             [*path, field_name],
                             modular_name,
+                        )
+                    elif field.additionalProperties.allOf:
+                        additional_properties_type = self.parse_all_of(
+                            field_class_name,
+                            field.additionalProperties,
+                            [*path, field_name],
+                            ignore_duplicate_model=True,
                         )
                     elif field.additionalProperties.is_object:
                         additional_properties_type = self.parse_object(
@@ -703,8 +703,9 @@ class JsonSchemaParser(Parser):
             else:
                 required = not obj.nullable and required
                 nullable = None
-        return self.data_model_field_type(
-            data_type=self.data_type(
+
+        data_types: List[DataType] = [
+            self.data_type(
                 data_types=[
                     parse_field(index, item)
                     for index, item in enumerate(
@@ -714,7 +715,22 @@ class JsonSchemaParser(Parser):
                     )
                 ],
                 is_list=True,
-            ),
+            )
+        ]
+        # TODO: decide special path word for a combined data model.
+        if obj.allOf:
+            data_types.append(
+                self.parse_all_of(name, obj, [*path, '#-combined-all-of-#'])
+            )
+        elif obj.is_object:
+            data_types.append(
+                self.parse_object(name, obj, [*path, '#-combined-object-#'])
+            )
+        if obj.enum:
+            data_types.append(self.parse_enum(name, obj, [*path, '#-combined-enum-#']))
+
+        return self.data_model_field_type(
+            data_type=self.data_type(data_types=data_types),
             example=obj.example,
             examples=obj.examples,
             default=obj.default,
@@ -733,8 +749,33 @@ class JsonSchemaParser(Parser):
         path: List[str],
         original_name: Optional[str] = None,
     ) -> DataType:
-        field = self.parse_array_fields(original_name or name, obj, [*path, name])
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        field = self.parse_array_fields(original_name or name, obj, [*path, name])
+
+        if reference in [
+            d.reference for d in field.data_type.all_data_types if d.reference
+        ]:
+            # self-reference
+            field = self.data_model_field_type(
+                data_type=self.data_type(
+                    data_types=[
+                        self.data_type(
+                            data_types=field.data_type.data_types[1:], is_list=True
+                        ),
+                        *field.data_type.data_types[1:],
+                    ]
+                ),
+                example=field.example,
+                examples=field.examples,
+                default=field.default,
+                description=field.description,
+                title=field.title,
+                required=field.required,
+                constraints=field.constraints,
+                nullable=field.nullable,
+                strip_default_none=field.strip_default_none,
+            )
+
         data_model_root = self.data_model_root_type(
             reference=reference,
             fields=[field],
@@ -1022,12 +1063,12 @@ class JsonSchemaParser(Parser):
         self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
 
     def parse_obj(self, name: str, obj: JsonSchemaObject, path: List[str],) -> None:
-        if obj.allOf:
+        if obj.is_array:
+            self.parse_array(name, obj, path)
+        elif obj.allOf:
             self.parse_all_of(name, obj, path)
         elif obj.is_object:
             self.parse_object(name, obj, path)
-        elif obj.is_array:
-            self.parse_array(name, obj, path)
         elif obj.enum:
             self.parse_enum(name, obj, path)
         else:
