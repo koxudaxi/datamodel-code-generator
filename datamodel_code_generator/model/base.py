@@ -189,12 +189,6 @@ class DataModel(TemplateBase, ABC):
 
         for base_class in self.base_classes:
             base_class.children.append(self)
-        else:
-            base_class_full_path = custom_base_class or self.BASE_CLASS
-            if base_class_full_path:
-                self._additional_imports.append(
-                    Import.from_full_path(base_class_full_path)
-                )
 
         if extra_template_data:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
@@ -216,7 +210,11 @@ class DataModel(TemplateBase, ABC):
     @property
     def imports(self) -> Tuple[Import, ...]:
         return chain_as_tuple(
-            (i for f in self.fields for i in f.imports), self._additional_imports
+            (i for f in self.fields for i in f.imports),
+            ()
+            if self.base_classes
+            else (Import.from_full_path(self.custom_base_class or self.BASE_CLASS),),
+            self._additional_imports,
         )
 
     @property
