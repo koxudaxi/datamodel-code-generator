@@ -899,25 +899,17 @@ class JsonSchemaParser(Parser):
                 )
             )
 
-        if not nullable:
-            reference = self.model_resolver.add(
-                path,
-                name,
-                class_name=True,
-                singular_name=singular_name,
-                singular_name_suffix='Enum',
-                loaded=True,
-            )
+        def create_enum(reference_: Reference) -> DataType:
             enum = Enum(
-                reference=reference,
+                reference=reference_,
                 fields=enum_fields,
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
             )
             self.results.append(enum)
-            return self.data_type(reference=reference)
+            return self.data_type(reference=reference_)
 
-        root_reference = self.model_resolver.add(
+        reference = self.model_resolver.add(
             path,
             name,
             class_name=True,
@@ -925,26 +917,24 @@ class JsonSchemaParser(Parser):
             singular_name_suffix='Enum',
             loaded=True,
         )
+
+        if not nullable:
+            return create_enum(reference)
+
         enum_reference = self.model_resolver.add(
             [*path, 'Enum'],
-            f'{root_reference.name}Enum',
+            f'{reference.name}Enum',
             class_name=True,
             singular_name=singular_name,
             singular_name_suffix='Enum',
             loaded=True,
         )
-        enum = Enum(
-            reference=enum_reference,
-            fields=enum_fields,
-            path=self.current_source_path,
-            description=obj.description if self.use_schema_description else None,
-        )
-        self.results.append(enum)
+
         data_model_root_type = self.data_model_root_type(
-            reference=root_reference,
+            reference=reference,
             fields=[
                 self.data_model_field_type(
-                    data_type=self.data_type(reference=enum_reference),
+                    data_type=create_enum(enum_reference),
                     description=obj.description,
                     example=obj.example,
                     examples=obj.examples,
@@ -960,7 +950,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
         )
         self.results.append(data_model_root_type)
-        return self.data_type(reference=root_reference)
+        return self.data_type(reference=reference)
 
     def _get_ref_body(self, resolved_ref: str) -> Dict[Any, Any]:
         if is_url(resolved_ref):
