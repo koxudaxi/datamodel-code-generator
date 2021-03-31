@@ -65,7 +65,7 @@ class DataType(_BaseModel):
     data_types: List['DataType'] = []
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]]
-    imports: List[Import] = []
+    import_: Optional[Import] = None
     python_version: PythonVersion = PythonVersion.PY_37
     is_optional: bool = False
     is_dict: bool = False
@@ -94,7 +94,7 @@ class DataType(_BaseModel):
     ) -> 'DataType':
         return cls(
             type=import_.import_,
-            imports=[import_],
+            import_=import_,
             is_optional=is_optional,
             is_dict=is_dict,
             is_list=is_list,
@@ -151,22 +151,10 @@ class DataType(_BaseModel):
             yield from data_type.all_imports
         yield from self.imports
 
-    def __init__(self, **values: Any) -> None:
-        super().__init__(**values)  # type: ignore
-
-        for type_ in self.data_types:
-            if type_.type == 'Any' and type_.is_optional:
-                if any(
-                    t for t in self.data_types if t.type != 'Any'
-                ):  # pragma: no cover
-                    self.is_optional = True
-                    self.data_types = [
-                        t
-                        for t in self.data_types
-                        if not (t.type == 'Any' and t.is_optional)
-                    ]
-                break
-
+    @property
+    def imports(self) -> Iterator[Import]:
+        if self.import_:
+            yield self.import_
         imports: Tuple[Tuple[bool, Import], ...] = (
             (self.is_optional, IMPORT_OPTIONAL),
             (len(self.data_types) > 1, IMPORT_UNION),
@@ -202,8 +190,24 @@ class DataType(_BaseModel):
                 (self.is_dict, IMPORT_DICT),
             )
         for field, import_ in imports:
-            if field and import_ not in self.imports:
-                self.imports.append(import_)
+            if field and import_ != self.import_:
+                yield import_
+
+    def __init__(self, **values: Any) -> None:
+        super().__init__(**values)  # type: ignore
+
+        for type_ in self.data_types:
+            if type_.type == 'Any' and type_.is_optional:
+                if any(
+                    t for t in self.data_types if t.type != 'Any'
+                ):  # pragma: no cover
+                    self.is_optional = True
+                    self.data_types = [
+                        t
+                        for t in self.data_types
+                        if not (t.type == 'Any' and t.is_optional)
+                    ]
+                break
 
         for data_type in self.data_types:
             if data_type.reference:
