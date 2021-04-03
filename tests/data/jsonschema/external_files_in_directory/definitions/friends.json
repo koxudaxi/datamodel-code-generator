@@ -1,5 +1,5 @@
 {
-  "$id": "friends.json",
+  "$id": "https://example.com/external_files_in_directory/definitions/friends.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Friends",
   "type": "array",

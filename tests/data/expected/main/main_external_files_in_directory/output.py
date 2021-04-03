@@ -61,6 +61,17 @@ class Person(BaseModel):
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[Pet]] = None
     friends: Optional[Friends] = None
+    robot: Optional[Robot] = None
     comment: Optional[Any] = None
     drink: Optional[List[Union[Coffee, Tea]]] = None
     food: Optional[List[Union[Noodle, Soup]]] = None
+
+
+class Robot(Pet):
+    friends: Optional[Person] = None
+    drink: Optional[Coffee] = None
+    food: Optional[Noodle] = None
+    pet: Optional[Pet] = None
+
+
+Person.update_forward_refs()

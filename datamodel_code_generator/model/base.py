@@ -140,6 +140,10 @@ class TemplateBase(ABC):
         return self.render()
 
 
+class BaseClassDataType(DataType):
+    ...
+
+
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ''
     BASE_CLASS: ClassVar[str] = ''
@@ -172,9 +176,17 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
-        self.base_classes: List[Reference] = [
-            base_class for base_class in base_classes or [] if base_class
-        ]
+        if base_classes:
+            self.base_classes: List[BaseClassDataType] = [
+                BaseClassDataType(reference=b) for b in base_classes
+            ]
+        else:
+            base_class_import = Import.from_full_path(
+                custom_base_class or self.BASE_CLASS
+            )
+            self._additional_imports.append(base_class_import)
+            self.base_classes = [BaseClassDataType.from_import(base_class_import)]
+
         self.custom_base_class = custom_base_class
         self.file_path: Optional[Path] = path
         self.reference: Reference = reference
@@ -188,7 +200,8 @@ class DataModel(TemplateBase, ABC):
         )
 
         for base_class in self.base_classes:
-            base_class.children.append(self)
+            if base_class.reference:
+                base_class.reference.children.append(self)
 
         if extra_template_data:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
@@ -210,17 +223,13 @@ class DataModel(TemplateBase, ABC):
     @property
     def imports(self) -> Tuple[Import, ...]:
         return chain_as_tuple(
-            (i for f in self.fields for i in f.imports),
-            ()
-            if self.base_classes
-            else (Import.from_full_path(self.custom_base_class or self.BASE_CLASS),),
-            self._additional_imports,
+            (i for f in self.fields for i in f.imports), self._additional_imports,
         )
 
     @property
     def reference_classes(self) -> FrozenSet[str]:
         return frozenset(
-            {r.path for r in self.base_classes if r.name != self.BASE_CLASS}
+            {r.reference.path for r in self.base_classes if r.reference}
             | {t for f in self.fields for t in f.unresolved_types}
         )
 
@@ -230,18 +239,7 @@ class DataModel(TemplateBase, ABC):
 
     @property
     def base_class(self) -> str:
-        if self.base_classes:
-            base_class: str = ', '.join(b.name for b in self.base_classes)
-        else:
-            base_class_full_path = self.custom_base_class or self.BASE_CLASS
-            base_class = base_class_full_path.rsplit('.', 1)[-1]
-
-        if '.' in self.name:
-            module, _ = self.name.rsplit('.', 1)
-            prefix = f'{module}.'
-            if base_class.startswith(prefix):
-                base_class = base_class.replace(prefix, '', 1)
-        return base_class
+        return ', '.join(b.type_hint for b in self.base_classes)
 
     @property
     def class_name(self) -> str:
@@ -261,6 +259,7 @@ class DataModel(TemplateBase, ABC):
     def all_data_types(self) -> Iterator['DataType']:
         for field in self.fields:
             yield from field.data_type.all_data_types
+        yield from self.base_classes
 
     @cached_property
     def path(self) -> str:

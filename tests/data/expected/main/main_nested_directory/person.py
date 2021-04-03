@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, conint
 
 from .definitions import food, friends, pet
 from .definitions.drink import coffee, tea
+from .definitions.machine import robot
 
 
 class Person(BaseModel):
@@ -18,6 +19,10 @@ class Person(BaseModel):
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[pet.Pet]] = None
     friends: Optional[friends.Friends] = None
+    robot: Optional[robot.Robot] = None
     comment: Optional[Any] = None
     drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
     food: Optional[List[Union[food.Noodle, food.Soup]]] = None
+
+
+Person.update_forward_refs()

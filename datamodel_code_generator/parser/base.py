@@ -27,7 +27,12 @@ from datamodel_code_generator import Protocol, runtime_checkable
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.base import ALL_MODEL, DataModel, DataModelFieldBase
+from datamodel_code_generator.model.base import (
+    ALL_MODEL,
+    BaseClassDataType,
+    DataModel,
+    DataModelFieldBase,
+)
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
@@ -114,9 +119,10 @@ def sort_data_models(
             unresolved_reference_model_names = [m.path for m in unresolved_references]
             for model in unresolved_references:
                 indexes = [
-                    unresolved_reference_model_names.index(b.path)
+                    unresolved_reference_model_names.index(b.reference.path)
                     for b in model.base_classes
-                    if b.path in unresolved_reference_model_names
+                    if b.reference
+                    and b.reference.path in unresolved_reference_model_names
                 ]
                 if indexes:
                     ordered_models.append((min(indexes), model,))
@@ -327,6 +333,7 @@ class Parser(ABC):
             empty_field_name=empty_enum_field_name,
             snake_case_field=snake_case_field,
             custom_class_name_generator=custom_class_name_generator,
+            base_path=self.base_path,
         )
         self.class_name: Optional[str] = class_name
 
@@ -438,7 +445,9 @@ class Parser(ABC):
                     for child in model.reference.children:
                         # inheritance model
                         if isinstance(child, DataModel):
-                            child.base_classes.remove(model.reference)
+                            for base_class in child.base_classes:
+                                if base_class.reference == model.reference:
+                                    child.base_classes.remove(base_class)
 
             module_models.append((module, models,))
 
@@ -489,9 +498,16 @@ class Parser(ABC):
                         # Or, Referenced model is in the same file. we don't need to import the model
                         continue
 
-                    from_, import_ = full_path = relative(
-                        model.module_name, data_type.full_name
-                    )
+                    if isinstance(data_type, BaseClassDataType):
+                        from_ = ''.join(
+                            relative(model.module_name, data_type.full_name)
+                        )
+                        import_ = data_type.reference.short_name
+                        full_path = from_, import_
+                    else:
+                        from_, import_ = full_path = relative(
+                            model.module_name, data_type.full_name
+                        )
 
                     alias = scoped_model_resolver.add(full_path, import_).name
 

@@ -2,8 +2,9 @@ import re
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import lru_cache
+from itertools import zip_longest
 from keyword import iskeyword
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -160,6 +161,23 @@ class FieldNameResolver:
         return valid_name, None if field_name == valid_name else field_name
 
 
+def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
+    if base_path == target_path:
+        return Path('.')
+    if not target_path.is_absolute():
+        return target_path
+    parent_count: int = 0
+    children: List[str] = []
+    for base_part, target_part in zip_longest(base_path.parts, target_path.parts):
+        if base_part == target_part:
+            continue
+        if base_part or not target_part:
+            parent_count += 1
+        if target_part:
+            children.append(target_part)
+    return Path(*['..' for _ in range(parent_count)], *children)
+
+
 class ModelResolver:
     def __init__(
         self,
@@ -171,6 +189,7 @@ class ModelResolver:
         snake_case_field: bool = False,
         empty_field_name: Optional[str] = None,
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
+        base_path: Optional[Path] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -192,6 +211,15 @@ class ModelResolver:
         self.class_name_generator = (
             custom_class_name_generator or self.default_class_name_generator
         )
+        self._base_path: Path = base_path or Path.cwd()
+        self._current_base_path: Optional[Path] = self._base_path
+
+    @property
+    def current_base_path(self) -> Optional[Path]:
+        return self._current_base_path
+
+    def set_current_base_path(self, base_path: Optional[Path]) -> None:
+        self._current_base_path = base_path
 
     @property
     def base_url(self) -> Optional[str]:
@@ -199,6 +227,17 @@ class ModelResolver:
 
     def set_base_url(self, base_url: Optional[str]) -> None:
         self._base_url = base_url
+
+    @contextmanager
+    def current_base_path_context(
+        self, base_path: Optional[Path]
+    ) -> Generator[None, None, None]:
+        if base_path:
+            base_path = (self._base_path / base_path).resolve()
+        with context_variable(
+            self.set_current_base_path, self.current_base_path, base_path
+        ):
+            yield
 
     @contextmanager
     def base_url_context(self, base_url: str) -> Generator[None, None, None]:
@@ -249,6 +288,22 @@ class ModelResolver:
             joined_path = path
         else:
             joined_path = self.join_path(path)
+        if joined_path == '#':
+            return f"{'/'.join(self.current_root)}#"
+        if (
+            self.current_base_path
+            and not self.base_url
+            and joined_path[0] != '#'
+            and not is_url(joined_path)
+        ):
+            # resolve local file path
+            file_path, *object_part = joined_path.split('#', 1)
+            resolved_file_path = Path(self.current_base_path, file_path).resolve()
+            joined_path = get_relative_path(
+                self._base_path, resolved_file_path
+            ).as_posix()
+            if object_part:
+                joined_path += f'#{object_part[0]}'
         if ID_PATTERN.match(joined_path):
             ref: str = self.ids['/'.join(self.current_root)][joined_path]
         elif (
@@ -256,17 +311,17 @@ class ModelResolver:
             and self.root_id_base_path
             and self.current_root != path
         ):
-            ref = f'{self.root_id_base_path}/{joined_path}#'
+            if Path(self._base_path, joined_path).is_file():
+                ref = f'{joined_path}#'
+            else:
+                ref = f'{self.root_id_base_path}/{joined_path}#'
         else:
             if '#' not in joined_path:
                 joined_path += '#'
             if joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
-            if self.is_remote_ref(joined_path):
-                ref = f'{"/".join(self.current_root[:-1])}/{joined_path}'
-            else:
-                delimiter = joined_path.index('#')
-                ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
+            delimiter = joined_path.index('#')
+            ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
         if self.base_url:
             from .http import join_url
 
@@ -277,18 +332,15 @@ class ModelResolver:
                 return f'{"/".join(self.current_root)}#{path_part}'
         return ref
 
-    def is_remote_ref(self, resolved_ref: str) -> bool:
-        return (
-            self.is_external_ref(resolved_ref)
-            and not is_url(resolved_ref)
-            and len(self.current_root) > 1
-        )
-
     def is_after_load(self, ref: str) -> bool:
+        if is_url(ref) or not self.current_base_path:
+            return False
+        file_part, *_ = ref.split('#', 1)
+        absolute_path = Path(self._base_path, file_part).resolve().as_posix()
         if self.is_external_root_ref(ref):
-            return ref[:-1] in self.after_load_files
+            return absolute_path in self.after_load_files
         elif self.is_external_ref(ref):
-            return ref.split('#/', 1)[0] in self.after_load_files
+            return absolute_path in self.after_load_files
         return False  # pragma: no cover
 
     @staticmethod
