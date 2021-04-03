@@ -47,7 +47,11 @@ def test_custom_root_type_decorator():
     custom_root_type = CustomRootType(
         fields=[DataModelFieldBase(data_type=DataType(type='str'), required=True)],
         decorators=['@validate'],
-        base_classes=[Reference(name='Base', original_name='Base', path='Base')],
+        base_classes=[
+            DataType(
+                reference=Reference(name='Base', original_name='Base', path='Base')
+            )
+        ],
         reference=Reference(name='test_model', path='test_model'),
     )
 

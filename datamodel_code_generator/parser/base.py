@@ -114,9 +114,9 @@ def sort_data_models(
             unresolved_reference_model_names = [m.path for m in unresolved_references]
             for model in unresolved_references:
                 indexes = [
-                    unresolved_reference_model_names.index(b.path)
+                    unresolved_reference_model_names.index(b.reference.path)  # type: ignore
                     for b in model.base_classes
-                    if b.path in unresolved_reference_model_names
+                    if b.reference.path in unresolved_reference_model_names  # type: ignore
                 ]
                 if indexes:
                     ordered_models.append((min(indexes), model,))
@@ -439,7 +439,9 @@ class Parser(ABC):
                     for child in model.reference.children:
                         # inheritance model
                         if isinstance(child, DataModel):
-                            child.base_classes.remove(model.reference)
+                            for base_class in child.base_classes:
+                                if base_class.reference == model.reference:
+                                    child.base_classes.remove(base_class)
 
             module_models.append((module, models,))
 
@@ -529,7 +531,9 @@ class Parser(ABC):
                             index = models.index(model)
                             inherited_model = model.__class__(
                                 fields=[],
-                                base_classes=[cached_model_reference],
+                                base_classes=[
+                                    DataType(reference=cached_model_reference)
+                                ],
                                 description=model.description,
                                 reference=Reference(
                                     name=model.name,

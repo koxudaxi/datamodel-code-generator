@@ -23,7 +23,11 @@ def test_data_class_base_class():
 
     data_class = DataClass(
         fields=[field],
-        base_classes=[Reference(name='Base', original_name='Base', path='Base')],
+        base_classes=[
+            DataType(
+                reference=Reference(name='Base', original_name='Base', path='Base')
+            )
+        ],
         reference=Reference(name='test_model', path='test_model'),
     )
 

@@ -2365,6 +2365,7 @@ def test_main_http_jsonschema(mocker):
             get_mock_response('definitions/fur.json'),
             get_mock_response('definitions/friends.json'),
             get_mock_response('definitions/food.json'),
+            get_mock_response('definitions/machine/robot.json'),
             get_mock_response('definitions/drink/coffee.json'),
             get_mock_response('definitions/drink/tea.json'),
         ],
@@ -2402,6 +2403,9 @@ def test_main_http_jsonschema(mocker):
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json'
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/machine/robot.json'
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json'
