@@ -21,8 +21,8 @@ from datamodel_code_generator.reference import get_relative_path
 def test_get_relative_path_posix(
     base_path: str, target_path: str, expected: str
 ) -> None:
-    assert get_relative_path(
-        PurePosixPath(base_path), PurePosixPath(target_path)
+    assert PurePosixPath(
+        get_relative_path(PurePosixPath(base_path), PurePosixPath(target_path))
     ) == PurePosixPath(expected)
 
 
