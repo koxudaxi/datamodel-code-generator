@@ -336,7 +336,7 @@ class ModelResolver:
         if is_url(ref) or not self.current_base_path:
             return False
         file_part, *_ = ref.split('#', 1)
-        absolute_path = str(Path(self._base_path, file_part).resolve())
+        absolute_path = Path(self._base_path, file_part).resolve().as_posix()
         if self.is_external_root_ref(ref):
             return absolute_path in self.after_load_files
         elif self.is_external_ref(ref):
