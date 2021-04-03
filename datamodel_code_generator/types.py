@@ -83,7 +83,7 @@ class DataType(_BaseModel):
 
     @classmethod
     def from_import(
-        cls,
+        cls: Type['DataTypeT'],
         import_: Import,
         *,
         is_optional: bool = False,
@@ -91,7 +91,7 @@ class DataType(_BaseModel):
         is_list: bool = False,
         strict: bool = False,
         kwargs: Optional[Dict[str, Any]] = None,
-    ) -> 'DataType':
+    ) -> 'DataTypeT':
         return cls(
             type=import_.import_,
             import_=import_,
@@ -264,6 +264,8 @@ class DataType(_BaseModel):
 
 
 DataType.update_forward_refs()
+
+DataTypeT = TypeVar('DataTypeT', bound=DataType)
 
 
 class Types(Enum):

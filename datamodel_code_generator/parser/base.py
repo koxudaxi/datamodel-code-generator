@@ -121,7 +121,8 @@ def sort_data_models(
                 indexes = [
                     unresolved_reference_model_names.index(b.reference.path)
                     for b in model.base_classes
-                    if b.reference.path in unresolved_reference_model_names
+                    if b.reference
+                    and b.reference.path in unresolved_reference_model_names
                 ]
                 if indexes:
                     ordered_models.append((min(indexes), model,))
