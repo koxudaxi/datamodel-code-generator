@@ -1098,7 +1098,7 @@ def test_main_invalid_model_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema(mocker):
+def test_main_root_id_jsonschema_with_local_file(mocker):
     root_id_response = mocker.Mock()
     root_id_response.text = 'dummy'
     person_response = mocker.Mock()
@@ -1121,6 +1121,37 @@ def test_main_root_id_jsonschema(mocker):
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
+        httpx_get_mock.assert_not_called()
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_root_id_jsonschema_with_remote_file(mocker):
+    root_id_response = mocker.Mock()
+    root_id_response.text = 'dummy'
+    person_response = mocker.Mock()
+    person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
+    httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
+    with TemporaryDirectory() as output_dir:
+        input_file = Path(output_dir, 'root_id.json')
+        shutil.copy(JSON_SCHEMA_DATA_PATH / 'root_id.json', input_file)
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(input_file),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
+        )
         httpx_get_mock.assert_has_calls(
             [call('https://example.com/person.json'),]
         )
@@ -1129,7 +1160,7 @@ def test_main_root_id_jsonschema(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_self_refs(mocker):
+def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
     httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
@@ -1139,6 +1170,36 @@ def test_main_root_id_jsonschema_self_refs(mocker):
             [
                 '--input',
                 str(JSON_SCHEMA_DATA_PATH / 'root_id_self_ref.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
+        ).read_text().replace(
+            'filename:  root_id.json', 'filename:  root_id_self_ref.json'
+        )
+        httpx_get_mock.assert_not_called()
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
+    person_response = mocker.Mock()
+    person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
+    httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
+    with TemporaryDirectory() as output_dir:
+        input_file = Path(output_dir, 'root_id_self_ref.json')
+        shutil.copy(JSON_SCHEMA_DATA_PATH / 'root_id_self_ref.json', input_file)
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(input_file),
                 '--output',
                 str(output_file),
                 '--input-file-type',
@@ -2306,7 +2367,6 @@ def test_main_http_jsonschema(mocker):
             get_mock_response('definitions/food.json'),
             get_mock_response('definitions/drink/coffee.json'),
             get_mock_response('definitions/drink/tea.json'),
-            get_mock_response('person.json'),
         ],
     )
     with TemporaryDirectory() as output_dir:

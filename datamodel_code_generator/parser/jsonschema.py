@@ -988,17 +988,20 @@ class JsonSchemaParser(Parser):
                     if is_url(ref):
                         relative_path, object_path = ref.split('#')
                         relative_paths = [relative_path]
+                        base_path = None
                     else:
                         if self.model_resolver.is_external_root_ref(ref):
                             relative_path, object_path = ref[:-1], ''
                         else:
                             relative_path, object_path = ref.split('#')
                         relative_paths = relative_path.split('/')
-
-                    with self.model_resolver.base_url_context(relative_path):
+                        base_path = Path(*relative_paths).parent
+                    with self.model_resolver.current_base_path_context(
+                        base_path
+                    ), self.model_resolver.base_url_context(relative_path):
                         self._parse_file(
                             self._get_ref_body(relative_path),
-                            self.model_resolver.add_ref(obj.ref).name,
+                            self.model_resolver.add_ref(ref, resolved=True).name,
                             relative_paths,
                             object_path.split('/') if object_path else None,
                         )
@@ -1071,7 +1074,8 @@ class JsonSchemaParser(Parser):
         ):
             self.current_source_path = Path()
             self.model_resolver.after_load_files = {
-                s.path.as_posix() for s in self.iter_source
+                self.base_path.joinpath(s.path).resolve().as_posix()
+                for s in self.iter_source
             }
 
         for source in self.iter_source:
@@ -1081,7 +1085,9 @@ class JsonSchemaParser(Parser):
                 path_parts = list(source.path.parts)
             if self.current_source_path is not None:
                 self.current_source_path = source.path
-            with self.model_resolver.current_root_context(path_parts):
+            with self.model_resolver.current_base_path_context(
+                source.path.parent
+            ), self.model_resolver.current_root_context(path_parts):
                 self.raw_obj = load_yaml(source.text)
                 if self.custom_class_name_generator:
                     obj_name = self.raw_obj.get('title', 'Model')
@@ -1109,7 +1115,9 @@ class JsonSchemaParser(Parser):
             if self.current_source_path is not None:
                 self.current_source_path = source.path
 
-            with self.model_resolver.current_root_context(path_parts):
+            with self.model_resolver.current_base_path_context(
+                source.path.parent
+            ), self.model_resolver.current_root_context(path_parts):
                 for reserved_ref in sorted(reserved_refs):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue

@@ -10,10 +10,6 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class Model(BaseModel):
-    __root__: Any
-
-
 class Noodle(Enum):
     ramen = 'ramen'
     spaghetti = 'spaghetti'
@@ -23,3 +19,7 @@ class Soup(Enum):
     bean = 'bean'
     mushroom = 'mushroom'
     tomato = 'tomato'
+
+
+class Model(BaseModel):
+    __root__: Any

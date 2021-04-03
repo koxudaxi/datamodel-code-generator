@@ -261,6 +261,8 @@ class DataModel(TemplateBase, ABC):
     def all_data_types(self) -> Iterator['DataType']:
         for field in self.fields:
             yield from field.data_type.all_data_types
+        for base_class in self.base_classes:
+            yield DataType(reference=base_class)
 
     @cached_property
     def path(self) -> str:

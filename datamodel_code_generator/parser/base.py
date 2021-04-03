@@ -327,6 +327,7 @@ class Parser(ABC):
             empty_field_name=empty_enum_field_name,
             snake_case_field=snake_case_field,
             custom_class_name_generator=custom_class_name_generator,
+            base_path=self.base_path,
         )
         self.class_name: Optional[str] = class_name
 
