@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from itertools import zip_longest
 from keyword import iskeyword
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -161,7 +161,7 @@ class FieldNameResolver:
         return valid_name, None if field_name == valid_name else field_name
 
 
-def get_relative_path(base_path: Path, target_path: Path) -> Path:
+def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
     if base_path == target_path:
         return Path('.')
     if not target_path.is_absolute():
@@ -299,7 +299,9 @@ class ModelResolver:
             # resolve local file path
             file_path, *object_part = joined_path.split('#', 1)
             resolved_file_path = Path(self.current_base_path, file_path).resolve()
-            joined_path = get_relative_path(self._base_path, resolved_file_path).as_posix()
+            joined_path = get_relative_path(
+                self._base_path, resolved_file_path
+            ).as_posix()
             if object_part:
                 joined_path += f'#{object_part[0]}'
         if ID_PATTERN.match(joined_path):
