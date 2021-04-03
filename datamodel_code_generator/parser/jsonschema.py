@@ -416,7 +416,7 @@ class JsonSchemaParser(Parser):
         ignore_duplicate_model: bool = False,
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
-        base_classes: List[BaseClassDataType] = []
+        base_classes: List[Reference] = []
         if len(obj.allOf) == 1 and not obj.properties:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
@@ -426,11 +426,7 @@ class JsonSchemaParser(Parser):
                     return self.get_ref_data_type(single_obj.ref)
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                base_classes.append(
-                    BaseClassDataType(
-                        reference=self.model_resolver.add_ref(all_of_item.ref)
-                    )
-                )
+                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
             else:
                 fields.extend(
                     self.parse_object_fields(
@@ -443,7 +439,7 @@ class JsonSchemaParser(Parser):
             )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
-            return self.data_type(reference=base_classes[0].reference)
+            return self.data_type(reference=base_classes[0])
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.name, obj)
         data_model_type = self.data_model_type(

@@ -544,9 +544,7 @@ class Parser(ABC):
                             index = models.index(model)
                             inherited_model = model.__class__(
                                 fields=[],
-                                base_classes=[
-                                    BaseClassDataType(reference=cached_model_reference)
-                                ],
+                                base_classes=[cached_model_reference],
                                 description=model.description,
                                 reference=Reference(
                                     name=model.name,

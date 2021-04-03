@@ -100,7 +100,7 @@ class BaseModel(DataModel):
         reference: Reference,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[BaseClassDataType]] = None,
+        base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Any]] = None,

@@ -86,11 +86,7 @@ def test_base_model_decorator():
     base_model = BaseModel(
         fields=[field],
         decorators=['@validate'],
-        base_classes=[
-            DataType(
-                reference=Reference(name='Base', original_name='Base', path='Base')
-            )
-        ],
+        base_classes=[Reference(name='Base', original_name='Base', path='Base')],
         reference=Reference(name='test_model', path='test_model'),
     )
 

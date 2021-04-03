@@ -155,7 +155,7 @@ class DataModel(TemplateBase, ABC):
         reference: Reference,
         fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[BaseClassDataType]] = None,
+        base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
@@ -176,13 +176,17 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
-        if not base_classes:
+        if base_classes:
+            self.base_classes: List[BaseClassDataType] = [
+                BaseClassDataType(reference=b) for b in base_classes
+            ]
+        else:
             base_class_import = Import.from_full_path(
                 custom_base_class or self.BASE_CLASS
             )
             self._additional_imports.append(base_class_import)
-            base_classes = [BaseClassDataType.from_import(base_class_import)]
-        self.base_classes: List[BaseClassDataType] = base_classes
+            self.base_classes = [BaseClassDataType.from_import(base_class_import)]
+
         self.custom_base_class = custom_base_class
         self.file_path: Optional[Path] = path
         self.reference: Reference = reference

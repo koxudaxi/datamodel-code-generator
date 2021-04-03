@@ -80,11 +80,7 @@ def test_data_model():
         data_model = B(
             fields=[field],
             decorators=['@validate'],
-            base_classes=[
-                DataType(
-                    reference=Reference(path='base', original_name='base', name='Base')
-                )
-            ],
+            base_classes=[Reference(path='base', original_name='base', name='Base')],
             reference=Reference(path='test_model', name='test_model'),
         )
 
