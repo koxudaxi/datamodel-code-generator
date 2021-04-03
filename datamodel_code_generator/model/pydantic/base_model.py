@@ -10,7 +10,6 @@ from datamodel_code_generator.model import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.base import BaseClassDataType
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple
