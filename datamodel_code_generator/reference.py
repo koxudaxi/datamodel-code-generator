@@ -299,7 +299,7 @@ class ModelResolver:
             # resolve local file path
             file_path, *object_part = joined_path.split('#', 1)
             resolved_file_path = Path(self.current_base_path, file_path).resolve()
-            joined_path = str(get_relative_path(self._base_path, resolved_file_path))
+            joined_path = get_relative_path(self._base_path, resolved_file_path).as_posix()
             if object_part:
                 joined_path += f'#{object_part[0]}'
         if ID_PATTERN.match(joined_path):
