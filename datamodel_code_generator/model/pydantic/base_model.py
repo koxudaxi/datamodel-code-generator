@@ -10,9 +10,10 @@ from datamodel_code_generator.model import (
     DataModel,
     DataModelFieldBase,
 )
+from datamodel_code_generator.model.base import BaseClassDataType
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType, chain_as_tuple
+from datamodel_code_generator.types import chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
@@ -99,7 +100,7 @@ class BaseModel(DataModel):
         reference: Reference,
         fields: List[DataModelField],
         decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[DataType]] = None,
+        base_classes: Optional[List[BaseClassDataType]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Any]] = None,

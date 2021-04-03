@@ -140,6 +140,10 @@ class TemplateBase(ABC):
         return self.render()
 
 
+class BaseClassDataType(DataType):
+    reference: Reference
+
+
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ''
     BASE_CLASS: ClassVar[str] = ''
@@ -151,7 +155,7 @@ class DataModel(TemplateBase, ABC):
         reference: Reference,
         fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[DataType]] = None,
+        base_classes: Optional[List[BaseClassDataType]] = None,
         custom_base_class: Optional[str] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
@@ -172,7 +176,7 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
-        self.base_classes: List[DataType] = [
+        self.base_classes: List[BaseClassDataType] = [
             base_class for base_class in base_classes or [] if base_class
         ]
         self.custom_base_class = custom_base_class
@@ -188,7 +192,7 @@ class DataModel(TemplateBase, ABC):
         )
 
         for base_class in self.base_classes:
-            base_class.reference.children.append(self)  # type: ignore
+            base_class.reference.children.append(self)
 
         if extra_template_data:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
@@ -221,9 +225,9 @@ class DataModel(TemplateBase, ABC):
     def reference_classes(self) -> FrozenSet[str]:
         return frozenset(
             {
-                r.reference.path  # type: ignore
+                r.reference.path
                 for r in self.base_classes
-                if r.reference.name != self.BASE_CLASS  # type: ignore
+                if r.reference.name != self.BASE_CLASS
             }
             | {t for f in self.fields for t in f.unresolved_types}
         )

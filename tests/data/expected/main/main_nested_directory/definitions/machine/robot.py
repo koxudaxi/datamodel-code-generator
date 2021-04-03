@@ -9,9 +9,11 @@ from typing import Optional
 from ... import person
 from .. import food, pet
 from ..drink import coffee
+from ..pet import Pet
 
 
-class Robot(pet.Pet):
+class Robot(Pet):
     friends: Optional[person.Person] = None
     drink: Optional[coffee.Coffee] = None
     food: Optional[food.Noodle] = None
+    pet: Optional[pet.Pet] = None

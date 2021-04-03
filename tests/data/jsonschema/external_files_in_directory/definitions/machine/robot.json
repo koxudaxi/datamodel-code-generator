@@ -13,6 +13,9 @@
     },
     "food": {
       "$ref": "../food.json#/definitions/noodle"
+    },
+    "pet": {
+      "$ref": "../pet.json"
     }
   }
 }

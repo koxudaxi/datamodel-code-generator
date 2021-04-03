@@ -33,7 +33,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.base import get_module_name
+from datamodel_code_generator.model.base import BaseClassDataType, get_module_name
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -416,7 +416,7 @@ class JsonSchemaParser(Parser):
         ignore_duplicate_model: bool = False,
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
-        base_classes: List[DataType] = []
+        base_classes: List[BaseClassDataType] = []
         if len(obj.allOf) == 1 and not obj.properties:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
@@ -427,7 +427,9 @@ class JsonSchemaParser(Parser):
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
                 base_classes.append(
-                    DataType(reference=self.model_resolver.add_ref(all_of_item.ref))
+                    BaseClassDataType(
+                        reference=self.model_resolver.add_ref(all_of_item.ref)
+                    )
                 )
             else:
                 fields.extend(

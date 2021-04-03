@@ -71,6 +71,7 @@ class Robot(Pet):
     friends: Optional[Person] = None
     drink: Optional[Coffee] = None
     food: Optional[Noodle] = None
+    pet: Optional[Pet] = None
 
 
 Person.update_forward_refs()
