@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 
 import pytest
@@ -19,4 +20,8 @@ from datamodel_code_generator.reference import get_relative_path
     ],
 )
 def test_get_relative_path(base_path: str, target_path: str, expected: str) -> None:
+    if platform.system() == 'Windows':
+        base_path.replace('/', '\\')
+        target_path.replace('/', '\\')
+        expected.replace('/', '\\')
     assert get_relative_path(Path(base_path), Path(target_path)) == Path(expected)
