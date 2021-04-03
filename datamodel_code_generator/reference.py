@@ -171,7 +171,7 @@ def get_relative_path(base_path: Path, target_path: Path) -> Path:
     for base_part, target_part in zip_longest(base_path.parts, target_path.parts):
         if base_part == target_part:
             continue
-        if (base_part and base_part != target_part) or not target_part:
+        if base_part or not target_part:
             parent_count += 1
         if target_part:
             children.append(target_part)
