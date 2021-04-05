@@ -257,6 +257,7 @@ class JsonSchemaParser(Parser):
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
+        skip_enum_output: bool = False,
         set_default_enum_member: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
@@ -291,6 +292,7 @@ class JsonSchemaParser(Parser):
             reuse_model=reuse_model,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            skip_enum_output=skip_enum_output,
             set_default_enum_member=set_default_enum_member,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
@@ -363,7 +365,7 @@ class JsonSchemaParser(Parser):
 
     def get_ref_data_type(self, ref: str) -> DataType:
         reference = self.model_resolver.add_ref(ref)
-        return self.data_type(reference=reference)
+        return self.data_type(reference=reference, is_enum=reference.source.base_class == 'Enum')
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.additionalProperties:
@@ -472,8 +474,6 @@ class JsonSchemaParser(Parser):
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name
             )
-            # if field.type == 'string' and field.child_is_enum:
-            #  make string type with enum property / choices
             if field.ref:
                 field_type = self.get_ref_data_type(field.ref)
             elif field.is_array:
@@ -825,15 +825,15 @@ class JsonSchemaParser(Parser):
                         else type(enum_part).__name__
                     )
                     field_name = f'{prefix}_{enum_part}'
-            if not self.is_using_schematics:
-                enum_fields.append(
-                    self.data_model_field_type(
-                        name=self.model_resolver.get_valid_name(field_name),
-                        default=default,
-                        data_type=self.data_type_manager.get_data_type(Types.any),
-                        required=True,
-                    )
+
+            enum_fields.append(
+                self.data_model_field_type(
+                    name=self.model_resolver.get_valid_name(field_name),
+                    default=default,
+                    data_type=self.data_type_manager.get_data_type(Types.any),
+                    required=True,
                 )
+            )
 
         if not nullable:
             reference = self.model_resolver.add(
@@ -851,7 +851,7 @@ class JsonSchemaParser(Parser):
                 description=obj.description if self.use_schema_description else None,
             )
             self.append_result(enum)
-            return self.data_type(reference=reference)
+            return self.data_type(reference=reference, is_enum=True)
 
         root_reference = self.model_resolver.add(
             path,
@@ -895,7 +895,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
         )
         self.append_result(data_model_root_type)
-        return self.data_type(reference=root_reference)
+        return self.data_type(reference=root_reference, is_enum=True)
 
     def _get_ref_body(self, resolved_ref: str) -> Dict[Any, Any]:
         if is_url(resolved_ref):

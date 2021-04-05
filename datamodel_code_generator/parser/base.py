@@ -245,6 +245,7 @@ class Parser(ABC):
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
+        skip_enum_output: bool = False,
         set_default_enum_member: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
@@ -283,6 +284,7 @@ class Parser(ABC):
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
+        self.skip_enum_output: bool = skip_enum_output
         self.set_default_enum_member: bool = set_default_enum_member
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
@@ -466,6 +468,7 @@ class Parser(ABC):
             import_map: Dict[str, Tuple[str, str]] = {}
 
             for model in models:
+
                 alias_map: Dict[str, Optional[str]] = {}
                 imports.append(model.imports)
                 for data_type in model.all_data_types:
@@ -584,6 +587,9 @@ class Parser(ABC):
                                     model_field.default = enum_member
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
+
+            if self.skip_enum_output:
+                models = list(filter(lambda x: x.base_class != 'Enum', models))
 
             code = dump_templates(models)
             result += [code]

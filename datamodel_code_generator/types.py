@@ -58,6 +58,7 @@ class DataType(_BaseModel):
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
+    is_enum: bool = False
     literals: List[str] = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
