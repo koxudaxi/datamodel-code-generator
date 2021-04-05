@@ -51,8 +51,9 @@ class SchematicsModelField(DataModelFieldBase):
         snakecase = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
         # If var shadowing builtin, mutate. i.e. `id` > `_id`
-        if iskeyword(snakecase):
-            snakecase = f'_{snakecase}'
+        builtin_names = dir(builtins)
+        if iskeyword(snakecase) or snakecase in builtin_names:
+            snakecase = f'{snakecase}_'
         return snakecase
 
     @property
