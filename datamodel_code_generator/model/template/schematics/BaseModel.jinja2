@@ -1,0 +1,19 @@
+{% for decorator in decorators -%}
+{{ decorator }}
+{% endfor -%}
+{%- if base_class %}
+class {{ class_name }}({{ base_class }}):
+{%- else %}
+class {{ class_name }}:
+{%- endif %}
+{%- if description %}
+    """
+    {{ description }}
+    """
+{%- endif %}
+{%- if not fields %}
+    pass
+{%- endif %}
+{%- for field in fields %}
+    {{ field.snakecase_name }} = {{field.inline_value}}
+{%- endfor -%}

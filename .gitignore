@@ -177,3 +177,6 @@ fabric.properties
 .idea
 
 version.py
+
+output.py
+test.json
