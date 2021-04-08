@@ -1,6 +1,7 @@
 from typing import ClassVar, Optional, Tuple, List
 from keyword import iskeyword
 import re
+import builtins
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModelFieldBase, DataModel
@@ -46,8 +47,9 @@ class SchematicsModelField(DataModelFieldBase):
         snakecase = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
         # If var shadowing builtin, mutate. i.e. `id` > `_id`
-        if iskeyword(snakecase):
-            snakecase = f'_{snakecase}'
+        builtin_names = dir(builtins)
+        if iskeyword(snakecase) or snakecase in builtin_names:
+            snakecase = f'{snakecase}_'
         return snakecase
 
     @property
