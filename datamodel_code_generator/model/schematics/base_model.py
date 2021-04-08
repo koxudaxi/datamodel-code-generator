@@ -1,7 +1,6 @@
 from typing import ClassVar, Optional, Tuple, List
 from keyword import iskeyword
 import re
-import builtins
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModelFieldBase, DataModel
@@ -24,8 +23,8 @@ class SchematicsModelField(DataModelFieldBase):
             imports_ = chain_as_tuple(imports_, (IMPORT_DICT,))
         if self.is_model_type:
             imports_ = chain_as_tuple(imports_, (IMPORT_MODEL,))
-
-        return chain_as_tuple(self.data_type.all_imports, imports_)
+        filtered_imports = filter(lambda x: x.from_ != 'typing', self.data_type.all_imports)
+        return chain_as_tuple(filtered_imports, imports_)
 
     @property
     def is_model_type(self) -> bool:
@@ -36,10 +35,6 @@ class SchematicsModelField(DataModelFieldBase):
     def model_name(self) -> Optional[str]:
         return self.data_type.reference.name if self.data_type.reference is not None \
             else self.data_type.data_types[-1].reference.name if len(self.data_type.data_types) > 0 else None
-
-    @property
-    def is_required(self) -> bool:
-        return self.nullable is not None and self.nullable or self.required
 
     @property
     def snakecase_name(self) -> str:
@@ -110,8 +105,8 @@ class SchematicsModelField(DataModelFieldBase):
                 # i.e., {'required':True, 'serialized_name':'id'} > outputs > '(required=True, serialized_name=id)'
                 extra_kwargs = dict()
 
-                if is_top_level:
-                    extra_kwargs['required'] = not self.data_type.is_optional
+                if is_top_level and not self.nullable:
+                    extra_kwargs['required'] = True
 
                 if outer.is_enum:
                     extra_kwargs['choices'] = [field.name for field in outer.reference.source.fields]
@@ -129,7 +124,7 @@ class SchematicsModelField(DataModelFieldBase):
 
                     # If this is the top level, give it kwarg string, if its nested, don't
                     extra = f', {extra_kwarg_string}' if is_top_level else ''
-                    return f'ModelType({outer.reference.name}{extra})'
+                    return f'ModelType({outer.alias if outer.alias else self.model_name}{extra})'
 
                 if not is_top_level and not is_model_type:
                     return outer_type
@@ -146,7 +141,7 @@ class SchematicsModelField(DataModelFieldBase):
 
 class BaseModel(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'schematics/BaseModel.jinja2'
-    BASE_CLASS: ClassVar[str] = 'schematics.BaseModel'
+    BASE_CLASS: ClassVar[str] = ''
 
     @property
     def imports(self) -> Tuple[Import, ...]:

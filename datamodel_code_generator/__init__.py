@@ -277,12 +277,12 @@ def generate(
             data_model_root_type=schematics_model.CustomRootType,
             data_type_manager_type=schematics_model.DataTypeManager,
             data_model_field_type=schematics_model.SchematicsModelField,
-            skip_enum_output=True
+            skip_enum_output=True,
         )
 
     parser = parser_class(
         source=input_ if isinstance(input_, ParseResult) else input_text or input_,
-        base_class=base_class,
+        base_class=base_class if not use_schematics else None,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
         target_python_version=target_python_version,

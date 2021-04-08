@@ -470,7 +470,9 @@ class Parser(ABC):
             for model in models:
 
                 alias_map: Dict[str, Optional[str]] = {}
-                imports.append(model.imports)
+                model_imports = model.imports if not self.skip_enum_output \
+                    else filter(lambda x: x.from_ != 'enum', model.imports)
+                imports.append(model_imports)
                 for data_type in model.all_data_types:
                     # To change from/import
 
@@ -518,7 +520,7 @@ class Parser(ABC):
                     else:
                         from_, import_ = relative(module_path, reference.name)
                     if init:
-                        from_ += "."
+                        from_ = "." + from_
                     imports.append(
                         Import(
                             from_=from_, import_=import_, alias=alias_map.get(ref_path),
@@ -608,7 +610,7 @@ class Parser(ABC):
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            results[module] = Result(body=body, source=models[0].file_path)
+            results[module] = Result(body=body, source=models[0].file_path if len(models) > 0 else None)
 
         # retain existing behaviour
         if [*results] == [('__init__.py',)]:
