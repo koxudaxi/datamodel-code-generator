@@ -315,7 +315,7 @@ class JsonSchemaParser(Parser):
 
     @property
     def is_using_schematics(self) -> bool:
-        return isinstance(self.data_model_field_type, SchematicsModelField)
+        return self.data_model_field_type is SchematicsModelField
 
     @root_id.setter
     def root_id(self, value: Optional[str]) -> None:
@@ -365,7 +365,8 @@ class JsonSchemaParser(Parser):
 
     def get_ref_data_type(self, ref: str) -> DataType:
         reference = self.model_resolver.add_ref(ref)
-        return self.data_type(reference=reference, is_enum=reference.source.base_class == 'Enum')
+        is_enum = reference.source.base_class == 'Enum' if reference.source else False
+        return self.data_type(reference=reference, is_enum=is_enum)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.additionalProperties:
@@ -590,6 +591,14 @@ class JsonSchemaParser(Parser):
                 required: bool = False
             else:
                 required = original_field_name in requires
+
+            if self.is_using_schematics:
+                nullable = field.nullable
+            elif self.strict_nullable and (field.has_default or required):
+                nullable = field.nullable
+            else:
+                nullable = None
+
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
@@ -602,9 +611,7 @@ class JsonSchemaParser(Parser):
                     required=required,
                     alias=alias,
                     constraints=constraints,
-                    nullable=field.nullable
-                    if self.strict_nullable and (field.has_default or required)
-                    else None,
+                    nullable=nullable
                 )
             )
         return fields

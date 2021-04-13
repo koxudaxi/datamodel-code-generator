@@ -29,7 +29,7 @@ from datamodel_code_generator.model.schematics.imports import (
     IMPORT_UUID3,
     IMPORT_UUID4,
     IMPORT_UUID5, IMPORT_CONDECIMAL, IMPORT_CONBYTES, IMPORT_CONFLOAT, IMPORT_CONINT, IMPORT_CONSTR, IMPORT_INT,
-    IMPORT_FLOAT, IMPORT_BOOLEAN, IMPORT_MODEL, IMPORT_LIST,
+    IMPORT_FLOAT, IMPORT_BOOLEAN, IMPORT_LIST,
 )
 from datamodel_code_generator.types import DataType
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
