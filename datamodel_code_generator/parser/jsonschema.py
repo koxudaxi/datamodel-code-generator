@@ -367,46 +367,19 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[name]['title'] = obj.title
 
-    def parse_list_item(
-        self, name: str, target_items: List[JsonSchemaObject], path: List[str]
-    ) -> DataType:
-        def parse_item(index: int, item: JsonSchemaObject) -> DataType:
-            if item.ref:  # $ref
-                return self.get_ref_data_type(item.ref)
-            elif not any(v for k, v in vars(item).items() if k != 'type'):
-                # trivial types
-                return self.get_data_type(item)
-            elif (
-                item.is_array
-                and isinstance(item.items, JsonSchemaObject)
-                and not any(v for k, v in vars(item.items).items() if k != 'type')
-            ):
-                # trivial item types
-                return self.data_type(
-                    data_types=[self.get_data_type(item.items)], is_list=True,
-                )
-            elif item.is_object:
-                return self.parse_object(
-                    name, item, [*path, str(index)], singular_name=True,
-                )
-            else:
-                return self.get_data_type(item)
-
-        return self.data_type(
-            data_types=[
-                parse_item(index, item) for index, item in enumerate(target_items)
-            ]
-        )
-
     def parse_any_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> DataType:
-        return self.parse_list_item(name, obj.anyOf, path)
+        return self.data_type(
+            data_types=self.parse_list_item(name, obj.anyOf, path, obj)
+        )
 
     def parse_one_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> DataType:
-        return self.parse_list_item(name, obj.oneOf, path)
+        return self.data_type(
+            data_types=self.parse_list_item(name, obj.oneOf, path, obj)
+        )
 
     def parse_all_of(
         self,
@@ -651,12 +624,17 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
 
-    def parse_array_fields(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
-    ) -> DataModelFieldBase:
-        def parse_field(index: int, item: JsonSchemaObject) -> DataType:
-            field_path = [*path, str(index)]
-            if item.has_constraint and (obj.has_constraint or self.field_constraints):
+    def parse_list_item(
+        self,
+        name: str,
+        target_items: List[JsonSchemaObject],
+        path: List[str],
+        parent: JsonSchemaObject,
+    ) -> List[DataType]:
+        def parse_item(item: JsonSchemaObject, field_path: List[str]) -> DataType:
+            if item.has_constraint and (
+                parent.has_constraint or self.field_constraints
+            ):
                 return self.parse_root_type(
                     self.model_resolver.add(
                         field_path, name, class_name=True, singular_name=True,
@@ -691,6 +669,14 @@ class JsonSchemaParser(Parser):
             else:
                 return self.get_data_type(item)
 
+        return [
+            parse_item(item, [*path, str(index)])
+            for index, item in enumerate(target_items)
+        ]
+
+    def parse_array_fields(
+        self, name: str, obj: JsonSchemaObject, path: List[str]
+    ) -> DataModelFieldBase:
         if self.force_optional_for_required_fields:
             required: bool = False
             nullable: Optional[bool] = None
@@ -706,14 +692,14 @@ class JsonSchemaParser(Parser):
 
         data_types: List[DataType] = [
             self.data_type(
-                data_types=[
-                    parse_field(index, item)
-                    for index, item in enumerate(
-                        [obj.items]
-                        if isinstance(obj.items, JsonSchemaObject)
-                        else obj.items or []
-                    )
-                ],
+                data_types=self.parse_list_item(
+                    name,
+                    [obj.items]
+                    if isinstance(obj.items, JsonSchemaObject)
+                    else obj.items or [],
+                    path,
+                    obj,
+                ),
                 is_list=True,
             )
         ]
