@@ -441,128 +441,30 @@ class JsonSchemaParser(Parser):
         exclude_field_names: Set[str] = set()
         for original_field_name, field in properties.items():
 
-            constraints: Optional[Mapping[str, Any]] = None
+            if field.is_array or (
+                self.field_constraints
+                and not (
+                    field.ref
+                    or field.anyOf
+                    or field.oneOf
+                    or field.allOf
+                    or field.is_object
+                    or field.enum
+                )
+            ):
+                constraints: Optional[Mapping[str, Any]] = field.dict()
+            else:
+                constraints = None
+
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 original_field_name, exclude_field_names
             )
             modular_name = f'{module_name}.{field_name}' if module_name else field_name
 
             exclude_field_names.add(field_name)
-            if field.ref:
-                field_type = self.get_ref_data_type(field.ref)
-            elif field.is_array:
-                field_type = self.parse_array_fields(
-                    modular_name, field, [*path, field_name]
-                ).data_type
-                constraints = field.dict()
-            elif field.anyOf:
-                field_type = self.parse_any_of(modular_name, field, [*path, field_name])
-            elif field.oneOf:
-                field_type = self.parse_one_of(modular_name, field, [*path, field_name])
-            elif field.allOf:
-                field_type = self.parse_all_of(
-                    modular_name,
-                    field,
-                    [*path, field_name],
-                    ignore_duplicate_model=True,
-                )
-            elif field.is_object:
-                if field.properties:
-                    field_type = self.parse_object(
-                        modular_name, field, [*path, field_name]
-                    )
-                elif isinstance(field.additionalProperties, JsonSchemaObject):
-                    field_class_name = self.model_resolver.add(
-                        [*path, field_name], modular_name, class_name=True
-                    ).name
 
-                    # TODO: supports other type
-                    if (
-                        isinstance(field.additionalProperties.items, JsonSchemaObject)
-                        and field.additionalProperties.items.ref
-                    ):
-                        additional_properties_type = self.data_type(
-                            reference=self.model_resolver.add_ref(
-                                field.additionalProperties.items.ref,
-                            ),
-                            is_list=True,
-                        )
-                    elif field.additionalProperties.is_array:
-                        additional_properties_type = self.parse_array(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                            modular_name,
-                        )
-                    elif field.additionalProperties.allOf:
-                        additional_properties_type = self.parse_all_of(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                            ignore_duplicate_model=True,
-                        )
-                    elif field.additionalProperties.is_object:
-                        additional_properties_type = self.parse_object(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                            additional_properties=None
-                            if field.additionalProperties.ref
-                            else field,
-                        )
-                    elif field.additionalProperties.enum:
-                        if self.should_parse_enum_as_literal(
-                            field.additionalProperties
-                        ):
-                            additional_properties_type = self.data_type(
-                                literals=field.additionalProperties.enum,
-                            )
-                        else:
-                            additional_properties_type = self.parse_enum(
-                                field_class_name,
-                                field.additionalProperties,
-                                [*path, field_name],
-                            )
-                    elif field.additionalProperties.anyOf:
-                        additional_properties_type = self.parse_any_of(
-                            modular_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                        )
-                    elif field.additionalProperties.oneOf:
-                        additional_properties_type = self.parse_one_of(
-                            modular_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                        )
-                    else:
-                        additional_properties_type = self.parse_root_type(
-                            field_class_name,
-                            field.additionalProperties,
-                            [*path, field_name],
-                            additional_properties=None
-                            if field.additionalProperties.ref
-                            else field,
-                        )
-                    self.parse_ref(
-                        field.additionalProperties, [*path, field_name],
-                    )
-                    field_type = self.data_type(
-                        data_types=[additional_properties_type], is_dict=True
-                    )
-                else:
-                    field_type = self.data_type_manager.get_data_type(Types.object)
-            elif field.enum:
-                if self.should_parse_enum_as_literal(field):
-                    field_type = self.data_type(literals=field.enum)
-                else:
-                    field_type = self.parse_enum(
-                        modular_name, field, [*path, field_name]
-                    )
-            else:
-                field_type = self.get_data_type(field)
-                if self.field_constraints:
-                    constraints = field.dict()
+            field_type = self.parse_item(modular_name, field, [*path, field_name])
+
             if self.force_optional_for_required_fields or (
                 self.apply_default_values_for_required_fields and field.has_default
             ):
@@ -624,6 +526,121 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
 
+    def parse_item(
+        self,
+        name: str,
+        item: JsonSchemaObject,
+        path: List[str],
+        singular_name: bool = False,
+        parent: Optional[JsonSchemaObject] = None,
+    ) -> DataType:
+        if (
+            parent
+            and item.has_constraint
+            and (parent.has_constraint or self.field_constraints)
+        ):
+            return self.parse_root_type(
+                self.model_resolver.add(
+                    path, name, class_name=True, singular_name=singular_name,
+                ).name,
+                item,
+                path,
+            )
+        elif item.ref:
+            return self.get_ref_data_type(item.ref)
+        elif item.is_array:
+            return self.parse_array_fields(name, item, path).data_type
+        elif item.anyOf:
+            return self.parse_any_of(name, item, path)
+        elif item.oneOf:
+            return self.parse_one_of(name, item, path)
+        elif item.allOf:
+            return self.parse_all_of(
+                self.model_resolver.add(
+                    path, name, singular_name=singular_name, class_name=True
+                ).name,
+                item,
+                path,
+                ignore_duplicate_model=True,
+            )
+        elif item.is_object:
+            if item.properties:
+                return self.parse_object(name, item, path, singular_name=singular_name)
+            elif isinstance(item.additionalProperties, JsonSchemaObject):
+                field_class_name = self.model_resolver.add(
+                    path, name, class_name=True
+                ).name
+
+                # TODO: supports other type
+                if (
+                    isinstance(item.additionalProperties.items, JsonSchemaObject)
+                    and item.additionalProperties.items.ref
+                ):
+                    additional_properties_type = self.data_type(
+                        reference=self.model_resolver.add_ref(
+                            item.additionalProperties.items.ref,
+                        ),
+                        is_list=True,
+                    )
+                elif item.additionalProperties.is_array:
+                    additional_properties_type = self.parse_array(
+                        field_class_name, item.additionalProperties, path, name,
+                    )
+                elif item.additionalProperties.allOf:
+                    additional_properties_type = self.parse_all_of(
+                        field_class_name,
+                        item.additionalProperties,
+                        path,
+                        ignore_duplicate_model=True,
+                    )
+                elif item.additionalProperties.is_object:
+                    additional_properties_type = self.parse_object(
+                        field_class_name,
+                        item.additionalProperties,
+                        path,
+                        additional_properties=None
+                        if item.additionalProperties.ref
+                        else item,
+                    )
+                elif item.additionalProperties.enum:
+                    if self.should_parse_enum_as_literal(item.additionalProperties):
+                        additional_properties_type = self.data_type(
+                            literals=item.additionalProperties.enum,
+                        )
+                    else:
+                        additional_properties_type = self.parse_enum(
+                            field_class_name, item.additionalProperties, path,
+                        )
+                elif item.additionalProperties.anyOf:
+                    additional_properties_type = self.parse_any_of(
+                        name, item.additionalProperties, path,
+                    )
+                elif item.additionalProperties.oneOf:
+                    additional_properties_type = self.parse_one_of(
+                        name, item.additionalProperties, path,
+                    )
+                else:
+                    additional_properties_type = self.parse_root_type(
+                        field_class_name,
+                        item.additionalProperties,
+                        path,
+                        additional_properties=None
+                        if item.additionalProperties.ref
+                        else item,
+                    )
+                self.parse_ref(
+                    item.additionalProperties, path,
+                )
+                return self.data_type(
+                    data_types=[additional_properties_type], is_dict=True
+                )
+            return self.data_type_manager.get_data_type(Types.object)
+        elif item.enum:
+            if self.should_parse_enum_as_literal(item):
+                return self.data_type(literals=item.enum)
+            return self.parse_enum(name, item, path, singular_name=singular_name)
+        return self.get_data_type(item)
+
     def parse_list_item(
         self,
         name: str,
@@ -631,46 +648,10 @@ class JsonSchemaParser(Parser):
         path: List[str],
         parent: JsonSchemaObject,
     ) -> List[DataType]:
-        def parse_item(item: JsonSchemaObject, field_path: List[str]) -> DataType:
-            if item.has_constraint and (
-                parent.has_constraint or self.field_constraints
-            ):
-                return self.parse_root_type(
-                    self.model_resolver.add(
-                        field_path, name, class_name=True, singular_name=True,
-                    ).name,
-                    item,
-                    field_path,
-                )
-            elif item.ref:
-                return self.get_ref_data_type(item.ref)
-            elif item.allOf:
-                return self.parse_all_of(
-                    self.model_resolver.add(
-                        field_path, name, singular_name=True, class_name=True
-                    ).name,
-                    item,
-                    field_path,
-                    ignore_duplicate_model=True,
-                )
-            elif isinstance(item, JsonSchemaObject) and item.properties:
-                return self.parse_object(name, item, field_path, singular_name=True,)
-            elif item.anyOf:
-                return self.parse_any_of(name, item, field_path)
-            elif item.oneOf:
-                return self.parse_one_of(name, item, field_path)
-            elif item.enum:
-                if self.should_parse_enum_as_literal(item):
-                    return self.data_type(literals=item.enum)
-                else:
-                    return self.parse_enum(name, item, field_path, singular_name=True)
-            elif item.is_array:
-                return self.parse_array_fields(name, item, field_path,).data_type
-            else:
-                return self.get_data_type(item)
-
         return [
-            parse_item(item, [*path, str(index)])
+            self.parse_item(
+                name, item, [*path, str(index)], singular_name=True, parent=parent
+            )
             for index, item in enumerate(target_items)
         ]
 
