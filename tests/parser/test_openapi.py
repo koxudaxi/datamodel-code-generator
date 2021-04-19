@@ -570,11 +570,11 @@ def test_openapi_model_resolver():
             'original_name': 'Users',
             'path': 'api.yaml#/components/schemas/Users',
         },
-        'api.yaml#/components/schemas/Users/Users/0': {
+        'api.yaml#/components/schemas/Users/Users/0#-datamodel-code-generator-#-object-#-special-#': {
             'loaded': True,
             'name': 'User',
             'original_name': 'Users',
-            'path': 'api.yaml#/components/schemas/Users/Users/0',
+            'path': 'api.yaml#/components/schemas/Users/Users/0#-datamodel-code-generator-#-object-#-special-#',
         },
         'api.yaml#/components/schemas/apis': {
             'loaded': True,
@@ -582,11 +582,11 @@ def test_openapi_model_resolver():
             'original_name': 'apis',
             'path': 'api.yaml#/components/schemas/apis',
         },
-        'api.yaml#/components/schemas/apis/apis/0': {
+        'api.yaml#/components/schemas/apis/apis/0#-datamodel-code-generator-#-object-#-special-#': {
             'loaded': True,
             'name': 'Api',
             'original_name': 'apis',
-            'path': 'api.yaml#/components/schemas/apis/apis/0',
+            'path': 'api.yaml#/components/schemas/apis/apis/0#-datamodel-code-generator-#-object-#-special-#',
         },
     }
 
