@@ -807,7 +807,10 @@ class JsonSchemaParser(Parser):
                 data_types.extend(
                     self.parse_one_of(name, obj, get_special_path('oneOf', object_path))
                 )
-            data_type = self.data_type(data_types=data_types)
+            if len(data_types) > 1:
+                data_type = self.data_type(data_types=data_types)
+            else:  # pragma: no cover
+                data_type = data_types[0]
         elif obj.type:
             data_type = self.get_data_type(obj)
         else:
