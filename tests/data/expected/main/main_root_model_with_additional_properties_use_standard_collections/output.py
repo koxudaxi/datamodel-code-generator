@@ -46,3 +46,4 @@ class Model(BaseModel):
     any_of_result: Optional[dict[str, Union[User, AnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[dict[str, User]] = None
     objectRef: Optional[dict[str, User]] = None
+    deepNestedObjectRef: Optional[dict[str, dict[str, dict[str, User]]]] = None

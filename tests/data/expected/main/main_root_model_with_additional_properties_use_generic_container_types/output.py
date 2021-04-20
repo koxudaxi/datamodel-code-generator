@@ -46,3 +46,4 @@ class Model(BaseModel):
     any_of_result: Optional[Mapping[str, Union[User, AnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[Mapping[str, User]] = None
     objectRef: Optional[Mapping[str, User]] = None
+    deepNestedObjectRef: Optional[Mapping[str, Mapping[str, Mapping[str, User]]]] = None

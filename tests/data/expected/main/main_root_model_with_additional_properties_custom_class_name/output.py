@@ -46,3 +46,4 @@ class CustomModel(BaseModel):
     any_of_result: Optional[Dict[str, Union[CustomUser, CustomAnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[Dict[str, CustomUser]] = None
     objectRef: Optional[Dict[str, CustomUser]] = None
+    deepNestedObjectRef: Optional[Dict[str, Dict[str, Dict[str, CustomUser]]]] = None

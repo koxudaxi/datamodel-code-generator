@@ -587,9 +587,6 @@ class JsonSchemaParser(Parser):
                 additional_properties_type = self.parse_item(
                     name, item.additionalProperties, object_path
                 )
-                self.parse_ref(
-                    item.additionalProperties, object_path,
-                )
                 return self.data_type(
                     data_types=[additional_properties_type], is_dict=True
                 )
