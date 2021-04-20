@@ -94,6 +94,24 @@
           { "description": "TODO" }
         ]
       }
+    },
+    "objectRef": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/User"
+      }
+    },
+    "deepNestedObjectRef": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+             "$ref": "#/definitions/User"
+          }
+        }
+      }
     }
   },
   "definitions": {

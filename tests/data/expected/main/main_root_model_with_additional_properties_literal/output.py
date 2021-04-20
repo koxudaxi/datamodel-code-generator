@@ -6,20 +6,10 @@ from __future__ import annotations
 
 from typing import Dict, Literal, Optional, Union
 
-from pydantic import BaseModel, Extra, Field
-
-
-class Result(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    __root__: int
+from pydantic import BaseModel, Field
 
 
 class NestedObjectResult(BaseModel):
-    class Config:
-        extra = Extra.allow
-
     status: int
 
 
@@ -42,10 +32,12 @@ class AllOfResult(User):
 class Model(BaseModel):
     test_id: str = Field(..., description='test ID')
     test_ip: str = Field(..., description='test IP')
-    result: Dict[str, Result]
+    result: Dict[str, int]
     nested_object_result: Dict[str, NestedObjectResult]
     nested_enum_result: Dict[str, Literal['red', 'green']]
     all_of_result: Optional[Dict[str, AllOfResult]] = None
     one_of_result: Optional[Dict[str, Union[User, OneOfResultItem]]] = None
     any_of_result: Optional[Dict[str, Union[User, AnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[Dict[str, User]] = None
+    objectRef: Optional[Dict[str, User]] = None
+    deepNestedObjectRef: Optional[Dict[str, Dict[str, Dict[str, User]]]] = None

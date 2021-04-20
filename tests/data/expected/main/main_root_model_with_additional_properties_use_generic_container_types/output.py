@@ -7,20 +7,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import Mapping, Optional, Union
 
-from pydantic import BaseModel, Extra, Field
-
-
-class Result(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    __root__: int
+from pydantic import BaseModel, Field
 
 
 class NestedObjectResult(BaseModel):
-    class Config:
-        extra = Extra.allow
-
     status: int
 
 
@@ -48,10 +38,12 @@ class AllOfResult(User):
 class Model(BaseModel):
     test_id: str = Field(..., description='test ID')
     test_ip: str = Field(..., description='test IP')
-    result: Mapping[str, Result]
+    result: Mapping[str, int]
     nested_object_result: Mapping[str, NestedObjectResult]
     nested_enum_result: Mapping[str, NestedEnumResult]
     all_of_result: Optional[Mapping[str, AllOfResult]] = None
     one_of_result: Optional[Mapping[str, Union[User, OneOfResultItem]]] = None
     any_of_result: Optional[Mapping[str, Union[User, AnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[Mapping[str, User]] = None
+    objectRef: Optional[Mapping[str, User]] = None
+    deepNestedObjectRef: Optional[Mapping[str, Mapping[str, Mapping[str, User]]]] = None
