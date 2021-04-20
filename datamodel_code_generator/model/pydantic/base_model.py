@@ -124,7 +124,7 @@ class BaseModel(DataModel):
 
         config_parameters: Dict[str, Any] = {}
 
-        if 'additionalProperties' in self.extra_template_data:
+        if self.extra_template_data.get('additionalProperties', False) is True:
             config_parameters['extra'] = 'Extra.allow'
             self._additional_imports.append(IMPORT_EXTRA)
 

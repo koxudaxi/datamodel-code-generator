@@ -50,9 +50,6 @@ class Result(BaseModel):
 
 
 class Failing(BaseModel):
-    class Config:
-        extra = Extra.allow
-
     __root__: str
 
 

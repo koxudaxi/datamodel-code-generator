@@ -7,20 +7,14 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, Optional, Union
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Field
 
 
 class CustomResult(BaseModel):
-    class Config:
-        extra = Extra.allow
-
     __root__: int
 
 
 class CustomNestedObjectResult(BaseModel):
-    class Config:
-        extra = Extra.allow
-
     status: int
 
 

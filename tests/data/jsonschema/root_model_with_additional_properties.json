@@ -94,7 +94,7 @@
           { "description": "TODO" }
         ]
       }
-    }
+    },
   },
   "definitions": {
     "User": {

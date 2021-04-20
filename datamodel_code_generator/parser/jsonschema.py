@@ -501,7 +501,6 @@ class JsonSchemaParser(Parser):
         path: List[str],
         singular_name: bool = False,
         unique: bool = True,
-        additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataType:
         if not unique:  # pragma: no cover
             warn(
@@ -514,7 +513,7 @@ class JsonSchemaParser(Parser):
         )
         class_name = reference.name
         self.set_title(class_name, obj)
-        self.set_additional_properties(class_name, additional_properties or obj)
+        self.set_additional_properties(class_name, obj)
         data_model_type = self.data_model_type(
             reference=reference,
             fields=self.parse_object_fields(
@@ -600,6 +599,12 @@ class JsonSchemaParser(Parser):
                         ),
                         is_list=True,
                     )
+                elif item.additionalProperties.ref:
+                    additional_properties_type = self.data_type(
+                        reference=self.model_resolver.add_ref(
+                            item.additionalProperties.ref,
+                        ),
+                    )
                 elif item.additionalProperties.is_array:
                     additional_properties_type = self.parse_array(
                         field_class_name, item.additionalProperties, object_path, name,
@@ -616,9 +621,6 @@ class JsonSchemaParser(Parser):
                         field_class_name,
                         item.additionalProperties,
                         object_path,
-                        additional_properties=None
-                        if item.additionalProperties.ref
-                        else item,
                     )
                 elif item.additionalProperties.enum:
                     if self.should_parse_enum_as_literal(item.additionalProperties):
@@ -646,9 +648,6 @@ class JsonSchemaParser(Parser):
                         field_class_name,
                         item.additionalProperties,
                         object_path,
-                        additional_properties=None
-                        if item.additionalProperties.ref
-                        else item,
                     )
                 self.parse_ref(
                     item.additionalProperties, object_path,
@@ -786,7 +785,6 @@ class JsonSchemaParser(Parser):
         name: str,
         obj: JsonSchemaObject,
         path: List[str],
-        additional_properties: Optional[JsonSchemaObject] = None,
     ) -> DataType:
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
@@ -823,7 +821,7 @@ class JsonSchemaParser(Parser):
             )
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self.set_title(name, obj)
-        self.set_additional_properties(name, additional_properties or obj)
+        self.set_additional_properties(name, obj)
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[

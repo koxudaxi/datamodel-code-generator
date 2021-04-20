@@ -52,9 +52,6 @@ class Result(Base):
 
 
 class Failing(Base):
-    class Config:
-        extra = Extra.allow
-
     __root__: str
 
 
