@@ -51,10 +51,6 @@ class Result(Base):
     event: Optional[Event] = None
 
 
-class Failing(Base):
-    __root__: str
-
-
 class Broken(Base):
     foo: Optional[str] = None
     bar: Optional[int] = None
@@ -64,15 +60,11 @@ class BrokenArray(Base):
     broken: Optional[Dict[str, List[Broken]]] = None
 
 
-class Tags(Base):
-    __root__: List[str]
-
-
 class FileSetUpload(Base):
     task_id: Optional[str] = None
-    tags: Dict[str, Tags]
+    tags: Dict[str, List[str]]
 
 
 class Test(Base):
     broken: Optional[Dict[str, Broken]] = None
-    failing: Optional[Dict[str, Failing]] = {}
+    failing: Optional[Dict[str, str]] = {}

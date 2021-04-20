@@ -584,67 +584,9 @@ class JsonSchemaParser(Parser):
                     name, item, object_path, singular_name=singular_name
                 )
             elif isinstance(item.additionalProperties, JsonSchemaObject):
-                field_class_name = self.model_resolver.add(
-                    object_path, name, class_name=True
-                ).name
-
-                # TODO: supports other type
-                if (
-                    isinstance(item.additionalProperties.items, JsonSchemaObject)
-                    and item.additionalProperties.items.ref
-                ):
-                    additional_properties_type = self.data_type(
-                        reference=self.model_resolver.add_ref(
-                            item.additionalProperties.items.ref,
-                        ),
-                        is_list=True,
-                    )
-                elif item.additionalProperties.ref:
-                    additional_properties_type = self.data_type(
-                        reference=self.model_resolver.add_ref(
-                            item.additionalProperties.ref,
-                        ),
-                    )
-                elif item.additionalProperties.is_array:
-                    additional_properties_type = self.parse_array(
-                        field_class_name, item.additionalProperties, object_path, name,
-                    )
-                elif item.additionalProperties.allOf:
-                    additional_properties_type = self.parse_all_of(
-                        field_class_name,
-                        item.additionalProperties,
-                        object_path,
-                        ignore_duplicate_model=True,
-                    )
-                elif item.additionalProperties.is_object:
-                    additional_properties_type = self.parse_object(
-                        field_class_name, item.additionalProperties, object_path,
-                    )
-                elif item.additionalProperties.enum:
-                    if self.should_parse_enum_as_literal(item.additionalProperties):
-                        additional_properties_type = self.data_type(
-                            literals=item.additionalProperties.enum,
-                        )
-                    else:
-                        additional_properties_type = self.parse_enum(
-                            field_class_name, item.additionalProperties, object_path,
-                        )
-                elif item.additionalProperties.anyOf:
-                    additional_properties_type = self.data_type(
-                        data_types=self.parse_any_of(
-                            name, item.additionalProperties, object_path,
-                        )
-                    )
-                elif item.additionalProperties.oneOf:
-                    additional_properties_type = self.data_type(
-                        data_types=self.parse_one_of(
-                            name, item.additionalProperties, object_path,
-                        )
-                    )
-                else:
-                    additional_properties_type = self.parse_root_type(
-                        field_class_name, item.additionalProperties, object_path,
-                    )
+                additional_properties_type = self.parse_item(
+                    name, item.additionalProperties, object_path
+                )
                 self.parse_ref(
                     item.additionalProperties, object_path,
                 )

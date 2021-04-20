@@ -9,10 +9,6 @@ from typing import Dict, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 
-class Result(BaseModel):
-    __root__: int
-
-
 class NestedObjectResult(BaseModel):
     status: int
 
@@ -36,7 +32,7 @@ class AllOfResult(User):
 class Model(BaseModel):
     test_id: str = Field(..., description='test ID')
     test_ip: str = Field(..., description='test IP')
-    result: Dict[str, Result]
+    result: Dict[str, int]
     nested_object_result: Dict[str, NestedObjectResult]
     nested_enum_result: Dict[str, Literal['red', 'green']]
     all_of_result: Optional[Dict[str, AllOfResult]] = None
