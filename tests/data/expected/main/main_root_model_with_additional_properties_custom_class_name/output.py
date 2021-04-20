@@ -49,3 +49,4 @@ class CustomModel(BaseModel):
     one_of_result: Optional[Dict[str, Union[CustomUser, CustomOneOfResultItem]]] = None
     any_of_result: Optional[Dict[str, Union[CustomUser, CustomAnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[Dict[str, CustomUser]] = None
+    objectRef: Optional[Dict[str, CustomUser]] = None

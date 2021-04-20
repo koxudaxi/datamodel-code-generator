@@ -49,3 +49,4 @@ class Model(BaseModel):
     one_of_result: Optional[Mapping[str, Union[User, OneOfResultItem]]] = None
     any_of_result: Optional[Mapping[str, Union[User, AnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[Mapping[str, User]] = None
+    objectRef: Optional[Mapping[str, User]] = None

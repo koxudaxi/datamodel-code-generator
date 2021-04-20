@@ -95,6 +95,12 @@
         ]
       }
     },
+    "objectRef": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/User"
+      }
+    }
   },
   "definitions": {
     "User": {

@@ -49,3 +49,4 @@ class Model(BaseModel):
     one_of_result: Optional[dict[str, Union[User, OneOfResultItem]]] = None
     any_of_result: Optional[dict[str, Union[User, AnyOfResultItem]]] = None
     all_of_with_unknown_object: Optional[dict[str, User]] = None
+    objectRef: Optional[dict[str, User]] = None
