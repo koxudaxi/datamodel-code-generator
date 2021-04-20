@@ -584,11 +584,11 @@ class JsonSchemaParser(Parser):
                     name, item, object_path, singular_name=singular_name
                 )
             elif isinstance(item.additionalProperties, JsonSchemaObject):
-                additional_properties_type = self.parse_item(
-                    name, item.additionalProperties, object_path
-                )
                 return self.data_type(
-                    data_types=[additional_properties_type], is_dict=True
+                    data_types=[
+                        self.parse_item(name, item.additionalProperties, object_path)
+                    ],
+                    is_dict=True,
                 )
             return self.data_type_manager.get_data_type(Types.object)
         elif item.enum:
