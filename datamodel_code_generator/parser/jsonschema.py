@@ -618,9 +618,7 @@ class JsonSchemaParser(Parser):
                     )
                 elif item.additionalProperties.is_object:
                     additional_properties_type = self.parse_object(
-                        field_class_name,
-                        item.additionalProperties,
-                        object_path,
+                        field_class_name, item.additionalProperties, object_path,
                     )
                 elif item.additionalProperties.enum:
                     if self.should_parse_enum_as_literal(item.additionalProperties):
@@ -645,9 +643,7 @@ class JsonSchemaParser(Parser):
                     )
                 else:
                     additional_properties_type = self.parse_root_type(
-                        field_class_name,
-                        item.additionalProperties,
-                        object_path,
+                        field_class_name, item.additionalProperties, object_path,
                     )
                 self.parse_ref(
                     item.additionalProperties, object_path,
@@ -781,10 +777,7 @@ class JsonSchemaParser(Parser):
         return self.data_type(reference=reference)
 
     def parse_root_type(
-        self,
-        name: str,
-        obj: JsonSchemaObject,
-        path: List[str],
+        self, name: str, obj: JsonSchemaObject, path: List[str],
     ) -> DataType:
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
