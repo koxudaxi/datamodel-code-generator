@@ -16,6 +16,7 @@ from datamodel_code_generator.reference import get_relative_path
         ('/a/b/c/d', '/a', '../../..'),
         ('/a/b/c/d', '/a/x/y/z', '../../../x/y/z'),
         ('/a/b/c/d', 'a/x/y/z', 'a/x/y/z'),
+        ('/a/b/c/d', '/a/b/e/d', '../../e/d'),
     ],
 )
 def test_get_relative_path_posix(
@@ -37,6 +38,7 @@ def test_get_relative_path_posix(
         ('c:/a/b/c/d', 'c:/a', '../../..'),
         ('c:/a/b/c/d', 'c:/a/x/y/z', '../../../x/y/z'),
         ('c:/a/b/c/d', 'a/x/y/z', 'a/x/y/z'),
+        ('c:/a/b/c/d', 'c:/a/b/e/d', '../../e/d'),
     ],
 )
 def test_get_relative_path_windows(
