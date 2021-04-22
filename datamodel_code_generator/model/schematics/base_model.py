@@ -111,7 +111,7 @@ class SchematicsModelField(DataModelFieldBase):
                     extra_kwargs['required'] = True
 
                 if outer.is_enum:
-                    extra_kwargs['choices'] = [field.name for field in outer.reference.source.fields]
+                    extra_kwargs['choices'] = [field.default.replace("'", "") for field in outer.reference.source.fields]
 
                 if is_top_level and self.name and self.name != self.snakecase_name:
                     extra_kwargs['serialized_name'] = self.serialized_name
