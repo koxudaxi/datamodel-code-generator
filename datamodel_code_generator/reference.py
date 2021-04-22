@@ -169,7 +169,7 @@ def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
     parent_count: int = 0
     children: List[str] = []
     for base_part, target_part in zip_longest(base_path.parts, target_path.parts):
-        if base_part == target_part:
+        if base_part == target_part and not parent_count:
             continue
         if base_part or not target_part:
             parent_count += 1
