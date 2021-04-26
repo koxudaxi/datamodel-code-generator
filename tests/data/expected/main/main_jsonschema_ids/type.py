@@ -8,4 +8,4 @@ from pydantic import BaseModel, Field
 
 
 class Schema(BaseModel):
-    __root__: str = Field(..., description='Type of this object.')
+    __root__: str = Field(..., description='Type of this object.', title='type')

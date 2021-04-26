@@ -261,6 +261,8 @@ class Parser(ABC):
         custom_class_name_generator: Optional[
             Callable[[str], str]
         ] = title_to_class_name,
+        field_extra_keys: Optional[Set[str]] = None,
+        field_include_all_keys: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -299,6 +301,8 @@ class Parser(ABC):
         self.custom_class_name_generator: Optional[
             Callable[[str], str]
         ] = custom_class_name_generator
+        self.field_extra_keys: Set[str] = field_extra_keys or set()
+        self.field_include_all_keys: bool = field_include_all_keys
 
         self.remote_text_cache: DefaultPutDict[str, str] = (
             remote_text_cache or DefaultPutDict()

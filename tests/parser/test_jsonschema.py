@@ -249,7 +249,7 @@ def test_parse_object(source_obj, generated_classes):
                 "description": "This field accepts any object",
             },
             """class AnyObject(BaseModel):
-    __root__: Any = Field(..., description='This field accepts any object')""",
+    __root__: Any = Field(..., description='This field accepts any object',title='AnyJson')""",
         )
     ],
 )

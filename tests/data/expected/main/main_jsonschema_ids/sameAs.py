@@ -13,4 +13,5 @@ class Schema(BaseModel):
     __root__: URI.Schema = Field(
         ...,
         description='Use the sameAs property to indicate the most canonical URLs for the original in cases of the entity. For example this may be a link to the original metadata of a dataset, definition of a property, Person, Organization or Place.',
+        title='sameAs',
     )

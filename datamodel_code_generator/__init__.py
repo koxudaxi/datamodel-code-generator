@@ -14,6 +14,7 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    Set,
     TextIO,
     Type,
     TypeVar,
@@ -212,6 +213,8 @@ def generate(
     strict_types: Optional[Sequence[StrictTypes]] = None,
     empty_enum_field_name: Optional[str] = None,
     custom_class_name_generator: Optional[Callable[[str], str]] = None,
+    field_extra_keys: Optional[Set[str]] = None,
+    field_include_all_keys: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -323,6 +326,8 @@ def generate(
         strict_types=strict_types,
         empty_enum_field_name=empty_enum_field_name,
         custom_class_name_generator=custom_class_name_generator,
+        field_extra_keys=field_extra_keys,
+        field_include_all_keys=field_include_all_keys,
     )
 
     with chdir(output):

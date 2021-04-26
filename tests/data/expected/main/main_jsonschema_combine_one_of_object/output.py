@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, Extra, Field
 
 
 class MySchema1(BaseModel):
@@ -32,4 +32,6 @@ class MySchema(BaseModel):
     class Config:
         extra = Extra.allow
 
-    __root__: Union[MySchema1, MySchemaItem, MySchemaItem1]
+    __root__: Union[MySchema1, MySchemaItem, MySchemaItem1] = Field(
+        ..., title='My schema'
+    )

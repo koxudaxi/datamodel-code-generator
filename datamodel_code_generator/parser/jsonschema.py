@@ -185,10 +185,20 @@ class JsonSchemaObject(BaseModel):
     examples: Any
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
+    _raw: Dict[str, Any]
 
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
+        underscore_attrs_are_private = True
+
+    def __init__(self, **data: Any) -> None:  # type: ignore
+        super().__init__(**data)
+        self._raw = data
+
+    @cached_property
+    def extras(self) -> Dict[str, Any]:
+        return {k: v for k, v in self._raw.items() if k not in EXCLUDE_FIELD_KEYS}
 
     @cached_property
     def is_object(self) -> bool:
@@ -235,6 +245,18 @@ class JsonSchemaObject(BaseModel):
 
 JsonSchemaObject.update_forward_refs()
 
+DEFAULT_FIELD_KEYS: Set[str] = {
+    'example',
+    'examples',
+    'description',
+    'title',
+}
+
+EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
+    '$id',
+    '$ref',
+}
+
 
 @snooper_to_methods(max_variable_length=None)
 class JsonSchemaParser(Parser):
@@ -275,6 +297,8 @@ class JsonSchemaParser(Parser):
         strict_types: Optional[Sequence[StrictTypes]] = None,
         empty_enum_field_name: Optional[str] = None,
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
+        field_extra_keys: Optional[Set[str]] = None,
+        field_include_all_keys: bool = False,
     ):
         super().__init__(
             source=source,
@@ -311,6 +335,8 @@ class JsonSchemaParser(Parser):
             strict_types=strict_types,
             empty_enum_field_name=empty_enum_field_name,
             custom_class_name_generator=custom_class_name_generator,
+            field_extra_keys=field_extra_keys,
+            field_include_all_keys=field_include_all_keys,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -318,6 +344,20 @@ class JsonSchemaParser(Parser):
         self._root_id: Optional[str] = None
         self._root_id_base_path: Optional[str] = None
         self.reserved_refs: DefaultDict[Tuple[str], Set[str]] = defaultdict(set)
+        self.field_keys: Set[str] = {*DEFAULT_FIELD_KEYS, *self.field_extra_keys}
+
+    def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
+        if self.field_include_all_keys:
+            return {
+                self.model_resolver.get_valid_field_name_and_alias(k)[0]: v
+                for k, v in obj.extras.items()
+            }
+        else:
+            return {
+                self.model_resolver.get_valid_field_name_and_alias(k)[0]: v
+                for k, v in obj.extras.items()
+                if k in self.field_keys
+            }
 
     @property
     def root_id(self) -> Optional[str]:
@@ -477,11 +517,7 @@ class JsonSchemaParser(Parser):
             fields.append(
                 self.data_model_field_type(
                     name=field_name,
-                    example=field.example,
-                    examples=field.examples,
-                    description=field.description,
                     default=field.default,
-                    title=field.title,
                     data_type=field_type,
                     required=required,
                     alias=alias,
@@ -490,6 +526,7 @@ class JsonSchemaParser(Parser):
                     if self.strict_nullable and (field.has_default or required)
                     else None,
                     strip_default_none=self.strip_default_none,
+                    extras={**self.get_field_extras(field)},
                 )
             )
         return fields
@@ -658,15 +695,12 @@ class JsonSchemaParser(Parser):
 
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
-            example=obj.example,
-            examples=obj.examples,
             default=obj.default,
-            description=obj.description,
-            title=obj.title,
             required=required,
             constraints=obj.dict(),
             nullable=nullable,
             strip_default_none=self.strip_default_none,
+            extras=self.get_field_extras(obj),
         )
 
     def parse_array(
@@ -692,15 +726,12 @@ class JsonSchemaParser(Parser):
                         *field.data_type.data_types[1:],
                     ]
                 ),
-                example=field.example,
-                examples=field.examples,
                 default=field.default,
-                description=field.description,
-                title=field.title,
                 required=field.required,
                 constraints=field.constraints,
                 nullable=field.nullable,
                 strip_default_none=field.strip_default_none,
+                extras=field.extras,
             )
 
         data_model_root = self.data_model_root_type(
@@ -759,14 +790,12 @@ class JsonSchemaParser(Parser):
             fields=[
                 self.data_model_field_type(
                     data_type=data_type,
-                    description=obj.description,
-                    example=obj.example,
-                    examples=obj.examples,
                     default=obj.default,
                     required=required,
                     constraints=obj.dict() if self.field_constraints else {},
                     nullable=obj.nullable if self.strict_nullable else None,
                     strip_default_none=self.strip_default_none,
+                    extras=self.get_field_extras(obj),
                 )
             ],
             custom_base_class=self.base_class,
@@ -875,13 +904,11 @@ class JsonSchemaParser(Parser):
             fields=[
                 self.data_model_field_type(
                     data_type=create_enum(enum_reference),
-                    description=obj.description,
-                    example=obj.example,
-                    examples=obj.examples,
                     default=obj.default,
                     required=False,
                     nullable=True,
                     strip_default_none=self.strip_default_none,
+                    extras=self.get_field_extras(obj),
                 )
             ],
             custom_base_class=self.base_class,

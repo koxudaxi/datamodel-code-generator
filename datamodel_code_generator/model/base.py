@@ -39,15 +39,12 @@ class DataModelFieldBase(_BaseModel):
     default: Optional[Any]
     required: bool = False
     alias: Optional[str]
-    example: Any = None
-    examples: Any = None
-    description: Optional[str]
-    title: Optional[str]
     data_type: DataType
     constraints: Any = None
     strip_default_none: bool = False
     nullable: Optional[bool] = None
     parent: Optional[Any] = None
+    extras: Dict[str, Any] = {}
 
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}

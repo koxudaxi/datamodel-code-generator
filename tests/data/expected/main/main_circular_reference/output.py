@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Member(BaseModel):
-    __root__: User
+    __root__: User = Field(..., title='Member')
 
 
 class User(BaseModel):
