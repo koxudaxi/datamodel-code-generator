@@ -1,6 +1,5 @@
-from collections import ChainMap
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from pydantic import Field
 
@@ -16,7 +15,6 @@ from datamodel_code_generator.types import chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
-
     gt: Optional[float] = Field(None, alias='exclusiveMinimum')
     ge: Optional[float] = Field(None, alias='minimum')
     lt: Optional[float] = Field(None, alias='exclusiveMaximum')
@@ -30,14 +28,22 @@ class Constraints(ConstraintsBase):
 
 
 class DataModelField(DataModelFieldBase):
-    _FIELDS_KEYS: ClassVar[Set[str]] = {
+    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
         'alias',
-        'example',
-        'examples',
-        'description',
-        'title',
+        'default',
+        'default_factory',
+        'const',
+        'gt',
+        'ge',
+        'lt',
+        'le',
+        'multiple_of',
+        'min_items',
+        'max_items',
+        'min_length',
+        'max_length',
+        'regex',
     }
-
     constraints: Optional[Constraints] = None
 
     @property
@@ -69,13 +75,18 @@ class DataModelField(DataModelFieldBase):
         }
 
     def __str__(self) -> str:
-        data: Mapping[str, Any] = self.dict(include=self._FIELDS_KEYS)
+        data: Dict[str, Any] = {
+            k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
+        }
+        if self.alias:
+            data['alias'] = self.alias
         if (
             self.constraints is not None
             and not self.self_reference()
             and not self.data_type.strict
         ):
-            data = ChainMap(data, self.constraints.dict())
+            data = {**data, **self.constraints.dict()}
+
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
         )

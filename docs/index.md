@@ -36,12 +36,14 @@ $ pip install datamodel-code-generator[http]
 The `datamodel-codegen` command:
 ```bash
 usage: datamodel-codegen [-h] [--input INPUT] [--url URL] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
-                         [--base-class BASE_CLASS] [--field-constraints] [--snake-case-field] [--strip-default-none] [--disable-appending-item-suffix]
+                         [--base-class BASE_CLASS] [--field-constraints] [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
+                         [--field-include-all-keys] [--snake-case-field] [--strip-default-none] [--disable-appending-item-suffix]
                          [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default] [--force-optional] [--strict-nullable]
-                         [--disable-timestamp] [--use-standard-collections] [--use-generic-container-types] [--use-schema-description]
-                         [--reuse-model] [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--class-name CLASS_NAME]
-                         [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--encoding ENCODING] [--debug] [--version]
+                         [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]] [--disable-timestamp]
+                         [--use-standard-collections] [--use-generic-container-types] [--use-schema-description] [--reuse-model]
+                         [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
+                         [--class-name CLASS_NAME] [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA]
+                         [--aliases ALIASES] [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--encoding ENCODING] [--debug] [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -53,6 +55,10 @@ optional arguments:
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
   --field-constraints   Use field constraints and not con* annotations
+  --field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]
+                        Add extra keys to field parameters
+  --field-include-all-keys
+                        Add all keys to field parameters
   --snake-case-field    Change camel-case field name to snake-case
   --strip-default-none  Strip default None on fields
   --disable-appending-item-suffix
@@ -63,21 +69,25 @@ optional arguments:
                         Enable faux immutability
   --use-default         Use default value even if a field is required
   --force-optional      Force optional for required fields
-  --strict-nullable     Treat default field as a non-nullable field (only OpenAPI)
+  --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
+  --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
+                        Use strict types
   --disable-timestamp   Disable timestamp on file headers
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
   --use-generic-container-types
-                        Use generic container types for type hinting (typing.Sequence, typing.Mapping). If `--use-standard-
-                        collections` option is set, then import from collections.abc instead of typing
+                        Use generic container types for type hinting (typing.Sequence, typing.Mapping). If `--use-standard-collections` option is set,
+                        then import from collections.abc instead of typing
   --use-schema-description
                         Use schema description to populate class docstring
   --reuse-model         Re-use models on the field when a module has the model with the same content
   --enum-field-as-literal {all,one}
-                        Parse enum field as literal. all: all enum field type are Literal. one: field type is Literal when an enum has only
-                        one possible value
+                        Parse enum field as literal. all: all enum field type are Literal. one: field type is Literal when an enum has only one
+                        possible value
   --set-default-enum-member
                         Set enum members as default values for enum field
+  --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
+                        Set field name when enum value is empty (default: `_`)
   --class-name CLASS_NAME
                         Set class name of root model
   --custom-template-dir CUSTOM_TEMPLATE_DIR
@@ -88,7 +98,7 @@ optional arguments:
   --target-python-version {3.6,3.7,3.8,3.9}
                         target python version (default: 3.7)
   --validation          Enable validation (Only OpenAPI)
-  --encoding ENCODING   The encoding of input and output (default: utf-8)
+  --encoding ENCODING   The encoding of input and output (default: UTF-8)
   --debug               show debug message
   --version             show version
 ```

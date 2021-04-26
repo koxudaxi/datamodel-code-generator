@@ -13,7 +13,7 @@ from collections import defaultdict
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Optional, Sequence, Union, cast
+from typing import Any, DefaultDict, Dict, List, Optional, Sequence, Set, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
@@ -71,6 +71,19 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--field-constraints',
     help='Use field constraints and not con* annotations',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
+    '--field-extra-keys',
+    help='Add extra keys to field parameters',
+    type=str,
+    nargs='+',
+)
+arg_parser.add_argument(
+    '--field-include-all-keys',
+    help='Add all keys to field parameters',
     action='store_true',
     default=None,
 )
@@ -299,6 +312,8 @@ class Config(BaseModel):
     disable_appending_item_suffix: bool = False
     strict_types: List[StrictTypes] = []
     empty_enum_field_name: Optional[str] = None
+    field_extra_keys: Optional[Set[str]] = None
+    field_include_all_keys: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -419,6 +434,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             disable_appending_item_suffix=config.disable_appending_item_suffix,
             strict_types=config.strict_types,
             empty_enum_field_name=config.empty_enum_field_name,
+            field_extra_keys=config.field_extra_keys,
+            field_include_all_keys=config.field_include_all_keys,
         )
         return Exit.OK
     except InvalidClassNameError as e:

@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Extras",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "normal key",
+      "key1": 123,
+      "key2": 456,
+      "$exclude": 123,
+      "invalid-key-1": "abc",
+      "-invalid+key_2": "efg",
+      "$comment": "comment",
+      "$id": "#name"
+    }
+  }
+}

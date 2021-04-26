@@ -109,21 +109,15 @@ def test_base_model_get_data_type():
     'kwargs,expected',
     [
         ({'required': True}, None),
-        ({'required': True, 'example': 'example'}, "Field(..., example='example')"),
-        ({'example': 'example'}, "Field(None, example='example')"),
-        (
-            {'required': True, 'default': 123, 'example': 'example'},
-            "Field(..., example='example')",
-        ),
-        (
-            {'required': False, 'default': 123, 'example': 'example'},
-            "Field(123, example='example')",
-        ),
-        ({'description': 'description'}, "Field(None, description='description')"),
-        ({'title': 'title'}, "Field(None, title='title')"),
+        ({'required': True, 'example': 'example'}, None),
+        ({'example': 'example'}, None),
+        ({'required': True, 'default': 123, 'example': 'example'}, None,),
+        ({'required': False, 'default': 123, 'example': 'example'}, None,),
+        ({'description': 'description'}, None),
+        ({'title': 'title'}, None),
         ({'alias': 'alias'}, "Field(None, alias='alias')"),
-        ({'example': True}, "Field(None, example=True)"),
-        ({'examples': True}, "Field(None, examples=True)"),
+        ({'example': True}, None),
+        ({'examples': True}, None),
         (
             {
                 'example': True,
@@ -131,15 +125,12 @@ def test_base_model_get_data_type():
                 'title': 'title',
                 'alias': 'alias',
             },
-            "Field(None, alias='alias',description='description',example=True,title='title')",
+            "Field(None, alias='alias')",
         ),
-        ({'examples': [1, 2, 3]}, "Field(None, examples=[1, 2, 3])"),
-        (
-            {'examples': {'name': 'dog', 'age': 1}},
-            'Field(None, examples={\'name\': \'dog\', \'age\': 1})',
-        ),
-        ({'default': 'abc', 'title': 'title'}, 'Field(\'abc\', title=\'title\')'),
-        ({'default': 123, 'title': 'title'}, 'Field(123, title=\'title\')'),
+        ({'examples': [1, 2, 3]}, None),
+        ({'examples': {'name': 'dog', 'age': 1}}, None,),
+        ({'default': 'abc', 'title': 'title'}, None),
+        ({'default': 123, 'title': 'title'}, None),
     ],
 )
 def test_data_model_field(kwargs, expected):

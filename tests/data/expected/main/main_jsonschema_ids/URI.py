@@ -8,4 +8,4 @@ from pydantic import AnyUrl, BaseModel, Field
 
 
 class Schema(BaseModel):
-    __root__: AnyUrl = Field(..., description='String representing a URI.')
+    __root__: AnyUrl = Field(..., description='String representing a URI.', title='URI')
