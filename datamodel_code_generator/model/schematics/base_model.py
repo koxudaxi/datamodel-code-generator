@@ -143,7 +143,7 @@ class SchematicsModelField(DataModelFieldBase):
 
 class BaseModel(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'schematics/BaseModel.jinja2'
-    BASE_CLASS: ClassVar[str] = ''
+    BASE_CLASS: ClassVar[str] = 'schematics.models.Model'
 
     @property
     def imports(self) -> Tuple[Import, ...]:
