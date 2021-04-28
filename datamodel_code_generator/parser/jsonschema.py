@@ -35,7 +35,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.model.schematics.base_model import SchematicsModelField
+from datamodel_code_generator.model.schematics import SchematicsModelField
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 from ..model import pydantic as pydantic_model
