@@ -11,6 +11,9 @@ class {{ class_name }}:
     {{ description }}
     """
 {%- endif %}
+{%- if not fields %}
+    pass
+{%- endif %}
 {%- for field in fields %}
     {{ field.snakecase_name }} = {{field.inline_value}}
 {%- endfor -%}
