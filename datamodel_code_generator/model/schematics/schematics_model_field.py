@@ -7,7 +7,7 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model.base import DataModelFieldBase
 from datamodel_code_generator.model.schematics.base_model import BaseModel
 from datamodel_code_generator.model.schematics.custom_root_type import CustomRootType
-from datamodel_code_generator.model.schematics.imports import IMPORT_MODEL, IMPORT_LIST, IMPORT_DICT
+from datamodel_code_generator.model.schematics.imports import IMPORT_MODEL, IMPORT_LIST, IMPORT_DICT, IMPORT_ANY
 from datamodel_code_generator.types import chain_as_tuple, DataType
 
 
@@ -19,7 +19,7 @@ class SchematicsModelField(DataModelFieldBase):
 
     @property
     def imports(self) -> Tuple[Import, ...]:
-        imports_ = ()
+        imports_ = (IMPORT_ANY,)
         if self.data_type.is_list:
             imports_ = chain_as_tuple(imports_, (IMPORT_LIST,))
         if self.data_type.is_dict:
@@ -129,10 +129,9 @@ class SchematicsModelField(DataModelFieldBase):
 
                     if isinstance(outer.reference.source, BaseModel) and outer.reference.source.is_fake_class:
                         # Using StringType cause there isn't a generic ObjectType
-                        return 'StringType'
+                        return 'BaseType'
 
                     if isinstance(outer.reference.source, CustomRootType) and len(outer.reference.source.fields) == 1:
-                        # Using StringType cause there isn't a generic ObjectType
                         return outer.reference.source.fields[0].inline_value
 
                     # If this is the top level, give it kwarg string, if its nested, don't
