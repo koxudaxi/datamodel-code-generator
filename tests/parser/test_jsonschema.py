@@ -354,8 +354,8 @@ def test_parse_nested_array():
         ('string', 'uuid3', 'UUID3', 'pydantic', 'UUID3'),
         ('string', 'uuid4', 'UUID4', 'pydantic', 'UUID4'),
         ('string', 'uuid5', 'UUID5', 'pydantic', 'UUID5'),
-        ('string', 'ipv4', 'IPv4Address', 'pydantic', 'IPv4Address'),
-        ('string', 'ipv6', 'IPv6Address', 'pydantic', 'IPv6Address'),
+        ('string', 'ipv4', 'IPv4Address', 'ipaddress', 'IPv4Address'),
+        ('string', 'ipv6', 'IPv6Address', 'ipaddress', 'IPv6Address'),
         ('string', 'unknown-type', 'str', None, None),
     ],
 )
