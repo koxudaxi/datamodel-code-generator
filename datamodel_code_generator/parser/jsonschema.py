@@ -630,7 +630,10 @@ class JsonSchemaParser(Parser):
             return self.data_type_manager.get_data_type(Types.object)
         elif item.enum:
             if self.should_parse_enum_as_literal(item):
-                return self.data_type(literals=item.enum)
+                enum_literals = item.enum
+                if item.nullable:
+                    enum_literals = [i for i in item.enum if i is not None]
+                return self.data_type(literals=enum_literals)
             return self.parse_enum(
                 name, item, get_special_path('enum', path), singular_name=singular_name
             )
