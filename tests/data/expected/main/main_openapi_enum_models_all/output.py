@@ -67,6 +67,12 @@ class ArrayEnum(BaseModel):
     __root__: List[Union[Literal['cat'], Literal['dog']]]
 
 
+class NestedNullableEnum(BaseModel):
+    nested_version: Optional[
+        Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4']
+    ] = Field('RC1', description='nullable enum', example='RC2')
+
+
 class VersionEnum(Enum):
     RC1 = 'RC1'
     RC1N = 'RC1N'

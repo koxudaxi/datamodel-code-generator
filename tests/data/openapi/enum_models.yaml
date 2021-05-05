@@ -112,6 +112,23 @@ components:
         { enum: [ "cat" ] },
         { enum: [ "dog"]}
       ]
+    nestedNullableEnum:
+      type: object
+      properties:
+        nested_version:
+          type: string
+          nullable: true
+          default: RC1
+          description: nullable enum
+          example: RC2
+          enum:
+            - RC1
+            - RC1N
+            - RC2
+            - RC2N
+            - RC3
+            - RC4
+            - null
     version:
       type: string
       nullable: true
