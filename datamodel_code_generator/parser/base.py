@@ -474,7 +474,6 @@ class Parser(ABC):
                         model.reference.name = generated_name
 
         for module, models in module_models:
-
             init = False
             if module:
                 parent = (*module[:-1], '__init__.py')
@@ -525,6 +524,7 @@ class Parser(ABC):
 
             if self.reuse_model:
                 model_cache: Dict[Tuple[str, ...], Reference] = {}
+                duplicates = []
                 for model in models:
                     model_key = tuple(
                         to_hashable(v)
@@ -540,10 +540,10 @@ class Parser(ABC):
                             for child in model.reference.children[:]:
                                 # child is resolved data_type by reference
                                 data_model = get_most_of_parent(child)
-
                                 # TODO: replace reference in all modules
                                 if data_model in models:  # pragma: no cover
                                     child.replace_reference(cached_model_reference)
+                            duplicates.append(model)
                         else:
                             index = models.index(model)
                             inherited_model = model.__class__(
@@ -567,6 +567,9 @@ class Parser(ABC):
 
                     else:
                         model_cache[model_key] = model.reference
+
+                for duplicate in duplicates:
+                    models.remove(duplicate)
 
             if self.set_default_enum_member:
                 for model in models:
