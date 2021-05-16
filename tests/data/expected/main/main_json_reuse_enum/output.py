@@ -16,12 +16,6 @@ class Animal(Enum):
     snake = 'snake'
 
 
-class Pet(Enum):
-    dog = 'dog'
-    cat = 'cat'
-    snake = 'snake'
-
-
 class User(BaseModel):
     name: Optional[str] = None
     animal: Optional[Animal] = 'dog'
