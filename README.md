@@ -31,13 +31,13 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 -  array
 -  object
 
-##### String Format 
+##### String Format
 -  date
 -  datetime
 -  time
 -  password
 -  email
--  idn-email 
+-  idn-email
 -  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 -  ipv4
 -  ipv6
@@ -148,8 +148,7 @@ $ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 
 <details>
 <summary>api.yaml</summary>
-<pre>
-<code>
+
 ```yaml
 openapi: "3.0.0"
 info:
@@ -298,8 +297,7 @@ components:
             format: uri
             description: A URL to the API console for each API
 ```
-</code>
-</pre>
+
 </details>
 
 `model.py`:
@@ -360,7 +358,7 @@ This code generator creates [FastAPI](https://github.com/tiangolo/fastapi) app f
 
 [https://github.com/koxudaxi/pydantic-pycharm-plugin](https://github.com/koxudaxi/pydantic-pycharm-plugin)
 
-## PyPi 
+## PyPi
 
 [https://pypi.org/project/datamodel-code-generator](https://pypi.org/project/datamodel-code-generator)
 
