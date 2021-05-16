@@ -877,6 +877,7 @@ class JsonSchemaParser(Parser):
                 fields=enum_fields,
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
+                custom_template_dir=self.custom_template_dir,
             )
             self.results.append(enum)
             return self.data_type(reference=reference_)
