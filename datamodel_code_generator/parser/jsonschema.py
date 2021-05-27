@@ -185,6 +185,7 @@ class JsonSchemaObject(BaseModel):
     examples: Any
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
+    custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
     _raw: Dict[str, Any]
 
     class Config:
@@ -588,6 +589,10 @@ class JsonSchemaParser(Parser):
             )
         elif item.ref:
             return self.get_ref_data_type(item.ref)
+        elif item.custom_type_path:
+            return self.data_type_manager.get_data_type_from_full_path(
+                item.custom_type_path, is_custom_type=True
+            )
         elif item.is_array:
             return self.parse_array_fields(
                 name, item, get_special_path('array', path)
@@ -754,6 +759,10 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
+        elif obj.custom_type_path:
+            data_type = self.data_type_manager.get_data_type_from_full_path(
+                obj.custom_type_path, is_custom_type=True
+            )
         elif obj.is_object or obj.anyOf or obj.oneOf:
             data_types: List[DataType] = []
             object_path = [*path, name]

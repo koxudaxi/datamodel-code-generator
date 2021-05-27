@@ -70,6 +70,7 @@ class DataType(_BaseModel):
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
+    is_custom_type: bool = False
     literals: List[str] = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
@@ -89,6 +90,7 @@ class DataType(_BaseModel):
         is_optional: bool = False,
         is_dict: bool = False,
         is_list: bool = False,
+        is_custom_type: bool = False,
         strict: bool = False,
         kwargs: Optional[Dict[str, Any]] = None,
     ) -> 'DataTypeT':
@@ -99,6 +101,7 @@ class DataType(_BaseModel):
             is_dict=is_dict,
             is_list=is_list,
             is_func=True if kwargs else False,
+            is_custom_type=is_custom_type,
             strict=strict,
             kwargs=kwargs,
         )
@@ -336,3 +339,10 @@ class DataTypeManager(ABC):
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
         raise NotImplementedError
+
+    def get_data_type_from_full_path(
+        self, full_path: str, is_custom_type: bool
+    ) -> DataType:
+        return self.data_type.from_import(
+            Import.from_full_path(full_path), is_custom_type=is_custom_type
+        )

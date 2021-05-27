@@ -144,6 +144,10 @@ class BaseModel(DataModel):
                 config_parameters[config_attribute] = self.extra_template_data[
                     config_attribute
                 ]
+        for data_type in self.all_data_types:
+            if data_type.is_custom_type:
+                config_parameters['arbitrary_types_allowed'] = True
+                break
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config
