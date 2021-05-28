@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
 
+import isort
 import pytest
 from _pytest.capture import CaptureFixture
 from _pytest.tmpdir import TempdirFactory
@@ -2880,6 +2881,35 @@ def test_main_jsonschema_field_extras():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason="isort 5.x don't sort pydantic modules",
+)
+@freeze_time('2019-07-26')
+def test_main_jsonschema_custom_type_path():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'custom_type_path.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_custom_type_path' / 'output.py'
             ).read_text()
         )
     with pytest.raises(SystemExit):
