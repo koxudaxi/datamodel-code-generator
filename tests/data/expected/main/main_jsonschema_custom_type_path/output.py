@@ -6,11 +6,12 @@ from __future__ import annotations
 
 from typing import Optional
 
+from pydantic import BaseModel, Field
+
 from custom import MultipleLineString, SpecialString, TitleString
 from custom.collection.array import Friends
 from custom.special import UpperString
 from custom.special.numbers import Age
-from pydantic import BaseModel, Field
 
 
 class Person(BaseModel):

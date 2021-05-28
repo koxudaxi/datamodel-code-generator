@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
 
+import isort
 import pytest
 from _pytest.capture import CaptureFixture
 from _pytest.tmpdir import TempdirFactory
@@ -2886,6 +2887,10 @@ def test_main_jsonschema_field_extras():
         main()
 
 
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason="isort 5.x don't sort pydantic modules",
+)
 @freeze_time('2019-07-26')
 def test_main_jsonschema_custom_type_path():
     with TemporaryDirectory() as output_dir:
