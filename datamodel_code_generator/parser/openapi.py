@@ -1,8 +1,50 @@
-from typing import Any, Dict, List
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import ParseResult
 
+from pydantic import BaseModel, Field
+
 from datamodel_code_generator import load_yaml, snooper_to_methods
-from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.parser.jsonschema import (
+    JsonSchemaObject,
+    JsonSchemaParser,
+)
+
+
+class ParameterLocation(Enum):
+    query = 'query'
+    header = 'header'
+    path = 'path'
+    cookie = 'cookie'
+
+
+class Ref(BaseModel):
+    ref: str = Field(default=None, alias='$ref')
+
+
+class Example(BaseModel):
+    summary: Optional[str]
+    description: Optional[str]
+    value: Any
+    externalValue: Optional[str]
+
+
+class Media(BaseModel):
+    schema: Union[JsonSchemaObject, Ref, None]
+    example: Any
+    examples: Union[str, Ref, Example, None]
+
+
+class Parameters(BaseModel):
+    name: str
+    in_: ParameterLocation
+    description: Optional[str]
+    required: bool = False
+    deprecated: bool = False
+    schema: Optional[JsonSchemaObject]
+    example: Any
+    examples: Union[str, Ref, Example, None]
+    content: Dict[str, Media]
 
 
 @snooper_to_methods(max_variable_length=None)
