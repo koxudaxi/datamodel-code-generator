@@ -18,33 +18,79 @@ class ParameterLocation(Enum):
     cookie = 'cookie'
 
 
-class Ref(BaseModel):
+class ReferenceObject(BaseModel):
     ref: str = Field(default=None, alias='$ref')
 
 
-class Example(BaseModel):
+class ExampleObject(BaseModel):
     summary: Optional[str]
     description: Optional[str]
     value: Any
     externalValue: Optional[str]
 
 
-class Media(BaseModel):
-    schema: Union[JsonSchemaObject, Ref, None]
+class MediaObject(BaseModel):
+    schema_: Union[JsonSchemaObject, ReferenceObject, None] = Field(
+        None, alias='schema'
+    )
     example: Any
-    examples: Union[str, Ref, Example, None]
+    examples: Union[str, ReferenceObject, ExampleObject, None]
 
 
-class Parameters(BaseModel):
+class ParameterObject(BaseModel):
     name: str
     in_: ParameterLocation
     description: Optional[str]
     required: bool = False
     deprecated: bool = False
-    schema: Optional[JsonSchemaObject]
+    schema_: Optional[JsonSchemaObject] = Field(None, alias='schema')
     example: Any
-    examples: Union[str, Ref, Example, None]
-    content: Dict[str, Media]
+    examples: Union[str, ReferenceObject, ExampleObject, None]
+    content: Dict[str, MediaObject] = {}
+
+
+class HeaderObject(BaseModel):
+    description: Optional[str]
+    required: bool = False
+    deprecated: bool = False
+    schema_: Optional[JsonSchemaObject] = Field(None, alias='schema')
+    example: Any
+    examples: Union[str, ReferenceObject, ExampleObject, None]
+    content: Dict[str, MediaObject] = {}
+
+
+class RequestBodyObject(BaseModel):
+    description: Optional[str]
+    content: Dict[str, MediaObject] = {}
+    required: bool = False
+
+
+class ResponseObject(BaseModel):
+    description: str
+    headers: Dict[str, ParameterObject] = {}
+    content: Dict[str, MediaObject] = {}
+
+
+class ResponsesObject(BaseModel):
+    default: Union[HeaderObject, ReferenceObject, None]
+
+
+class Operation(BaseModel):
+    tags: List[str] = []
+    summary: Optional[str]
+    description: Optional[str]
+    operationId: Optional[str]
+    parameters: List[Union[ParameterObject, ReferenceObject]]
+    requestBody: ResponsesObject
+    deprecated: bool = False
+
+
+class ComponentsObject(BaseModel):
+    schemas: Dict[str, Union[JsonSchemaObject, ReferenceObject]] = {}
+    responses: Dict[str, Union[ResponseObject, ReferenceObject]] = {}
+    examples: Dict[str, Union[ExampleObject, ReferenceObject]] = {}
+    requestBodies: Dict[str, Union[RequestBodyObject, ReferenceObject]] = {}
+    headers: Dict[str, Union[HeaderObject, ReferenceObject]] = {}
 
 
 @snooper_to_methods(max_variable_length=None)
