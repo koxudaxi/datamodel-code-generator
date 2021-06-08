@@ -9,6 +9,7 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
 )
+from datamodel_code_generator.reference import snake_to_upper_camel
 
 
 class ParameterLocation(Enum):
@@ -39,7 +40,7 @@ class MediaObject(BaseModel):
 
 class ParameterObject(BaseModel):
     name: str
-    in_: ParameterLocation
+    in_: ParameterLocation = Field(..., alias='in')
     description: Optional[str]
     required: bool = False
     deprecated: bool = False
@@ -80,8 +81,9 @@ class Operation(BaseModel):
     summary: Optional[str]
     description: Optional[str]
     operationId: Optional[str]
-    parameters: List[Union[ParameterObject, ReferenceObject]]
-    requestBody: ResponsesObject
+    parameters: List[Union[ParameterObject, ReferenceObject]] = []
+    requestBody: Optional[RequestBodyObject]
+    responses: Optional[ResponsesObject]
     deprecated: bool = False
 
 
@@ -95,6 +97,43 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
+    def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
+        if parameters.schema_:
+            self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
+        for (
+            media_type,
+            media_obj,
+        ) in parameters.content.items():  # type: str, MediaObject
+            if isinstance(media_obj.schema_, JsonSchemaObject):
+                self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
+
+    def parse_request_body(
+        self, name: str, request_body: RequestBodyObject, path: List[str],
+    ) -> None:
+        for (
+            media_type,
+            media_obj,
+        ) in request_body.content.items():  # type: str, MediaObject
+            if isinstance(media_obj.schema_, JsonSchemaObject):
+                self.parse_item(name, media_obj.schema_, [*path, media_type])
+
+    @classmethod
+    def _get_request_body_name(cls, path_name: str, method: str):
+        camel_path_name = snake_to_upper_camel(path_name[1:].replace("/", "_"))
+        return f'{camel_path_name}{method.capitalize()}Request'
+
+    def parse_operation(self, raw_operation: Operation, path: List[str],) -> None:
+        operation = Operation.parse_obj(raw_operation)
+        for parameters in operation.parameters:
+            if isinstance(parameters, ParameterObject):
+                self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
+        if operation.requestBody:
+            self.parse_request_body(
+                name=self._get_request_body_name(*path[-2:]),
+                request_body=operation.requestBody,
+                path=[*path, 'requestBody'],
+            )
+
     def parse_raw(self) -> None:
         for source in self.iter_source:
             if self.validation:
@@ -121,3 +160,9 @@ class OpenAPIParser(JsonSchemaParser):
                         raw_obj,
                         [*path_parts, '#/components', 'schemas', obj_name],
                     )
+                paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
+                for path_name, methods in paths.items():
+                    for method, raw_operation in methods.items():
+                        self.parse_operation(
+                            raw_operation, [*path_parts, '#/paths', path_name, method],
+                        )
