@@ -118,7 +118,7 @@ class OpenAPIParser(JsonSchemaParser):
                 self.parse_item(name, media_obj.schema_, [*path, media_type])
 
     @classmethod
-    def _get_request_body_name(cls, path_name: str, method: str):
+    def _get_request_body_name(cls, path_name: str, method: str) -> str:
         camel_path_name = snake_to_upper_camel(path_name[1:].replace("/", "_"))
         return f'{camel_path_name}{method.capitalize()}Request'
 
