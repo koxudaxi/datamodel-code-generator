@@ -57,6 +57,7 @@ jobs:
       run: |
         ./scripts/lint.sh
     - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1.5.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
