@@ -6,17 +6,15 @@ theme:
     palette:
       primary: 'light blue'
       accent: 'light blue'
-
+    analytics:
+      gtag: 275257853
 markdown_extensions:
   - codehilite
   - admonition
 
 repo_name: koxudaxi/datamodel-code-generator
 repo_url: https://github.com/koxudaxi/datamodel-code-generator
-
-google_analytics:
-    - 'UA-142130505-1'
-    - 'auto'
+site_url: https://koxudaxi.github.io/datamodel-code-generator
 
 nav:
     - Overview: index.md
