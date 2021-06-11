@@ -452,6 +452,8 @@ class Parser(ABC):
                             for base_class in child.base_classes:
                                 if base_class.reference == model.reference:
                                     child.base_classes.remove(base_class)
+                            if not child.base_classes:
+                                child.set_base_class()
 
             module_models.append((module, models,))
 
