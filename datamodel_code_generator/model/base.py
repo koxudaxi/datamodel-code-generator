@@ -173,18 +173,14 @@ class DataModel(TemplateBase, ABC):
         self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
+        self.custom_base_class = custom_base_class
         if base_classes:
             self.base_classes: List[BaseClassDataType] = [
                 BaseClassDataType(reference=b) for b in base_classes
             ]
         else:
-            base_class_import = Import.from_full_path(
-                custom_base_class or self.BASE_CLASS
-            )
-            self._additional_imports.append(base_class_import)
-            self.base_classes = [BaseClassDataType.from_import(base_class_import)]
+            self.set_base_class()
 
-        self.custom_base_class = custom_base_class
         self.file_path: Optional[Path] = path
         self.reference: Reference = reference
 
@@ -212,6 +208,13 @@ class DataModel(TemplateBase, ABC):
             field.parent = self
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
+
+    def set_base_class(self) -> None:
+        base_class_import = Import.from_full_path(
+            self.custom_base_class or self.BASE_CLASS
+        )
+        self._additional_imports.append(base_class_import)
+        self.base_classes = [BaseClassDataType.from_import(base_class_import)]
 
     @property
     def template_file_path(self) -> Path:
