@@ -10,6 +10,7 @@ from datamodel_code_generator import load_yaml, snooper_to_methods
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
+    get_model_by_path,
     get_special_path,
 )
 from datamodel_code_generator.reference import snake_to_upper_camel
@@ -159,13 +160,20 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:
                     continue
-                ref_body = self._get_ref_body(
-                    self.model_resolver.resolve_ref(detail.ref)
+                ref_file, ref_path = self.model_resolver.resolve_ref(detail.ref).split(
+                    '#', 1
                 )
-                content = ref_body.get("content", {})
+                ref_model = get_model_by_path(
+                    self._get_ref_body(ref_file), ref_path.split('/')[1:]
+                )
+                content = {
+                    k: MediaObject.parse_obj(v)
+                    for k, v in ref_model.get("content", {}).items()
+                }
             else:
                 content = detail.content
             for content_type, obj in content.items():
+
                 object_schema = obj.schema_
                 if not object_schema:
                     continue
