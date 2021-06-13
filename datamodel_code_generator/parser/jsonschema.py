@@ -1,6 +1,7 @@
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import lru_cache
 from pathlib import Path
 from typing import (
     Any,
@@ -236,12 +237,17 @@ class JsonSchemaObject(BaseModel):
     @cached_property
     def ref_type(self) -> Optional[JSONReference]:
         if self.ref:
-            if self.ref[0] == '#':
-                return JSONReference.LOCAL
-            elif is_url(self.ref):
-                return JSONReference.URL
-            return JSONReference.REMOTE
+            return get_ref_type(self.ref)
         return None  # pragma: no cover
+
+
+@lru_cache()
+def get_ref_type(ref: str) -> JSONReference:
+    if ref[0] == '#':
+        return JSONReference.LOCAL
+    elif is_url(ref):
+        return JSONReference.URL
+    return JSONReference.REMOTE
 
 
 JsonSchemaObject.update_forward_refs()
@@ -953,40 +959,47 @@ class JsonSchemaParser(Parser):
             default_factory=lambda _: load_yaml_from_path(full_path, self.encoding),
         )
 
+    def resolve_ref(self, object_ref: str) -> Reference:
+        reference = self.model_resolver.add_ref(object_ref)
+        if reference.loaded:
+            return reference
+
+        # https://swagger.io/docs/specification/using-ref/
+        ref = self.model_resolver.resolve_ref(object_ref)
+        if get_ref_type(object_ref) == JSONReference.LOCAL:
+            # Local Reference – $ref: '#/definitions/myElement'
+            self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)  # type: ignore
+            return reference
+        elif self.model_resolver.is_after_load(ref):
+            self.reserved_refs[tuple(ref.split('#')[0].split('/'))].add(ref)  # type: ignore
+            return reference
+
+        if is_url(ref):
+            relative_path, object_path = ref.split('#')
+            relative_paths = [relative_path]
+            base_path = None
+        else:
+            if self.model_resolver.is_external_root_ref(ref):
+                relative_path, object_path = ref[:-1], ''
+            else:
+                relative_path, object_path = ref.split('#')
+            relative_paths = relative_path.split('/')
+            base_path = Path(*relative_paths).parent
+        with self.model_resolver.current_base_path_context(
+            base_path
+        ), self.model_resolver.base_url_context(relative_path):
+            self._parse_file(
+                self._get_ref_body(relative_path),
+                self.model_resolver.add_ref(ref, resolved=True).name,
+                relative_paths,
+                object_path.split('/') if object_path else None,
+            )
+        reference.loaded = True
+        return reference
+
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
-            reference = self.model_resolver.add_ref(obj.ref)
-            if not reference or not reference.loaded:
-                # https://swagger.io/docs/specification/using-ref/
-                ref = self.model_resolver.resolve_ref(obj.ref)
-                if obj.ref_type == JSONReference.LOCAL:
-                    # Local Reference – $ref: '#/definitions/myElement'
-                    self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)  # type: ignore
-                elif self.model_resolver.is_after_load(ref):
-                    self.reserved_refs[tuple(ref.split('#')[0].split('/'))].add(ref)  # type: ignore
-                else:
-                    if is_url(ref):
-                        relative_path, object_path = ref.split('#')
-                        relative_paths = [relative_path]
-                        base_path = None
-                    else:
-                        if self.model_resolver.is_external_root_ref(ref):
-                            relative_path, object_path = ref[:-1], ''
-                        else:
-                            relative_path, object_path = ref.split('#')
-                        relative_paths = relative_path.split('/')
-                        base_path = Path(*relative_paths).parent
-                    with self.model_resolver.current_base_path_context(
-                        base_path
-                    ), self.model_resolver.base_url_context(relative_path):
-                        self._parse_file(
-                            self._get_ref_body(relative_path),
-                            self.model_resolver.add_ref(ref, resolved=True).name,
-                            relative_paths,
-                            object_path.split('/') if object_path else None,
-                        )
-                    self.model_resolver.add_ref(obj.ref,).loaded = True
-
+            self.resolve_ref(obj.ref)
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
                 self.parse_ref(obj.items, path)
