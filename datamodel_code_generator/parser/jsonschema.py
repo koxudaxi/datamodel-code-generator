@@ -238,6 +238,7 @@ class JsonSchemaObject(BaseModel):
     def ref_type(self) -> Optional[JSONReference]:
         if self.ref:
             return get_ref_type(self.ref)
+        return None
 
 
 @lru_cache()
