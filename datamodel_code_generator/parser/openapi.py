@@ -170,12 +170,14 @@ class OpenAPIParser(JsonSchemaParser):
                 if not object_schema:
                     continue
                 if isinstance(object_schema, JsonSchemaObject):
-                    schema = object_schema
+                    data_types[status_code][content_type] = self.parse_schema(
+                        name, object_schema, [*path, status_code, content_type]
+                    )
                 else:
-                    schema = self.resolve_ref(object_schema.ref)
-                data_types[status_code][content_type] = self.parse_schema(
-                    name, schema, [*path, status_code, content_type]
-                )
+                    data_types[status_code][content_type] = self.get_ref_data_type(
+                        object_schema.ref
+                    )
+
         return data_types
 
     @classmethod
@@ -186,27 +188,28 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_operation(
         self,
         raw_operation: Dict[str, Any],
-        parameters: List[Dict[str, Any]],
+        parent_parameters: List[Dict[str, Any]],
         path: List[str],
     ) -> None:
-        if parameters:
+        if parent_parameters:
             if 'parameters' in raw_operation:
-                raw_operation['parameters'].extend(parameters)
+                raw_operation['parameters'].extend(parent_parameters)
             else:
-                raw_operation['parameters'] = parameters
+                raw_operation['parameters'] = parent_parameters
         operation = Operation.parse_obj(raw_operation)
         for parameters in operation.parameters:
             if isinstance(parameters, ParameterObject):
                 self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
+        path_name, method = path[-2:]
         if operation.requestBody:
             self.parse_request_body(
-                name=self._get_model_name(*path[-2:], suffix='Request'),
+                name=self._get_model_name(path_name, method, suffix='Request'),
                 request_body=operation.requestBody,
                 path=[*path, 'requestBody'],
             )
         if operation.responses:
             self.parse_responses(
-                name=self._get_model_name(*path[-2:], suffix='Response'),
+                name=self._get_model_name(path_name, method, suffix='Response'),
                 responses=operation.responses,
                 path=[*path, 'responses'],
             )
@@ -239,7 +242,7 @@ class OpenAPIParser(JsonSchemaParser):
                     )
                 paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
                 parameters: List[Dict[str, Any]] = [
-                    self._get_ref_body(p['$ref']) if '$ref' in p else p
+                    self._get_ref_body(p['$ref']) if '$ref' in p else p  # type: ignore
                     for p in paths.get('parameters', [])
                     if isinstance(p, dict)
                 ]
