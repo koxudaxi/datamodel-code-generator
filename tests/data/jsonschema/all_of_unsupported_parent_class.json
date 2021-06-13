@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pet",
+  "allOf": [
+    {
+      "$ref": "#/definitions/UnsupportedClass"
+    }
+  ],
+  "type": [
+    "object"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "age": {
+      "type": "integer"
+    }
+  },
+  "definitions": {
+    "UnsupportedClass": {
+      "patternProperties": {
+        "^[a-z][a-z0-9_]{0,245}_bin$": {
+         "type": "string"
+        }
+      }
+    }
+  }
+}
