@@ -92,6 +92,7 @@ class SchematicsModelField(DataModelFieldBase):
                 is_model_type = outer.reference is not None
 
                 # Is model type if reference attr exists
+
                 if outer.is_list:
                     outer_type = 'ListType'
                 elif outer.is_enum:
@@ -136,7 +137,10 @@ class SchematicsModelField(DataModelFieldBase):
 
                     # If this is the top level, give it kwarg string, if its nested, don't
                     extra = f', {extra_kwarg_string}' if is_top_level else ''
-                    return f'ModelType({outer.alias if outer.alias else self.model_name}{extra})'
+                    if outer.is_list:
+                        return f'ListType(ModelType({outer.alias if outer.alias else self.model_name}{extra}))'
+                    else:
+                        return f'ModelType({outer.alias if outer.alias else self.model_name}{extra})'
 
                 if not is_top_level and not is_model_type:
                     return outer_type
