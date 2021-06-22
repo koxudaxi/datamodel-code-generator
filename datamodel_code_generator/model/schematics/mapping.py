@@ -5,6 +5,6 @@
 NAME_OVERRIDE_MAPPING = {
     'AppetiteEligibilityAnswer': {
         # subQuestions calls a circular reference possibly infinitely, and schematics doesn't support forward references
-        'subQuestions': 'ListType(BaseType(), serialized_name=\'subQuestions\')'}
+        'subQuestions': "ListType(BaseType(), serialized_name='subQuestions)"}
 
 }
