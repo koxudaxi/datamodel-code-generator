@@ -9,7 +9,6 @@ from .types import DataTypeManager
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
-    import pdb; pdb.set_trace()
     return '\n'.join(
         f'{class_name}.update_forward_refs()' for class_name in class_names
     )
