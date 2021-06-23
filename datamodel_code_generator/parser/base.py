@@ -269,7 +269,7 @@ class Parser(ABC):
         self.results: List[DataModel] = []
         self.dump_resolve_reference_action: Optional[
             Callable[[Iterable[str]], str]
-        ] = dump_resolve_reference_action
+        ] = None if self.is_using_schematics else dump_resolve_reference_action
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field

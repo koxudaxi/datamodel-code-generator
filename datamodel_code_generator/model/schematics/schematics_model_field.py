@@ -8,6 +8,7 @@ from datamodel_code_generator.model.base import DataModelFieldBase
 from datamodel_code_generator.model.schematics.base_model import BaseModel
 from datamodel_code_generator.model.schematics.custom_root_type import CustomRootType
 from datamodel_code_generator.model.schematics.imports import IMPORT_MODEL, IMPORT_LIST, IMPORT_DICT, IMPORT_ANY
+from datamodel_code_generator.model.schematics.mapping import NAME_OVERRIDE_MAPPING
 from datamodel_code_generator.types import chain_as_tuple, DataType
 
 
@@ -91,7 +92,10 @@ class SchematicsModelField(DataModelFieldBase):
                 outer = sublist[0]
                 is_model_type = outer.reference is not None
 
-                # Is model type if reference attr exists
+                # Short circuit with pre-defined mappings
+                if self.name in NAME_OVERRIDE_MAPPING.get(self.parent.name, {}):
+                    # Gets a list of specific fields to override
+                    return NAME_OVERRIDE_MAPPING[self.parent.name][self.name]
 
                 if outer.is_list:
                     outer_type = 'ListType'
