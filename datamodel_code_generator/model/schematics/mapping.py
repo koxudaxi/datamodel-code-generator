@@ -5,6 +5,11 @@
 NAME_OVERRIDE_MAPPING = {
     'AppetiteEligibilityAnswer': {
         # subQuestions calls a circular reference possibly infinitely, and schematics doesn't support forward references
-        'subQuestions': "ListType(BaseType(), serialized_name='subQuestions')"}
+        'subQuestions': "ListType(BaseType(), serialized_name='subQuestions')"},
+    'PortalUserInputs': {
+        # eligibilityAnswers uses `None` as an acceptable field, yet is required. Schematics has a builtin check to not
+        # accept None as a value unless required is False
+        'eligibilityAnswers': "DictType(BaseType(required=False), serialized_name='eligibilityAnswers')"
+    }
 
 }
