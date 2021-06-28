@@ -2955,6 +2955,9 @@ def test_main_openapi_body_and_parameters():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--openapi-scopes',
+                'paths',
+                'schemas',
             ]
         )
         assert return_code == Exit.OK
@@ -2962,6 +2965,64 @@ def test_main_openapi_body_and_parameters():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_body_and_parameters_only_paths():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--openapi-scopes',
+                'paths',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_paths'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_body_and_parameters_only_schemas():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--openapi-scopes',
+                'schemas',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_schemas'
+                / 'output.py'
             ).read_text()
         )
     with pytest.raises(SystemExit):
@@ -3005,6 +3066,9 @@ def test_main_openapi_oas_response_reference():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--openapi-scopes',
+                'paths',
+                'schemas',
             ]
         )
         assert return_code == Exit.OK
