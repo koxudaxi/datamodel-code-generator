@@ -1,12 +1,36 @@
 import re
 from collections import defaultdict
 from enum import Enum
-from typing import Any, DefaultDict, Dict, List, Optional, Pattern, Union
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    DefaultDict,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Pattern,
+    Sequence,
+    Set,
+    Type,
+    Union,
+)
 from urllib.parse import ParseResult
 
 from pydantic import BaseModel, Field
 
-from datamodel_code_generator import load_yaml, snooper_to_methods
+from datamodel_code_generator import (
+    DefaultPutDict,
+    LiteralType,
+    OpenAPIScope,
+    PythonVersion,
+    load_yaml,
+    snooper_to_methods,
+)
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
@@ -14,7 +38,7 @@ from datamodel_code_generator.parser.jsonschema import (
     get_special_path,
 )
 from datamodel_code_generator.reference import snake_to_upper_camel
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r'^application/.*json$')
 
@@ -111,8 +135,91 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
+    def __init__(
+        self,
+        source: Union[str, Path, List[Path], ParseResult],
+        *,
+        data_model_type: Type[DataModel] = pydantic_model.BaseModel,
+        data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
+        data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
+        data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
+        base_class: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+        target_python_version: PythonVersion = PythonVersion.PY_37,
+        dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
+        validation: bool = False,
+        field_constraints: bool = False,
+        snake_case_field: bool = False,
+        strip_default_none: bool = False,
+        aliases: Optional[Mapping[str, str]] = None,
+        allow_population_by_field_name: bool = False,
+        apply_default_values_for_required_fields: bool = False,
+        force_optional_for_required_fields: bool = False,
+        class_name: Optional[str] = None,
+        use_standard_collections: bool = False,
+        base_path: Optional[Path] = None,
+        use_schema_description: bool = False,
+        reuse_model: bool = False,
+        encoding: str = 'utf-8',
+        enum_field_as_literal: Optional[LiteralType] = None,
+        set_default_enum_member: bool = False,
+        strict_nullable: bool = False,
+        use_generic_container_types: bool = False,
+        enable_faux_immutability: bool = False,
+        remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
+        disable_appending_item_suffix: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
+        empty_enum_field_name: Optional[str] = None,
+        custom_class_name_generator: Optional[Callable[[str], str]] = None,
+        field_extra_keys: Optional[Set[str]] = None,
+        field_include_all_keys: bool = False,
+        openapi_scopes: Optional[List[OpenAPIScope]] = None,
+    ):
+        super().__init__(
+            source=source,
+            data_model_type=data_model_type,
+            data_model_root_type=data_model_root_type,
+            data_type_manager_type=data_type_manager_type,
+            data_model_field_type=data_model_field_type,
+            base_class=base_class,
+            custom_template_dir=custom_template_dir,
+            extra_template_data=extra_template_data,
+            target_python_version=target_python_version,
+            dump_resolve_reference_action=dump_resolve_reference_action,
+            validation=validation,
+            field_constraints=field_constraints,
+            snake_case_field=snake_case_field,
+            strip_default_none=strip_default_none,
+            aliases=aliases,
+            allow_population_by_field_name=allow_population_by_field_name,
+            apply_default_values_for_required_fields=apply_default_values_for_required_fields,
+            force_optional_for_required_fields=force_optional_for_required_fields,
+            class_name=class_name,
+            use_standard_collections=use_standard_collections,
+            base_path=base_path,
+            use_schema_description=use_schema_description,
+            reuse_model=reuse_model,
+            encoding=encoding,
+            enum_field_as_literal=enum_field_as_literal,
+            set_default_enum_member=set_default_enum_member,
+            strict_nullable=strict_nullable,
+            use_generic_container_types=use_generic_container_types,
+            enable_faux_immutability=enable_faux_immutability,
+            remote_text_cache=remote_text_cache,
+            disable_appending_item_suffix=disable_appending_item_suffix,
+            strict_types=strict_types,
+            empty_enum_field_name=empty_enum_field_name,
+            custom_class_name_generator=custom_class_name_generator,
+            field_extra_keys=field_extra_keys,
+            field_include_all_keys=field_include_all_keys,
+        )
+        self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
+            OpenAPIScope.Schemas
+        ]
+
     def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
-        if parameters.schema_:
+        if parameters.schema_:  # pragma: no cover
             self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
         for (
             media_type,
@@ -242,27 +349,32 @@ class OpenAPIParser(JsonSchemaParser):
             else:
                 path_parts = list(source.path.parts)
             with self.model_resolver.current_root_context(path_parts):
-                for obj_name, raw_obj in schemas.items():  # type: str, Dict[Any, Any]
-                    self.parse_raw_obj(
+                if OpenAPIScope.Schemas in self.open_api_scopes:
+                    for (
                         obj_name,
                         raw_obj,
-                        [*path_parts, '#/components', 'schemas', obj_name],
-                    )
-                paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
-                parameters: List[Dict[str, Any]] = [
-                    self._get_ref_body(p['$ref']) if '$ref' in p else p  # type: ignore
-                    for p in paths.get('parameters', [])
-                    if isinstance(p, dict)
-                ]
-                paths_path = [*path_parts, '#/paths']
-                for path_name, methods in paths.items():
-                    relative_path_name = path_name[1:]
-                    if relative_path_name:
-                        path = [*paths_path, relative_path_name]
-                    else:
-                        path = get_special_path('root', paths_path)
-                    for operation_name, raw_operation in methods.items():
-                        if operation_name in OPERATION_NAMES:
-                            self.parse_operation(
-                                raw_operation, parameters, [*path, operation_name],
-                            )
+                    ) in schemas.items():  # type: str, Dict[Any, Any]
+                        self.parse_raw_obj(
+                            obj_name,
+                            raw_obj,
+                            [*path_parts, '#/components', 'schemas', obj_name],
+                        )
+                if OpenAPIScope.Paths in self.open_api_scopes:
+                    paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
+                    parameters: List[Dict[str, Any]] = [
+                        self._get_ref_body(p['$ref']) if '$ref' in p else p  # type: ignore
+                        for p in paths.get('parameters', [])
+                        if isinstance(p, dict)
+                    ]
+                    paths_path = [*path_parts, '#/paths']
+                    for path_name, methods in paths.items():
+                        relative_path_name = path_name[1:]
+                        if relative_path_name:
+                            path = [*paths_path, relative_path_name]
+                        else:  # pragma: no cover
+                            path = get_special_path('root', paths_path)
+                        for operation_name, raw_operation in methods.items():
+                            if operation_name in OPERATION_NAMES:
+                                self.parse_operation(
+                                    raw_operation, parameters, [*path, operation_name],
+                                )

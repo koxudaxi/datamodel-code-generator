@@ -11,6 +11,7 @@ from typing import (
     DefaultDict,
     Dict,
     Iterator,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -155,6 +156,11 @@ class InputFileType(Enum):
     CSV = 'csv'
 
 
+class OpenAPIScope(Enum):
+    Schemas = 'schemas'
+    Paths = 'paths'
+
+
 class Error(Exception):
     def __init__(self, message: str) -> None:
         self.message: str = message
@@ -215,6 +221,7 @@ def generate(
     custom_class_name_generator: Optional[Callable[[str], str]] = None,
     field_extra_keys: Optional[Set[str]] = None,
     field_include_all_keys: bool = False,
+    openapi_scopes: Optional[List[OpenAPIScope]] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -245,10 +252,12 @@ def generate(
         except:
             raise Error('Invalid file format')
 
+    kwargs: Dict[str, Any] = {}
     if input_file_type == InputFileType.OpenAPI:
         from datamodel_code_generator.parser.openapi import OpenAPIParser
 
         parser_class: Type[Parser] = OpenAPIParser
+        kwargs['openapi_scopes'] = openapi_scopes
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
@@ -328,6 +337,7 @@ def generate(
         custom_class_name_generator=custom_class_name_generator,
         field_extra_keys=field_extra_keys,
         field_include_all_keys=field_include_all_keys,
+        **kwargs,
     )
 
     with chdir(output):

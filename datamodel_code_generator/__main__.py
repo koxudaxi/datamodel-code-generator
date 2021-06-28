@@ -26,6 +26,7 @@ from datamodel_code_generator import (
     Error,
     InputFileType,
     InvalidClassNameError,
+    OpenAPIScope,
     enable_debug_message,
     generate,
 )
@@ -62,6 +63,13 @@ arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
     choices=[i.value for i in InputFileType],
+)
+arg_parser.add_argument(
+    '--openapi-scopes',
+    help='Scopes of OpenAPI model generation (default: schemas)',
+    choices=[o.value for o in OpenAPIScope],
+    nargs='+',
+    default=[OpenAPIScope.Schemas.value],
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 
@@ -314,6 +322,7 @@ class Config(BaseModel):
     empty_enum_field_name: Optional[str] = None
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
+    openapi_scopes: Optional[List[OpenAPIScope]] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -436,6 +445,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             empty_enum_field_name=config.empty_enum_field_name,
             field_extra_keys=config.field_extra_keys,
             field_include_all_keys=config.field_include_all_keys,
+            openapi_scopes=config.openapi_scopes,
         )
         return Exit.OK
     except InvalidClassNameError as e:
