@@ -26,3 +26,6 @@ class DefaultPutDict(Dict[TK, TV]):
             value = self[key] = default_factory(key)
             return value
         raise ValueError('Not found default and default_factory')  # pragma: no cover
+
+
+__all__ = ['LiteralType']

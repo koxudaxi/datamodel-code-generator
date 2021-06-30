@@ -35,15 +35,22 @@ $ pip install datamodel-code-generator[http]
 
 The `datamodel-codegen` command:
 ```bash
-usage: datamodel-codegen [-h] [--input INPUT] [--url URL] [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}] [--output OUTPUT]
-                         [--base-class BASE_CLASS] [--field-constraints] [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
-                         [--field-include-all-keys] [--snake-case-field] [--strip-default-none] [--disable-appending-item-suffix]
-                         [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default] [--force-optional] [--strict-nullable]
-                         [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]] [--disable-timestamp]
-                         [--use-standard-collections] [--use-generic-container-types] [--use-schema-description] [--reuse-model]
-                         [--enum-field-as-literal {all,one}] [--set-default-enum-member] [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
-                         [--class-name CLASS_NAME] [--custom-template-dir CUSTOM_TEMPLATE_DIR] [--extra-template-data EXTRA_TEMPLATE_DATA]
-                         [--aliases ALIASES] [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--encoding ENCODING] [--debug] [--version]
+usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
+                         [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
+                         [--openapi-scopes {schemas,paths} [{schemas,paths} ...]] [--output OUTPUT]
+                         [--base-class BASE_CLASS] [--field-constraints]
+                         [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]] [--field-include-all-keys]
+                         [--snake-case-field] [--strip-default-none] [--disable-appending-item-suffix]
+                         [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default]
+                         [--force-optional] [--strict-nullable]
+                         [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]]
+                         [--disable-timestamp] [--use-standard-collections] [--use-generic-container-types]
+                         [--use-schema-description] [--reuse-model] [--enum-field-as-literal {all,one}]
+                         [--set-default-enum-member] [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
+                         [--class-name CLASS_NAME] [--custom-template-dir CUSTOM_TEMPLATE_DIR]
+                         [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
+                         [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--encoding ENCODING] [--debug]
+                         [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -51,6 +58,8 @@ optional arguments:
   --url URL             Input file URL. `--input` is ignore when `--url` is used
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
+  --openapi-scopes {schemas,paths} [{schemas,paths} ...]
+                        Scopes of OpenAPI model generation (default: schemas)
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
