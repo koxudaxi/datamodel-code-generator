@@ -81,8 +81,8 @@ class MediaObject(BaseModel):
 
 
 class ParameterObject(BaseModel):
-    name: str
-    in_: ParameterLocation = Field(..., alias='in')
+    name: Optional[str]
+    in_: Optional[ParameterLocation] = Field(None, alias='in')
     description: Optional[str]
     required: bool = False
     deprecated: bool = False
@@ -109,7 +109,7 @@ class RequestBodyObject(BaseModel):
 
 
 class ResponseObject(BaseModel):
-    description: str
+    description: Optional[str]
     headers: Dict[str, ParameterObject] = {}
     content: Dict[str, MediaObject] = {}
 
@@ -219,13 +219,15 @@ class OpenAPIParser(JsonSchemaParser):
         ]
 
     def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
-        if parameters.schema_:  # pragma: no cover
+        if parameters.name and parameters.schema_:  # pragma: no cover
             self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
         for (
             media_type,
             media_obj,
         ) in parameters.content.items():  # type: str, MediaObject
-            if isinstance(media_obj.schema_, JsonSchemaObject):  # pragma: no cover
+            if parameters.name and isinstance(
+                media_obj.schema_, JsonSchemaObject
+            ):  # pragma: no cover
                 self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
 
     def parse_schema(
@@ -244,6 +246,8 @@ class OpenAPIParser(JsonSchemaParser):
             data_type = self.parse_object(name, obj, path)
         elif obj.enum:  # pragma: no cover
             data_type = self.parse_enum(name, obj, path)
+        elif obj.ref:
+            data_type = self.get_ref_data_type(obj.ref)
         else:
             data_type = self.get_data_type(obj)
         self.parse_ref(obj, path)
