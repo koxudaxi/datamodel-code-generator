@@ -62,7 +62,7 @@ class ParameterLocation(Enum):
 
 
 class ReferenceObject(BaseModel):
-    ref: str = Field(default=None, alias='$ref')
+    ref: str = Field(..., alias='$ref')
 
 
 class ExampleObject(BaseModel):
@@ -73,7 +73,7 @@ class ExampleObject(BaseModel):
 
 
 class MediaObject(BaseModel):
-    schema_: Union[JsonSchemaObject, ReferenceObject, None] = Field(
+    schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(
         None, alias='schema'
     )
     example: Any
@@ -119,18 +119,18 @@ class Operation(BaseModel):
     summary: Optional[str]
     description: Optional[str]
     operationId: Optional[str]
-    parameters: List[Union[ParameterObject, ReferenceObject]] = []
+    parameters: List[Union[ReferenceObject, ParameterObject]] = []
     requestBody: Optional[RequestBodyObject]
-    responses: Dict[str, Union[ResponseObject, ReferenceObject]] = {}
+    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
-    schemas: Dict[str, Union[JsonSchemaObject, ReferenceObject]] = {}
-    responses: Dict[str, Union[ResponseObject, ReferenceObject]] = {}
-    examples: Dict[str, Union[ExampleObject, ReferenceObject]] = {}
-    requestBodies: Dict[str, Union[RequestBodyObject, ReferenceObject]] = {}
-    headers: Dict[str, Union[HeaderObject, ReferenceObject]] = {}
+    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}
+    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
+    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}
+    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}
+    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}
 
 
 @snooper_to_methods(max_variable_length=None)
@@ -266,7 +266,7 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_responses(
         self,
         name: str,
-        responses: Dict[str, Union[ResponseObject, ReferenceObject]],
+        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
         path: List[str],
     ) -> Dict[str, Dict[str, DataType]]:
         data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
