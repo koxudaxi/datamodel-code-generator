@@ -246,7 +246,7 @@ class OpenAPIParser(JsonSchemaParser):
             data_type = self.parse_object(name, obj, path)
         elif obj.enum:  # pragma: no cover
             data_type = self.parse_enum(name, obj, path)
-        elif obj.ref:
+        elif obj.ref:  # pragma: no cover
             data_type = self.get_ref_data_type(obj.ref)
         else:
             data_type = self.get_data_type(obj)
@@ -272,7 +272,7 @@ class OpenAPIParser(JsonSchemaParser):
         data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
-                if not detail.ref:
+                if not detail.ref:  # pragma: no cover
                     continue
                 ref_file, ref_path = self.model_resolver.resolve_ref(detail.ref).split(
                     '#', 1
@@ -295,7 +295,7 @@ class OpenAPIParser(JsonSchemaParser):
                     data_types[status_code][content_type] = self.parse_schema(
                         name, object_schema, [*path, status_code, content_type]
                     )
-                else:  # pragma: no cover
+                else:
                     data_types[status_code][content_type] = self.get_ref_data_type(
                         object_schema.ref
                     )
