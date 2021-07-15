@@ -62,7 +62,7 @@ class ParameterLocation(Enum):
 
 
 class ReferenceObject(BaseModel):
-    ref: str = Field(default=None, alias='$ref')
+    ref: str = Field(..., alias='$ref')
 
 
 class ExampleObject(BaseModel):
@@ -73,7 +73,7 @@ class ExampleObject(BaseModel):
 
 
 class MediaObject(BaseModel):
-    schema_: Union[JsonSchemaObject, ReferenceObject, None] = Field(
+    schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(
         None, alias='schema'
     )
     example: Any
@@ -81,8 +81,8 @@ class MediaObject(BaseModel):
 
 
 class ParameterObject(BaseModel):
-    name: str
-    in_: ParameterLocation = Field(..., alias='in')
+    name: Optional[str]
+    in_: Optional[ParameterLocation] = Field(None, alias='in')
     description: Optional[str]
     required: bool = False
     deprecated: bool = False
@@ -109,7 +109,7 @@ class RequestBodyObject(BaseModel):
 
 
 class ResponseObject(BaseModel):
-    description: str
+    description: Optional[str]
     headers: Dict[str, ParameterObject] = {}
     content: Dict[str, MediaObject] = {}
 
@@ -119,18 +119,18 @@ class Operation(BaseModel):
     summary: Optional[str]
     description: Optional[str]
     operationId: Optional[str]
-    parameters: List[Union[ParameterObject, ReferenceObject]] = []
+    parameters: List[Union[ReferenceObject, ParameterObject]] = []
     requestBody: Optional[RequestBodyObject]
-    responses: Dict[str, Union[ResponseObject, ReferenceObject]] = {}
+    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
-    schemas: Dict[str, Union[JsonSchemaObject, ReferenceObject]] = {}
-    responses: Dict[str, Union[ResponseObject, ReferenceObject]] = {}
-    examples: Dict[str, Union[ExampleObject, ReferenceObject]] = {}
-    requestBodies: Dict[str, Union[RequestBodyObject, ReferenceObject]] = {}
-    headers: Dict[str, Union[HeaderObject, ReferenceObject]] = {}
+    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}
+    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
+    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}
+    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}
+    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}
 
 
 @snooper_to_methods(max_variable_length=None)
@@ -219,13 +219,15 @@ class OpenAPIParser(JsonSchemaParser):
         ]
 
     def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
-        if parameters.schema_:  # pragma: no cover
+        if parameters.name and parameters.schema_:  # pragma: no cover
             self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
         for (
             media_type,
             media_obj,
         ) in parameters.content.items():  # type: str, MediaObject
-            if isinstance(media_obj.schema_, JsonSchemaObject):  # pragma: no cover
+            if parameters.name and isinstance(
+                media_obj.schema_, JsonSchemaObject
+            ):  # pragma: no cover
                 self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
 
     def parse_schema(
@@ -244,6 +246,8 @@ class OpenAPIParser(JsonSchemaParser):
             data_type = self.parse_object(name, obj, path)
         elif obj.enum:  # pragma: no cover
             data_type = self.parse_enum(name, obj, path)
+        elif obj.ref:  # pragma: no cover
+            data_type = self.get_ref_data_type(obj.ref)
         else:
             data_type = self.get_data_type(obj)
         self.parse_ref(obj, path)
@@ -262,13 +266,13 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_responses(
         self,
         name: str,
-        responses: Dict[str, Union[ResponseObject, ReferenceObject]],
+        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
         path: List[str],
     ) -> Dict[str, Dict[str, DataType]]:
         data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
-                if not detail.ref:
+                if not detail.ref:  # pragma: no cover
                     continue
                 ref_file, ref_path = self.model_resolver.resolve_ref(detail.ref).split(
                     '#', 1
@@ -291,7 +295,7 @@ class OpenAPIParser(JsonSchemaParser):
                     data_types[status_code][content_type] = self.parse_schema(
                         name, object_schema, [*path, status_code, content_type]
                     )
-                else:  # pragma: no cover
+                else:
                     data_types[status_code][content_type] = self.get_ref_data_type(
                         object_schema.ref
                     )
