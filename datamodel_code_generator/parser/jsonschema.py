@@ -656,16 +656,25 @@ class JsonSchemaParser(Parser):
         target_items: List[JsonSchemaObject],
         path: List[str],
         parent: JsonSchemaObject,
+        singular_name: bool = True,
     ) -> List[DataType]:
         return [
             self.parse_item(
-                name, item, [*path, str(index)], singular_name=True, parent=parent
+                name,
+                item,
+                [*path, str(index)],
+                singular_name=singular_name,
+                parent=parent,
             )
             for index, item in enumerate(target_items)
         ]
 
     def parse_array_fields(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        singular_name: bool = True,
     ) -> DataModelFieldBase:
         if self.force_optional_for_required_fields:
             required: bool = False
@@ -689,6 +698,7 @@ class JsonSchemaParser(Parser):
                     else obj.items or [],
                     path,
                     obj,
+                    singular_name=singular_name,
                 ),
                 is_list=True,
             )

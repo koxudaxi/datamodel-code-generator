@@ -232,7 +232,10 @@ class OpenAPIParser(JsonSchemaParser):
         self, name: str, obj: JsonSchemaObject, path: List[str],
     ) -> DataType:
         if obj.is_array:
-            data_type: DataType = self.parse_array(name, obj, path)
+            data_type: DataType = self.parse_array_fields(
+                name, obj, [*path, name], False
+            ).data_type
+            # TODO: The List model is not created by this method. Some scenarios may necessitate it.
         elif obj.allOf:  # pragma: no cover
             data_type = self.parse_all_of(name, obj, path)
         elif obj.oneOf:  # pragma: no cover
