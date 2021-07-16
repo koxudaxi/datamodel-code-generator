@@ -277,9 +277,11 @@ class OpenAPIParser(JsonSchemaParser):
                 ref_file, ref_path = self.model_resolver.resolve_ref(detail.ref).split(
                     '#', 1
                 )
-                ref_model = get_model_by_path(
-                    self._get_ref_body(ref_file), ref_path.split('/')[1:]
-                )
+                if ref_file:
+                    ref_body = self._get_ref_body(ref_file)
+                else:  # pragma: no cover
+                    ref_body = self.raw_obj
+                ref_model = get_model_by_path(ref_body, ref_path.split('/')[1:])
                 content = {
                     k: MediaObject.parse_obj(v)
                     for k, v in ref_model.get("content", {}).items()
