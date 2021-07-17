@@ -348,6 +348,9 @@ class OpenAPIParser(JsonSchemaParser):
             schemas: Dict[Any, Any] = specification.get('components', {}).get(
                 'schemas', {}
             )
+            security: Optional[List[Dict[str, List[str]]]] = specification.get(
+                'security'
+            )
             if isinstance(self.source, ParseResult):
                 path_parts: List[str] = self.get_url_path_parts(self.source)
             else:
@@ -364,9 +367,6 @@ class OpenAPIParser(JsonSchemaParser):
                             [*path_parts, '#/components', 'schemas', obj_name],
                         )
                 if OpenAPIScope.Paths in self.open_api_scopes:
-                    security: Optional[List[Dict[str, List[str]]]] = specification.get(
-                        'security'
-                    )
                     paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
                     parameters: List[Dict[str, Any]] = [
                         self._get_ref_body(p['$ref']) if '$ref' in p else p  # type: ignore
@@ -385,21 +385,15 @@ class OpenAPIParser(JsonSchemaParser):
                         else:  # pragma: no cover
                             path = get_special_path('root', paths_path)
                         for operation_name, raw_operation in methods.items():
-                            if operation_name in OPERATION_NAMES:
-                                if paths_parameters:
-                                    if (
-                                        'parameters' in raw_operation
-                                    ):  # pragma: no cover
-                                        raw_operation['parameters'].extend(
-                                            paths_parameters
-                                        )
-                                    else:
-                                        raw_operation['parameters'] = paths_parameters
-                                if (
-                                    security is not None
-                                    and 'security' not in raw_operation
-                                ):
-                                    raw_operation['security'] = security
-                                self.parse_operation(
-                                    raw_operation, [*path, operation_name],
-                                )
+                            if operation_name not in OPERATION_NAMES:
+                                continue
+                            if paths_parameters:
+                                if 'parameters' in raw_operation:  # pragma: no cover
+                                    raw_operation['parameters'].extend(paths_parameters)
+                                else:
+                                    raw_operation['parameters'] = paths_parameters
+                            if security is not None and 'security' not in raw_operation:
+                                raw_operation['security'] = security
+                            self.parse_operation(
+                                raw_operation, [*path, operation_name],
+                            )
