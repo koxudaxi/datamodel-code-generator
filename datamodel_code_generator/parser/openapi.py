@@ -389,7 +389,7 @@ class OpenAPIParser(JsonSchemaParser):
                         relative_path_name = path_name[1:]
                         if relative_path_name:
                             path = [*paths_path, relative_path_name]
-                        else:
+                        else:  # pragma: no cover
                             path = get_special_path('root', paths_path)
                         for operation_name, raw_operation in methods.items():
                             if operation_name in OPERATION_NAMES:
