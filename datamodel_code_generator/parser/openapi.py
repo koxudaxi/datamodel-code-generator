@@ -310,17 +310,7 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(path_name.replace('/', '_'))
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
-    def parse_operation(
-        self,
-        raw_operation: Dict[str, Any],
-        parent_parameters: List[Dict[str, Any]],
-        path: List[str],
-    ) -> None:
-        if parent_parameters:
-            if 'parameters' in raw_operation:  # pragma: no cover
-                raw_operation['parameters'].extend(parent_parameters)
-            else:
-                raw_operation['parameters'] = parent_parameters
+    def parse_operation(self, raw_operation: Dict[str, Any], path: List[str],) -> None:
         operation = Operation.parse_obj(raw_operation)
         for parameters in operation.parameters:
             if isinstance(parameters, ParameterObject):
@@ -374,6 +364,9 @@ class OpenAPIParser(JsonSchemaParser):
                             [*path_parts, '#/components', 'schemas', obj_name],
                         )
                 if OpenAPIScope.Paths in self.open_api_scopes:
+                    security: Optional[List[Dict[str, List[str]]]] = specification.get(
+                        'security'
+                    )
                     paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
                     parameters: List[Dict[str, Any]] = [
                         self._get_ref_body(p['$ref']) if '$ref' in p else p  # type: ignore
@@ -393,8 +386,20 @@ class OpenAPIParser(JsonSchemaParser):
                             path = get_special_path('root', paths_path)
                         for operation_name, raw_operation in methods.items():
                             if operation_name in OPERATION_NAMES:
+                                if paths_parameters:
+                                    if (
+                                        'parameters' in raw_operation
+                                    ):  # pragma: no cover
+                                        raw_operation['parameters'].extend(
+                                            paths_parameters
+                                        )
+                                    else:
+                                        raw_operation['parameters'] = paths_parameters
+                                if (
+                                    security is not None
+                                    and 'security' not in raw_operation
+                                ):
+                                    raw_operation['security'] = security
                                 self.parse_operation(
-                                    raw_operation,
-                                    paths_parameters,
-                                    [*path, operation_name],
+                                    raw_operation, [*path, operation_name],
                                 )
