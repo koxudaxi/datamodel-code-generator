@@ -313,8 +313,10 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_operation(self, raw_operation: Dict[str, Any], path: List[str],) -> None:
         operation = Operation.parse_obj(raw_operation)
         for parameters in operation.parameters:
-            if isinstance(parameters, ParameterObject):
-                self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
+            if isinstance(parameters, ReferenceObject):
+                ref_parameter = self.get_ref_model(parameters.ref)
+                parameters = ParameterObject.parse_obj(ref_parameter)
+            self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
         path_name, method = path[-2:]
         if operation.requestBody:
             if isinstance(operation.requestBody, ReferenceObject):
