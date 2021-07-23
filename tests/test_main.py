@@ -2972,6 +2972,44 @@ def test_main_openapi_body_and_parameters():
 
 
 @freeze_time('2019-07-26')
+def test_main_openapi_body_and_parameters_remote_ref(mocker):
+    input_path = OPEN_API_DATA_PATH / 'body_and_parameters_remote_ref.yaml'
+    person_response = mocker.Mock()
+    person_response.text = input_path.read_text()
+    httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
+
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(input_path),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--openapi-scopes',
+                'paths',
+                'schemas',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_remote_ref'
+                / 'output.py'
+            ).read_text()
+        )
+        httpx_get_mock.assert_has_calls(
+            [call('https://schema.example'),]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_openapi_body_and_parameters_only_paths():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

@@ -120,7 +120,7 @@ class Operation(BaseModel):
     description: Optional[str]
     operationId: Optional[str]
     parameters: List[Union[ReferenceObject, ParameterObject]] = []
-    requestBody: Optional[RequestBodyObject]
+    requestBody: Union[ReferenceObject, RequestBodyObject, None]
     responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
     deprecated: bool = False
 
@@ -218,6 +218,14 @@ class OpenAPIParser(JsonSchemaParser):
             OpenAPIScope.Schemas
         ]
 
+    def get_ref_model(self, ref: str) -> Dict[str, Any]:
+        ref_file, ref_path = self.model_resolver.resolve_ref(ref).split('#', 1)
+        if ref_file:
+            ref_body = self._get_ref_body(ref_file)
+        else:  # pragma: no cover
+            ref_body = self.raw_obj
+        return get_model_by_path(ref_body, ref_path.split('/')[1:])
+
     def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
         if parameters.name and parameters.schema_:  # pragma: no cover
             self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
@@ -225,7 +233,7 @@ class OpenAPIParser(JsonSchemaParser):
             media_type,
             media_obj,
         ) in parameters.content.items():  # type: str, MediaObject
-            if parameters.name and isinstance(
+            if parameters.name and isinstance(  # pragma: no cover
                 media_obj.schema_, JsonSchemaObject
             ):  # pragma: no cover
                 self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
@@ -260,7 +268,7 @@ class OpenAPIParser(JsonSchemaParser):
             media_type,
             media_obj,
         ) in request_body.content.items():  # type: str, MediaObject
-            if isinstance(media_obj.schema_, JsonSchemaObject):  # pragma: no cover
+            if isinstance(media_obj.schema_, JsonSchemaObject):
                 self.parse_schema(name, media_obj.schema_, [*path, media_type])
 
     def parse_responses(
@@ -274,14 +282,7 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
                     continue
-                ref_file, ref_path = self.model_resolver.resolve_ref(detail.ref).split(
-                    '#', 1
-                )
-                if ref_file:
-                    ref_body = self._get_ref_body(ref_file)
-                else:  # pragma: no cover
-                    ref_body = self.raw_obj
-                ref_model = get_model_by_path(ref_body, ref_path.split('/')[1:])
+                ref_model = self.get_ref_model(detail.ref)
                 content = {
                     k: MediaObject.parse_obj(v)
                     for k, v in ref_model.get("content", {}).items()
@@ -309,34 +310,30 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(path_name.replace('/', '_'))
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
-    def parse_operation(
-        self,
-        raw_operation: Dict[str, Any],
-        parent_parameters: List[Dict[str, Any]],
-        path: List[str],
-    ) -> None:
-        if parent_parameters:  # pragma: no cover
-            if 'parameters' in raw_operation:
-                raw_operation['parameters'].extend(parent_parameters)
-            else:  # pragma: no cover
-                raw_operation['parameters'] = parent_parameters
+    def parse_operation(self, raw_operation: Dict[str, Any], path: List[str],) -> None:
         operation = Operation.parse_obj(raw_operation)
         for parameters in operation.parameters:
-            if isinstance(parameters, ParameterObject):  # pragma: no cover
-                self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
+            if isinstance(parameters, ReferenceObject):
+                ref_parameter = self.get_ref_model(parameters.ref)
+                parameters = ParameterObject.parse_obj(ref_parameter)
+            self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
         path_name, method = path[-2:]
         if operation.requestBody:
+            if isinstance(operation.requestBody, ReferenceObject):
+                ref_model = self.get_ref_model(operation.requestBody.ref)
+                request_body = RequestBodyObject.parse_obj(ref_model)
+            else:
+                request_body = operation.requestBody
             self.parse_request_body(
                 name=self._get_model_name(path_name, method, suffix='Request'),
-                request_body=operation.requestBody,
+                request_body=request_body,
                 path=[*path, 'requestBody'],
             )
-        if operation.responses:
-            self.parse_responses(
-                name=self._get_model_name(path_name, method, suffix='Response'),
-                responses=operation.responses,
-                path=[*path, 'responses'],
-            )
+        self.parse_responses(
+            name=self._get_model_name(path_name, method, suffix='Response'),
+            responses=operation.responses,
+            path=[*path, 'responses'],
+        )
 
     def parse_raw(self) -> None:
         for source in self.iter_source:
@@ -352,6 +349,9 @@ class OpenAPIParser(JsonSchemaParser):
             self.raw_obj = specification
             schemas: Dict[Any, Any] = specification.get('components', {}).get(
                 'schemas', {}
+            )
+            security: Optional[List[Dict[str, List[str]]]] = specification.get(
+                'security'
             )
             if isinstance(self.source, ParseResult):
                 path_parts: List[str] = self.get_url_path_parts(self.source)
@@ -377,13 +377,25 @@ class OpenAPIParser(JsonSchemaParser):
                     ]
                     paths_path = [*path_parts, '#/paths']
                     for path_name, methods in paths.items():
+
+                        paths_parameters = parameters[:]
+                        if 'parameters' in methods:
+                            paths_parameters.extend(methods['parameters'])
                         relative_path_name = path_name[1:]
                         if relative_path_name:
                             path = [*paths_path, relative_path_name]
                         else:  # pragma: no cover
                             path = get_special_path('root', paths_path)
                         for operation_name, raw_operation in methods.items():
-                            if operation_name in OPERATION_NAMES:
-                                self.parse_operation(
-                                    raw_operation, parameters, [*path, operation_name],
-                                )
+                            if operation_name not in OPERATION_NAMES:
+                                continue
+                            if paths_parameters:
+                                if 'parameters' in raw_operation:  # pragma: no cover
+                                    raw_operation['parameters'].extend(paths_parameters)
+                                else:
+                                    raw_operation['parameters'] = paths_parameters
+                            if security is not None and 'security' not in raw_operation:
+                                raw_operation['security'] = security
+                            self.parse_operation(
+                                raw_operation, [*path, operation_name],
+                            )
