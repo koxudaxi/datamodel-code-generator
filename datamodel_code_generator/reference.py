@@ -238,7 +238,7 @@ class ModelResolver:
             singular_name_suffix, str
         ) else SINGULAR_NAME_SUFFIX
         merged_field_name_resolver_classes = DEFAULT_FIELD_NAME_RESOLVERS.copy()
-        if field_name_resolver_classes:
+        if field_name_resolver_classes:  # pragma: no cover
             merged_field_name_resolver_classes.update(field_name_resolver_classes)
         self.field_name_resolvers: Dict[ModelType, FieldNameResolver] = {
             k: v(
