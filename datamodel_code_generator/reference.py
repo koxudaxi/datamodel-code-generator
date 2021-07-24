@@ -1,6 +1,7 @@
 import re
 from collections import defaultdict
 from contextlib import contextmanager
+from enum import Enum, auto
 from functools import lru_cache
 from itertools import zip_longest
 from keyword import iskeyword
@@ -20,6 +21,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
 )
@@ -132,7 +134,11 @@ class FieldNameResolver:
         self.empty_field_name: str = empty_field_name or '_'
         self.snake_case_field = snake_case_field
 
-    def get_valid_name(self, name: str, excludes: Optional[Set[str]] = None) -> str:
+    @classmethod
+    def _validate_field_name(cls, field_name: str) -> bool:
+        return True
+
+    def get_valid_name(self, name: str, excludes: Optional[Set[str]] = None,) -> str:
         if not name:
             name = self.empty_field_name
         if name[0] == '#':
@@ -144,10 +150,12 @@ class FieldNameResolver:
         if self.snake_case_field:
             name = camel_to_snake(name)
         count = 1
-        if iskeyword(name):
+        if iskeyword(name) or not self._validate_field_name(name):
             name += '_'
         new_name = name
-        while not new_name.isidentifier() or (excludes and new_name in excludes):
+        while not (
+            new_name.isidentifier() or not self._validate_field_name(new_name)
+        ) or (excludes and new_name in excludes):
             new_name = f'{name}_{count}'
             count += 1
         return new_name
@@ -159,6 +167,29 @@ class FieldNameResolver:
             return self.aliases[field_name], field_name
         valid_name = self.get_valid_name(field_name, excludes=excludes)
         return valid_name, None if field_name == valid_name else field_name
+
+
+class PydanticFieldNameResolver(FieldNameResolver):
+    @classmethod
+    def _validate_field_name(cls, field_name: str) -> bool:
+        return not hasattr(BaseModel, field_name)
+
+
+class EnumFieldNameResolver(FieldNameResolver):
+    pass
+
+
+class ModelType(Enum):
+    PYDANTIC = auto()
+    ENUM = auto()
+    CLASS = auto()
+
+
+DEFAULT_FIELD_NAME_RESOLVERS: Dict[ModelType, Type[FieldNameResolver]] = {
+    ModelType.ENUM: EnumFieldNameResolver,
+    ModelType.PYDANTIC: PydanticFieldNameResolver,
+    ModelType.CLASS: FieldNameResolver,
+}
 
 
 def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
@@ -190,6 +221,9 @@ class ModelResolver:
         empty_field_name: Optional[str] = None,
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
         base_path: Optional[Path] = None,
+        field_name_resolver_classes: Optional[
+            Dict[ModelType, Type[FieldNameResolver]]
+        ] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -203,11 +237,17 @@ class ModelResolver:
         self.singular_name_suffix: str = singular_name_suffix if isinstance(
             singular_name_suffix, str
         ) else SINGULAR_NAME_SUFFIX
-        self.field_name_resolver = FieldNameResolver(
-            aliases=aliases,
-            snake_case_field=snake_case_field,
-            empty_field_name=empty_field_name,
-        )
+        merged_field_name_resolver_classes = DEFAULT_FIELD_NAME_RESOLVERS.copy()
+        if field_name_resolver_classes:
+            merged_field_name_resolver_classes.update(field_name_resolver_classes)
+        self.field_name_resolvers: Dict[ModelType, FieldNameResolver] = {
+            k: v(
+                aliases=aliases,
+                snake_case_field=snake_case_field,
+                empty_field_name=empty_field_name,
+            )
+            for k, v in merged_field_name_resolver_classes.items()
+        }
         self.class_name_generator = (
             custom_class_name_generator or self.default_class_name_generator
         )
@@ -417,7 +457,8 @@ class ModelResolver:
                 singular_name_suffix=singular_name_suffix,
             )
         else:
-            name = self.get_valid_name(name)
+            # TODO: create a validate for module name
+            name = self.get_valid_field_name(name, model_type=ModelType.CLASS)
             if singular_name:  # pragma: no cover
                 name = get_singular_name(
                     name, singular_name_suffix or self.singular_name_suffix
@@ -438,8 +479,10 @@ class ModelResolver:
     def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
         return self.references.get(self.resolve_ref(path))
 
-    def default_class_name_generator(self, name: str) -> str:
-        name = self.field_name_resolver.get_valid_name(name)
+    def default_class_name_generator(
+        self, name: str, model_type: ModelType = ModelType.PYDANTIC
+    ) -> str:
+        name = self.field_name_resolvers[model_type].get_valid_name(name)
         return snake_to_upper_camel(name)
 
     def get_class_name(
@@ -454,7 +497,9 @@ class ModelResolver:
         if '.' in name:
             split_name = name.split('.')
             prefix = '.'.join(
-                self.field_name_resolver.get_valid_name(n) for n in split_name[:-1]
+                # TODO: create a validate for class name
+                self.field_name_resolvers[ModelType.CLASS].get_valid_name(n)
+                for n in split_name[:-1]
             )
             prefix += '.'
             class_name = split_name[-1]
@@ -500,13 +545,21 @@ class ModelResolver:
     def validate_name(cls, name: str) -> bool:
         return name.isidentifier() and not iskeyword(name)
 
-    def get_valid_name(self, name: str, excludes: Optional[Set[str]] = None) -> str:
-        return self.field_name_resolver.get_valid_name(name, excludes)
+    def get_valid_field_name(
+        self,
+        name: str,
+        excludes: Optional[Set[str]] = None,
+        model_type: ModelType = ModelType.PYDANTIC,
+    ) -> str:
+        return self.field_name_resolvers[model_type].get_valid_name(name, excludes)
 
     def get_valid_field_name_and_alias(
-        self, field_name: str, excludes: Optional[Set[str]] = None
+        self,
+        field_name: str,
+        excludes: Optional[Set[str]] = None,
+        model_type: ModelType = ModelType.PYDANTIC,
     ) -> Tuple[str, Optional[str]]:
-        return self.field_name_resolver.get_valid_field_name_and_alias(
+        return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(
             field_name, excludes
         )
 

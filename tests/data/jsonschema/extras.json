@@ -12,7 +12,9 @@
       "invalid-key-1": "abc",
       "-invalid+key_2": "efg",
       "$comment": "comment",
-      "$id": "#name"
+      "$id": "#name",
+      "register": "hij",
+      "schema": "klm"
     }
   }
 }

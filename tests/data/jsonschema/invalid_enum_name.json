@@ -5,6 +5,7 @@
   "enum": [
     "1 value",
     " space",
-    "*- special"
+    "*- special",
+    "schema"
   ]
 }

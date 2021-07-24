@@ -19,4 +19,6 @@ class Extras(BaseModel):
         invalid_key_1='abc',
         key1=123,
         key2=456,
+        register_='hij',
+        schema_='klm',
     )
