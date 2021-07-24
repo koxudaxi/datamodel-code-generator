@@ -479,10 +479,9 @@ class ModelResolver:
     def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
         return self.references.get(self.resolve_ref(path))
 
-    def default_class_name_generator(
-        self, name: str, model_type: ModelType = ModelType.PYDANTIC
-    ) -> str:
-        name = self.field_name_resolvers[model_type].get_valid_name(name)
+    def default_class_name_generator(self, name: str) -> str:
+        # TODO: create a validate for class name
+        name = self.field_name_resolvers[ModelType.CLASS].get_valid_name(name)
         return snake_to_upper_camel(name)
 
     def get_class_name(
