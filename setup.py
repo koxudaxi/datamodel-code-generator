@@ -8,7 +8,6 @@ from setuptools.config import read_configuration
 config = read_configuration(Path(__file__).parent.joinpath('setup.cfg'))
 
 extras_require = {
-    'setup': config['options']['setup_requires'],
     'test': config['options']['tests_require'],
     **config['options']['extras_require'],
 }
