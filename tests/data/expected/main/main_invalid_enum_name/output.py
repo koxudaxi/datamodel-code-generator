@@ -11,3 +11,4 @@ class InvalidEnum(Enum):
     field_1_value = '1 value'
     _space = ' space'
     ___special = '*- special'
+    schema = 'schema'

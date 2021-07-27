@@ -42,7 +42,7 @@ from datamodel_code_generator.parser.base import (
     escape_characters,
     title_to_class_name,
 )
-from datamodel_code_generator.reference import Reference, is_url
+from datamodel_code_generator.reference import ModelType, Reference, is_url
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
 
 
@@ -882,8 +882,8 @@ class JsonSchemaParser(Parser):
                         else type(enum_part).__name__
                     )
                     field_name = f'{prefix}_{enum_part}'
-            field_name = self.model_resolver.get_valid_name(
-                field_name, excludes=exclude_field_names
+            field_name = self.model_resolver.get_valid_field_name(
+                field_name, excludes=exclude_field_names, model_type=ModelType.ENUM
             )
             exclude_field_names.add(field_name)
             enum_fields.append(
