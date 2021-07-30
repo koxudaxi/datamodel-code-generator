@@ -34,6 +34,8 @@ class Rules(BaseModel):
 
 
 class Error(BaseModel):
+    class Config:
+        extra = Extra.forbid
     code: int
     message: str
 

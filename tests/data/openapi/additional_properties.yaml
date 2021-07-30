@@ -146,6 +146,7 @@ components:
           format: int32
         message:
           type: string
+      additionalProperties: false
     Event:
       type: object
       properties:

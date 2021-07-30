@@ -411,7 +411,7 @@ class JsonSchemaParser(Parser):
         return self.data_type(reference=reference)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
-        if obj.additionalProperties:
+        if obj.additionalProperties is not None:
             # TODO check additional property types.
             self.extra_template_data[name][
                 'additionalProperties'

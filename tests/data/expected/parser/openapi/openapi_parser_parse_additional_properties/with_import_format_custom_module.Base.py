@@ -39,6 +39,9 @@ class Rules(Base):
 
 
 class Error(Base):
+    class Config:
+        extra = Extra.forbid
+
     code: int
     message: str
 
