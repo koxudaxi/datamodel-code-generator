@@ -6,15 +6,21 @@ from __future__ import annotations
 
 from typing import List, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
 
 
 class Key(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
     address: str
     nat: str
 
 
 class ModelItem(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
     key: Key
     value: str
 

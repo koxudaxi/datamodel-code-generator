@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, Extra, constr
 
 
 class ElegantName(BaseModel):
@@ -12,4 +12,7 @@ class ElegantName(BaseModel):
 
 
 class Person(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
     name: ElegantName

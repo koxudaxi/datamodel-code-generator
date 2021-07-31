@@ -135,8 +135,11 @@ class BaseModel(DataModel):
 
         config_parameters: Dict[str, Any] = {}
 
-        if self.extra_template_data.get('additionalProperties'):
-            config_parameters['extra'] = 'Extra.allow'
+        additionalProperties = self.extra_template_data.get('additionalProperties')
+        if additionalProperties is not None:
+            config_parameters['extra'] = (
+                'Extra.allow' if additionalProperties else 'Extra.forbid'
+            )
             self._additional_imports.append(IMPORT_EXTRA)
 
         for config_attribute in 'allow_population_by_field_name', 'allow_mutation':
