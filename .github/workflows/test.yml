@@ -48,7 +48,7 @@ jobs:
 #       if: matrix.os != 'windows-latest'
       run: |
         source $VENV
-        poetry run ./scripts/lint.sh
+        ./scripts/lint.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1.5.1
