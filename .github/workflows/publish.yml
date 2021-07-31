@@ -15,20 +15,20 @@ jobs:
       - uses: actions/cache@v1
         with:
           path: |
+            ~/.cache/pypoetry
             ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Set up Python 3.8
         uses: actions/setup-python@v1
         with:
           python-version: 3.8
-      - name: Install https://pypi.org/project/build
-        run: pip install build
       - name: Build publish
         run: |
-          pip install -e ".[all]"
-          python -m build -s -w . -o dist
+          python -m pip install poetry poetry-dynamic-versioning
+          poetry install
+          poetry build
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@master
         with:
