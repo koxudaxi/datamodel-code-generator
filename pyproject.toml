@@ -34,7 +34,7 @@ pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision
 datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.poetry.dependencies]
-python = ">=3.6.1"
+python = "^3.6.1"
 pydantic = {extras = ["email"], version = ">=1.5.1,<2.0"}
 argcomplete = ">=1.10,<2.0"
 prance = ">=0.18.2,<1.0"
@@ -49,9 +49,9 @@ genson = ">=1.2.1,<2.0"
 httpx = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
-pytest = ">4.6"
+pytest = ">6.0"
 pytest-benchmark = "*"
-pytest-cov = "*"
+pytest-cov = ">=2.12.1"
 pytest-mock = "*"
 mypy = "*"
 isort = "*"
@@ -75,6 +75,29 @@ force_grid_wrap = 0
 use_parentheses = true
 line_length = 88
 skip = "tests/data"
+
+[tool.mypy]
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+filterwarnings = "ignore::DeprecationWarning:distutils"
+norecursedirs = "tests/data/*"
+
+[tool.coverage.run]
+source = ["datamodel_code_generator"]
+branch = true
+
+[tool.coverage.report]
+ignore_errors = true
+exclude_lines = [
+    "if self.debug:",
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:"
+]
+omit = ["tests/*"]
 
 [tool.pydantic-pycharm-plugin.parsable-types]
 # str field may parse int and float
