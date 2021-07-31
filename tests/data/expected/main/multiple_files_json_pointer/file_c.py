@@ -6,11 +6,14 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Extra, Field
 
 from . import file_b
 
 
 class PersonC(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
     name: Optional[str] = Field(None, title='name')
     pet: Optional[Union[file_b.Cat, file_b.Dog]] = Field(None, title='pet')
