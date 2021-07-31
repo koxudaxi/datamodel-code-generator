@@ -21,12 +21,12 @@ jobs:
       with:
         path: |
           ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.cfg') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-docs.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    - name: Install dependencies
+    - name: Install mkdocs
       run: |
-        pip install -e ".[all]"
+         pip install -r requirements-docs.txt
     - name: build site
       run:  mkdocs build --verbose --clean --strict
     - name: Deploy
