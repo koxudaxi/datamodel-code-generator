@@ -60,7 +60,7 @@ class Modular(Protocol):
         raise NotImplementedError
 
 
-class DataType(_BaseModel):
+class DataType(_BaseModel):  # type: ignore
     type: Optional[str]
     reference: Optional[Reference]
     data_types: List['DataType'] = []
@@ -198,7 +198,7 @@ class DataType(_BaseModel):
                 yield import_
 
     def __init__(self, **values: Any) -> None:
-        super().__init__(**values)  # type: ignore
+        super().__init__(**values)
 
         for type_ in self.data_types:
             if type_.type == 'Any' and type_.is_optional:

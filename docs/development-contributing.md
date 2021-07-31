@@ -17,24 +17,23 @@ We are waiting for your contributions to `datamodel-code-generator`.
 $ git clone git@github.com:<your username>/datamodel-code-generator.git
 $ cd datamodel-code-generator
 
-## 2. Create `venv` with python3.7 (also you should do with python3.6)
-$ python3.7 -m venv venv37
-$ source venv37/bin/activate  
+## 2. Install [poetry](https://github.com/python-poetry/poetry)
+$ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python 
 
 ## 3. Install dependencies
-$ python3 -m pip install ".[all]" 
+$ poetry install
 
 ## 4. Create new branch and rewrite code.
 $ git checkout -b new-branch
 
 ## 5. Run unittest (you should pass all test and coverage should be 100%)
-$ ./scripts/test.sh
+$ poeyry run ./scripts/test.sh
 
 ## 6. Format code
-$ ./scripts/format.sh
+$ poeyry run ./scripts/format.sh
 
 ## 7. Check lint (mypy)
-$ ./scripts/lint.sh
+$ poeyry run ./scripts/lint.sh
 
 ## 8. Commit and Push...
 ```

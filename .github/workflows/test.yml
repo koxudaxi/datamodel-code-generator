@@ -13,54 +13,51 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
+    defaults:
+      run:
+        shell: bash
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
       ISORT: ${{ matrix.isort-version }}
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/cache@v1
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.cfg') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root -E http
+    - name: Lint
       run: |
-        pip install -e ".[all]"
+        source $VENV
+        ./scripts/lint.sh
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
-        pip install isort=="$ISORT"
-    - name: Install isort ${{ matrix.isort-version }} for Windows
-      if: runner.os == 'Windows'
+         poetry run pip install isort=="$ISORT"
+    - name: Unit Test
       run: |
-        pip install isort==${env:ISORT}
-    - name: Unit Test on Linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
+        source $VENV
         ./scripts/test.sh
-    - name: Unit Test on macOS
-      if: matrix.os == 'macos-latest'
-      run: |
-        ./scripts/test.sh
-    - name: Unit Test on Windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        ./scripts/test.bat
-    - name: Lint
-      if: matrix.os != 'windows-latest'
-      run: |
-        ./scripts/lint.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1.5.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests
+        file: ./coverage.xml
         fail_ci_if_error: true
         env_vars: OS,PYTHON,ISORT
