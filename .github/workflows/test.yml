@@ -45,7 +45,6 @@ jobs:
         source $VENV
         ./scripts/test.sh
     - name: Lint
-#       if: matrix.os != 'windows-latest'
       run: |
         source $VENV
         ./scripts/lint.sh
