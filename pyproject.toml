@@ -1,12 +1,67 @@
-[build-system]
-requires = [
-    "setuptools >= 41.0.0",
-    "wheel >= 0.30.0",
-    "twine >= 3.4.2",
-    "setuptools_scm >= 2",
+[tool.poetry]
+name = "datamodel-code-generator"
+version = "0.0.1"
+description = "Datamodel Code Generator"
+authors = ["Koudai Aono <koxudaxi@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/koxudaxi/datamodel-code-generator"
+repository = "https://github.com/koxudaxi/datamodel-code-generator"
+
+
+classifiers = [
+        "Development Status :: 4 - Beta",
+        "Natural Language :: English",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: Implementation :: CPython"
 ]
 
-build-backend = 'setuptools.build_meta'
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision>\\d+)?))?$"
+
+[tool.poetry.scripts]
+datamodel-codegen = "datamodel_code_generator.__main__:main"
+
+[tool.poetry.dependencies]
+python = ">=3.6.1"
+pydantic = {extras = ["email"], version = ">=1.5.1,<2.0"}
+argcomplete = ">=1.10,<2.0"
+prance = ">=0.18.2,<1.0"
+openapi-spec-validator = ">=0.2.8,<0.4"
+jinja2 = ">=2.10.1,<4.0"
+inflect = ">=4.1.0,<6.0"
+black = ">=19.10b0"
+isort = ">=4.3.21,<6.0"
+PySnooper = ">=0.4.1,<1.0.0"
+toml = ">=0.10.0,<1.0.0"
+genson = ">=1.2.1,<2.0"
+httpx = { version = "*", optional = true }
+
+[tool.poetry.dev-dependencies]
+pytest = ">4.6"
+pytest-benchmark = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+mypy = "*"
+isort = "*"
+freezegun = "*"
+types-Jinja2 = "*"
+types-PyYAML = "*"
+types-toml = "*"
+
+[tool.poetry.extras]
+http = ["httpx"]
 
 [tool.black]
 line-length = 88
