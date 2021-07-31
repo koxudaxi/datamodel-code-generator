@@ -18,8 +18,7 @@ classifiers = [
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: Implementation :: CPython"
-]
+        "Programming Language :: Python :: Implementation :: CPython"]
 
 [build-system]
 requires = ["poetry_core>=1.0.0"]
@@ -77,8 +76,23 @@ line_length = 88
 skip = "tests/data"
 
 [tool.mypy]
-disallow_untyped_defs = true
+plugins = "pydantic.mypy"
+
 ignore_missing_imports = true
+follow_imports = "silent"
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_reexport = true
+disallow_untyped_defs = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
 
 [tool.pytest.ini_options]
 filterwarnings = "ignore::DeprecationWarning:distutils"
@@ -95,8 +109,8 @@ exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:"
-]
+    "if TYPE_CHECKING:"]
+
 omit = ["tests/*"]
 
 [tool.pydantic-pycharm-plugin.parsable-types]
