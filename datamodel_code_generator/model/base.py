@@ -50,7 +50,7 @@ class DataModelFieldBase(_BaseModel):
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
     def __init__(self, **data: Any):  # type: ignore
-        super().__init__(**data)  # type: ignore
+        super().__init__(**data)
         if isinstance(self.data_type, DataType) and self.data_type.reference:
             self.data_type.parent = self
 
@@ -137,7 +137,7 @@ class TemplateBase(ABC):
         return self.render()
 
 
-class BaseClassDataType(DataType):
+class BaseClassDataType(DataType):  # type: ignore
     ...
 
 
