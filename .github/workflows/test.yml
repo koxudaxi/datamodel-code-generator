@@ -22,7 +22,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.cfg') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
         restore-keys: |
           ${{ runner.os }}-pip-
     - name: Set up Python ${{ matrix.python-version }}
@@ -31,31 +31,32 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install -e ".[all]"
+        python -m pip install poetry
+        poetry install
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
-        pip install isort=="$ISORT"
+        poetry run pip install isort=="$ISORT"
     - name: Install isort ${{ matrix.isort-version }} for Windows
       if: runner.os == 'Windows'
       run: |
-        pip install isort==${env:ISORT}
+        poetry run pip install isort==${env:ISORT}
     - name: Unit Test on Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
-        ./scripts/test.sh
+        poetry run ./scripts/test.sh
     - name: Unit Test on macOS
       if: matrix.os == 'macos-latest'
       run: |
-        ./scripts/test.sh
+        poetry run ./scripts/test.sh
     - name: Unit Test on Windows
       if: matrix.os == 'windows-latest'
       run: |
-        ./scripts/test.bat
+        poetry run ./scripts/test.bat
     - name: Lint
       if: matrix.os != 'windows-latest'
       run: |
-        ./scripts/lint.sh
+        poetry run ./scripts/lint.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1.5.1
