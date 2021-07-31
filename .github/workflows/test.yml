@@ -40,10 +40,6 @@ jobs:
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root -E http
-#     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
-#       if: runner.os != 'Windows'
-#       run: |
-#         poetry run pip install isort=="$ISORT"
     - name: Unit Test
       run: |
         source $VENV
@@ -51,6 +47,7 @@ jobs:
     - name: Lint
 #       if: matrix.os != 'windows-latest'
       run: |
+        source $VENV
         poetry run ./scripts/lint.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
