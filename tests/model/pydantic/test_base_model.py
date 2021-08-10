@@ -10,7 +10,8 @@ def test_base_model():
     field = DataModelField(name='a', data_type=DataType(type='str'), required=True)
 
     base_model = BaseModel(
-        fields=[field], reference=Reference(name='test_model', path='test_model'),
+        fields=[field],
+        reference=Reference(name='test_model', path='test_model'),
     )
 
     assert base_model.name == 'test_model'
@@ -25,7 +26,8 @@ def test_base_model_optional():
     )
 
     base_model = BaseModel(
-        fields=[field], reference=Reference(name='test_model', path='test_model'),
+        fields=[field],
+        reference=Reference(name='test_model', path='test_model'),
     )
 
     assert base_model.name == 'test_model'
@@ -47,7 +49,8 @@ def test_base_model_nullable_required():
     )
 
     base_model = BaseModel(
-        fields=[field], reference=Reference(name='test_model', path='test_model'),
+        fields=[field],
+        reference=Reference(name='test_model', path='test_model'),
     )
 
     assert base_model.name == 'test_model'
@@ -69,7 +72,8 @@ def test_base_model_strict_non_nullable_required():
     )
 
     base_model = BaseModel(
-        fields=[field], reference=Reference(name='test_model', path='test_model'),
+        fields=[field],
+        reference=Reference(name='test_model', path='test_model'),
     )
 
     assert base_model.name == 'test_model'
@@ -111,8 +115,14 @@ def test_base_model_get_data_type():
         ({'required': True}, None),
         ({'required': True, 'example': 'example'}, None),
         ({'example': 'example'}, None),
-        ({'required': True, 'default': 123, 'example': 'example'}, None,),
-        ({'required': False, 'default': 123, 'example': 'example'}, None,),
+        (
+            {'required': True, 'default': 123, 'example': 'example'},
+            None,
+        ),
+        (
+            {'required': False, 'default': 123, 'example': 'example'},
+            None,
+        ),
         ({'description': 'description'}, None),
         ({'title': 'title'}, None),
         ({'alias': 'alias'}, "Field(None, alias='alias')"),
@@ -128,7 +138,10 @@ def test_base_model_get_data_type():
             "Field(None, alias='alias')",
         ),
         ({'examples': [1, 2, 3]}, None),
-        ({'examples': {'name': 'dog', 'age': 1}}, None,),
+        (
+            {'examples': {'name': 'dog', 'age': 1}},
+            None,
+        ),
         ({'default': 'abc', 'title': 'title'}, None),
         ({'default': 123, 'title': 'title'}, None),
     ],

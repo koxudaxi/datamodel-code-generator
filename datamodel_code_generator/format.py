@@ -81,13 +81,19 @@ class CodeFormatter:
         else:
             self.isort_config = isort.Config(settings_path=self.settings_path)
 
-    def format_code(self, code: str,) -> str:
+    def format_code(
+        self,
+        code: str,
+    ) -> str:
         code = self.apply_isort(code)
         code = self.apply_black(code)
         return code
 
     def apply_black(self, code: str) -> str:
-        return black.format_str(code, mode=self.back_mode,)
+        return black.format_str(
+            code,
+            mode=self.back_mode,
+        )
 
     if isort.__version__.startswith('4.'):
 

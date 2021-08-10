@@ -54,10 +54,12 @@ DEFAULT_ENCODING = locale.getpreferredencoding()
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
-    '--input', help='Input file/directory (default: stdin)',
+    '--input',
+    help='Input file/directory (default: stdin)',
 )
 arg_parser.add_argument(
-    '--url', help='Input file URL. `--input` is ignore when `--url` is used',
+    '--url',
+    help='Input file URL. `--input` is ignore when `--url` is used',
 )
 arg_parser.add_argument(
     '--input-file-type',
@@ -74,7 +76,9 @@ arg_parser.add_argument(
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 
 arg_parser.add_argument(
-    '--base-class', help='Base Class (default: pydantic.BaseModel)', type=str,
+    '--base-class',
+    help='Base Class (default: pydantic.BaseModel)',
+    type=str,
 )
 arg_parser.add_argument(
     '--field-constraints',
@@ -215,7 +219,9 @@ arg_parser.add_argument(
 
 
 arg_parser.add_argument(
-    '--class-name', help='Set class name of root model', default=None,
+    '--class-name',
+    help='Set class name of root model',
+    default=None,
 )
 
 arg_parser.add_argument(

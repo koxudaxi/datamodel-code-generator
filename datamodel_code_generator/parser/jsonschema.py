@@ -396,7 +396,8 @@ class JsonSchemaParser(Parser):
                 )
                 data_formats = json_schema_data_formats[type_]['default']
             return self.data_type_manager.get_data_type(
-                data_formats, **obj.dict() if not self.field_constraints else {},
+                data_formats,
+                **obj.dict() if not self.field_constraints else {},
             )
 
         if isinstance(obj.type, list):
@@ -455,7 +456,9 @@ class JsonSchemaParser(Parser):
             else:
                 fields.extend(
                     self.parse_object_fields(
-                        all_of_item, path, get_module_name(name, None),
+                        all_of_item,
+                        path,
+                        get_module_name(name, None),
                     )
                 )
         if obj.properties:
@@ -555,7 +558,11 @@ class JsonSchemaParser(Parser):
                 f'This argument will be removed in a future version'
             )
         reference = self.model_resolver.add(
-            path, name, class_name=True, singular_name=singular_name, loaded=True,
+            path,
+            name,
+            class_name=True,
+            singular_name=singular_name,
+            loaded=True,
         )
         class_name = reference.name
         self.set_title(class_name, obj)
@@ -590,7 +597,10 @@ class JsonSchemaParser(Parser):
             root_type_path = get_special_path('array', path)
             return self.parse_root_type(
                 self.model_resolver.add(
-                    root_type_path, name, class_name=True, singular_name=singular_name,
+                    root_type_path,
+                    name,
+                    class_name=True,
+                    singular_name=singular_name,
                 ).name,
                 item,
                 root_type_path,
@@ -773,7 +783,10 @@ class JsonSchemaParser(Parser):
         return self.data_type(reference=reference)
 
     def parse_root_type(
-        self, name: str, obj: JsonSchemaObject, path: List[str],
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
     ) -> DataType:
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
@@ -1057,10 +1070,20 @@ class JsonSchemaParser(Parser):
         yield
         self.root_id = previous_root_id
 
-    def parse_raw_obj(self, name: str, raw: Dict[str, Any], path: List[str],) -> None:
+    def parse_raw_obj(
+        self,
+        name: str,
+        raw: Dict[str, Any],
+        path: List[str],
+    ) -> None:
         self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
 
-    def parse_obj(self, name: str, obj: JsonSchemaObject, path: List[str],) -> None:
+    def parse_obj(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+    ) -> None:
         if obj.is_array:
             self.parse_array(name, obj, path)
         elif obj.allOf:

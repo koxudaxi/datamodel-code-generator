@@ -42,7 +42,8 @@ from datamodel_code_generator.types import StrictTypes, Types
 
 
 def type_map_factory(
-    data_type: Type[DataType], strict_types: Sequence[StrictTypes],
+    data_type: Type[DataType],
+    strict_types: Sequence[StrictTypes],
 ) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
@@ -125,7 +126,14 @@ string_kwargs: Set[str] = {'minItems', 'maxItems', 'minLength', 'maxLength', 'pa
 byes_kwargs: Set[str] = {'minLength', 'maxLength'}
 
 escape_characters = str.maketrans(
-    {"'": r"\'", '\b': r'\b', '\f': r'\f', '\n': r'\n', '\r': r'\r', '\t': r'\t',}
+    {
+        "'": r"\'",
+        '\b': r'\b',
+        '\f': r'\f',
+        '\n': r'\n',
+        '\r': r'\r',
+        '\t': r'\t',
+    }
 )
 
 
@@ -153,7 +161,8 @@ class DataTypeManager(_DataTypeManager):
         )
 
         self.type_map: Dict[Types, DataType] = type_map_factory(
-            self.data_type, strict_types=self.strict_types,
+            self.data_type,
+            strict_types=self.strict_types,
         )
         self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
             self.data_type,
