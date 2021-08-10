@@ -57,10 +57,10 @@ class CodeFormatter:
                 'experimental-string-processing'
             )
 
-        if experimental_string_processing is not None:
-            if black.__version__.startswith('19.'):  # pragma: no cover
+        if experimental_string_processing is not None:  # pragma: no cover
+            if black.__version__.startswith('19.'):  # type: ignore
                 warn(
-                    f'black doesn\'t support `experimental-string-processing` option'
+                    f'black doesn\'t support `experimental-string-processing` option'  # type: ignore
                     f' for wrapping string literal in {black.__version__}'
                 )
             else:
