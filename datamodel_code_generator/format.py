@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from warnings import warn
 
 import black
@@ -68,12 +68,15 @@ class CodeFormatter:
                     'experimental_string_processing'
                 ] = experimental_string_processing
 
-        self.back_mode = black.FileMode(  # type: ignore
-            target_versions={BLACK_PYTHON_VERSION[python_version]},
-            line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
-            string_normalization=not config.get("skip-string-normalization", True),
-            **black_kwargs,
-        )
+        if TYPE_CHECKING:
+            self.back_mode: black.FileMode
+        else:
+            self.back_mode = black.FileMode(
+                target_versions={BLACK_PYTHON_VERSION[python_version]},
+                line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
+                string_normalization=not config.get("skip-string-normalization", True),
+                **black_kwargs,
+            )
 
         self.settings_path: str = str(settings_path)
         if isort.__version__.startswith('4.'):
