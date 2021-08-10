@@ -263,6 +263,7 @@ class Parser(ABC):
         ] = title_to_class_name,
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
+        wrap_string_literal: Optional[bool] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -340,6 +341,7 @@ class Parser(ABC):
             base_path=self.base_path,
         )
         self.class_name: Optional[str] = class_name
+        self.wrap_string_literal: Optional[bool] = wrap_string_literal
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -398,7 +400,7 @@ class Parser(ABC):
 
         if format_:
             code_formatter: Optional[CodeFormatter] = CodeFormatter(
-                self.target_python_version, settings_path
+                self.target_python_version, settings_path, self.wrap_string_literal
             )
         else:
             code_formatter = None

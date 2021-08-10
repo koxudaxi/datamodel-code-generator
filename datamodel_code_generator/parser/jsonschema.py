@@ -306,6 +306,7 @@ class JsonSchemaParser(Parser):
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
+        wrap_string_literal: Optional[bool] = None,
     ):
         super().__init__(
             source=source,
@@ -344,6 +345,7 @@ class JsonSchemaParser(Parser):
             custom_class_name_generator=custom_class_name_generator,
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
+            wrap_string_literal=wrap_string_literal,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()

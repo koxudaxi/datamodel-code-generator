@@ -1,6 +1,7 @@
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
+from warnings import warn
 
 import black
 import isort
@@ -31,7 +32,10 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no 
 
 class CodeFormatter:
     def __init__(
-        self, python_version: PythonVersion, settings_path: Optional[Path] = None
+        self,
+        python_version: PythonVersion,
+        settings_path: Optional[Path] = None,
+        wrap_string_literal: Optional[bool] = None,
     ):
         if not settings_path:
             settings_path = Path().resolve()
@@ -44,10 +48,31 @@ class CodeFormatter:
             config = pyproject_toml.get("tool", {}).get("black", {})
         else:
             config = {}
+
+        black_kwargs: Dict[str, Any] = {}
+        if wrap_string_literal is not None:
+            experimental_string_processing = wrap_string_literal
+        else:
+            experimental_string_processing = config.get(
+                'experimental-string-processing'
+            )
+
+        if experimental_string_processing is not None:
+            if black.__version__.startswith('19.'):  # pragma: no cover
+                warn(
+                    f'black doesn\'t support `experimental-string-processing` option'
+                    f' for wrapping string literal in {black.__version__}'
+                )
+            else:
+                black_kwargs[
+                    'experimental_string_processing'
+                ] = experimental_string_processing
+
         self.back_mode = black.FileMode(
             target_versions={BLACK_PYTHON_VERSION[python_version]},
             line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
             string_normalization=not config.get("skip-string-normalization", True),
+            **black_kwargs,
         )
 
         self.settings_path: str = str(settings_path)

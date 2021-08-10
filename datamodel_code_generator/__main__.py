@@ -230,6 +230,14 @@ arg_parser.add_argument(
     help='target python version (default: 3.7)',
     choices=[v.value for v in PythonVersion],
 )
+
+arg_parser.add_argument(
+    '--wrap-string-literal',
+    help='Wrap string literal by using black `experimental-string-processing` option (require black 20.8b0 or later)',
+    action='store_true',
+    default=None,
+)
+
 arg_parser.add_argument(
     '--validation',
     help='Enable validation (Only OpenAPI)',
@@ -323,6 +331,7 @@ class Config(BaseModel):
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
     openapi_scopes: Optional[List[OpenAPIScope]] = None
+    wrap_string_literal: Optional[bool] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -446,6 +455,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             field_extra_keys=config.field_extra_keys,
             field_include_all_keys=config.field_include_all_keys,
             openapi_scopes=config.openapi_scopes,
+            wrap_string_literal=config.wrap_string_literal,
         )
         return Exit.OK
     except InvalidClassNameError as e:
