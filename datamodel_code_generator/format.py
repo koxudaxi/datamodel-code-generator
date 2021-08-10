@@ -68,7 +68,7 @@ class CodeFormatter:
                     'experimental_string_processing'
                 ] = experimental_string_processing
 
-        self.back_mode = black.FileMode(
+        self.back_mode = black.FileMode(  # type: ignore
             target_versions={BLACK_PYTHON_VERSION[python_version]},
             line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
             string_normalization=not config.get("skip-string-normalization", True),
