@@ -671,25 +671,36 @@
 <p>The <code>datamodel-codegen</code> command:</p>
 <div class="codehilite"><pre><span></span><code>usage: datamodel-codegen <span class="o">[</span>-h<span class="o">]</span> <span class="o">[</span>--input INPUT<span class="o">]</span> <span class="o">[</span>--url URL<span class="o">]</span>
                          <span class="o">[</span>--input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
-                         <span class="o">[</span>--openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]]</span> <span class="o">[</span>--output OUTPUT<span class="o">]</span>
-                         <span class="o">[</span>--base-class BASE_CLASS<span class="o">]</span> <span class="o">[</span>--field-constraints<span class="o">]</span>
-                         <span class="o">[</span>--field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]]</span> <span class="o">[</span>--field-include-all-keys<span class="o">]</span>
-                         <span class="o">[</span>--snake-case-field<span class="o">]</span> <span class="o">[</span>--strip-default-none<span class="o">]</span> <span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
-                         <span class="o">[</span>--allow-population-by-field-name<span class="o">]</span> <span class="o">[</span>--enable-faux-immutability<span class="o">]</span> <span class="o">[</span>--use-default<span class="o">]</span>
+                         <span class="o">[</span>--openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]]</span>
+                         <span class="o">[</span>--output OUTPUT<span class="o">]</span> <span class="o">[</span>--base-class BASE_CLASS<span class="o">]</span>
+                         <span class="o">[</span>--field-constraints<span class="o">]</span>
+                         <span class="o">[</span>--field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]]</span>
+                         <span class="o">[</span>--field-include-all-keys<span class="o">]</span> <span class="o">[</span>--snake-case-field<span class="o">]</span>
+                         <span class="o">[</span>--strip-default-none<span class="o">]</span>
+                         <span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
+                         <span class="o">[</span>--allow-population-by-field-name<span class="o">]</span>
+                         <span class="o">[</span>--enable-faux-immutability<span class="o">]</span> <span class="o">[</span>--use-default<span class="o">]</span>
                          <span class="o">[</span>--force-optional<span class="o">]</span> <span class="o">[</span>--strict-nullable<span class="o">]</span>
                          <span class="o">[</span>--strict-types <span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span> <span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span> ...<span class="o">]]</span>
-                         <span class="o">[</span>--disable-timestamp<span class="o">]</span> <span class="o">[</span>--use-standard-collections<span class="o">]</span> <span class="o">[</span>--use-generic-container-types<span class="o">]</span>
-                         <span class="o">[</span>--use-schema-description<span class="o">]</span> <span class="o">[</span>--reuse-model<span class="o">]</span> <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
-                         <span class="o">[</span>--set-default-enum-member<span class="o">]</span> <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
-                         <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span> <span class="o">[</span>--custom-template-dir CUSTOM_TEMPLATE_DIR<span class="o">]</span>
-                         <span class="o">[</span>--extra-template-data EXTRA_TEMPLATE_DATA<span class="o">]</span> <span class="o">[</span>--aliases ALIASES<span class="o">]</span>
-                         <span class="o">[</span>--target-python-version <span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}]</span> <span class="o">[</span>--validation<span class="o">]</span> <span class="o">[</span>--encoding ENCODING<span class="o">]</span> <span class="o">[</span>--debug<span class="o">]</span>
-                         <span class="o">[</span>--version<span class="o">]</span>
+                         <span class="o">[</span>--disable-timestamp<span class="o">]</span> <span class="o">[</span>--use-standard-collections<span class="o">]</span>
+                         <span class="o">[</span>--use-generic-container-types<span class="o">]</span>
+                         <span class="o">[</span>--use-schema-description<span class="o">]</span> <span class="o">[</span>--reuse-model<span class="o">]</span>
+                         <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
+                         <span class="o">[</span>--set-default-enum-member<span class="o">]</span>
+                         <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
+                         <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span>
+                         <span class="o">[</span>--custom-template-dir CUSTOM_TEMPLATE_DIR<span class="o">]</span>
+                         <span class="o">[</span>--extra-template-data EXTRA_TEMPLATE_DATA<span class="o">]</span>
+                         <span class="o">[</span>--aliases ALIASES<span class="o">]</span>
+                         <span class="o">[</span>--target-python-version <span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}]</span>
+                         <span class="o">[</span>--wrap-string-literal<span class="o">]</span> <span class="o">[</span>--validation<span class="o">]</span>
+                         <span class="o">[</span>--encoding ENCODING<span class="o">]</span> <span class="o">[</span>--debug<span class="o">]</span> <span class="o">[</span>--version<span class="o">]</span>
 
 optional arguments:
   -h, --help            show this <span class="nb">help</span> message and <span class="nb">exit</span>
   --input INPUT         Input file/directory <span class="o">(</span>default: stdin<span class="o">)</span>
-  --url URL             Input file URL. <span class="sb">`</span>--input<span class="sb">`</span> is ignore when <span class="sb">`</span>--url<span class="sb">`</span> is used
+  --url URL             Input file URL. <span class="sb">`</span>--input<span class="sb">`</span> is ignore when <span class="sb">`</span>--url<span class="sb">`</span> is
+                        used
   --input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}</span>
                         Input file <span class="nb">type</span> <span class="o">(</span>default: auto<span class="o">)</span>
   --openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]</span>
@@ -705,28 +716,34 @@ optional arguments:
   --snake-case-field    Change camel-case field name to snake-case
   --strip-default-none  Strip default None on fields
   --disable-appending-item-suffix
-                        Disable appending <span class="sb">`</span>Item<span class="sb">`</span> suffix to model name <span class="k">in</span> an array
+                        Disable appending <span class="sb">`</span>Item<span class="sb">`</span> suffix to model name <span class="k">in</span> an
+                        array
   --allow-population-by-field-name
                         Allow population by field name
   --enable-faux-immutability
                         Enable faux immutability
   --use-default         Use default value even <span class="k">if</span> a field is required
   --force-optional      Force optional <span class="k">for</span> required fields
-  --strict-nullable     Treat default field as a non-nullable field <span class="o">(</span>Only OpenAPI<span class="o">)</span>
+  --strict-nullable     Treat default field as a non-nullable field <span class="o">(</span>Only
+                        OpenAPI<span class="o">)</span>
   --strict-types <span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span> <span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span> ...<span class="o">]</span>
                         Use strict types
   --disable-timestamp   Disable timestamp on file headers
   --use-standard-collections
                         Use standard collections <span class="k">for</span> <span class="nb">type</span> hinting <span class="o">(</span>list, dict<span class="o">)</span>
   --use-generic-container-types
-                        Use generic container types <span class="k">for</span> <span class="nb">type</span> hinting <span class="o">(</span>typing.Sequence, typing.Mapping<span class="o">)</span>. If <span class="sb">`</span>--use-standard-collections<span class="sb">`</span> option is set,
-                        <span class="k">then</span> import from collections.abc instead of typing
+                        Use generic container types <span class="k">for</span> <span class="nb">type</span> hinting
+                        <span class="o">(</span>typing.Sequence, typing.Mapping<span class="o">)</span>. If <span class="sb">`</span>--use-standard-
+                        collections<span class="sb">`</span> option is set, <span class="k">then</span> import from
+                        collections.abc instead of typing
   --use-schema-description
                         Use schema description to populate class docstring
-  --reuse-model         Re-use models on the field when a module has the model with the same content
+  --reuse-model         Re-use models on the field when a module has the model
+                        with the same content
   --enum-field-as-literal <span class="o">{</span>all,one<span class="o">}</span>
-                        Parse enum field as literal. all: all enum field <span class="nb">type</span> are Literal. one: field <span class="nb">type</span> is Literal when an enum has only one
-                        possible value
+                        Parse enum field as literal. all: all enum field <span class="nb">type</span>
+                        are Literal. one: field <span class="nb">type</span> is Literal when an enum
+                        has only one possible value
   --set-default-enum-member
                         Set enum members as default values <span class="k">for</span> enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
@@ -740,6 +757,10 @@ optional arguments:
   --aliases ALIASES     Alias mapping file
   --target-python-version <span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}</span>
                         target python version <span class="o">(</span>default: <span class="m">3</span>.7<span class="o">)</span>
+  --wrap-string-literal
+                        Wrap string literal by using black <span class="sb">`</span>experimental-
+                        string-processing<span class="sb">`</span> option <span class="o">(</span>require black <span class="m">20</span>.8b0 or
+                        later<span class="o">)</span>
   --validation          Enable validation <span class="o">(</span>Only OpenAPI<span class="o">)</span>
   --encoding ENCODING   The encoding of input and output <span class="o">(</span>default: UTF-8<span class="o">)</span>
   --debug               show debug message
