@@ -721,7 +721,7 @@ types-MarkupSafe = "*"
 
 [[package]]
 name = "types-markupsafe"
-version = "1.1.4"
+version = "1.1.6"
 description = "Typing stubs for MarkupSafe"
 category = "dev"
 optional = false
@@ -1265,8 +1265,8 @@ types-jinja2 = [
     {file = "types_Jinja2-2.11.6-py3-none-any.whl", hash = "sha256:4e1f31d0e31a564a44b0b0f9b8392f890806ad974f41490c1279b72aff9c5be4"},
 ]
 types-markupsafe = [
-    {file = "types-MarkupSafe-1.1.4.tar.gz", hash = "sha256:4fd2cc858fb4aea38555850f4ac2ecafae3543c88abb056669a3346c5c1b202c"},
-    {file = "types_MarkupSafe-1.1.4-py3-none-any.whl", hash = "sha256:2539a9e9b1b5a1bf1c10fdf2cb1dcb89e6f360759196883f4d5d103c53624375"},
+    {file = "types-MarkupSafe-1.1.6.tar.gz", hash = "sha256:7014f5b578b419967c64ff65cb230636ec20c37b6e22e58a88969b1f78f029c4"},
+    {file = "types_MarkupSafe-1.1.6-py3-none-any.whl", hash = "sha256:1dd3c3f6e913434282a37f847be51bf6d40117b16b6b2e84b79d568275f21784"},
 ]
 types-pyyaml = [
     {file = "types-PyYAML-5.4.3.tar.gz", hash = "sha256:2e7b81b2b7af751634425107b986086c6ba7cb61270a43a5c290c58be8cdbc3a"},
