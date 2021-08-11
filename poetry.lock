@@ -710,7 +710,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-jinja2"
-version = "2.11.2"
+version = "2.11.6"
 description = "Typing stubs for Jinja2"
 category = "dev"
 optional = false
@@ -1261,8 +1261,8 @@ typed-ast = [
     {file = "typed_ast-1.4.3.tar.gz", hash = "sha256:fb1bbeac803adea29cedd70781399c99138358c26d05fcbd23c13016b7f5ec65"},
 ]
 types-jinja2 = [
-    {file = "types-Jinja2-2.11.2.tar.gz", hash = "sha256:5b53d2b8bc6dd6dfbc0ae3e33e346fbe343cbeba1ed528858749e2a2ffe0e143"},
-    {file = "types_Jinja2-2.11.2-py2.py3-none-any.whl", hash = "sha256:d27e112a8add449407de235f4533239149056327c8bddc6b0d6bf80cd7280c16"},
+    {file = "types-Jinja2-2.11.6.tar.gz", hash = "sha256:93450ccfaea23c3c7f5a80f65d744f26d317c1a8608c15d49af63d40eafc6fd1"},
+    {file = "types_Jinja2-2.11.6-py3-none-any.whl", hash = "sha256:4e1f31d0e31a564a44b0b0f9b8392f890806ad974f41490c1279b72aff9c5be4"},
 ]
 types-markupsafe = [
     {file = "types-MarkupSafe-1.1.4.tar.gz", hash = "sha256:4fd2cc858fb4aea38555850f4ac2ecafae3543c88abb056669a3346c5c1b202c"},
