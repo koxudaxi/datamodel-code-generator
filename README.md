@@ -71,25 +71,36 @@ The `datamodel-codegen` command:
 ```bash
 usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
-                         [--openapi-scopes {schemas,paths} [{schemas,paths} ...]] [--output OUTPUT]
-                         [--base-class BASE_CLASS] [--field-constraints]
-                         [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]] [--field-include-all-keys]
-                         [--snake-case-field] [--strip-default-none] [--disable-appending-item-suffix]
-                         [--allow-population-by-field-name] [--enable-faux-immutability] [--use-default]
+                         [--openapi-scopes {schemas,paths} [{schemas,paths} ...]]
+                         [--output OUTPUT] [--base-class BASE_CLASS]
+                         [--field-constraints]
+                         [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
+                         [--field-include-all-keys] [--snake-case-field]
+                         [--strip-default-none]
+                         [--disable-appending-item-suffix]
+                         [--allow-population-by-field-name]
+                         [--enable-faux-immutability] [--use-default]
                          [--force-optional] [--strict-nullable]
                          [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]]
-                         [--disable-timestamp] [--use-standard-collections] [--use-generic-container-types]
-                         [--use-schema-description] [--reuse-model] [--enum-field-as-literal {all,one}]
-                         [--set-default-enum-member] [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
-                         [--class-name CLASS_NAME] [--custom-template-dir CUSTOM_TEMPLATE_DIR]
-                         [--extra-template-data EXTRA_TEMPLATE_DATA] [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7,3.8,3.9}] [--validation] [--encoding ENCODING] [--debug]
-                         [--version]
+                         [--disable-timestamp] [--use-standard-collections]
+                         [--use-generic-container-types]
+                         [--use-schema-description] [--reuse-model]
+                         [--enum-field-as-literal {all,one}]
+                         [--set-default-enum-member]
+                         [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
+                         [--class-name CLASS_NAME]
+                         [--custom-template-dir CUSTOM_TEMPLATE_DIR]
+                         [--extra-template-data EXTRA_TEMPLATE_DATA]
+                         [--aliases ALIASES]
+                         [--target-python-version {3.6,3.7,3.8,3.9}]
+                         [--wrap-string-literal] [--validation]
+                         [--encoding ENCODING] [--debug] [--version]
 
 optional arguments:
   -h, --help            show this help message and exit
   --input INPUT         Input file/directory (default: stdin)
-  --url URL             Input file URL. `--input` is ignore when `--url` is used
+  --url URL             Input file URL. `--input` is ignore when `--url` is
+                        used
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --openapi-scopes {schemas,paths} [{schemas,paths} ...]
@@ -105,28 +116,34 @@ optional arguments:
   --snake-case-field    Change camel-case field name to snake-case
   --strip-default-none  Strip default None on fields
   --disable-appending-item-suffix
-                        Disable appending `Item` suffix to model name in an array
+                        Disable appending `Item` suffix to model name in an
+                        array
   --allow-population-by-field-name
                         Allow population by field name
   --enable-faux-immutability
                         Enable faux immutability
   --use-default         Use default value even if a field is required
   --force-optional      Force optional for required fields
-  --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
+  --strict-nullable     Treat default field as a non-nullable field (Only
+                        OpenAPI)
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
                         Use strict types
   --disable-timestamp   Disable timestamp on file headers
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
   --use-generic-container-types
-                        Use generic container types for type hinting (typing.Sequence, typing.Mapping). If `--use-standard-collections` option is set,
-                        then import from collections.abc instead of typing
+                        Use generic container types for type hinting
+                        (typing.Sequence, typing.Mapping). If `--use-standard-
+                        collections` option is set, then import from
+                        collections.abc instead of typing
   --use-schema-description
                         Use schema description to populate class docstring
-  --reuse-model         Re-use models on the field when a module has the model with the same content
+  --reuse-model         Re-use models on the field when a module has the model
+                        with the same content
   --enum-field-as-literal {all,one}
-                        Parse enum field as literal. all: all enum field type are Literal. one: field type is Literal when an enum has only one
-                        possible value
+                        Parse enum field as literal. all: all enum field type
+                        are Literal. one: field type is Literal when an enum
+                        has only one possible value
   --set-default-enum-member
                         Set enum members as default values for enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
@@ -140,6 +157,10 @@ optional arguments:
   --aliases ALIASES     Alias mapping file
   --target-python-version {3.6,3.7,3.8,3.9}
                         target python version (default: 3.7)
+  --wrap-string-literal
+                        Wrap string literal by using black `experimental-
+                        string-processing` option (require black 20.8b0 or
+                        later)
   --validation          Enable validation (Only OpenAPI)
   --encoding ENCODING   The encoding of input and output (default: UTF-8)
   --debug               show debug message

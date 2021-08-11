@@ -223,7 +223,8 @@ class DataModel(TemplateBase, ABC):
     @property
     def imports(self) -> Tuple[Import, ...]:
         return chain_as_tuple(
-            (i for f in self.fields for i in f.imports), self._additional_imports,
+            (i for f in self.fields for i in f.imports),
+            self._additional_imports,
         )
 
     @property

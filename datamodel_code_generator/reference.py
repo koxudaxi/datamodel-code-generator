@@ -138,7 +138,11 @@ class FieldNameResolver:
     def _validate_field_name(cls, field_name: str) -> bool:
         return True
 
-    def get_valid_name(self, name: str, excludes: Optional[Set[str]] = None,) -> str:
+    def get_valid_name(
+        self,
+        name: str,
+        excludes: Optional[Set[str]] = None,
+    ) -> str:
         if not name:
             name = self.empty_field_name
         if name[0] == '#':
@@ -234,9 +238,11 @@ class ModelResolver:
         self.exclude_names: Set[str] = exclude_names or set()
         self.duplicate_name_suffix: Optional[str] = duplicate_name_suffix
         self._base_url: Optional[str] = base_url
-        self.singular_name_suffix: str = singular_name_suffix if isinstance(
-            singular_name_suffix, str
-        ) else SINGULAR_NAME_SUFFIX
+        self.singular_name_suffix: str = (
+            singular_name_suffix
+            if isinstance(singular_name_suffix, str)
+            else SINGULAR_NAME_SUFFIX
+        )
         merged_field_name_resolver_classes = DEFAULT_FIELD_NAME_RESOLVERS.copy()
         if field_name_resolver_classes:  # pragma: no cover
             merged_field_name_resolver_classes.update(field_name_resolver_classes)
@@ -419,7 +425,10 @@ class ModelResolver:
             )
         name = self.get_class_name(original_name, unique=False)
         reference = Reference(
-            path=path, original_name=original_name, name=name, loaded=False,
+            path=path,
+            original_name=original_name,
+            name=name,
+            loaded=False,
         )
 
         self.references[path] = reference
