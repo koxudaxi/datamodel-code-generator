@@ -352,12 +352,12 @@ class OpenAPIParser(JsonSchemaParser):
             if self.validation:
                 from prance import BaseParser
 
-                base_parser = BaseParser(
-                    spec_string=source.text, backend='openapi-spec-validator'
+                BaseParser(
+                    spec_string=source.text,
+                    backend='openapi-spec-validator',
+                    encoding=self.encoding,
                 )
-                specification: Dict[str, Any] = base_parser.specification
-            else:
-                specification = load_yaml(source.text)
+            specification: Dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
             schemas: Dict[Any, Any] = specification.get('components', {}).get(
                 'schemas', {}
