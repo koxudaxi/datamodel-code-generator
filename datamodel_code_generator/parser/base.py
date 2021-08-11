@@ -55,7 +55,15 @@ def to_hashable(item: Any) -> Any:
     if isinstance(item, list):
         return tuple(to_hashable(i) for i in item)
     elif isinstance(item, dict):
-        return tuple(sorted((k, to_hashable(v),) for k, v in item.items()))
+        return tuple(
+            sorted(
+                (
+                    k,
+                    to_hashable(v),
+                )
+                for k, v in item.items()
+            )
+        )
     elif isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)
     elif isinstance(item, BaseModel):
@@ -125,9 +133,19 @@ def sort_data_models(
                     and b.reference.path in unresolved_reference_model_names
                 ]
                 if indexes:
-                    ordered_models.append((min(indexes), model,))
+                    ordered_models.append(
+                        (
+                            min(indexes),
+                            model,
+                        )
+                    )
                 else:
-                    ordered_models.append((-1, model,))
+                    ordered_models.append(
+                        (
+                            -1,
+                            model,
+                        )
+                    )
             sorted_unresolved_models = [
                 m[1] for m in sorted(ordered_models, key=lambda m: m[0])
             ]
@@ -217,7 +235,8 @@ class Source(BaseModel):
     @classmethod
     def from_path(cls, path: Path, base_path: Path, encoding: str) -> 'Source':
         return cls(
-            path=path.relative_to(base_path), text=path.read_text(encoding=encoding),
+            path=path.relative_to(base_path),
+            text=path.read_text(encoding=encoding),
         )
 
 
@@ -263,6 +282,7 @@ class Parser(ABC):
         ] = title_to_class_name,
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
+        wrap_string_literal: Optional[bool] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -340,6 +360,7 @@ class Parser(ABC):
             base_path=self.base_path,
         )
         self.class_name: Optional[str] = class_name
+        self.wrap_string_literal: Optional[bool] = wrap_string_literal
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -398,7 +419,7 @@ class Parser(ABC):
 
         if format_:
             code_formatter: Optional[CodeFormatter] = CodeFormatter(
-                self.target_python_version, settings_path
+                self.target_python_version, settings_path, self.wrap_string_literal
             )
         else:
             code_formatter = None
@@ -455,7 +476,12 @@ class Parser(ABC):
                             if not child.base_classes:
                                 child.set_base_class()
 
-            module_models.append((module, models,))
+            module_models.append(
+                (
+                    module,
+                    models,
+                )
+            )
 
             scoped_model_resolver = ModelResolver(
                 exclude_names={i.alias or i.import_ for m in models for i in m.imports},

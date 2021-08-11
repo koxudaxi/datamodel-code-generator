@@ -577,7 +577,10 @@ def test_stdin(monkeypatch):
         output_file: Path = output_dir / 'output.py'
         monkeypatch.setattr('sys.stdin', (OPEN_API_DATA_PATH / 'api.yaml').open())
         return_code: Exit = main(
-            ['--output', str(output_file),]
+            [
+                '--output',
+                str(output_file),
+            ]
         )
         assert return_code == Exit.OK
         assert (
@@ -1154,7 +1157,9 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
             == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
-            [call('https://example.com/person.json'),]
+            [
+                call('https://example.com/person.json'),
+            ]
         )
     with pytest.raises(SystemExit):
         main()
@@ -1214,7 +1219,9 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
         httpx_get_mock.assert_has_calls(
-            [call('https://example.com/person.json'),]
+            [
+                call('https://example.com/person.json'),
+            ]
         )
     with pytest.raises(SystemExit):
         main()
@@ -1249,7 +1256,12 @@ def test_main_jsonschema_id_as_stdin(monkeypatch):
         output_file: Path = Path(output_dir) / 'output.py'
         monkeypatch.setattr('sys.stdin', (JSON_SCHEMA_DATA_PATH / 'id.json').open())
         return_code: Exit = main(
-            ['--output', str(output_file), '--input-file-type', 'jsonschema',]
+            [
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
         )
         assert return_code == Exit.OK
         assert (
@@ -1666,7 +1678,12 @@ def test_csv_stdin(monkeypatch):
         output_file: Path = Path(output_dir) / 'output.py'
         monkeypatch.setattr('sys.stdin', (CSV_DATA_PATH / 'simple.csv').open())
         return_code: Exit = main(
-            ['--output', str(output_file), '--input-file-type', 'csv',]
+            [
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'csv',
+            ]
         )
         assert return_code == Exit.OK
         assert (
@@ -2236,7 +2253,9 @@ def test_main_generate():
         input_ = (JSON_SCHEMA_DATA_PATH / 'person.json').relative_to(Path.cwd())
         assert not input_.is_absolute()
         generate(
-            input_=input_, input_file_type=InputFileType.JsonSchema, output=output_file,
+            input_=input_,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
         )
 
         assert (
@@ -2255,7 +2274,9 @@ def test_main_generate_from_directory():
         assert not input_.is_absolute()
         assert input_.is_dir()
         generate(
-            input_=input_, input_file_type=InputFileType.JsonSchema, output=output_path,
+            input_=input_,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
         )
 
         main_nested_directory = EXPECTED_MAIN_PATH / 'main_nested_directory'
@@ -3003,7 +3024,9 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
             ).read_text()
         )
         httpx_get_mock.assert_has_calls(
-            [call('https://schema.example'),]
+            [
+                call('https://schema.example'),
+            ]
         )
     with pytest.raises(SystemExit):
         main()
@@ -3114,6 +3137,59 @@ def test_main_openapi_oas_response_reference():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_openapi_oas_response_reference' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_long_description():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'long_description.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        print(output_file.read_text())
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_long_description_wrap_string_literal():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'long_description.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--wrap-string-literal',
+            ]
+        )
+        assert return_code == Exit.OK
+        print(output_file.read_text())
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_long_description_wrap_string_literal'
+                / 'output.py'
             ).read_text()
         )
     with pytest.raises(SystemExit):
