@@ -9,7 +9,10 @@ def test_custom_root_type():
     custom_root_type = CustomRootType(
         fields=[
             DataModelFieldBase(
-                name='a', data_type=DataType(type='str'), default='abc', required=False,
+                name='a',
+                data_type=DataType(type='str'),
+                default='abc',
+                required=False,
             )
         ],
         reference=Reference(name='test_model', path='test_model'),

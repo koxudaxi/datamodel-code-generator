@@ -56,10 +56,12 @@ def test_sort_data_models():
             reference=reference_a,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_b)], reference=reference_b,
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_b,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_b)], reference=reference_c,
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_c,
         ),
     ]
 
@@ -95,10 +97,12 @@ def test_sort_data_models_unresolved():
             reference=reference_a,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_b)], reference=reference_b,
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_b,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_b)], reference=reference_c,
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_c,
         ),
         BaseModel(
             fields=[
@@ -109,7 +113,8 @@ def test_sort_data_models_unresolved():
             reference=reference_d,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_v)], reference=reference_z,
+            fields=[DataModelField(data_type=data_type_v)],
+            reference=reference_z,
         ),
     ]
 
@@ -138,10 +143,12 @@ def test_sort_data_models_unresolved_raise_recursion_error():
             reference=reference_a,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_b)], reference=reference_b,
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_b,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_b)], reference=reference_c,
+            fields=[DataModelField(data_type=data_type_b)],
+            reference=reference_c,
         ),
         BaseModel(
             fields=[
@@ -152,7 +159,8 @@ def test_sort_data_models_unresolved_raise_recursion_error():
             reference=reference_d,
         ),
         BaseModel(
-            fields=[DataModelField(data_type=data_type_v)], reference=reference_z,
+            fields=[DataModelField(data_type=data_type_v)],
+            reference=reference_z,
         ),
     ]
 

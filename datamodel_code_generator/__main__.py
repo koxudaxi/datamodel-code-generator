@@ -54,10 +54,12 @@ DEFAULT_ENCODING = locale.getpreferredencoding()
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument(
-    '--input', help='Input file/directory (default: stdin)',
+    '--input',
+    help='Input file/directory (default: stdin)',
 )
 arg_parser.add_argument(
-    '--url', help='Input file URL. `--input` is ignore when `--url` is used',
+    '--url',
+    help='Input file URL. `--input` is ignore when `--url` is used',
 )
 arg_parser.add_argument(
     '--input-file-type',
@@ -74,7 +76,9 @@ arg_parser.add_argument(
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 
 arg_parser.add_argument(
-    '--base-class', help='Base Class (default: pydantic.BaseModel)', type=str,
+    '--base-class',
+    help='Base Class (default: pydantic.BaseModel)',
+    type=str,
 )
 arg_parser.add_argument(
     '--field-constraints',
@@ -215,7 +219,9 @@ arg_parser.add_argument(
 
 
 arg_parser.add_argument(
-    '--class-name', help='Set class name of root model', default=None,
+    '--class-name',
+    help='Set class name of root model',
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -230,6 +236,14 @@ arg_parser.add_argument(
     help='target python version (default: 3.7)',
     choices=[v.value for v in PythonVersion],
 )
+
+arg_parser.add_argument(
+    '--wrap-string-literal',
+    help='Wrap string literal by using black `experimental-string-processing` option (require black 20.8b0 or later)',
+    action='store_true',
+    default=None,
+)
+
 arg_parser.add_argument(
     '--validation',
     help='Enable validation (Only OpenAPI)',
@@ -323,6 +337,7 @@ class Config(BaseModel):
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
     openapi_scopes: Optional[List[OpenAPIScope]] = None
+    wrap_string_literal: Optional[bool] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -371,7 +386,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
 
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(
-            f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
+            f"Installed black doesn't support Python version {config.target_python_version.value}.\n"  # type: ignore
             f"You have to install a newer black.\n"
             f"Installed black version: {black.__version__}",
             file=sys.stderr,
@@ -446,6 +461,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             field_extra_keys=config.field_extra_keys,
             field_include_all_keys=config.field_include_all_keys,
             openapi_scopes=config.openapi_scopes,
+            wrap_string_literal=config.wrap_string_literal,
         )
         return Exit.OK
     except InvalidClassNameError as e:

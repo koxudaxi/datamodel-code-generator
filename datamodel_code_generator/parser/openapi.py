@@ -175,6 +175,7 @@ class OpenAPIParser(JsonSchemaParser):
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
         openapi_scopes: Optional[List[OpenAPIScope]] = None,
+        wrap_string_literal: Optional[bool] = None,
     ):
         super().__init__(
             source=source,
@@ -213,6 +214,7 @@ class OpenAPIParser(JsonSchemaParser):
             custom_class_name_generator=custom_class_name_generator,
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
+            wrap_string_literal=wrap_string_literal,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -239,7 +241,10 @@ class OpenAPIParser(JsonSchemaParser):
                 self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
 
     def parse_schema(
-        self, name: str, obj: JsonSchemaObject, path: List[str],
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
     ) -> DataType:
         if obj.is_array:
             data_type: DataType = self.parse_array_fields(
@@ -262,7 +267,10 @@ class OpenAPIParser(JsonSchemaParser):
         return data_type
 
     def parse_request_body(
-        self, name: str, request_body: RequestBodyObject, path: List[str],
+        self,
+        name: str,
+        request_body: RequestBodyObject,
+        path: List[str],
     ) -> None:
         for (
             media_type,
@@ -310,7 +318,11 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(path_name.replace('/', '_'))
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
-    def parse_operation(self, raw_operation: Dict[str, Any], path: List[str],) -> None:
+    def parse_operation(
+        self,
+        raw_operation: Dict[str, Any],
+        path: List[str],
+    ) -> None:
         operation = Operation.parse_obj(raw_operation)
         for parameters in operation.parameters:
             if isinstance(parameters, ReferenceObject):
@@ -397,5 +409,6 @@ class OpenAPIParser(JsonSchemaParser):
                             if security is not None and 'security' not in raw_operation:
                                 raw_operation['security'] = security
                             self.parse_operation(
-                                raw_operation, [*path, operation_name],
+                                raw_operation,
+                                [*path, operation_name],
                             )
