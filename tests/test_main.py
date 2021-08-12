@@ -2290,7 +2290,6 @@ def test_main_generate_from_directory():
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator():
-
     custom_class_name_generator = lambda title: f'Custom{title}'
 
     with TemporaryDirectory() as output_dir:
@@ -3158,7 +3157,6 @@ def test_long_description():
             ]
         )
         assert return_code == Exit.OK
-        print(output_file.read_text())
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
@@ -3183,7 +3181,6 @@ def test_long_description_wrap_string_literal():
             ]
         )
         assert return_code == Exit.OK
-        print(output_file.read_text())
         assert (
             output_file.read_text()
             == (
@@ -3194,3 +3191,12 @@ def test_long_description_wrap_string_literal():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+def test_version(capsys):
+    with pytest.raises(SystemExit) as e:
+        main(['--version'])
+    assert e.value.code == Exit.OK
+    captured = capsys.readouterr()
+    assert captured.out == '0.0.0\n'
+    assert captured.err == ''
