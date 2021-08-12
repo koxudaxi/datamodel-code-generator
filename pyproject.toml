@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "datamodel-code-generator"
-version = "0.0.1"
+version = "0.0.0"
 description = "Datamodel Code Generator"
 authors = ["Koudai Aono <koxudaxi@gmail.com>"]
 readme = "README.md"
@@ -21,13 +21,18 @@ classifiers = [
         "Programming Language :: Python :: Implementation :: CPython"]
 
 [build-system]
-requires = ["poetry_core>=1.0.0"]
+requires = ["poetry_core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
 pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision>\\d+)?))?$"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["*/version.py"]
+patterns = ["(^version: str = ')[^']*(')"]
+
 
 [tool.poetry.scripts]
 datamodel-codegen = "datamodel_code_generator.__main__:main"
