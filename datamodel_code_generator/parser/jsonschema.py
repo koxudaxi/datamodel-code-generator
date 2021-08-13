@@ -1024,6 +1024,9 @@ class JsonSchemaParser(Parser):
 
     def parse_ref(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.ref:
+            if obj.ref.startswith("#"):
+                obj.ref = path[0] + obj.ref
+
             self.resolve_ref(obj.ref)
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
