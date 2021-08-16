@@ -1098,20 +1098,6 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         self.parse_ref(obj, path)
 
-    def parse_json_pointer(
-        self, raw: Dict[str, Any], ref: str, path_parts: List[str]
-    ) -> None:
-        path = ref.split('#', 1)[-1]
-        if path[0] == '/':  # pragma: no cover
-            path = path[1:]
-        object_paths = path.split('/')
-        models = get_model_by_path(raw, object_paths)
-        model_name = object_paths[-1]
-
-        self.parse_raw_obj(
-            model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
-        )
-
     def parse_raw(self) -> None:
         if isinstance(self.source, list) or (
             isinstance(self.source, Path) and self.source.is_dir()
@@ -1148,6 +1134,20 @@ class JsonSchemaParser(Parser):
                 self._parse_file(self.raw_obj, obj_name, path_parts)
 
         self._resolve_unparsed_json_pointer()
+
+    def parse_json_pointer(
+        self, raw: Dict[str, Any], ref: str, path_parts: List[str]
+    ) -> None:
+        path = ref.split('#', 1)[-1]
+        if path[0] == '/':  # pragma: no cover
+            path = path[1:]
+        object_paths = path.split('/')
+        models = get_model_by_path(raw, object_paths)
+        model_name = object_paths[-1]
+
+        self.parse_raw_obj(
+            model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
+        )
 
     def _resolve_unparsed_json_pointer(self) -> None:
         model_count: int = len(self.results)
