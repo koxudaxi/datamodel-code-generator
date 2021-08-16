@@ -1135,20 +1135,6 @@ class JsonSchemaParser(Parser):
 
         self._resolve_unparsed_json_pointer()
 
-    def parse_json_pointer(
-        self, raw: Dict[str, Any], ref: str, path_parts: List[str]
-    ) -> None:
-        path = ref.split('#', 1)[-1]
-        if path[0] == '/':  # pragma: no cover
-            path = path[1:]
-        object_paths = path.split('/')
-        models = get_model_by_path(raw, object_paths)
-        model_name = object_paths[-1]
-
-        self.parse_raw_obj(
-            model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
-        )
-
     def _resolve_unparsed_json_pointer(self) -> None:
         model_count: int = len(self.results)
         for source in self.iter_source:
@@ -1172,6 +1158,20 @@ class JsonSchemaParser(Parser):
         if model_count != len(self.results):
             # New model have been generated. It try to resolve json pointer again.
             self._resolve_unparsed_json_pointer()
+
+    def parse_json_pointer(
+        self, raw: Dict[str, Any], ref: str, path_parts: List[str]
+    ) -> None:
+        path = ref.split('#', 1)[-1]
+        if path[0] == '/':  # pragma: no cover
+            path = path[1:]
+        object_paths = path.split('/')
+        models = get_model_by_path(raw, object_paths)
+        model_name = object_paths[-1]
+
+        self.parse_raw_obj(
+            model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
+        )
 
     def _parse_file(
         self,
