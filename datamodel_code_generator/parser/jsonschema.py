@@ -1174,6 +1174,7 @@ class JsonSchemaParser(Parser):
                 key = tuple(path_parts)
                 reserved_refs = set(self.reserved_refs.get(key) or [])
                 while reserved_refs:
+                    raise Exception(reserved_refs)
                     for reserved_path in sorted(reserved_refs):
                         reference = self.model_resolver.get(reserved_path)
                         if not reference or reference.loaded:
