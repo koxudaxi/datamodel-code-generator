@@ -3200,3 +3200,28 @@ def test_version(capsys):
     captured = capsys.readouterr()
     assert captured.out == '0.0.0\n'
     assert captured.err == ''
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_json_pointer():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'json_pointer.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_json_pointer' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
