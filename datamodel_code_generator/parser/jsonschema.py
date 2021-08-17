@@ -1133,45 +1133,45 @@ class JsonSchemaParser(Parser):
                         raise InvalidClassNameError(obj_name)
                 self._parse_file(self.raw_obj, obj_name, path_parts)
 
-        self._resolve_unparsed_json_pointer()
+        # self._resolve_unparsed_json_pointer()
 
-    def _resolve_unparsed_json_pointer(self) -> None:
-        model_count: int = len(self.results)
-        for source in self.iter_source:
-            path_parts = list(source.path.parts)
-            reserved_refs = self.reserved_refs.get(tuple(path_parts))  # type: ignore
-            if not reserved_refs:
-                continue
-            if self.current_source_path is not None:
-                self.current_source_path = source.path
+    # def _resolve_unparsed_json_pointer(self) -> None:
+    #     model_count: int = len(self.results)
+    #     for source in self.iter_source:
+    #         path_parts = list(source.path.parts)
+    #         reserved_refs = self.reserved_refs.get(tuple(path_parts))  # type: ignore
+    #         if not reserved_refs:
+    #             continue
+    #         if self.current_source_path is not None:
+    #             self.current_source_path = source.path
+    #
+    #         with self.model_resolver.current_base_path_context(
+    #             source.path.parent
+    #         ), self.model_resolver.current_root_context(path_parts):
+    #             for reserved_ref in sorted(reserved_refs):
+    #                 if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
+    #                     continue
+    #                 # for root model
+    #                 self.raw_obj = load_yaml(source.text)
+    #                 self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
+    #
+    #     if model_count != len(self.results):
+    #         # New model have been generated. It try to resolve json pointer again.
+    #         self._resolve_unparsed_json_pointer()
 
-            with self.model_resolver.current_base_path_context(
-                source.path.parent
-            ), self.model_resolver.current_root_context(path_parts):
-                for reserved_ref in sorted(reserved_refs):
-                    if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
-                        continue
-                    # for root model
-                    self.raw_obj = load_yaml(source.text)
-                    self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
-
-        if model_count != len(self.results):
-            # New model have been generated. It try to resolve json pointer again.
-            self._resolve_unparsed_json_pointer()
-
-    def parse_json_pointer(
-        self, raw: Dict[str, Any], ref: str, path_parts: List[str]
-    ) -> None:
-        path = ref.split('#', 1)[-1]
-        if path[0] == '/':  # pragma: no cover
-            path = path[1:]
-        object_paths = path.split('/')
-        models = get_model_by_path(raw, object_paths)
-        model_name = object_paths[-1]
-
-        self.parse_raw_obj(
-            model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
-        )
+    # def parse_json_pointer(
+    #     self, raw: Dict[str, Any], ref: str, path_parts: List[str]
+    # ) -> None:
+    #     path = ref.split('#', 1)[-1]
+    #     if path[0] == '/':  # pragma: no cover
+    #         path = path[1:]
+    #     object_paths = path.split('/')
+    #     models = get_model_by_path(raw, object_paths)
+    #     model_name = object_paths[-1]
+    #
+    #     self.parse_raw_obj(
+    #         model_name, models, [*path_parts, f'#/{object_paths[0]}', *object_paths[1:]]
+    #     )
 
     def _parse_file(
         self,
