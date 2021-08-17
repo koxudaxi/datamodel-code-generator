@@ -42,14 +42,16 @@ jobs:
       run: poetry install --no-interaction --no-root -E http
     - name: Lint
       run: |
-        poetry run ./scripts/lint.sh
+        source $VENV
+        ./scripts/lint.sh
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
          poetry run pip install isort=="$ISORT"
     - name: Unit Test
       run: |
-         poetry run ./scripts/test.sh
+         source $VENV
+         ./scripts/test.sh
     - name: Upload coverage to Codecov
       if: matrix.os != 'windows-latest'
       uses: codecov/codecov-action@v2
