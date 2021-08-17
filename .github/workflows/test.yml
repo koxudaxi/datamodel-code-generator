@@ -43,7 +43,7 @@ jobs:
     - name: Lint
       run: |
         source $VENV
-        ./scripts/lint.sh
+        source ./scripts/lint.sh
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
@@ -51,7 +51,7 @@ jobs:
     - name: Unit Test
       run: |
         source $VENV
-        ./scripts/test.sh
+        source ./scripts/test.sh
     - name: Upload coverage to Codecov
       if: matrix.os != 'windows-latest'
       uses: codecov/codecov-action@v2
