@@ -43,7 +43,9 @@ jobs:
     - name: Lint
       run: |
         source $VENV
-        source ./scripts/lint.sh
+        black --check datamodel_code_generator tests
+        isort --check-only datamodel_code_generator tests
+        mypy datamodel_code_generator
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
@@ -51,7 +53,7 @@ jobs:
     - name: Unit Test
       run: |
         source $VENV
-        source ./scripts/test.sh
+        pytest --cov=datamodel_code_generator --cov-report xml  --cov-report term-missing tests
     - name: Upload coverage to Codecov
       if: matrix.os != 'windows-latest'
       uses: codecov/codecov-action@v2
