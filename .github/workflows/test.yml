@@ -53,7 +53,7 @@ jobs:
         source $VENV
         ./scripts/test.sh
     - name: Upload coverage to Codecov
-#       if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'windows-latest'
       uses: codecov/codecov-action@v1.5.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
