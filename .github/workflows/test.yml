@@ -34,7 +34,7 @@ jobs:
     - name: Load cached venv
       id: cached-poetry-dependencies
       uses: actions/cache@v2
-      if: matrix.os != 'windows-latest' || python-version != '3.6'
+      if: matrix.os != 'windows-latest' || matrix.python-version != '3.6'
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
