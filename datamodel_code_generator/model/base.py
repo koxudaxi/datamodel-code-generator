@@ -51,9 +51,8 @@ class DataModelFieldBase(_BaseModel):
 
     def __init__(self, **data: Any):  # type: ignore
         super().__init__(**data)
-        if isinstance(self.data_type, DataType):
-            if self.data_type.reference or self.data_type.data_types:
-                self.data_type.parent = self
+        if self.data_type.reference or self.data_type.data_types:
+            self.data_type.parent = self
 
     @property
     def type_hint(self) -> str:
