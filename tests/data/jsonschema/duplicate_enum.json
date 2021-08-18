@@ -3,26 +3,49 @@
   "title": "User",
   "type": "object",
   "properties": {
-      "name": {
-          "type": "string"
-      },
-      "animal": {
-        "type": "string",
-        "enum": [
-            "dog",
-            "cat",
-            "snake"
-        ],
-        "default": "dog"
+    "name": {
+      "type": "string"
     },
-      "pet": {
+    "animal": {
+      "type": "string",
+      "enum": [
+        "dog",
+        "cat",
+        "snake"
+      ],
+      "default": "dog"
+    },
+    "pet": {
+      "type": "string",
+      "enum": [
+        "dog",
+        "cat",
+        "snake"
+      ],
+      "default": "cat"
+    },
+    "redistribute": {
+      "type": "array",
+      "items": {
         "type": "string",
         "enum": [
-            "dog",
-            "cat",
-            "snake"
-        ],
-        "default": "cat"
+          "static",
+          "connected"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "redistribute": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "static",
+          "connected"
+        ]
+      },
+      "description": "Redistribute type for routes."
     }
   }
 }
