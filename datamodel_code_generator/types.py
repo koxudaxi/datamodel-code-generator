@@ -214,7 +214,7 @@ class DataType(_BaseModel):  # type: ignore
                 break
 
         for data_type in self.data_types:
-            if data_type.reference:
+            if data_type.reference or data_type.data_types:
                 data_type.parent = self
 
         if self.reference:
