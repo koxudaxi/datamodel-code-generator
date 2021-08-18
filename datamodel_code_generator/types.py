@@ -58,7 +58,6 @@ class DataType(_BaseModel):
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
-    is_enum: bool = False
     literals: List[str] = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
@@ -68,7 +67,8 @@ class DataType(_BaseModel):
     strict: bool = False
 
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
-    _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
+    _pass_fields: ClassVar[Set[str]] = {
+        'parent', 'children', 'data_types', 'reference'}
 
     @classmethod
     def from_import(
@@ -131,6 +131,10 @@ class DataType(_BaseModel):
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
+
+    @property
+    def is_enum(self) -> bool:
+        return self.reference.source.base_class == 'Enum' if self.reference and self.reference.source else False
 
     @property
     def all_imports(self) -> Iterator[Import]:
@@ -230,7 +234,8 @@ class DataType(_BaseModel):
             type_ = f'Optional[{type_}]'
         elif self.is_func:
             if self.kwargs:
-                kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
+                kwargs: str = ', '.join(
+                    f'{k}={v}' for k, v in self.kwargs.items())
                 return f'{type_}({kwargs})'
             return f'{type_}()'
         return type_

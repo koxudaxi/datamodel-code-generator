@@ -371,8 +371,7 @@ class JsonSchemaParser(Parser):
 
     def get_ref_data_type(self, ref: str) -> DataType:
         reference = self.model_resolver.add_ref(ref)
-        is_enum = reference.source.base_class == 'Enum' if reference.source else False
-        return self.data_type(reference=reference, is_enum=is_enum)
+        return self.data_type(reference=reference)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.additionalProperties:
@@ -866,7 +865,7 @@ class JsonSchemaParser(Parser):
                 description=obj.description if self.use_schema_description else None,
             )
             self.append_result(enum)
-            return self.data_type(reference=reference, is_enum=True)
+            return self.data_type(reference=reference)
 
         root_reference = self.model_resolver.add(
             path,
@@ -910,7 +909,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
         )
         self.append_result(data_model_root_type)
-        return self.data_type(reference=root_reference, is_enum=True)
+        return self.data_type(reference=root_reference)
 
     def _parse_enum_fields(self, obj: JsonSchemaObject, key, enum_part):
         if obj.type == 'string' or isinstance(enum_part, str):
