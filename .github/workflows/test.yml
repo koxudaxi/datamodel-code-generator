@@ -36,7 +36,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-v1-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root -E http
@@ -50,11 +50,11 @@ jobs:
          poetry run pip install isort=="$ISORT"
     - name: Unit Test
       run: |
-        source $VENV
-        ./scripts/test.sh
+         source $VENV
+         ./scripts/test.sh
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest'
-      uses: codecov/codecov-action@v1.5.1
+      if: matrix.os != 'windows-latest'
+      uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests

@@ -1210,3 +1210,22 @@ class JsonSchemaParser(Parser):
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)
+
+                key = tuple(path_parts)
+                reserved_refs = set(self.reserved_refs.get(key) or [])
+                while reserved_refs:
+                    for reserved_path in sorted(reserved_refs):
+                        reference = self.model_resolver.get(reserved_path)
+                        if not reference or reference.loaded:
+                            continue
+                        path = reserved_path.split('/')
+                        _, *object_paths = path
+                        models = get_model_by_path(raw, object_paths)
+                        model_name = object_paths[-1]
+                        self.parse_obj(
+                            model_name, JsonSchemaObject.parse_obj(models), path
+                        )
+                    previous_reserved_refs = reserved_refs
+                    reserved_refs = set(self.reserved_refs.get(key) or [])
+                    if previous_reserved_refs == reserved_refs:
+                        break
