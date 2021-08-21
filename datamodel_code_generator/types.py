@@ -80,6 +80,7 @@ class DataType(_BaseModel):  # type: ignore
     children: List[Any] = []
     strict: bool = False
     dict_key: Optional['DataType'] = None
+
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
 
@@ -193,7 +194,6 @@ class DataType(_BaseModel):  # type: ignore
                 (self.is_list, IMPORT_LIST),
                 (self.is_dict, IMPORT_DICT),
             )
-
         for field, import_ in imports:
             if field and import_ != self.import_:
                 yield import_
