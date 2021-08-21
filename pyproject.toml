@@ -119,6 +119,10 @@ exclude_lines = [
 
 omit = ["tests/*"]
 
+
+[tool.pydantic-pycharm-plugin]
+ignore-init-method-arguments = true
+
 [tool.pydantic-pycharm-plugin.parsable-types]
 # str field may parse int and float
 str = ["int", "float"]
