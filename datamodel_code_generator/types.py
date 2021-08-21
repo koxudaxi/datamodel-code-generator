@@ -79,7 +79,7 @@ class DataType(_BaseModel):  # type: ignore
     parent: Optional[Any] = None
     children: List[Any] = []
     strict: bool = False
-
+    dict_key: Optional['DataType'] = None
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
 
@@ -193,9 +193,13 @@ class DataType(_BaseModel):  # type: ignore
                 (self.is_list, IMPORT_LIST),
                 (self.is_dict, IMPORT_DICT),
             )
+
         for field, import_ in imports:
             if field and import_ != self.import_:
                 yield import_
+
+        if self.dict_key:
+            yield from self.dict_key.imports
 
     def __init__(self, **values: Any) -> None:
         super().__init__(**values)
@@ -256,7 +260,11 @@ class DataType(_BaseModel):  # type: ignore
                 dict_ = 'dict'
             else:
                 dict_ = 'Dict'
-            type_ = f'{dict_}[str, {type_}]' if type_ else dict_
+            if self.dict_key or type_:
+                key = self.dict_key.type_hint if self.dict_key else 'str'
+                type_ = f'{dict_}[{key}, {type_ or "Any"}]'
+            else:
+                type_ = dict_
         if self.is_optional and type_ != 'Any':
             type_ = f'Optional[{type_}]'
         elif self.is_func:
