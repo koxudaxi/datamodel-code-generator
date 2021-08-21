@@ -263,7 +263,7 @@ class DataType(_BaseModel):  # type: ignore
             if self.dict_key or type_:
                 key = self.dict_key.type_hint if self.dict_key else 'str'
                 type_ = f'{dict_}[{key}, {type_ or "Any"}]'
-            else:
+            else:  # pragma: no cover
                 type_ = dict_
         if self.is_optional and type_ != 'Any':
             type_ = f'Optional[{type_}]'
