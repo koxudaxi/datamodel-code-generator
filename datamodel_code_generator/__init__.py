@@ -223,6 +223,7 @@ def generate(
     field_include_all_keys: bool = False,
     openapi_scopes: Optional[List[OpenAPIScope]] = None,
     wrap_string_literal: Optional[bool] = None,
+    use_title_as_name: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -339,6 +340,7 @@ def generate(
         field_extra_keys=field_extra_keys,
         field_include_all_keys=field_include_all_keys,
         wrap_string_literal=wrap_string_literal,
+        use_title_as_name=use_title_as_name,
         **kwargs,
     )
 

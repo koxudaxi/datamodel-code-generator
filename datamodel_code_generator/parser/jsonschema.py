@@ -308,6 +308,7 @@ class JsonSchemaParser(Parser):
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
         wrap_string_literal: Optional[bool] = None,
+        use_title_as_name: bool = False,
     ):
         super().__init__(
             source=source,
@@ -347,6 +348,7 @@ class JsonSchemaParser(Parser):
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
             wrap_string_literal=wrap_string_literal,
+            use_title_as_name=use_title_as_name,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -469,6 +471,8 @@ class JsonSchemaParser(Parser):
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             return self.data_type(reference=base_classes[0])
+        if self.use_title_as_name and obj.title:
+            name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.name, obj)
         data_model_type = self.data_model_type(
@@ -558,6 +562,8 @@ class JsonSchemaParser(Parser):
                 f'An object name must be unique.'
                 f'This argument will be removed in a future version'
             )
+        if self.use_title_as_name and obj.title:
+            name = obj.title
         reference = self.model_resolver.add(
             path,
             name,
@@ -590,6 +596,9 @@ class JsonSchemaParser(Parser):
         singular_name: bool = False,
         parent: Optional[JsonSchemaObject] = None,
     ) -> DataType:
+        if self.use_title_as_name and item.title:
+            name = item.title
+            singular_name = False
         if (
             parent
             and item.has_constraint
@@ -762,6 +771,8 @@ class JsonSchemaParser(Parser):
         path: List[str],
         original_name: Optional[str] = None,
     ) -> DataType:
+        if self.use_title_as_name and obj.title:
+            name = obj.title
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
@@ -841,6 +852,8 @@ class JsonSchemaParser(Parser):
             required = not obj.nullable and not (
                 obj.has_default and self.apply_default_values_for_required_fields
             )
+        if self.use_title_as_name and obj.title:
+            name = obj.title
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self.set_title(name, obj)
         self.set_additional_properties(name, obj)
@@ -938,6 +951,8 @@ class JsonSchemaParser(Parser):
             self.results.append(enum)
             return self.data_type(reference=reference_)
 
+        if self.use_title_as_name and obj.title:
+            name = obj.title
         reference = self.model_resolver.add(
             path,
             name,

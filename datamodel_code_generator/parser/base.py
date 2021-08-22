@@ -283,6 +283,7 @@ class Parser(ABC):
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
         wrap_string_literal: Optional[bool] = None,
+        use_title_as_name: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -328,6 +329,7 @@ class Parser(ABC):
             remote_text_cache or DefaultPutDict()
         )
         self.current_source_path: Optional[Path] = None
+        self.use_title_as_name: bool = use_title_as_name
 
         if base_path:
             self.base_path = base_path
