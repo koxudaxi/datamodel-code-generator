@@ -45,6 +45,7 @@
       "type": "object",
       "properties": {
         "processing_status_union": {
+          "title": "Processing Status Union Title",
           "allOf": [
             {
               "title": "Processing Status Detail",

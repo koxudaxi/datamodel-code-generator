@@ -24,13 +24,6 @@ class ExtendedProcessingTaskItem(BaseModel):
     comment: Optional[str] = None
 
 
-class ProcessingTask(BaseModel):
-    processing_status_union: Optional[ProcessingStatus] = 'COMPLETED'
-    processing_status: Optional[ProcessingStatus] = 'COMPLETED'
-    name: Optional[str] = None
-    kind: Optional[Kind] = None
-
-
 class Model(BaseModel):
     __root__: List[ProcessingTask]
 
@@ -41,3 +34,19 @@ class ExtendedProcessingTask(BaseModel):
 
 class ExtendedProcessingTasks(BaseModel):
     __root__: List[ExtendedProcessingTask]
+
+
+class ProcessingTask(BaseModel):
+    processing_status_union: Optional[ProcessingStatusUnion] = 'COMPLETED'
+    processing_status: Optional[ProcessingStatus] = 'COMPLETED'
+    name: Optional[str] = None
+    kind: Optional[Kind] = None
+
+
+class ProcessingStatusUnion(BaseModel):
+    id: Optional[int] = None
+    description: Optional[str] = None
+
+
+Model.update_forward_refs()
+ProcessingTask.update_forward_refs()

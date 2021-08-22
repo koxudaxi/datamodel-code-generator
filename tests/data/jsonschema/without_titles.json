@@ -41,11 +41,19 @@
       "properties": {
         "processing_status_union": {
           "allOf": [
-            {
-              "type": "string"
+               {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
             },
             {
-              "$ref": "#/definitions/ProcessingStatus"
+              "$ref": "#/definitions/ExtendedProcessingTask"
             }
           ],
           "default": "COMPLETED"

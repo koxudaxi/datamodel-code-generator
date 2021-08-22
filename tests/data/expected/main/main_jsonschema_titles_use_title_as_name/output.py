@@ -41,13 +41,15 @@ class ExtendedProcessingTasksTitle(BaseModel):
 
 
 class ProcessingTaskTitle(BaseModel):
-    processing_status_union: Optional[ProcessingStatusUnion] = 'COMPLETED'
+    processing_status_union: Optional[ProcessingStatusUnionTitle] = Field(
+        'COMPLETED', title='Processing Status Union Title'
+    )
     processing_status: Optional[ProcessingStatusTitle] = 'COMPLETED'
     name: Optional[str] = None
     kind: Optional[Kind] = None
 
 
-class ProcessingStatusUnion(BaseModel):
+class ProcessingStatusUnionTitle(BaseModel):
     id: Optional[int] = None
     description: Optional[str] = None
 
