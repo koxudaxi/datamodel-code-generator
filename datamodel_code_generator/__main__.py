@@ -13,7 +13,18 @@ from collections import defaultdict
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, Optional, Sequence, Set, Union, cast
+from typing import (
+    Any,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
@@ -60,6 +71,13 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--url',
     help='Input file URL. `--input` is ignore when `--url` is used',
+)
+
+arg_parser.add_argument(
+    '--http-headers',
+    nargs='+',
+    metavar='HTTP_HEADER',
+    help='Set headers in HTTP requests to the remote host. (example: "Authorization: Basic dXNlcjpwYXNz")',
 )
 arg_parser.add_argument(
     '--input-file-type',
@@ -310,6 +328,16 @@ class Config(BaseModel):
                 )
         return values
 
+    @validator('http_headers', pre=True, each_item=True)
+    def validate_http_headers(cls, value: Any) -> Optional[Tuple[str, str]]:
+        if isinstance(value, str):  # pragma: no cover
+            try:
+                field_name, field_value = value.split(':', maxsplit=1)  # type: str, str
+                return field_name, field_value.lstrip()
+            except ValueError:
+                raise Error(f'Invalid http header: {value!r}')
+        return value
+
     input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
@@ -346,6 +374,7 @@ class Config(BaseModel):
     openapi_scopes: Optional[List[OpenAPIScope]] = None
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
+    http_headers: Optional[Sequence[Tuple[str, str]]] = None
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -471,6 +500,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             openapi_scopes=config.openapi_scopes,
             wrap_string_literal=config.wrap_string_literal,
             use_title_as_name=config.use_title_as_name,
+            http_headers=config.http_headers,
         )
         return Exit.OK
     except InvalidClassNameError as e:

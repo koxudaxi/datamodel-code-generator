@@ -1158,7 +1158,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json'),
+                call('https://example.com/person.json', headers=None),
             ]
         )
     with pytest.raises(SystemExit):
@@ -1220,7 +1220,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json'),
+                call('https://example.com/person.json', headers=None),
             ]
         )
     with pytest.raises(SystemExit):
@@ -2412,27 +2412,37 @@ def test_main_http_jsonschema(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/external_files_in_directory/person.json'),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/pet.json'
+                    'https://example.com/external_files_in_directory/person.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/fur.json'
+                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/friends.json'
+                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/food.json'
+                    'https://example.com/external_files_in_directory/definitions/friends.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/machine/robot.json'
+                    'https://example.com/external_files_in_directory/definitions/food.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json'
+                    'https://example.com/external_files_in_directory/definitions/machine/robot.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/drink/tea.json'
+                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
+                    headers=None,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/tea.json',
+                    headers=None,
                 ),
             ]
         )
@@ -2473,8 +2483,11 @@ def test_main_http_openapi(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/refs.yaml'),
-                call('https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml'),
+                call('https://example.com/refs.yaml', headers=None),
+                call(
+                    'https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml',
+                    headers=None,
+                ),
             ]
         )
     with pytest.raises(SystemExit):
@@ -3024,7 +3037,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://schema.example'),
+                call('https://schema.example', headers=None),
             ]
         )
     with pytest.raises(SystemExit):
