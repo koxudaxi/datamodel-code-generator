@@ -175,7 +175,8 @@ class OpenAPIParser(JsonSchemaParser):
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
         openapi_scopes: Optional[List[OpenAPIScope]] = None,
-        wrap_string_literal: Optional[bool] = None,
+        wrap_string_literal: bool = False,
+        use_title_as_name: bool = False,
     ):
         super().__init__(
             source=source,
@@ -215,6 +216,7 @@ class OpenAPIParser(JsonSchemaParser):
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
             wrap_string_literal=wrap_string_literal,
+            use_title_as_name=use_title_as_name,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

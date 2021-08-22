@@ -225,6 +225,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-title-as-name',
+    help='use titles as class names of models',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
 )
 arg_parser.add_argument(
@@ -337,7 +344,8 @@ class Config(BaseModel):
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
     openapi_scopes: Optional[List[OpenAPIScope]] = None
-    wrap_string_literal: Optional[bool] = None
+    wrap_string_literal: bool = False
+    use_title_as_name: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -462,6 +470,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             field_include_all_keys=config.field_include_all_keys,
             openapi_scopes=config.openapi_scopes,
             wrap_string_literal=config.wrap_string_literal,
+            use_title_as_name=config.use_title_as_name,
         )
         return Exit.OK
     except InvalidClassNameError as e:
