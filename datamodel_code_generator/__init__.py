@@ -222,7 +222,7 @@ def generate(
     field_extra_keys: Optional[Set[str]] = None,
     field_include_all_keys: bool = False,
     openapi_scopes: Optional[List[OpenAPIScope]] = None,
-    wrap_string_literal: bool = False,
+    wrap_string_literal: Optional[bool] = None,
     use_title_as_name: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()

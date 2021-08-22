@@ -308,7 +308,7 @@ class JsonSchemaParser(Parser):
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
         wrap_string_literal: bool = False,
-        use_title_as_name: bool = False,
+        use_title_as_name: Optional[bool] = None,
     ):
         super().__init__(
             source=source,
