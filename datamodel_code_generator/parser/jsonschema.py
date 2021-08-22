@@ -307,8 +307,8 @@ class JsonSchemaParser(Parser):
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
-        wrap_string_literal: Optional[bool] = False,
-        use_title_as_name: bool = None,
+        wrap_string_literal: Optional[bool] = None,
+        use_title_as_name: bool = False,
     ):
         super().__init__(
             source=source,
