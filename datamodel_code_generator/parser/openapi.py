@@ -14,6 +14,7 @@ from typing import (
     Pattern,
     Sequence,
     Set,
+    Tuple,
     Type,
     Union,
 )
@@ -177,6 +178,7 @@ class OpenAPIParser(JsonSchemaParser):
         openapi_scopes: Optional[List[OpenAPIScope]] = None,
         wrap_string_literal: Optional[bool] = False,
         use_title_as_name: bool = False,
+        http_headers: Optional[Sequence[Tuple[str, str]]] = None,
     ):
         super().__init__(
             source=source,
@@ -217,6 +219,7 @@ class OpenAPIParser(JsonSchemaParser):
             field_include_all_keys=field_include_all_keys,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
+            http_headers=http_headers,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

@@ -2451,6 +2451,104 @@ def test_main_http_jsonschema(mocker):
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.parametrize(
+    'headers_arguments,headers_requests',
+    [
+        (
+            ('Authorization: Basic dXNlcjpwYXNz',),
+            [('Authorization', 'Basic dXNlcjpwYXNz')],
+        ),
+        (
+            ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
+            [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
+        ),
+    ],
+)
+def test_main_http_jsonschema_with_http_headers(
+    mocker, headers_arguments, headers_requests
+):
+    external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
+
+    def get_mock_response(path: str) -> mocker.Mock:
+        mock = mocker.Mock()
+        mock.text = (external_directory / path).read_text()
+        return mock
+
+    httpx_get_mock = mocker.patch(
+        'httpx.get',
+        side_effect=[
+            get_mock_response('person.json'),
+            get_mock_response('definitions/pet.json'),
+            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/friends.json'),
+            get_mock_response('definitions/food.json'),
+            get_mock_response('definitions/machine/robot.json'),
+            get_mock_response('definitions/drink/coffee.json'),
+            get_mock_response('definitions/drink/tea.json'),
+        ],
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--url',
+                'https://example.com/external_files_in_directory/person.json',
+                '--http-headers',
+                *headers_arguments,
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+        ).read_text().replace(
+            '#   filename:  person.json',
+            '#   filename:  https://example.com/external_files_in_directory/person.json',
+        )
+        httpx_get_mock.assert_has_calls(
+            [
+                call(
+                    'https://example.com/external_files_in_directory/person.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/friends.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/food.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/machine/robot.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/tea.json',
+                    headers=headers_requests,
+                ),
+            ]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_http_openapi(mocker):
     def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()

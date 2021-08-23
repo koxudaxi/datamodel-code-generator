@@ -343,6 +343,7 @@ def generate(
         field_include_all_keys=field_include_all_keys,
         wrap_string_literal=wrap_string_literal,
         use_title_as_name=use_title_as_name,
+        http_headers=http_headers,
         **kwargs,
     )
 
