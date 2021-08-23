@@ -336,7 +336,7 @@ class Config(BaseModel):
                 return field_name, field_value.lstrip()
             except ValueError:
                 raise Error(f'Invalid http header: {value!r}')
-        return value
+        return value  # pragma: no cover
 
     input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
