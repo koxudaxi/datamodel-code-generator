@@ -309,6 +309,7 @@ class JsonSchemaParser(Parser):
         field_include_all_keys: bool = False,
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
+        http_headers: Optional[Sequence[Tuple[str, str]]] = None,
     ):
         super().__init__(
             source=source,
@@ -349,6 +350,7 @@ class JsonSchemaParser(Parser):
             field_include_all_keys=field_include_all_keys,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
+            http_headers=http_headers,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()

@@ -1,3 +1,5 @@
+from typing import Optional, Sequence, Tuple
+
 try:
     import httpx
 except ImportError:  # pragma: no cover
@@ -6,8 +8,8 @@ except ImportError:  # pragma: no cover
     )
 
 
-def get_body(url: str) -> str:
-    return httpx.get(url).text
+def get_body(url: str, headers: Optional[Sequence[Tuple[str, str]]] = None) -> str:
+    return httpx.get(url, headers=headers).text
 
 
 def join_url(url: str, ref: str = '.') -> str:

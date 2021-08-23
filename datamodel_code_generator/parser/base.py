@@ -284,6 +284,7 @@ class Parser(ABC):
         field_include_all_keys: bool = False,
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
+        http_headers: Optional[Sequence[Tuple[str, str]]] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -363,6 +364,7 @@ class Parser(ABC):
         )
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
+        self.http_headers: Optional[Sequence[Tuple[str, str]]] = http_headers
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -389,7 +391,9 @@ class Parser(ABC):
     def _get_text_from_url(self, url: str) -> str:
         from datamodel_code_generator.http import get_body
 
-        return self.remote_text_cache.get_or_put(url, default_factory=get_body)
+        return self.remote_text_cache.get_or_put(
+            url, default_factory=lambda url_: get_body(url, self.http_headers)
+        )
 
     @classmethod
     def get_url_path_parts(cls, url: ParseResult) -> List[str]:

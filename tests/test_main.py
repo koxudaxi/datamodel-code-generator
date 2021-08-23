@@ -1158,7 +1158,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json'),
+                call('https://example.com/person.json', headers=None),
             ]
         )
     with pytest.raises(SystemExit):
@@ -1220,7 +1220,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json'),
+                call('https://example.com/person.json', headers=None),
             ]
         )
     with pytest.raises(SystemExit):
@@ -2412,27 +2412,135 @@ def test_main_http_jsonschema(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/external_files_in_directory/person.json'),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/pet.json'
+                    'https://example.com/external_files_in_directory/person.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/fur.json'
+                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/friends.json'
+                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/food.json'
+                    'https://example.com/external_files_in_directory/definitions/friends.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/machine/robot.json'
+                    'https://example.com/external_files_in_directory/definitions/food.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json'
+                    'https://example.com/external_files_in_directory/definitions/machine/robot.json',
+                    headers=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/drink/tea.json'
+                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
+                    headers=None,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/tea.json',
+                    headers=None,
+                ),
+            ]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.parametrize(
+    'headers_arguments,headers_requests',
+    [
+        (
+            ('Authorization: Basic dXNlcjpwYXNz',),
+            [('Authorization', 'Basic dXNlcjpwYXNz')],
+        ),
+        (
+            ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
+            [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
+        ),
+    ],
+)
+def test_main_http_jsonschema_with_http_headers(
+    mocker, headers_arguments, headers_requests
+):
+    external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
+
+    def get_mock_response(path: str) -> mocker.Mock:
+        mock = mocker.Mock()
+        mock.text = (external_directory / path).read_text()
+        return mock
+
+    httpx_get_mock = mocker.patch(
+        'httpx.get',
+        side_effect=[
+            get_mock_response('person.json'),
+            get_mock_response('definitions/pet.json'),
+            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/friends.json'),
+            get_mock_response('definitions/food.json'),
+            get_mock_response('definitions/machine/robot.json'),
+            get_mock_response('definitions/drink/coffee.json'),
+            get_mock_response('definitions/drink/tea.json'),
+        ],
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--url',
+                'https://example.com/external_files_in_directory/person.json',
+                '--http-headers',
+                *headers_arguments,
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+        ).read_text().replace(
+            '#   filename:  person.json',
+            '#   filename:  https://example.com/external_files_in_directory/person.json',
+        )
+        httpx_get_mock.assert_has_calls(
+            [
+                call(
+                    'https://example.com/external_files_in_directory/person.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/friends.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/food.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/machine/robot.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
+                    headers=headers_requests,
+                ),
+                call(
+                    'https://example.com/external_files_in_directory/definitions/drink/tea.json',
+                    headers=headers_requests,
                 ),
             ]
         )
@@ -2473,8 +2581,11 @@ def test_main_http_openapi(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/refs.yaml'),
-                call('https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml'),
+                call('https://example.com/refs.yaml', headers=None),
+                call(
+                    'https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml',
+                    headers=None,
+                ),
             ]
         )
     with pytest.raises(SystemExit):
@@ -3024,7 +3135,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://schema.example'),
+                call('https://schema.example', headers=None),
             ]
         )
     with pytest.raises(SystemExit):
