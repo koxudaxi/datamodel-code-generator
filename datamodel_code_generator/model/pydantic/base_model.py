@@ -95,9 +95,18 @@ class DataModelField(DataModelFieldBase):
                 return 'Field(...)'  # Field() is for mypy
             return ""
 
-        value_arg = "..." if self.required else repr(self.default)
         kwargs = ",".join(field_arguments)
+        if self.use_annotated:
+            return f'Field({kwargs})'
+        value_arg = "..." if self.required else repr(self.default)
+
         return f'Field({value_arg}, {kwargs})'
+
+    @property
+    def annotated(self) -> Optional[str]:
+        if not self.use_annotated or not str(self):
+            return None
+        return f'Annotated[{self.type_hint}, {str(self)}]'
 
 
 class BaseModel(DataModel):

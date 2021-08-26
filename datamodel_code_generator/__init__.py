@@ -226,6 +226,7 @@ def generate(
     wrap_string_literal: Optional[bool] = None,
     use_title_as_name: bool = False,
     http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+    use_annotated: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -344,6 +345,7 @@ def generate(
         wrap_string_literal=wrap_string_literal,
         use_title_as_name=use_title_as_name,
         http_headers=http_headers,
+        use_annotated=use_annotated,
         **kwargs,
     )
 

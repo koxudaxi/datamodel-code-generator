@@ -179,6 +179,7 @@ class OpenAPIParser(JsonSchemaParser):
         wrap_string_literal: Optional[bool] = False,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        use_annotated: bool = False,
     ):
         super().__init__(
             source=source,
@@ -220,6 +221,7 @@ class OpenAPIParser(JsonSchemaParser):
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
             http_headers=http_headers,
+            use_annotated=use_annotated,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

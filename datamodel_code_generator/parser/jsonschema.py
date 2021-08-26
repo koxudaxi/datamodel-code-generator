@@ -310,6 +310,7 @@ class JsonSchemaParser(Parser):
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        use_annotated: bool = False,
     ):
         super().__init__(
             source=source,
@@ -351,6 +352,7 @@ class JsonSchemaParser(Parser):
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
             http_headers=http_headers,
+            use_annotated=use_annotated,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -546,6 +548,7 @@ class JsonSchemaParser(Parser):
                     else None,
                     strip_default_none=self.strip_default_none,
                     extras={**self.get_field_extras(field)},
+                    use_annotated=self.use_annotated,
                 )
             )
         return fields
@@ -764,6 +767,7 @@ class JsonSchemaParser(Parser):
             nullable=nullable,
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(obj),
+            use_annotated=self.use_annotated,
         )
 
     def parse_array(
@@ -797,6 +801,7 @@ class JsonSchemaParser(Parser):
                 nullable=field.nullable,
                 strip_default_none=field.strip_default_none,
                 extras=field.extras,
+                use_annotated=self.use_annotated,
             )
 
         data_model_root = self.data_model_root_type(
@@ -870,6 +875,7 @@ class JsonSchemaParser(Parser):
                     nullable=obj.nullable if self.strict_nullable else None,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
+                    use_annotated=self.use_annotated,
                 )
             ],
             custom_base_class=self.base_class,
@@ -986,6 +992,7 @@ class JsonSchemaParser(Parser):
                     nullable=True,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
+                    use_annotated=self.use_annotated,
                 )
             ],
             custom_base_class=self.base_class,
