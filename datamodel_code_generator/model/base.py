@@ -13,6 +13,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
 )
 
 from jinja2 import Environment, FileSystemLoader, Template
@@ -70,7 +71,9 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def imports(self) -> Tuple[Import, ...]:
-        imports: List[Iterator[Import]] = [self.data_type.all_imports]
+        imports: List[Union[Tuple[Import], Iterator[Import]]] = [
+            self.data_type.all_imports
+        ]
         if self.nullable or (self.nullable is None and not self.required):
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated:
