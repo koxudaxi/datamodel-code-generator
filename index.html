@@ -670,10 +670,11 @@
 <h2 id="usage">Usage</h2>
 <p>The <code>datamodel-codegen</code> command:</p>
 <div class="codehilite"><pre><span></span><code>usage: datamodel-codegen <span class="o">[</span>-h<span class="o">]</span> <span class="o">[</span>--input INPUT<span class="o">]</span> <span class="o">[</span>--url URL<span class="o">]</span>
+                         <span class="o">[</span>--http-headers HTTP_HEADER <span class="o">[</span>HTTP_HEADER ...<span class="o">]]</span>
                          <span class="o">[</span>--input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
                          <span class="o">[</span>--openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]]</span>
                          <span class="o">[</span>--output OUTPUT<span class="o">]</span> <span class="o">[</span>--base-class BASE_CLASS<span class="o">]</span>
-                         <span class="o">[</span>--field-constraints<span class="o">]</span>
+                         <span class="o">[</span>--field-constraints<span class="o">]</span> <span class="o">[</span>--use-annotated<span class="o">]</span>
                          <span class="o">[</span>--field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]]</span>
                          <span class="o">[</span>--field-include-all-keys<span class="o">]</span> <span class="o">[</span>--snake-case-field<span class="o">]</span>
                          <span class="o">[</span>--strip-default-none<span class="o">]</span>
@@ -688,7 +689,7 @@
                          <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
                          <span class="o">[</span>--set-default-enum-member<span class="o">]</span>
                          <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
-                         <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span>
+                         <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span> <span class="o">[</span>--use-title-as-name<span class="o">]</span>
                          <span class="o">[</span>--custom-template-dir CUSTOM_TEMPLATE_DIR<span class="o">]</span>
                          <span class="o">[</span>--extra-template-data EXTRA_TEMPLATE_DATA<span class="o">]</span>
                          <span class="o">[</span>--aliases ALIASES<span class="o">]</span>
@@ -701,6 +702,9 @@ optional arguments:
   --input INPUT         Input file/directory <span class="o">(</span>default: stdin<span class="o">)</span>
   --url URL             Input file URL. <span class="sb">`</span>--input<span class="sb">`</span> is ignore when <span class="sb">`</span>--url<span class="sb">`</span> is
                         used
+  --http-headers HTTP_HEADER <span class="o">[</span>HTTP_HEADER ...<span class="o">]</span>
+                        Set headers <span class="k">in</span> HTTP requests to the remote host.
+                        <span class="o">(</span>example: <span class="s2">&quot;Authorization: Basic dXNlcjpwYXNz&quot;</span><span class="o">)</span>
   --input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}</span>
                         Input file <span class="nb">type</span> <span class="o">(</span>default: auto<span class="o">)</span>
   --openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]</span>
@@ -709,6 +713,8 @@ optional arguments:
   --base-class BASE_CLASS
                         Base Class <span class="o">(</span>default: pydantic.BaseModel<span class="o">)</span>
   --field-constraints   Use field constraints and not con* annotations
+  --use-annotated       Use typing.Annotated <span class="k">for</span> Field<span class="o">()</span>. Also, <span class="sb">`</span>--field-
+                        constraints<span class="sb">`</span> option will be enabled.
   --field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]</span>
                         Add extra keys to field parameters
   --field-include-all-keys
@@ -750,6 +756,7 @@ optional arguments:
                         Set field name when enum value is empty <span class="o">(</span>default: <span class="sb">`</span>_<span class="sb">`</span><span class="o">)</span>
   --class-name CLASS_NAME
                         Set class name of root model
+  --use-title-as-name   use titles as class names of models
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA
