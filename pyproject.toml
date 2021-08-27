@@ -52,6 +52,9 @@ toml = ">=0.10.0,<1.0.0"
 genson = ">=1.2.1,<2.0"
 httpx = { version = "*", optional = true }
 
+# https://bitbucket.org/mrabarnett/mrab-regex/issues/421/2021827-results-in-fatal-python-error
+regex = "!=2021.8.27"
+
 [tool.poetry.dev-dependencies]
 pytest = ">6.0"
 pytest-benchmark = "*"
