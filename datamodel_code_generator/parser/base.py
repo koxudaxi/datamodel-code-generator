@@ -285,6 +285,7 @@ class Parser(ABC):
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        use_annotated: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -365,6 +366,11 @@ class Parser(ABC):
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
         self.http_headers: Optional[Sequence[Tuple[str, str]]] = http_headers
+        self.use_annotated: bool = use_annotated
+        if self.use_annotated and not self.field_constraints:  # pragma: no cover
+            raise Exception(
+                '`use_annotated=True` has to be used with `field_constraints=True`'
+            )
 
     @property
     def iter_source(self) -> Iterator[Source]:

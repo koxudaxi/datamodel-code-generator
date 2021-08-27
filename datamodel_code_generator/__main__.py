@@ -104,7 +104,12 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
-
+arg_parser.add_argument(
+    '--use-annotated',
+    help='Use typing.Annotated for Field(). Also, `--field-constraints` option will be enabled.',
+    action='store_true',
+    default=None,
+)
 arg_parser.add_argument(
     '--field-extra-keys',
     help='Add extra keys to field parameters',
@@ -338,6 +343,12 @@ class Config(BaseModel):
                 raise Error(f'Invalid http header: {value!r}')
         return value  # pragma: no cover
 
+    @root_validator()
+    def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('use_annotated'):
+            values['field_constraints'] = True
+        return values
+
     input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
@@ -375,6 +386,7 @@ class Config(BaseModel):
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
     http_headers: Optional[Sequence[Tuple[str, str]]] = None
+    use_annotated: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         for field_name in self.__fields__:
@@ -501,6 +513,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             wrap_string_literal=config.wrap_string_literal,
             use_title_as_name=config.use_title_as_name,
             http_headers=config.http_headers,
+            use_annotated=config.use_annotated,
         )
         return Exit.OK
     except InvalidClassNameError as e:

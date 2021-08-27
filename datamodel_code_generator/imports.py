@@ -58,6 +58,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                         self.alias[import_.from_][import_.import_] = import_.alias
 
 
+IMPORT_ANNOTATED = Import.from_full_path('typing.Annotated')
 IMPORT_ANY = Import.from_full_path('typing.Any')
 IMPORT_LIST = Import.from_full_path('typing.List')
 IMPORT_UNION = Import.from_full_path('typing.Union')

@@ -13,13 +13,14 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
 )
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel
 
 from datamodel_code_generator import cached_property
-from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_OPTIONAL, Import
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import DataType, chain_as_tuple
 
@@ -45,7 +46,7 @@ class DataModelFieldBase(_BaseModel):
     nullable: Optional[bool] = None
     parent: Optional[Any] = None
     extras: Dict[str, Any] = {}
-
+    use_annotated: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
@@ -70,12 +71,14 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def imports(self) -> Tuple[Import, ...]:
-        if self.nullable is None:
-            if not self.required:
-                return chain_as_tuple(self.data_type.all_imports, (IMPORT_OPTIONAL,))
-        elif self.nullable:
-            return chain_as_tuple(self.data_type.all_imports, (IMPORT_OPTIONAL,))
-        return tuple(self.data_type.all_imports)
+        imports: List[Union[Tuple[Import], Iterator[Import]]] = [
+            self.data_type.all_imports
+        ]
+        if self.nullable or (self.nullable is None and not self.required):
+            imports.append((IMPORT_OPTIONAL,))
+        if self.use_annotated:
+            imports.append((IMPORT_ANNOTATED,))
+        return chain_as_tuple(*imports)
 
     @property
     def unresolved_types(self) -> FrozenSet[str]:
@@ -93,6 +96,10 @@ class DataModelFieldBase(_BaseModel):
     @property
     def represented_default(self) -> str:
         return repr(self.default)
+
+    @property
+    def annotated(self) -> Optional[str]:
+        return None
 
 
 @lru_cache()

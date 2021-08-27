@@ -36,10 +36,11 @@ $ pip install datamodel-code-generator[http]
 The `datamodel-codegen` command:
 ```bash
 usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
+                         [--http-headers HTTP_HEADER [HTTP_HEADER ...]]
                          [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
                          [--openapi-scopes {schemas,paths} [{schemas,paths} ...]]
                          [--output OUTPUT] [--base-class BASE_CLASS]
-                         [--field-constraints]
+                         [--field-constraints] [--use-annotated]
                          [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
                          [--field-include-all-keys] [--snake-case-field]
                          [--strip-default-none]
@@ -54,7 +55,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--enum-field-as-literal {all,one}]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
-                         [--class-name CLASS_NAME]
+                         [--class-name CLASS_NAME] [--use-title-as-name]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
@@ -67,6 +68,9 @@ optional arguments:
   --input INPUT         Input file/directory (default: stdin)
   --url URL             Input file URL. `--input` is ignore when `--url` is
                         used
+  --http-headers HTTP_HEADER [HTTP_HEADER ...]
+                        Set headers in HTTP requests to the remote host.
+                        (example: "Authorization: Basic dXNlcjpwYXNz")
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --openapi-scopes {schemas,paths} [{schemas,paths} ...]
@@ -75,6 +79,8 @@ optional arguments:
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
   --field-constraints   Use field constraints and not con* annotations
+  --use-annotated       Use typing.Annotated for Field(). Also, `--field-
+                        constraints` option will be enabled.
   --field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]
                         Add extra keys to field parameters
   --field-include-all-keys
@@ -116,6 +122,7 @@ optional arguments:
                         Set field name when enum value is empty (default: `_`)
   --class-name CLASS_NAME
                         Set class name of root model
+  --use-title-as-name   use titles as class names of models
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA
