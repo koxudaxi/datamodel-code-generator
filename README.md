@@ -12,6 +12,12 @@ This code generator creates pydantic model from an openapi file and others.
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/koxudaxi/datamodel-code-generator.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/koxudaxi/datamodel-code-generator/alerts/)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/koxudaxi/datamodel-code-generator.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/koxudaxi/datamodel-code-generator/context:python)
 
+## Playground
+
+You can try `datamodel-code-generator` generation in action with our online [playground](http://dcg-playground.boardpack.org/).
+
+**Important!** Currently, it supports only OpenAPI 3 (YAML/JSON) source type.
+
 ## Help
 See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
 
