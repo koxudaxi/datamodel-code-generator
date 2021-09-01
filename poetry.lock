@@ -733,7 +733,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-pyyaml"
-version = "5.4.7"
+version = "5.4.9"
 description = "Typing stubs for PyYAML"
 category = "dev"
 optional = false
@@ -1313,8 +1313,8 @@ types-markupsafe = [
     {file = "types_MarkupSafe-1.1.6-py3-none-any.whl", hash = "sha256:1dd3c3f6e913434282a37f847be51bf6d40117b16b6b2e84b79d568275f21784"},
 ]
 types-pyyaml = [
-    {file = "types-PyYAML-5.4.7.tar.gz", hash = "sha256:9024d94239d52016fd485f5721cbc5b7f9d56cb585b7a0cd22a473f06365ea07"},
-    {file = "types_PyYAML-5.4.7-py3-none-any.whl", hash = "sha256:d3b4b555cbb13e98169137dae16079c9b4a32e7bdd9f1759289417bcd14a326c"},
+    {file = "types-PyYAML-5.4.9.tar.gz", hash = "sha256:135ec927adb70a0c0e8d771b2c998d522bb2af72eef602cfae376ef5519153b3"},
+    {file = "types_PyYAML-5.4.9-py3-none-any.whl", hash = "sha256:22ec5e44003f2e9653ef71ee878a3689f2d2954a19cc2226c240aacf17f5ebb2"},
 ]
 types-toml = [
     {file = "types-toml-0.1.5.tar.gz", hash = "sha256:fc5e1df92c245404e4360c63568e9f0e732b0cabea7a220a4788d52b78f5dc59"},
