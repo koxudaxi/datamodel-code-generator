@@ -67,10 +67,7 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-pydantic = [
-    {version = "==1.5.1", markers = "python_version < \"3.9\""},
-    {version = ">=1.8.2", markers = "python_version >= \"3.9\""},
-]
+pydantic = ">=1.8.2"
 httpx = "*"
 
 
