@@ -786,7 +786,7 @@ http = ["httpx"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.1"
-content-hash = "bfaf22ce17b41b672987bd2fae1cd5213cc53418f0fe903fc799e0c98b336cbd"
+content-hash = "24857ad761c48739392f2ab5b2f6364f4f25abfcfcaa248386e28518533714b9"
 
 [metadata.files]
 appdirs = [
