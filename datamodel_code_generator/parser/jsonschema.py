@@ -125,6 +125,7 @@ class JsonSchemaObject(BaseModel):
         'maxLength',
         'pattern',
     }
+    __extra_key__: str = SPECIAL_PATH_FORMAT.format('extras')
 
     @root_validator(pre=True)
     def validate_exclusive_maximum_and_exclusive_minimum(
@@ -188,20 +189,15 @@ class JsonSchemaObject(BaseModel):
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
     custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
-    _raw: Dict[str, Any]
+    extras: Dict[str, Any] = Field(default=None, alias=__extra_key__)
 
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
-        underscore_attrs_are_private = True
 
     def __init__(self, **data: Any) -> None:  # type: ignore
         super().__init__(**data)
-        self._raw = data
-
-    @cached_property
-    def extras(self) -> Dict[str, Any]:
-        return {k: v for k, v in self._raw.items() if k not in EXCLUDE_FIELD_KEYS}
+        self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
 
     @cached_property
     def is_object(self) -> bool:
@@ -263,6 +259,7 @@ DEFAULT_FIELD_KEYS: Set[str] = {
 EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
     '$id',
     '$ref',
+    JsonSchemaObject.__extra_key__,
 }
 
 

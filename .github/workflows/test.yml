@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }} and isort ${{ matrix.isort-version }} 
+    name: Test on Python ${{ matrix.python-version }} and ${{ matrix.os }} and isort ${{ matrix.isort-version }} and pydantic ${{ matrix.pydantic-version }} 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -13,6 +13,7 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
+        pydantic-version: [1.5.1, default]
     defaults:
       run:
         shell: bash
@@ -49,12 +50,16 @@ jobs:
       if: runner.os != 'Windows'
       run: |
          poetry run pip install isort=="$ISORT"
+    - name: Install Pydantic 1.5.1
+      if: matrix.pydantic-version == '1.5.1' && matrix.python-version != '3.9'
+      run: |
+         poetry run pip install pydantic=="1.5.1"
     - name: Unit Test
       run: |
          source $VENV
          ./scripts/test.sh
     - name: Upload coverage to Codecov
-      if: matrix.os != 'windows-latest'
+      if: matrix.os != 'windows-latest' && matrix.pydantic-version == 'default' 
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
