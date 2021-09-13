@@ -59,7 +59,7 @@ jobs:
          source $VENV
          ./scripts/test.sh
     - name: Upload coverage to Codecov
-      if: matrix.os != 'windows-latest'
+      if: matrix.os != 'windows-latest' && matrix.pydantic-version == 'default' 
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
