@@ -51,7 +51,7 @@ jobs:
       run: |
          poetry run pip install isort=="$ISORT"
     - name: Install Pydantic 1.5.1
-      if: matrix.pydantic-version == 1.5.1 && matrix.python-version != '3.9'
+      if: matrix.pydantic-version == '1.5.1' && matrix.python-version != '3.9'
       run: |
          poetry run pip install pydantic=="1.5.1"
     - name: Unit Test
