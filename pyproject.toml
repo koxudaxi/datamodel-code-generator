@@ -64,6 +64,8 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
+pydantic = "1.5.1"
+httpx = "*"
 
 [tool.poetry.extras]
 http = ["httpx"]

@@ -295,7 +295,8 @@ arg_parser.add_argument('--version', help='show version', action='store_true')
 
 class Config(BaseModel):
     class Config:
-        validate_assignment = True
+        # validate_assignment = True
+        # Pydantic 1.5.1 doesn't support validate_assignment correctly
         arbitrary_types_allowed = (TextIOBase,)
 
     @validator("aliases", "extra_template_data", pre=True)
@@ -333,18 +334,30 @@ class Config(BaseModel):
                 )
         return values
 
-    @validator('http_headers', pre=True, each_item=True)
-    def validate_http_headers(cls, value: Any) -> Optional[Tuple[str, str]]:
-        if isinstance(value, str):  # pragma: no cover
-            try:
-                field_name, field_value = value.split(':', maxsplit=1)  # type: str, str
-                return field_name, field_value.lstrip()
-            except ValueError:
-                raise Error(f'Invalid http header: {value!r}')
-        return value  # pragma: no cover
+    # Pydantic 1.5.1 doesn't support each_item=True correctly
+    @validator('http_headers', pre=True)
+    def validate_http_headers(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
+        def validate_each_item(each_item: Any) -> Tuple[str, str]:
+            if isinstance(each_item, str):  # pragma: no cover
+                try:
+                    field_name, field_value = each_item.split(
+                        ':', maxsplit=1
+                    )  # type: str, str
+                    return field_name, field_value.lstrip()
+                except ValueError:
+                    raise Error(f'Invalid http header: {each_item!r}')
+            return each_item  # pragma: no cover
+
+        if isinstance(value, list):
+            return [validate_each_item(each_item) for each_item in value]
+        return value
 
     @root_validator()
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        return cls._validate_use_annotated(values)
+
+    @classmethod
+    def _validate_use_annotated(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('use_annotated'):
             values['field_constraints'] = True
         return values
@@ -389,11 +402,13 @@ class Config(BaseModel):
     use_annotated: bool = False
 
     def merge_args(self, args: Namespace) -> None:
-        for field_name in self.__fields__:
-            arg = getattr(args, field_name)
-            if arg is None:
-                continue
-            setattr(self, field_name, arg)
+        set_args = {
+            f: getattr(args, f) for f in self.__fields__ if getattr(args, f) is not None
+        }
+        set_args = self._validate_use_annotated(set_args)
+        parsed_args = self.parse_obj(set_args)
+        for field_name in set_args:
+            setattr(self, field_name, getattr(parsed_args, field_name))
 
 
 def main(args: Optional[Sequence[str]] = None) -> Exit:
