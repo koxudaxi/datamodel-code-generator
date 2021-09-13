@@ -350,7 +350,7 @@ class Config(BaseModel):
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
-        return value
+        return value  # pragma: no cover
 
     @root_validator()
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
