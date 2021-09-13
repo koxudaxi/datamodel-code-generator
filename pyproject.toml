@@ -67,8 +67,12 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-pydantic = "1.5.1"
+pydantic = [
+    {version = "==1.5.1", markers = "python_version < \"3.9\""},
+    {version = ">=1.8.2", markers = "python_version >= \"3.9\""},
+]
 httpx = "*"
+
 
 [tool.poetry.extras]
 http = ["httpx"]
