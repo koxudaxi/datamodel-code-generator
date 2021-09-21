@@ -742,7 +742,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-toml"
-version = "0.1.5"
+version = "0.10.0"
 description = "Typing stubs for toml"
 category = "dev"
 optional = false
@@ -1318,8 +1318,8 @@ types-pyyaml = [
     {file = "types_PyYAML-5.4.10-py3-none-any.whl", hash = "sha256:f1d1357168988e45fa20c65aecb3911462246a84809015dd889ebf8b1db74124"},
 ]
 types-toml = [
-    {file = "types-toml-0.1.5.tar.gz", hash = "sha256:fc5e1df92c245404e4360c63568e9f0e732b0cabea7a220a4788d52b78f5dc59"},
-    {file = "types_toml-0.1.5-py3-none-any.whl", hash = "sha256:dd00526680595aad0eade682bd8a9e9513e9b4b8932daed159925fe446fc90a9"},
+    {file = "types-toml-0.10.0.tar.gz", hash = "sha256:64f88a257dd62465b01fcf0d1ed4ffcaf19e320ee3e731c26a2e9dcc5090fdbb"},
+    {file = "types_toml-0.10.0-py3-none-any.whl", hash = "sha256:c1bbb97ebe59593378769447343f78187017458cce8c3f1e76c80b9a930eef01"},
 ]
 typing-extensions = [
     {file = "typing_extensions-3.10.0.2-py2-none-any.whl", hash = "sha256:d8226d10bc02a29bcc81df19a26e56a9647f8b0a6d4a83924139f4a8b01f17b7"},
