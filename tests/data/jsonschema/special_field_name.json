@@ -17,6 +17,9 @@
     },
     "class-s": {
       "type": "string"
+    },
+    "#": {
+      "type": "string"
     }
   }
 }
