@@ -146,7 +146,7 @@ class FieldNameResolver:
         if not name:
             name = self.empty_field_name
         if name[0] == '#':
-            name = name[1:]
+            name = name[1:] or self.empty_field_name
         # TODO: when first character is a number
         name = re.sub(r'\W', '_', name)
         if name[0].isnumeric():
