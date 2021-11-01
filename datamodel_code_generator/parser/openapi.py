@@ -19,9 +19,15 @@ class OpenAPIParser(JsonSchemaParser):
             else:
                 specification = load_yaml(source.text)
             self.raw_obj = specification
-            schemas: Dict[Any, Any] = specification.get('components', {}).get(
-                'schemas', {}
-            )
+
+            try:
+                schemas: Dict[Any, Any] = specification.get('components', {}).get(
+                    'schemas', {}
+                )
+            except Exception as e:
+                raise Exception(f"{specification['info']['title']}{specification['info'].get('version')}"
+                                f"failed to parse") from e
+
             if isinstance(self.source, ParseResult):
                 path_parts: List[str] = self.get_url_path_parts(self.source)
             else:

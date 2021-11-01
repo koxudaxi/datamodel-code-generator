@@ -1,0 +1,3993 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Underwriting API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://underwriting.integration:8080/api/v1"
+    }
+  ],
+  "paths": {
+    "/api/v1/uw/Decisions": {
+      "get": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Look up the latest Decision based on a Submission Id",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uw/Decisions/{decisionId}/rerate": {
+      "post": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Rerate a non-draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Rerate a draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UWRerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uw/Decisions/{decisionId}/lock": {
+      "put": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Lock a draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uw/Decisions/{decisionId}/unlock": {
+      "put": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Unlock a draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uw/Decisions/{decisionId}/finalize": {
+      "put": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Finalize a draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UWDecisionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uw/Decisions/{decisionId}/republish": {
+      "put": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Finalize a draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "202": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uw/Decisions/{decisionId}/cancel": {
+      "put": {
+        "tags": [
+          "Decisions"
+        ],
+        "summary": "Cancel a draft decision",
+        "parameters": [
+          {
+            "name": "decisionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Server Error"
+          },
+          "501": {
+            "description": "Server Error"
+          },
+          "502": {
+            "description": "Server Error"
+          },
+          "503": {
+            "description": "Server Error"
+          },
+          "504": {
+            "description": "Server Error"
+          },
+          "505": {
+            "description": "Server Error"
+          },
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Client Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Address": {
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": "string",
+            "nullable": true
+          },
+          "line2": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "zip": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "$ref": "#/components/schemas/States"
+          },
+          "country": {
+            "$ref": "#/components/schemas/Countries"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BusinessTypes": {
+        "enum": [
+          "Individual",
+          "Partnership",
+          "Corporation",
+          "AssociationLaborUnionReligiousOrganization",
+          "LimitedPartnership",
+          "JointVenture",
+          "CommonOwnership",
+          "MultipleStatus",
+          "JointEmployer",
+          "LimitedLiabilityCompany",
+          "TrustOrEstate",
+          "ExecutorOrTrustee",
+          "LimitedLiabilityPartnership",
+          "GovernmentEntity",
+          "Other"
+        ],
+        "type": "string"
+      },
+      "Contact": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/ContactTypes"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContactTypes": {
+        "enum": [
+          "Accounting",
+          "Claims",
+          "Inspection",
+          "Client",
+          "Other"
+        ],
+        "type": "string"
+      },
+      "Countries": {
+        "enum": [
+          "US",
+          "USA"
+        ],
+        "type": "string"
+      },
+      "CustomDeclineReason": {
+        "enum": [
+          "Other",
+          "PotentialFraud",
+          "UwLossHistory",
+          "UwMinimumPayrollAndLossHistory",
+          "UwPremiumAboveThreshold",
+          "UwGenericEligibilityDecline",
+          "UwIndustryEligibilityDecline"
+        ],
+        "type": "string"
+      },
+      "DecimalNullableUWOverrideable": {
+        "type": "object",
+        "properties": {
+          "rawValue": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "currentValue": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EmployersLiabilityLimits": {
+        "type": "object",
+        "properties": {
+          "eachAccident": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eachEmployee": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eachPolicy": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "premium": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExperienceModificationTypes": {
+        "enum": [
+          "Actual",
+          "Contingent",
+          "Estimated",
+          "Expiring",
+          "Preliminary",
+          "Tentative"
+        ],
+        "type": "string"
+      },
+      "LapseReason": {
+        "enum": [
+          "NonPayment",
+          "AuditNonCompliance",
+          "NoEmployees",
+          "Other"
+        ],
+        "type": "string"
+      },
+      "NotCoveredReason": {
+        "enum": [
+          "NonPayment",
+          "AuditNonCompliance",
+          "NoEmployees",
+          "Other",
+          "NewBusiness"
+        ],
+        "type": "string"
+      },
+      "OfficerTitles": {
+        "enum": [
+          "SoleProprietor",
+          "Partner",
+          "CorporateOfficer",
+          "Other"
+        ],
+        "type": "string"
+      },
+      "PaymentPlanType": {
+        "enum": [
+          "unspecified",
+          "full",
+          "semiannual",
+          "quarterly",
+          "monthly",
+          "payroll"
+        ],
+        "type": "string"
+      },
+      "PremiumAndFees": {
+        "type": "object",
+        "properties": {
+          "policyTotalEstimatedCost": {
+            "type": "number",
+            "format": "double"
+          },
+          "expenseConstant": {
+            "type": "number",
+            "format": "double"
+          },
+          "blanketWaiver": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "catastrophe": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "experienceModifier": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "premiumDiscount": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "scheduleModifier": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "terrorism": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "territoryModifier": {
+            "$ref": "#/components/schemas/RatingAdjustment"
+          },
+          "employersLiabilityLimits": {
+            "$ref": "#/components/schemas/EmployersLiabilityLimits"
+          },
+          "taxesAndAssessments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaxDetails"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": { },
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QuestionDependsOn": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RatingAdjustment": {
+        "type": "object",
+        "properties": {
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "premium": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SectionInfo": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "States": {
+        "enum": [
+          "AL",
+          "AK",
+          "AR",
+          "AZ",
+          "CA",
+          "CO",
+          "CT",
+          "DC",
+          "DE",
+          "FL",
+          "GA",
+          "HI",
+          "IA",
+          "ID",
+          "IL",
+          "IN",
+          "KS",
+          "KY",
+          "LA",
+          "MA",
+          "MD",
+          "ME",
+          "MI",
+          "MN",
+          "MO",
+          "MS",
+          "MT",
+          "NC",
+          "ND",
+          "NE",
+          "NH",
+          "NJ",
+          "NM",
+          "NV",
+          "NY",
+          "OK",
+          "OH",
+          "OR",
+          "PA",
+          "RI",
+          "SC",
+          "SD",
+          "TN",
+          "TX",
+          "UT",
+          "VA",
+          "VT",
+          "WA",
+          "WI",
+          "WV",
+          "WY",
+          "CW"
+        ],
+        "type": "string"
+      },
+      "SubmissionSourceType": {
+        "enum": [
+          "unspecified",
+          "partnerportal",
+          "api",
+          "webapp",
+          "leadgen",
+          "priceindication",
+          "testingendpoint",
+          "salesportal",
+          "underwritingportal"
+        ],
+        "type": "string"
+      },
+      "TaxDetails": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "premium": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWClassCodeBreakdown": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "payroll": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "percentageOfPayroll": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "premium": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "netRates": {
+            "$ref": "#/components/schemas/UWNetRates"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWDecisionResponse": {
+        "type": "object",
+        "properties": {
+          "isDraft": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UWDecisionStatusUWOverrideable"
+          },
+          "statusReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "scheduleModificationFactor": {
+            "$ref": "#/components/schemas/DecimalNullableUWOverrideable"
+          },
+          "dividendFactor": {
+            "$ref": "#/components/schemas/DecimalNullableUWOverrideable"
+          },
+          "primaryStateMaxRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "primaryStateMinRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "valenBin": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "valenPremiumEstimate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "valenMarketPremiumEstimate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "valenModifier": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "valenScoreCalculatedOffline": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "valenOriginalScore": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "valenTransformedScore": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "valenCompanionClasses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "lossHistoryRequirement": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "minimumPayrollRequirement": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "premiumRequirement": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "scheduleModifierRequirement": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "classRequirement": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "paymentInformation": {
+            "$ref": "#/components/schemas/UWPaymentInformation"
+          },
+          "premiumBreakdown": {
+            "$ref": "#/components/schemas/UWPremiumBreakdown"
+          },
+          "eligibilityQuestions": {
+            "$ref": "#/components/schemas/UWEligibilityQuestions"
+          },
+          "classCodeDescriptions": {
+            "type": "object",
+            "properties": {
+              "AL": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "AK": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "AR": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "AZ": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "CA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "CO": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "CT": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "DC": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "DE": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "FL": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "GA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "HI": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "IA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "ID": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "IL": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "IN": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "KS": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "KY": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "LA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MD": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "ME": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MI": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MN": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MO": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MS": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "MT": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NC": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "ND": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NE": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NH": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NJ": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NM": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NV": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "NY": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "OK": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "OH": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "OR": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "PA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "RI": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "SC": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "SD": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "TN": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "TX": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "UT": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "VA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "VT": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "WA": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "WI": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "WV": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "WY": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "CW": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "lastModified": {
+            "type": "string"
+          },
+          "decisionWorkflowStatus": {
+            "$ref": "#/components/schemas/UWDecisionWorkflowStatus"
+          },
+          "lastPolicyProcessedOn": {
+            "type": "string",
+            "nullable": true
+          },
+          "policyProcessedSuccessfully": {
+            "type": "boolean"
+          },
+          "classCodeValues": {
+            "type": "object",
+            "properties": {
+              "AL": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "AK": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "AR": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "AZ": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "CA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "CO": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "CT": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "DC": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "DE": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "FL": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "GA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "HI": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "IA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "ID": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "IL": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "IN": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "KS": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "KY": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "LA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MD": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "ME": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MI": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MN": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MO": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MS": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "MT": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NC": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "ND": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NE": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NH": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NJ": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NM": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NV": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "NY": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "OK": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "OH": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "OR": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "PA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "RI": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "SC": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "SD": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "TN": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "TX": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "UT": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "VA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "VT": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "WA": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "WI": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "WV": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "WY": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              },
+              "CW": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/UnderwriterValues"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "totalMinimumPayroll": {
+            "type": "object",
+            "properties": {
+              "AL": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "AK": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "AR": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "AZ": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "CA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "CO": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "CT": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "DC": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "DE": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "FL": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "GA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "HI": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "IA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "ID": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "IL": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "IN": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "KS": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "KY": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "LA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MD": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "ME": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MI": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MN": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MO": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MS": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "MT": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NC": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "ND": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NE": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NH": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NJ": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NM": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NV": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "NY": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "OK": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "OH": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "OR": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "PA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "RI": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "SC": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "SD": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "TN": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "TX": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "UT": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "VA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "VT": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "WA": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "WI": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "WV": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "WY": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "CW": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "decisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/UWSubmission"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWDecisionStatus": {
+        "enum": [
+          "Undetermined",
+          "Refer",
+          "Decline",
+          "Quotable"
+        ],
+        "type": "string"
+      },
+      "UWDecisionStatusUWOverrideable": {
+        "type": "object",
+        "properties": {
+          "rawValue": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "currentValue": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWDecisionWorkflowStatus": {
+        "enum": [
+          "Unspecified",
+          "Draft",
+          "Cancelled",
+          "Published",
+          "Bind Requested",
+          "Locked"
+        ],
+        "type": "string"
+      },
+      "UWDecisionsResponse": {
+        "type": "object",
+        "properties": {
+          "submissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latestDecision": {
+            "$ref": "#/components/schemas/UWDecisionResponse"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWDeclineReason": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/CustomDeclineReason"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWEligibilityAnswer": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWEligibilityQuestions": {
+        "type": "object",
+        "properties": {
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWQuestion"
+            },
+            "nullable": true
+          },
+          "sectionTitles": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SectionInfo"
+            },
+            "nullable": true
+          },
+          "criticalResponseQuestionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "unansweredQuestionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWEmployersLiabilityLimits": {
+        "type": "object",
+        "properties": {
+          "eachAccident": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eachEmployee": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eachPolicy": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWExperienceModification": {
+        "type": "object",
+        "properties": {
+          "riskId": {
+            "type": "string",
+            "nullable": true
+          },
+          "factor": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/ExperienceModificationTypes"
+          },
+          "date": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWExposure": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/States"
+          },
+          "class": {
+            "type": "string",
+            "nullable": true
+          },
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "payroll": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "hazardGroup": {
+            "type": "string"
+          },
+          "overrideRate": {
+            "type": "boolean"
+          },
+          "specificWaiversOfSubrogation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWSpecificWaiverOfSubrogation"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWInstallment": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "premiumAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "surchargeAmount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "feeAmount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWLegalEntity": {
+        "type": "object",
+        "properties": {
+          "isPrimaryLegalEntity": {
+            "type": "boolean"
+          },
+          "businessType": {
+            "$ref": "#/components/schemas/BusinessTypes"
+          },
+          "yearStarted": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "doingBusinessAs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "businessDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "fein": {
+            "type": "string",
+            "nullable": true
+          },
+          "sicCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "naicsCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWState"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWLocation": {
+        "type": "object",
+        "properties": {
+          "isPrimaryLocation": {
+            "type": "boolean"
+          },
+          "isMailingAddress": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "fullTimeEmployeeCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partTimeEmployeeCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "contactName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "exposures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWExposure"
+            },
+            "nullable": true
+          },
+          "officers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWOfficer"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWNetRates": {
+        "type": "object",
+        "properties": {
+          "netRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "commissionableNetRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "loadedNetRate": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWOfficer": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "duties": {
+            "type": "string",
+            "nullable": true
+          },
+          "class": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "$ref": "#/components/schemas/OfficerTitles"
+          },
+          "ownershipPercentage": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "payroll": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "included": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWPaymentInformation": {
+        "type": "object",
+        "properties": {
+          "downPaymentAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "monthlyPaymentAmount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPolicyCost": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "targetPremium": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentPlan": {
+            "$ref": "#/components/schemas/PaymentPlanType"
+          },
+          "paymentPlans": {
+            "type": "object",
+            "properties": {
+              "unspecified": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWInstallment"
+                }
+              },
+              "full": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWInstallment"
+                }
+              },
+              "semiannual": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWInstallment"
+                }
+              },
+              "quarterly": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWInstallment"
+                }
+              },
+              "monthly": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWInstallment"
+                }
+              },
+              "payroll": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWInstallment"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWPremiumBreakdown": {
+        "type": "object",
+        "properties": {
+          "classCodes": {
+            "type": "object",
+            "properties": {
+              "AL": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "AK": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "AR": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "AZ": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "CA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "CO": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "CT": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "DC": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "DE": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "FL": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "GA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "HI": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "IA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "ID": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "IL": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "IN": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "KS": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "KY": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "LA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MD": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "ME": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MI": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MN": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MO": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MS": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "MT": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NC": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "ND": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NE": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NH": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NJ": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NM": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NV": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "NY": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "OK": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "OH": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "OR": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "PA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "RI": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "SC": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "SD": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "TN": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "TX": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "UT": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "VA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "VT": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "WA": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "WI": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "WV": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "WY": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              },
+              "CW": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UWClassCodeBreakdown"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "premiumAndFees": {
+            "type": "object",
+            "properties": {
+              "AL": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "AK": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "AR": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "AZ": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "CA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "CO": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "CT": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "DC": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "DE": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "FL": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "GA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "HI": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "IA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "ID": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "IL": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "IN": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "KS": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "KY": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "LA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MD": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "ME": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MI": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MN": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MO": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MS": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "MT": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NC": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "ND": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NE": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NH": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NJ": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NM": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NV": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "NY": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "OK": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "OH": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "OR": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "PA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "RI": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "SC": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "SD": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "TN": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "TX": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "UT": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "VA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "VT": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "WA": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "WI": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "WV": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "WY": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              },
+              "CW": {
+                "$ref": "#/components/schemas/PremiumAndFees"
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWPriorCarrier": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "policyNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectiveDate": {
+            "type": "string"
+          },
+          "expirationDate": {
+            "type": "string"
+          },
+          "totalPremium": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "lapseInPeriod": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "lapseReason": {
+            "$ref": "#/components/schemas/LapseReason"
+          },
+          "lapseReasonDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "nonZeroClaimCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "zeroClaimCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "amountPaid": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "amountReserved": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "amountIncurred": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "modificationFactor": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "lapsedReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWQuestion": {
+        "type": "object",
+        "properties": {
+          "eligibleIf": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "declineIf": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "questionEligibility": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sectionKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "isIndustrySpecific": {
+            "type": "boolean"
+          },
+          "questionText": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionUnit": {
+            "type": "string",
+            "nullable": true
+          },
+          "questionUnitSymbol": {
+            "type": "string",
+            "nullable": true
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionDependsOn"
+            },
+            "nullable": true
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWRerateRequest": {
+        "type": "object",
+        "properties": {
+          "decisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/UWSubmission"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWSpecificWaiverOfSubrogation": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "taxId": {
+            "type": "string",
+            "nullable": true
+          },
+          "jobDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "payroll": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWState": {
+        "type": "object",
+        "properties": {
+          "isPrimaryState": {
+            "type": "boolean"
+          },
+          "code": {
+            "$ref": "#/components/schemas/States"
+          },
+          "drugFreeProgram": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "managedCareProgram": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "blanketWaiver": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "meritRatingPlan": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "smallDeductible": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "uian": {
+            "type": "string",
+            "nullable": true
+          },
+          "territoryRiskZipCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "experienceModification": {
+            "$ref": "#/components/schemas/UWExperienceModification"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWLocation"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWSubmission": {
+        "type": "object",
+        "properties": {
+          "lastUpdateSource": {
+            "$ref": "#/components/schemas/SubmissionSourceType"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SubmissionSourceType"
+          },
+          "effectiveDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "expirationDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "namedInsured": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverageLapsedOrCancelled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "comments": {
+            "type": "string",
+            "nullable": true
+          },
+          "scheduleModifierOverride": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "decisionStatusOverride": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "dividendFactorOverride": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "mailingAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Contact"
+            },
+            "nullable": true
+          },
+          "eligibilityAnswers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWEligibilityAnswer"
+            },
+            "nullable": true
+          },
+          "workersCompensation": {
+            "$ref": "#/components/schemas/UWWorkersCompensation"
+          },
+          "ratingRationale": {
+            "type": "string",
+            "nullable": true
+          },
+          "customDeclineReason": {
+            "$ref": "#/components/schemas/UWDeclineReason"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UWWorkersCompensation": {
+        "type": "object",
+        "properties": {
+          "currentlyCovered": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "notCurrentlyCoveredReason": {
+            "$ref": "#/components/schemas/NotCoveredReason"
+          },
+          "notCurrentlyCoveredDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "employersLiability": {
+            "$ref": "#/components/schemas/UWEmployersLiabilityLimits"
+          },
+          "otherStates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/States"
+            },
+            "nullable": true
+          },
+          "priorCarriers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWPriorCarrier"
+            },
+            "nullable": true
+          },
+          "legalEntities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UWLegalEntity"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UnderwriterValues": {
+        "type": "object",
+        "properties": {
+          "bindStatus": {
+            "$ref": "#/components/schemas/UWDecisionStatus"
+          },
+          "minimumPayroll": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lossHistoryYearsRequired": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

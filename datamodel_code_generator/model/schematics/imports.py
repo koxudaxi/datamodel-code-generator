@@ -13,7 +13,7 @@ IMPORT_ANNOTATIONS = Import.from_full_path('__future__.annotations')
 IMPORT_DICT = Import.from_full_path('schematics.types.DictType')
 IMPORT_DATE = Import.from_full_path('schematics.types.DateType')
 #IMPORT_DATETIME = Import.from_full_path('schematics.types.DateTimeType')
-IMPORT_DATETIME = Import.from_full_path('applications.models.custom_types.PieDateTimeType')
+IMPORT_DATETIME = Import.from_full_path('test_services.applications.models.custom_types.PieDateTimeType')
 
 IMPORT_TIME = Import.from_full_path('schematics.types.DateTimeType')
 IMPORT_UUID = Import.from_full_path('schematics.types.UUIDType')
