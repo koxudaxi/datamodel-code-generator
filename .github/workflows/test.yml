@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
         pydantic-version: [1.5.1, default]
