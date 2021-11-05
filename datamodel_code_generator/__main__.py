@@ -70,7 +70,7 @@ arg_parser.add_argument(
 )
 arg_parser.add_argument(
     '--url',
-    help='Input file URL. `--input` is ignore when `--url` is used',
+    help='Input file URL. `--input` is ignored when `--url` is used',
 )
 
 arg_parser.add_argument(
