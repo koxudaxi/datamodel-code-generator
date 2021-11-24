@@ -359,6 +359,9 @@ class ModelResolver:
         ):
             if Path(self._base_path, joined_path).is_file():
                 ref = f'{joined_path}#'
+            elif is_url(joined_path):
+                # Handle when the joined_path is already an absolute URL
+                ref = f'{joined_path}#'
             else:
                 ref = f'{self.root_id_base_path}/{joined_path}#'
         else:
