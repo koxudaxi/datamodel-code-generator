@@ -58,7 +58,9 @@ pytest = ">6.0"
 pytest-benchmark = "*"
 pytest-cov = ">=2.12.1"
 pytest-mock = "*"
-mypy = "*"
+
+# version: 0.920
+mypy = { git = "https://github.com/python/mypy.git", rev = "5a19bfbb2e7b34667606e4c7ba8901c4e94c591d"}
 isort = "==5.6.4"
 black = "==20.8b0"
 freezegun = "*"
