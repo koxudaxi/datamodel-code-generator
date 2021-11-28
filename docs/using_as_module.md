@@ -10,6 +10,11 @@ You can generate models with `datamodel_code_generator.generate` into a temporar
 
 And, you can read files from the directory.
 
+### Installation
+```sh
+pip install "datamodel-code-generator[http]"
+```
+
 ### Example
 ```python
 from pathlib import Path
