@@ -1228,6 +1228,43 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
 
 
 @freeze_time('2019-07-26')
+def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
+    root_id_response = mocker.Mock()
+    root_id_response.text = 'dummy'
+    person_response = mocker.Mock()
+    person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
+    httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
+    with TemporaryDirectory() as output_dir:
+        input_file = Path(output_dir, 'root_id_absolute_url.json')
+        shutil.copy(JSON_SCHEMA_DATA_PATH / 'root_id_absolute_url.json', input_file)
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(input_file),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
+            ).read_text()
+        )
+        httpx_get_mock.assert_has_calls(
+            [
+                call('https://example.com/person.json', headers=None),
+            ]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_jsonschema_id():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

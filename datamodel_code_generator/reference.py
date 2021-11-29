@@ -357,7 +357,7 @@ class ModelResolver:
             and self.root_id_base_path
             and self.current_root != path
         ):
-            if Path(self._base_path, joined_path).is_file():
+            if is_url(joined_path) or Path(self._base_path, joined_path).is_file():
                 ref = f'{joined_path}#'
             else:
                 ref = f'{self.root_id_base_path}/{joined_path}#'
