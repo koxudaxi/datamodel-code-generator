@@ -2630,6 +2630,50 @@ def test_main_http_openapi(mocker):
 
 
 @freeze_time('2019-07-26')
+def test_main_http_json(mocker):
+    def get_mock_response(path: str) -> mocker.Mock:
+        mock = mocker.Mock()
+        mock.text = (JSON_DATA_PATH / path).read_text()
+        return mock
+
+    httpx_get_mock = mocker.patch(
+        'httpx.get',
+        side_effect=[
+            get_mock_response('pet.json'),
+        ],
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--url',
+                'https://example.com/pet.json',
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'json',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_json' / 'output.py'
+        ).read_text().replace(
+            '#   filename:  pet.json',
+            '#   filename:  https://example.com/pet.json',
+        )
+        httpx_get_mock.assert_has_calls(
+            [
+                call(
+                    'https://example.com/pet.json',
+                    headers=None,
+                ),
+            ]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_self_reference():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
