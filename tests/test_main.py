@@ -39,8 +39,8 @@ def test_main():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -64,8 +64,8 @@ def test_main_base_class():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -88,8 +88,8 @@ def test_target_python_version():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'target_python_version' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'target_python_version' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -112,8 +112,8 @@ def test_main_autodetect():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -160,8 +160,8 @@ def test_main_jsonschema():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -173,7 +173,7 @@ def test_main_jsonschema_nested_deep():
         output_init_file: Path = Path(output_dir) / '__init__.py'
         output_nested_file: Path = Path(output_dir) / 'nested/deep.py'
         output_empty_parent_nested_file: Path = (
-                Path(output_dir) / 'empty_parent/nested/deep.py'
+            Path(output_dir) / 'empty_parent/nested/deep.py'
         )
 
         return_code: Exit = main(
@@ -188,30 +188,30 @@ def test_main_jsonschema_nested_deep():
         )
         assert return_code == Exit.OK
         assert (
-                output_init_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_nested_deep' / '__init__.py'
-                ).read_text()
+            output_init_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_nested_deep' / '__init__.py'
+            ).read_text()
         )
 
         assert (
-                output_nested_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_nested_deep'
-                        / 'nested'
-                        / 'deep.py'
-                ).read_text()
+            output_nested_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_nested_deep'
+                / 'nested'
+                / 'deep.py'
+            ).read_text()
         )
         assert (
-                output_empty_parent_nested_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_nested_deep'
-                        / 'empty_parent'
-                        / 'nested'
-                        / 'deep.py'
-                ).read_text()
+            output_empty_parent_nested_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_nested_deep'
+                / 'empty_parent'
+                / 'nested'
+                / 'deep.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -233,10 +233,10 @@ def test_main_jsonschema_external_files():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_external_files' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_external_files' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -284,8 +284,8 @@ def test_main_json():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -307,10 +307,10 @@ def test_space_and_special_characters_json():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -351,10 +351,10 @@ def test_main_json_arrary_include_null():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -376,8 +376,8 @@ def test_main_null_and_array():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_null_and_array' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_null_and_array' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -399,8 +399,8 @@ def test_main_yaml():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -463,8 +463,8 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     output_filename = output_directory / 'model.py'
 
     assert (
-            main(['--input', str(input_filename), '--output', str(output_filename)])
-            == Exit.ERROR
+        main(['--input', str(input_filename), '--output', str(output_filename)])
+        == Exit.ERROR
     )
 
 
@@ -478,7 +478,7 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-            captured.out == (EXPECTED_MAIN_PATH / 'main_no_file' / 'output.py').read_text()
+        captured.out == (EXPECTED_MAIN_PATH / 'main_no_file' / 'output.py').read_text()
     )
     assert not captured.err
 
@@ -504,8 +504,8 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-            captured.out
-            == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+        captured.out
+        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
     )
     assert not captured.err
 
@@ -524,24 +524,24 @@ def test_pyproject():
             pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
             pyproject_toml = (
                 pyproject_toml_path.read_text()
-                    .replace('INPUT_PATH', get_path(OPEN_API_DATA_PATH / 'api.yaml'))
-                    .replace('OUTPUT_PATH', get_path(output_file))
-                    .replace(
+                .replace('INPUT_PATH', get_path(OPEN_API_DATA_PATH / 'api.yaml'))
+                .replace('OUTPUT_PATH', get_path(output_file))
+                .replace(
                     'ALIASES_PATH', get_path(OPEN_API_DATA_PATH / 'empty_aliases.json')
                 )
-                    .replace(
+                .replace(
                     'EXTRA_TEMPLATE_DATA_PATH',
                     get_path(OPEN_API_DATA_PATH / 'empty_data.json'),
                 )
-                    .replace('CUSTOM_TEMPLATE_DIR_PATH', get_path(output_dir))
+                .replace('CUSTOM_TEMPLATE_DIR_PATH', get_path(output_dir))
             )
             (output_dir / 'pyproject.toml').write_text(pyproject_toml)
 
             return_code: Exit = main([])
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
             )
     with pytest.raises(SystemExit):
         main()
@@ -563,10 +563,10 @@ def test_pyproject_not_found():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py'
+                ).read_text()
             )
 
 
@@ -584,8 +584,8 @@ def test_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
         )
 
 
@@ -604,8 +604,8 @@ def test_validation():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -617,18 +617,18 @@ def test_validation_failed():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         assert (
-                main(
-                    [
-                        '--input',
-                        str(OPEN_API_DATA_PATH / 'invalid.yaml'),
-                        '--output',
-                        str(output_file),
-                        '--input-file-type',
-                        'openapi',
-                        '--validation',
-                    ]
-                )
-                == Exit.ERROR
+            main(
+                [
+                    '--input',
+                    str(OPEN_API_DATA_PATH / 'invalid.yaml'),
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                    '--validation',
+                ]
+            )
+            == Exit.ERROR
         )
 
 
@@ -647,10 +647,10 @@ def test_main_with_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_with_field_constraints' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_with_field_constraints' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -671,10 +671,10 @@ def test_main_without_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_without_field_constraints' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_without_field_constraints' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -697,8 +697,8 @@ def test_main_with_aliases():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -777,10 +777,10 @@ def test_main_with_snake_case_field():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_with_snake_case_field' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_with_snake_case_field' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -802,10 +802,10 @@ def test_main_with_strip_default_none():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_with_strip_default_none' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_with_strip_default_none' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -826,8 +826,8 @@ def test_disable_timestamp():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -849,10 +849,10 @@ def test_allow_population_by_field_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'allow_population_by_field_name' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'allow_population_by_field_name' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -874,10 +874,10 @@ def test_enable_faux_immutability():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'enable_faux_immutability' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'enable_faux_immutability' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -899,8 +899,8 @@ def test_use_default():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'use_default' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'use_default' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -922,8 +922,8 @@ def test_force_optional():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -944,8 +944,8 @@ def test_main_with_exclusive():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_with_exclusive' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_with_exclusive' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -966,8 +966,8 @@ def test_main_subclass_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_subclass_enum' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_subclass_enum' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -989,12 +989,12 @@ def test_main_complicated_enum_default_member():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_complicated_enum_default_member'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_complicated_enum_default_member'
+                / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -1019,10 +1019,10 @@ def test_main_json_reuse_enum_default_member():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_json_reuse_enum_default_member' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_reuse_enum_default_member' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1047,8 +1047,8 @@ def test_main_invalid_model_name_failed(capsys):
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
-                captured.err
-                == 'title=\'with\' is invalid class name. You have to set `--class-name` option\n'
+            captured.err
+            == 'title=\'with\' is invalid class name. You have to set `--class-name` option\n'
         )
 
 
@@ -1069,8 +1069,8 @@ def test_main_invalid_model_name_converted(capsys):
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
-                captured.err
-                == 'title=\'1Xyz\' is invalid class name. You have to set `--class-name` option\n'
+            captured.err
+            == 'title=\'1Xyz\' is invalid class name. You have to set `--class-name` option\n'
         )
 
 
@@ -1092,10 +1092,10 @@ def test_main_invalid_model_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_invalid_model_name' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_invalid_model_name' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1122,8 +1122,8 @@ def test_main_root_id_jsonschema_with_local_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_not_called()
     with pytest.raises(SystemExit):
@@ -1153,8 +1153,8 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -1184,7 +1184,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
         ).read_text().replace(
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
@@ -1214,7 +1214,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
         ).read_text().replace(
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
@@ -1250,10 +1250,10 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
+            ).read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -1280,8 +1280,8 @@ def test_main_jsonschema_id():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema_id' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema_id' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1302,10 +1302,10 @@ def test_main_jsonschema_id_as_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_id_stdin' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_id_stdin' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1353,7 +1353,7 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
             ]
         )
     main_use_standard_collections_dir = (
-            EXPECTED_MAIN_PATH / 'main_use_standard_collections'
+        EXPECTED_MAIN_PATH / 'main_use_standard_collections'
     )
     for path in main_use_standard_collections_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1379,7 +1379,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
             ]
         )
     main_use_generic_container_types_dir = (
-            EXPECTED_MAIN_PATH / 'main_use_generic_container_types'
+        EXPECTED_MAIN_PATH / 'main_use_generic_container_types'
     )
     for path in main_use_generic_container_types_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1389,7 +1389,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
 
 
 def test_main_use_generic_container_types_standard_collections(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -1408,7 +1408,7 @@ def test_main_use_generic_container_types_standard_collections(
             ]
         )
     main_use_generic_container_types_standard_collections_dir = (
-            EXPECTED_MAIN_PATH / 'main_use_generic_container_types_standard_collections'
+        EXPECTED_MAIN_PATH / 'main_use_generic_container_types_standard_collections'
     )
     for path in main_use_generic_container_types_standard_collections_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1432,9 +1432,9 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     captured = capsys.readouterr()
     assert return_code == Exit.ERROR
     assert (
-            captured.err == '`--use-generic-container-types` can not be used with '
-                            '`--target-python_version` 3.6.\n '
-                            'The version will be not supported in a future version\n'
+        captured.err == '`--use-generic-container-types` can not be used with '
+        '`--target-python_version` 3.6.\n '
+        'The version will be not supported in a future version\n'
     )
 
 
@@ -1454,10 +1454,10 @@ def test_main_external_definitions():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1483,10 +1483,10 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1533,10 +1533,10 @@ def test_main_circular_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_circular_reference' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_circular_reference' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1558,8 +1558,8 @@ def test_main_invalid_enum_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1582,8 +1582,8 @@ def test_main_json_reuse_model():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1606,8 +1606,8 @@ def test_main_json_reuse_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json_reuse_enum' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_reuse_enum' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1629,8 +1629,8 @@ def test_main_openapi_datetime():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_openapi_datetime' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_openapi_datetime' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1652,10 +1652,10 @@ def test_main_similar_nested_array():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_similar_nested_array' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_similar_nested_array' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1677,10 +1677,10 @@ def test_space_and_special_characters_dict():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1702,8 +1702,8 @@ def test_csv_file():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1724,8 +1724,8 @@ def test_csv_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1766,8 +1766,8 @@ def test_main_json_pointer():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json_pointer' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_pointer' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1789,10 +1789,10 @@ def test_main_nested_json_pointer():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_nested_json_pointer' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_nested_json_pointer' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1844,10 +1844,10 @@ def test_main_openapi_enum_models_as_literal_one():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_enum_models_one' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_one' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1873,10 +1873,10 @@ def test_main_openapi_enum_models_as_literal_all():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1901,12 +1901,12 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
 
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_enum_models_as_literal_py37'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_enum_models_as_literal_py37'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1930,12 +1930,12 @@ def test_main_root_model_with_additional_properties():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1960,12 +1960,12 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties_use_generic_container_types'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_use_generic_container_types'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -1990,12 +1990,12 @@ def test_main_root_model_with_additional_properties_use_standard_collections():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties_use_standard_collections'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_use_standard_collections'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2023,12 +2023,12 @@ def test_main_root_model_with_additional_properties_literal():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties_literal'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_literal'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2077,10 +2077,10 @@ def test_main_jsonschema_multiple_files_ref_test_json():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
+                ).read_text()
             )
     with pytest.raises(SystemExit):
         main()
@@ -2104,10 +2104,10 @@ def test_simple_json_snake_case_field():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
+                ).read_text()
             )
     with pytest.raises(SystemExit):
         main()
@@ -2132,8 +2132,8 @@ def test_main_all_of_ref():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'all_of_ref' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'all_of_ref' / 'output.py').read_text()
             )
     with pytest.raises(SystemExit):
         main()
@@ -2156,8 +2156,8 @@ def test_main_all_of_with_object():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'all_of_with_object' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'all_of_with_object' / 'output.py').read_text()
             )
     with pytest.raises(SystemExit):
         main()
@@ -2180,8 +2180,8 @@ def test_main_combined_array():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'combined_array' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'combined_array' / 'output.py').read_text()
             )
     with pytest.raises(SystemExit):
         main()
@@ -2203,8 +2203,8 @@ def test_main_openapi_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_openapi_nullable' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_openapi_nullable' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2227,12 +2227,12 @@ def test_main_openapi_nullable_strict_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_nullable_strict_nullable'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_nullable_strict_nullable'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2254,7 +2254,7 @@ def test_main_openapi_pattern():
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py'
         ).read_text().replace('pattern.json', 'pattern.yaml')
     with pytest.raises(SystemExit):
         main()
@@ -2276,8 +2276,8 @@ def test_main_jsonschema_pattern():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2296,8 +2296,8 @@ def test_main_generate():
         )
 
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
 
 
@@ -2341,19 +2341,19 @@ def test_main_generate_custom_class_name_generator():
         )
 
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py'
         ).read_text().replace('Person', 'CustomPerson')
 
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator_modular(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ):
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     output_path = output_directory / 'model'
     main_modular_custom_class_name_dir = (
-            EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
+        EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
     )
 
     custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
@@ -2377,7 +2377,7 @@ def test_main_generate_custom_class_name_generator_modular(
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator_additional_properties(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ):
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -2386,7 +2386,7 @@ def test_main_generate_custom_class_name_generator_additional_properties(
     custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
 
     input_ = (
-            JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+        JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
     ).relative_to(Path.cwd())
     assert not input_.is_absolute()
     generate(
@@ -2397,12 +2397,12 @@ def test_main_generate_custom_class_name_generator_additional_properties(
     )
 
     assert (
-            output_file.read_text()
-            == (
-                    EXPECTED_MAIN_PATH
-                    / 'main_root_model_with_additional_properties_custom_class_name'
-                    / 'output.py'
-            ).read_text()
+        output_file.read_text()
+        == (
+            EXPECTED_MAIN_PATH
+            / 'main_root_model_with_additional_properties_custom_class_name'
+            / 'output.py'
+        ).read_text()
     )
 
 
@@ -2442,7 +2442,7 @@ def test_main_http_jsonschema(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
         ).read_text().replace(
             '#   filename:  person.json',
             '#   filename:  https://example.com/external_files_in_directory/person.json',
@@ -2492,17 +2492,17 @@ def test_main_http_jsonschema(mocker):
     'headers_arguments,headers_requests',
     [
         (
-                ('Authorization: Basic dXNlcjpwYXNz',),
-                [('Authorization', 'Basic dXNlcjpwYXNz')],
+            ('Authorization: Basic dXNlcjpwYXNz',),
+            [('Authorization', 'Basic dXNlcjpwYXNz')],
         ),
         (
-                ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
-                [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
+            ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
+            [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
         ),
     ],
 )
 def test_main_http_jsonschema_with_http_headers(
-        mocker, headers_arguments, headers_requests
+    mocker, headers_arguments, headers_requests
 ):
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
@@ -2540,7 +2540,7 @@ def test_main_http_jsonschema_with_http_headers(
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
         ).read_text().replace(
             '#   filename:  person.json',
             '#   filename:  https://example.com/external_files_in_directory/person.json',
@@ -2613,8 +2613,8 @@ def test_main_http_openapi(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_openapi_http_refs' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_openapi_http_refs' / 'output.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -2656,7 +2656,7 @@ def test_main_http_json(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_json' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_json' / 'output.py'
         ).read_text().replace(
             '#   filename:  pet.json',
             '#   filename:  https://example.com/pet.json',
@@ -2689,8 +2689,8 @@ def test_main_self_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_self_reference' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_self_reference' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2712,10 +2712,10 @@ def test_main_disable_appending_item_suffix():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_disable_appending_item_suffix' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_disable_appending_item_suffix' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -2738,8 +2738,8 @@ def test_main_strict_types():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_strict_types' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_strict_types' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2767,8 +2767,8 @@ def test_main_strict_types_all():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_strict_types_all' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_strict_types_all' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2798,12 +2798,12 @@ def test_main_strict_types_all_with_field_constraints():
 
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_strict_types_all_field_constraints'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_strict_types_all_field_constraints'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2825,10 +2825,10 @@ def test_main_jsonschema_special_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_special_enum' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_special_enum' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2852,12 +2852,12 @@ def test_main_jsonschema_special_enum_empty_enum_field_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_special_enum_empty_enum_field_name'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_special_enum_empty_enum_field_name'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2879,10 +2879,10 @@ def test_main_jsonschema_special_field_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_special_field_name' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_special_field_name' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2904,10 +2904,10 @@ def test_main_jsonschema_complex_one_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_complex_one_of' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_complex_one_of' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2929,10 +2929,10 @@ def test_main_jsonschema_complex_any_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_complex_any_of' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_complex_any_of' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2954,12 +2954,12 @@ def test_main_jsonschema_combine_one_of_object():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_combine_one_of_object'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_combine_one_of_object'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -2981,12 +2981,12 @@ def test_main_jsonschema_combine_any_of_object():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_combine_any_of_object'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_combine_any_of_object'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3009,8 +3009,8 @@ def test_main_jsonschema_field_include_all_keys():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3033,12 +3033,12 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_field_extras_field_include_all_keys'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_field_extras_field_include_all_keys'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3063,12 +3063,12 @@ def test_main_jsonschema_field_extras_field_extra_keys():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_field_extras_field_extra_keys'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_field_extras_field_extra_keys'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3090,10 +3090,10 @@ def test_main_jsonschema_field_extras():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3119,10 +3119,10 @@ def test_main_jsonschema_custom_type_path():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_custom_type_path' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_custom_type_path' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3144,12 +3144,12 @@ def test_main_jsonschema_unsupported_parent_class():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_unsupported_parent_class'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_unsupported_parent_class'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3174,10 +3174,10 @@ def test_main_openapi_body_and_parameters():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3207,12 +3207,12 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_body_and_parameters_remote_ref'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_remote_ref'
+                / 'output.py'
+            ).read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -3241,12 +3241,12 @@ def test_main_openapi_body_and_parameters_only_paths():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_body_and_parameters_only_paths'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_paths'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3270,12 +3270,12 @@ def test_main_openapi_body_and_parameters_only_schemas():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_body_and_parameters_only_schemas'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_schemas'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3297,10 +3297,10 @@ def test_main_openapi_content_in_parameters():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_content_in_parameters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_content_in_parameters' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3325,10 +3325,10 @@ def test_main_openapi_oas_response_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_oas_response_reference' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_oas_response_reference' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3350,8 +3350,8 @@ def test_long_description():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3374,12 +3374,12 @@ def test_long_description_wrap_string_literal():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_long_description_wrap_string_literal'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_long_description_wrap_string_literal'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3410,10 +3410,10 @@ def test_main_openapi_json_pointer():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_json_pointer' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_json_pointer' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3435,12 +3435,11 @@ def test_jsonschema_pattern_properties():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_pattern_properties' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_pattern_properties' / 'output.py'
+            ).read_text()
         )
-
         from tests.data.expected.main.main_pattern_properties.output import Foo
         Foo(**{
             'bar': {
@@ -3468,8 +3467,8 @@ def test_jsonschema_titles():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema_titles' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema_titles' / 'output.py').read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3492,12 +3491,12 @@ def test_jsonschema_titles_use_title_as_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_titles_use_title_as_name'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_titles_use_title_as_name'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3520,12 +3519,12 @@ def test_jsonschema_without_titles_use_title_as_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_without_titles_use_title_as_name'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_without_titles_use_title_as_name'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3547,12 +3546,12 @@ def test_main_use_annotated_with_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_use_annotated_with_field_constraints'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_use_annotated_with_field_constraints'
+                / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
