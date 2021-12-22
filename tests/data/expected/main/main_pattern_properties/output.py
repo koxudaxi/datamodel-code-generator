@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from pydantic import BaseModel, constr
 
 
-class Bar(BaseModel):
-    name: Optional[str] = None
-
-
 class Foo(BaseModel):
-    bar: Dict[constr(regex=r'^([a-zA-Z_][a-zA-Z0-9_]*)$'), Bar]
+    bar: Optional[
+        Union[Dict[constr(regex=r'^A_\d$'), str], Dict[constr(regex=r'^B_\d$'), str]]
+    ] = None
