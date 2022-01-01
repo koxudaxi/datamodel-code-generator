@@ -39,11 +39,13 @@ class _BaseModel(BaseModel):
     _exclude_fields: ClassVar[Set[str]] = set()
     _pass_fields: ClassVar[Set[str]] = set()
 
-    def __init__(self, **values: Any) -> None:  # type: ignore
-        super().__init__(**values)
-        for pass_field_name in self._pass_fields:
-            if pass_field_name in values:
-                setattr(self, pass_field_name, values[pass_field_name])
+    if not TYPE_CHECKING:
+
+        def __init__(self, **values: Any) -> None:
+            super().__init__(**values)
+            for pass_field_name in self._pass_fields:
+                if pass_field_name in values:
+                    setattr(self, pass_field_name, values[pass_field_name])
 
     def dict(
         self,
