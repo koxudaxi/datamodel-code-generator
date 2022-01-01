@@ -483,152 +483,152 @@
 <pre>
 <code>
 
-<div class="codehilite"><pre><span></span><code><span class="nt">openapi</span><span class="p">:</span> <span class="s">&quot;3.0.0&quot;</span>
-<span class="nt">info</span><span class="p">:</span>
-  <span class="nt">version</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1.0.0</span>
-  <span class="nt">title</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Swagger Petstore</span>
-  <span class="nt">license</span><span class="p">:</span>
-    <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">MIT</span>
-<span class="nt">servers</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="nt">url</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">http://petstore.swagger.io/v1</span>
-<span class="nt">paths</span><span class="p">:</span>
-  <span class="nt">/pets</span><span class="p">:</span>
-    <span class="nt">get</span><span class="p">:</span>
-      <span class="nt">summary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">List all pets</span>
-      <span class="nt">operationId</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">listPets</span>
-      <span class="nt">tags</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pets</span>
-      <span class="nt">parameters</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">limit</span>
-          <span class="nt">in</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">query</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">How many items to return at one time (max 100)</span>
-          <span class="nt">required</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">false</span>
-          <span class="nt">schema</span><span class="p">:</span>
-            <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">integer</span>
-            <span class="nt">format</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">int32</span>
-      <span class="nt">responses</span><span class="p">:</span>
-        <span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">A paged array of pets</span>
-          <span class="nt">headers</span><span class="p">:</span>
-            <span class="nt">x-next</span><span class="p">:</span>
-              <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">A link to the next page of responses</span>
-              <span class="nt">schema</span><span class="p">:</span>
-                <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-          <span class="nt">content</span><span class="p">:</span>
-            <span class="nt">application/json</span><span class="p">:</span>
-              <span class="nt">schema</span><span class="p">:</span>
-                <span class="nt">$ref</span><span class="p">:</span> <span class="s">&quot;#/components/schemas/Pets&quot;</span>
-        <span class="nt">default</span><span class="p">:</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
-          <span class="nt">content</span><span class="p">:</span>
-            <span class="nt">application/json</span><span class="p">:</span>
-              <span class="nt">schema</span><span class="p">:</span>
-                <span class="nt">$ref</span><span class="p">:</span> <span class="s">&quot;#/components/schemas/Error&quot;</span>
-                <span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
-                  <span class="nt">uri</span><span class="p">:</span>
-                    <span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
-                  <span class="nt">passthroughBehavior</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
-                  <span class="nt">httpMethod</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">POST</span>
-                  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
-    <span class="nt">post</span><span class="p">:</span>
-      <span class="nt">summary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Create a pet</span>
-      <span class="nt">operationId</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">createPets</span>
-      <span class="nt">tags</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pets</span>
-      <span class="nt">responses</span><span class="p">:</span>
-        <span class="s">&#39;201&#39;</span><span class="p p-Indicator">:</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Null response</span>
-        <span class="nt">default</span><span class="p">:</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
-          <span class="nt">content</span><span class="p">:</span>
-            <span class="nt">application/json</span><span class="p">:</span>
-              <span class="nt">schema</span><span class="p">:</span>
-                <span class="nt">$ref</span><span class="p">:</span> <span class="s">&quot;#/components/schemas/Error&quot;</span>
-                <span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
-                  <span class="nt">uri</span><span class="p">:</span>
-                    <span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
-                  <span class="nt">passthroughBehavior</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
-                  <span class="nt">httpMethod</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">POST</span>
-                  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
-  <span class="l l-Scalar l-Scalar-Plain">/pets/{petId}</span><span class="p p-Indicator">:</span>
-    <span class="nt">get</span><span class="p">:</span>
-      <span class="nt">summary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Info for a specific pet</span>
-      <span class="nt">operationId</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">showPetById</span>
-      <span class="nt">tags</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pets</span>
-      <span class="nt">parameters</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">petId</span>
-          <span class="nt">in</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">path</span>
-          <span class="nt">required</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">The id of the pet to retrieve</span>
-          <span class="nt">schema</span><span class="p">:</span>
-            <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-      <span class="nt">responses</span><span class="p">:</span>
-        <span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Expected response to a valid request</span>
-          <span class="nt">content</span><span class="p">:</span>
-            <span class="nt">application/json</span><span class="p">:</span>
-              <span class="nt">schema</span><span class="p">:</span>
-                <span class="nt">$ref</span><span class="p">:</span> <span class="s">&quot;#/components/schemas/Pets&quot;</span>
-        <span class="nt">default</span><span class="p">:</span>
-          <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
-          <span class="nt">content</span><span class="p">:</span>
-            <span class="nt">application/json</span><span class="p">:</span>
-              <span class="nt">schema</span><span class="p">:</span>
-                <span class="nt">$ref</span><span class="p">:</span> <span class="s">&quot;#/components/schemas/Error&quot;</span>
-    <span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
-      <span class="nt">uri</span><span class="p">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
-      <span class="nt">passthroughBehavior</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
-      <span class="nt">httpMethod</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">POST</span>
-      <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
-<span class="nt">components</span><span class="p">:</span>
-  <span class="nt">schemas</span><span class="p">:</span>
-    <span class="nt">Pet</span><span class="p">:</span>
-      <span class="nt">required</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">id</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span>
-      <span class="nt">properties</span><span class="p">:</span>
-        <span class="nt">id</span><span class="p">:</span>
-          <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">integer</span>
-          <span class="nt">format</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">int64</span>
-        <span class="nt">name</span><span class="p">:</span>
-          <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-        <span class="nt">tag</span><span class="p">:</span>
-          <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-    <span class="nt">Pets</span><span class="p">:</span>
-      <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
-      <span class="nt">items</span><span class="p">:</span>
-        <span class="nt">$ref</span><span class="p">:</span> <span class="s">&quot;#/components/schemas/Pet&quot;</span>
-    <span class="nt">Error</span><span class="p">:</span>
-      <span class="nt">required</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">code</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">message</span>
-      <span class="nt">properties</span><span class="p">:</span>
-        <span class="nt">code</span><span class="p">:</span>
-          <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">integer</span>
-          <span class="nt">format</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">int32</span>
-        <span class="nt">message</span><span class="p">:</span>
-          <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-    <span class="nt">apis</span><span class="p">:</span>
-      <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
-      <span class="nt">items</span><span class="p">:</span>
-        <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">object</span>
-        <span class="nt">properties</span><span class="p">:</span>
-          <span class="nt">apiKey</span><span class="p">:</span>
-            <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-            <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">To be used as a dataset parameter value</span>
-          <span class="nt">apiVersionNumber</span><span class="p">:</span>
-            <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-            <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">To be used as a version parameter value</span>
-          <span class="nt">apiUrl</span><span class="p">:</span>
-            <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-            <span class="nt">format</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">uri</span>
-            <span class="nt">description</span><span class="p">:</span> <span class="s">&quot;The</span><span class="nv"> </span><span class="s">URL</span><span class="nv"> </span><span class="s">describing</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">dataset&#39;s</span><span class="nv"> </span><span class="s">fields&quot;</span>
-          <span class="nt">apiDocumentationUrl</span><span class="p">:</span>
-            <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">string</span>
-            <span class="nt">format</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">uri</span>
-            <span class="nt">description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">A URL to the API console for each API</span>
+<div class="codehilite"><pre><span></span><code><span class="nt">openapi</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.0.0&quot;</span><span class="w"></span>
+<span class="nt">info</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0.0</span><span class="w"></span>
+<span class="w">  </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Swagger Petstore</span><span class="w"></span>
+<span class="w">  </span><span class="nt">license</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MIT</span><span class="w"></span>
+<span class="nt">servers</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://petstore.swagger.io/v1</span><span class="w"></span>
+<span class="nt">paths</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">/pets</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">get</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">List all pets</span><span class="w"></span>
+<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">listPets</span><span class="w"></span>
+<span class="w">      </span><span class="nt">tags</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span><span class="w"></span>
+<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">limit</span><span class="w"></span>
+<span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">query</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">How many items to return at one time (max 100)</span><span class="w"></span>
+<span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"></span>
+<span class="w">          </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span><span class="w"></span>
+<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span><span class="w"></span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A paged array of pets</span><span class="w"></span>
+<span class="w">          </span><span class="nt">headers</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">x-next</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A link to the next page of responses</span><span class="w"></span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span><span class="w"></span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">uri</span><span class="p">:</span><span class="w"></span>
+<span class="w">                    </span><span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span><span class="w"></span>
+<span class="w">    </span><span class="nt">post</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create a pet</span><span class="w"></span>
+<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">createPets</span><span class="w"></span>
+<span class="w">      </span><span class="nt">tags</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span><span class="w"></span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="s">&#39;201&#39;</span><span class="p p-Indicator">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Null response</span><span class="w"></span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span><span class="w"></span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">uri</span><span class="p">:</span><span class="w"></span>
+<span class="w">                    </span><span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span><span class="w"></span>
+<span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/pets/{petId}</span><span class="p p-Indicator">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">get</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Info for a specific pet</span><span class="w"></span>
+<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">showPetById</span><span class="w"></span>
+<span class="w">      </span><span class="nt">tags</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span><span class="w"></span>
+<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">petId</span><span class="w"></span>
+<span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">path</span><span class="w"></span>
+<span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">The id of the pet to retrieve</span><span class="w"></span>
+<span class="w">          </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Expected response to a valid request</span><span class="w"></span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span><span class="w"></span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">uri</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span><span class="w"></span>
+<span class="w">      </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span><span class="w"></span>
+<span class="w">      </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span><span class="w"></span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span><span class="w"></span>
+<span class="nt">components</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">schemas</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">Pet</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">required</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">id</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">name</span><span class="w"></span>
+<span class="w">      </span><span class="nt">properties</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">id</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span><span class="w"></span>
+<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int64</span><span class="w"></span>
+<span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">        </span><span class="nt">tag</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">    </span><span class="nt">Pets</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span><span class="w"></span>
+<span class="w">      </span><span class="nt">items</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pet&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">Error</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">required</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">message</span><span class="w"></span>
+<span class="w">      </span><span class="nt">properties</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">code</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span><span class="w"></span>
+<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span><span class="w"></span>
+<span class="w">        </span><span class="nt">message</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">    </span><span class="nt">apis</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span><span class="w"></span>
+<span class="w">      </span><span class="nt">items</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object</span><span class="w"></span>
+<span class="w">        </span><span class="nt">properties</span><span class="p">:</span><span class="w"></span>
+<span class="w">          </span><span class="nt">apiKey</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a dataset parameter value</span><span class="w"></span>
+<span class="w">          </span><span class="nt">apiVersionNumber</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a version parameter value</span><span class="w"></span>
+<span class="w">          </span><span class="nt">apiUrl</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span><span class="w"></span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;The</span><span class="nv"> </span><span class="s">URL</span><span class="nv"> </span><span class="s">describing</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">dataset&#39;s</span><span class="nv"> </span><span class="s">fields&quot;</span><span class="w"></span>
+<span class="w">          </span><span class="nt">apiDocumentationUrl</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
+<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span><span class="w"></span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A URL to the API console for each API</span><span class="w"></span>
 </code></pre></div>
 
 
