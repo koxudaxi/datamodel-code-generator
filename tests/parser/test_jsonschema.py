@@ -409,5 +409,4 @@ def test_get_data_type_array(schema_types, result_types):
             for r in result_types
         ],
         is_optional='null' in schema_types,
-        imports=[IMPORT_OPTIONAL] if 'null' in schema_types else [],
     )
