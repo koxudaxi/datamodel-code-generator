@@ -39,7 +39,7 @@ datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.6.1"
-pydantic = {extras = ["email"], version = ">=1.5.1,<2.0"}
+pydantic =  [{extras = ["email"], version = ">=1.5.1,<2.0", python = "<3.10"}, {extras = ["email"], version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 argcomplete = ">=1.10,<2.0"
 prance = ">=0.18.2,<1.0"
 openapi-spec-validator = ">=0.2.8,<0.4"
@@ -65,7 +65,7 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-pydantic = ">=1.8.2"
+pydantic =  [{version = ">=1.8.2,<2.0", python = "<3.10"}, {version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 httpx = "*"
 
 
