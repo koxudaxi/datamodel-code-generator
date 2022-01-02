@@ -42,10 +42,6 @@ jobs:
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root -E http
-    - name: Lint
-      run: |
-        source $VENV
-        ./scripts/lint.sh
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
@@ -54,6 +50,10 @@ jobs:
       if: matrix.pydantic-version == '1.5.1' && matrix.python-version != '3.9'
       run: |
          poetry run pip install pydantic=="1.5.1"
+    - name: Lint
+      run: |
+        source $VENV
+        ./scripts/lint.sh
     - name: Unit Test
       run: |
          source $VENV

@@ -157,6 +157,14 @@ class InputFileType(Enum):
     CSV = 'csv'
 
 
+RAW_DATA_TYPES: List[InputFileType] = [
+    InputFileType.Json,
+    InputFileType.Yaml,
+    InputFileType.Dict,
+    InputFileType.CSV,
+]
+
+
 class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
@@ -268,12 +276,7 @@ def generate(
 
         parser_class = JsonSchemaParser
 
-        if input_file_type in (
-            InputFileType.Json,
-            InputFileType.Yaml,
-            InputFileType.Dict,
-            InputFileType.CSV,
-        ):
+        if input_file_type in RAW_DATA_TYPES:
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     raise Error(f'Input must be a file for {input_file_type}')
@@ -308,8 +311,10 @@ def generate(
             builder.add_object(obj)
             input_text = json.dumps(builder.to_schema())
 
+    if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
+        input_text = None
     parser = parser_class(
-        source=input_ if isinstance(input_, ParseResult) else input_text or input_,
+        source=input_text or input_,
         base_class=base_class,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
