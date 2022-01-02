@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
         pydantic-version: [1.5.1, default]
@@ -47,7 +47,7 @@ jobs:
       run: |
          poetry run pip install isort=="$ISORT"
     - name: Install Pydantic 1.5.1
-      if: matrix.pydantic-version == '1.5.1' && matrix.python-version != '3.9'
+      if: matrix.pydantic-version == '1.5.1' && matrix.python-version != '3.9'  && matrix.python-version != '3.10'
       run: |
          poetry run pip install pydantic=="1.5.1"
     - name: Lint
