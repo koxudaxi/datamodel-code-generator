@@ -3,6 +3,7 @@ from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     DefaultDict,
@@ -50,10 +51,12 @@ class DataModelFieldBase(_BaseModel):
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
-    def __init__(self, **data: Any):  # type: ignore
-        super().__init__(**data)
-        if self.data_type.reference or self.data_type.data_types:
-            self.data_type.parent = self
+    if not TYPE_CHECKING:
+
+        def __init__(self, **data: Any):
+            super().__init__(**data)
+            if self.data_type.reference or self.data_type.data_types:
+                self.data_type.parent = self
 
     @property
     def type_hint(self) -> str:
@@ -144,7 +147,7 @@ class TemplateBase(ABC):
         return self.render()
 
 
-class BaseClassDataType(DataType):  # type: ignore
+class BaseClassDataType(DataType):
     ...
 
 

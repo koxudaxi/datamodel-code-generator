@@ -39,7 +39,7 @@ datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.6.1"
-pydantic = {extras = ["email"], version = ">=1.5.1,<2.0"}
+pydantic =  [{extras = ["email"], version = ">=1.5.1,<2.0", python = "<3.10"}, {extras = ["email"], version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 argcomplete = ">=1.10,<2.0"
 prance = ">=0.18.2,<1.0"
 openapi-spec-validator = ">=0.2.8,<0.4"
@@ -65,7 +65,7 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-pydantic = ">=1.8.2"
+pydantic =  [{version = ">=1.8.2,<2.0", python = "<3.10"}, {version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 httpx = "*"
 
 
@@ -101,7 +101,7 @@ disallow_untyped_defs = true
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
-warn_required_dynamic_aliases = true
+warn_required_dynamic_aliases = false
 warn_untyped_fields = true
 
 [tool.pytest.ini_options]
@@ -119,7 +119,8 @@ exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:"]
+    "if TYPE_CHECKING:",
+    "if not TYPE_CHECKING:"]
 
 omit = ["tests/*"]
 
