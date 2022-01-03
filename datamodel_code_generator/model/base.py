@@ -28,6 +28,7 @@ from datamodel_code_generator.types import DataType, chain_as_tuple
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
 OPTIONAL: str = 'Optional'
+UNION: str = 'Union'
 
 ALL_MODEL: str = '#all#'
 
@@ -64,6 +65,8 @@ class DataModelFieldBase(_BaseModel):
 
         if not type_hint:
             return OPTIONAL
+        elif self.required is False:
+            return f'{UNION}[{type_hint}, Unset]'
         elif self.nullable is not None:
             if self.nullable:
                 return f'{OPTIONAL}[{type_hint}]'

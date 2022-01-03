@@ -629,6 +629,7 @@ class Parser(ABC):
                 result += [str(self.imports), str(imports), '\n']
 
             code = dump_templates(models)
+            result += ["class Unset:", "    pass", "\n", "unset = Unset()"]
             result += [code]
 
             if self.dump_resolve_reference_action is not None:
