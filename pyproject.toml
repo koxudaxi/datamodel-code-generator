@@ -40,7 +40,7 @@ datamodel-codegen = "datamodel_code_generator.__main__:main"
 [tool.poetry.dependencies]
 python = "^3.6.1"
 pydantic =  [{extras = ["email"], version = ">=1.5.1,<2.0", python = "<3.10"}, {extras = ["email"], version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
-argcomplete = ">=1.10,<2.0"
+argcomplete = ">=1.10,<3.0"
 prance = ">=0.18.2,<1.0"
 openapi-spec-validator = ">=0.2.8,<0.4"
 jinja2 = ">=2.10.1,<4.0"
