@@ -3441,12 +3441,8 @@ def test_jsonschema_pattern_properties():
             ).read_text()
         )
         from tests.data.expected.main.main_pattern_properties.output import Foo
-        Foo(**{
-            'bar': {
-                'A_1': "a",
-                'B_2': "b"
-            }
-        })
+
+        Foo(**{'bar': {'A_1': "a", 'B_2': "b"}})
     with pytest.raises(SystemExit):
         main()
 
