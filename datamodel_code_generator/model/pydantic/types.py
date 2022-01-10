@@ -22,6 +22,10 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_IPV6ADDRESS,
     IMPORT_NEGATIVE_FLOAT,
     IMPORT_NEGATIVE_INT,
+    IMPORT_NON_NEGATIVE_FLOAT,
+    IMPORT_NON_NEGATIVE_INT,
+    IMPORT_NON_POSITIVE_FLOAT,
+    IMPORT_NON_POSITIVE_INT,
     IMPORT_POSITIVE_FLOAT,
     IMPORT_POSITIVE_INT,
     IMPORT_SECRET_STR,
@@ -177,6 +181,10 @@ class DataTypeManager(_DataTypeManager):
                     return self.data_type.from_import(IMPORT_POSITIVE_INT)
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_INT)
+                if data_type_kwargs == {'ge': 0}:
+                    return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
+                if data_type_kwargs == {'le': 0}:
+                    return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
             kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
             if strict:
                 kwargs['strict'] = True
@@ -194,6 +202,10 @@ class DataTypeManager(_DataTypeManager):
                     return self.data_type.from_import(IMPORT_POSITIVE_FLOAT)
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_FLOAT)
+                if data_type_kwargs == {'ge': 0}:
+                    return self.data_type.from_import(IMPORT_NON_NEGATIVE_FLOAT)
+                if data_type_kwargs == {'le': 0}:
+                    return self.data_type.from_import(IMPORT_NON_POSITIVE_FLOAT)
             kwargs = {k: float(v) for k, v in data_type_kwargs.items()}
             if strict:
                 kwargs['strict'] = True

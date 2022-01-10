@@ -208,7 +208,7 @@ class Pet(BaseModel):
             """class Person(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
-    age: Optional[conint(ge=0)] = None""",
+    age: Optional[NonNegativeInt] = None""",
         ),
         (
             {
