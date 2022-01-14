@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, List, Optional, Union
 
-from pydantic import BaseModel, Extra, Field, NonNegativeInt
+from pydantic import BaseModel, Extra, Field, conint
 
 
 class Fur(Enum):
@@ -58,7 +58,7 @@ class Friends(BaseModel):
 class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
-    age: Optional[NonNegativeInt] = Field(None, description='Age in years.')
+    age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[Pet]] = None
     friends: Optional[Friends] = None
     robot: Optional[Robot] = None

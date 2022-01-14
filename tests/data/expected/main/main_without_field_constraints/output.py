@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field, NonNegativeInt, constr
+from pydantic import AnyUrl, BaseModel, Field, conint, constr
 
 
 class Pet(BaseModel):
-    id: NonNegativeInt
+    id: conint(ge=0)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
 
@@ -20,7 +20,7 @@ class Pets(BaseModel):
 
 
 class UID(BaseModel):
-    __root__: NonNegativeInt
+    __root__: conint(ge=0)
 
 
 class Phone(BaseModel):
@@ -28,7 +28,7 @@ class Phone(BaseModel):
 
 
 class User(BaseModel):
-    id: NonNegativeInt
+    id: conint(ge=0)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
     uid: UID

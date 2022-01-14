@@ -6,26 +6,17 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import (
-    BaseModel,
-    Field,
-    NonNegativeFloat,
-    NonNegativeInt,
-    NonPositiveFloat,
-    NonPositiveInt,
-    conbytes,
-    constr,
-)
+from pydantic import BaseModel, Field, conbytes, confloat, conint, constr
 
 
 class User(BaseModel):
     name: Optional[str] = Field(None, example='ken')
     age: Optional[int] = None
-    salary: Optional[NonNegativeInt] = None
-    debt: Optional[NonPositiveInt] = None
-    loan: Optional[NonPositiveFloat] = None
+    salary: Optional[conint(ge=0)] = None
+    debt: Optional[conint(le=0)] = None
+    loan: Optional[confloat(le=0.0)] = None
     tel: Optional[constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$')] = None
-    height: Optional[NonNegativeFloat] = None
-    weight: Optional[NonNegativeFloat] = None
+    height: Optional[confloat(ge=0.0)] = None
+    weight: Optional[confloat(ge=0.0)] = None
     active: Optional[bool] = None
     photo: Optional[conbytes(min_length=100)] = None
