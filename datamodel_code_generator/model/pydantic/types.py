@@ -172,7 +172,7 @@ class DataTypeManager(_DataTypeManager):
             self.data_type,
         )
 
-    def get_data_int_type(self, types: Types, **kwargs: Any) -> DataType:
+    def get_data_int_type(self, types: Types, use_typecheck_friendly_constrained_types: bool, **kwargs: Any) -> DataType:
         data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.int in self.strict_types
         if data_type_kwargs:
@@ -181,9 +181,9 @@ class DataTypeManager(_DataTypeManager):
                     return self.data_type.from_import(IMPORT_POSITIVE_INT)
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_INT)
-                if data_type_kwargs == {'ge': 0}:
+                if data_type_kwargs == {'ge': 0} and use_typecheck_friendly_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
-                if data_type_kwargs == {'le': 0}:
+                if data_type_kwargs == {'le': 0} and use_typecheck_friendly_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
             kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
             if strict:
@@ -193,7 +193,7 @@ class DataTypeManager(_DataTypeManager):
             return self.strict_type_map[StrictTypes.int]
         return self.type_map[types]
 
-    def get_data_float_type(self, types: Types, **kwargs: Any) -> DataType:
+    def get_data_float_type(self, types: Types, use_typecheck_friendly_constrained_types: bool, **kwargs: Any) -> DataType:
         data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.float in self.strict_types
         if data_type_kwargs:
@@ -202,9 +202,9 @@ class DataTypeManager(_DataTypeManager):
                     return self.data_type.from_import(IMPORT_POSITIVE_FLOAT)
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_FLOAT)
-                if data_type_kwargs == {'ge': 0}:
+                if data_type_kwargs == {'ge': 0} and use_typecheck_friendly_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_FLOAT)
-                if data_type_kwargs == {'le': 0}:
+                if data_type_kwargs == {'le': 0} and use_typecheck_friendly_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_FLOAT)
             kwargs = {k: float(v) for k, v in data_type_kwargs.items()}
             if strict:
@@ -255,13 +255,13 @@ class DataTypeManager(_DataTypeManager):
             return self.strict_type_map[StrictTypes.bytes]
         return self.type_map[types]
 
-    def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+    def get_data_type(self, types: Types, use_typecheck_friendly_constrained_types: bool, **kwargs: Any) -> DataType:
         if types == Types.string:
             return self.get_data_str_type(types, **kwargs)
         elif types in (Types.int32, Types.int64, Types.integer):
-            return self.get_data_int_type(types, **kwargs)
+            return self.get_data_int_type(types, use_typecheck_friendly_constrained_types, **kwargs)
         elif types in (Types.float, Types.double, Types.number, Types.time):
-            return self.get_data_float_type(types, **kwargs)
+            return self.get_data_float_type(types, use_typecheck_friendly_constrained_types, **kwargs)
         elif types == Types.decimal:
             return self.get_data_decimal_type(types, **kwargs)
         elif types == Types.binary:

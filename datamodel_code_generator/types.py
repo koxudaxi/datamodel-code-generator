@@ -350,7 +350,7 @@ class DataTypeManager(ABC):
             )
 
     @abstractmethod
-    def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+    def get_data_type(self, types: Types, use_numbertypes_constrained_with_non: bool,**kwargs: Any) -> DataType:
         raise NotImplementedError
 
     def get_data_type_from_full_path(

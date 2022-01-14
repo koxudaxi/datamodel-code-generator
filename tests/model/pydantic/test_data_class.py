@@ -57,4 +57,4 @@ def test_data_class_optional():
 
 
 def test_data_class_get_data_type():
-    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer, False) == DataType(type='int')

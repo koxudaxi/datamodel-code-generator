@@ -268,7 +268,7 @@ def test_get_data_str_type(types, params, data_type):
     ],
 )
 def test_get_data_type(types, params, data_type):
-    assert DataTypeManager().get_data_type(types, **params) == data_type
+    assert DataTypeManager().get_data_type(types, False, **params) == data_type
 
 
 def test_data_type_type_hint():
