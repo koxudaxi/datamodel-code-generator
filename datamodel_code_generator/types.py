@@ -324,11 +324,15 @@ class DataTypeManager(ABC):
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
+        use_non_positive_negative_number_constrained_types: bool = False,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
         self.use_generic_container_types: bool = use_generic_container_types
         self.strict_types: Sequence[StrictTypes] = strict_types or ()
+        self.use_non_positive_negative_number_constrained_types: bool = (
+            use_non_positive_negative_number_constrained_types
+        )
 
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36

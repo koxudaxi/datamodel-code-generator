@@ -286,6 +286,7 @@ class Parser(ABC):
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
         use_annotated: bool = False,
+        use_non_positive_negative_number_constrained_types: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -371,6 +372,9 @@ class Parser(ABC):
             raise Exception(
                 '`use_annotated=True` has to be used with `field_constraints=True`'
             )
+        self.use_non_positive_negative_number_constrained_types = (
+            use_non_positive_negative_number_constrained_types
+        )
 
     @property
     def iter_source(self) -> Iterator[Source]:

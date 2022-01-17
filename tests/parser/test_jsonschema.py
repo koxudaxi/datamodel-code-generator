@@ -245,7 +245,10 @@ class Pet(BaseModel):
     ],
 )
 def test_parse_object(source_obj, generated_classes):
-    parser = JsonSchemaParser(data_model_field_type=DataModelFieldBase, source='')
+    parser = JsonSchemaParser(
+        data_model_field_type=DataModelFieldBase,
+        source='',
+    )
     parser.parse_object('Person', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
