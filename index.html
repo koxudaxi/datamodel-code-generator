@@ -695,6 +695,7 @@
                          <span class="o">[</span>--openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]]</span>
                          <span class="o">[</span>--output OUTPUT<span class="o">]</span> <span class="o">[</span>--base-class BASE_CLASS<span class="o">]</span>
                          <span class="o">[</span>--field-constraints<span class="o">]</span> <span class="o">[</span>--use-annotated<span class="o">]</span>
+                         <span class="o">[</span>--use_non_positive_negative_number_constrained_types<span class="o">]</span>
                          <span class="o">[</span>--field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]]</span>
                          <span class="o">[</span>--field-include-all-keys<span class="o">]</span> <span class="o">[</span>--snake-case-field<span class="o">]</span>
                          <span class="o">[</span>--strip-default-none<span class="o">]</span>
@@ -735,6 +736,9 @@ optional arguments:
   --field-constraints   Use field constraints and not con* annotations
   --use-annotated       Use typing.Annotated <span class="k">for</span> Field<span class="o">()</span>. Also, <span class="sb">`</span>--field-
                         constraints<span class="sb">`</span> option will be enabled.
+  --use_non_positive_negative_number_constrained_types
+                        Use the Non<span class="o">{</span>Positive,Negative<span class="o">}{</span>FloatInt<span class="o">}</span> types instead of the corresponding con*
+                        constrained types.
   --field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]</span>
                         Add extra keys to field parameters
   --field-include-all-keys
