@@ -235,7 +235,7 @@ def generate(
     use_title_as_name: bool = False,
     http_headers: Optional[Sequence[Tuple[str, str]]] = None,
     use_annotated: bool = False,
-    use_typecheck_friendly_constrained_types: bool = False,
+    use_non_positive_negative_number_constrained_types: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -352,7 +352,7 @@ def generate(
         use_title_as_name=use_title_as_name,
         http_headers=http_headers,
         use_annotated=use_annotated,
-        use_typecheck_friendly_constrained_types=use_typecheck_friendly_constrained_types,
+        use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         **kwargs,
     )
 

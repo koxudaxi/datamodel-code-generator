@@ -308,7 +308,7 @@ class JsonSchemaParser(Parser):
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
         use_annotated: bool = False,
-        use_typecheck_friendly_constrained_types: bool = False,
+        use_non_positive_negative_number_constrained_types: bool = False,
     ):
         super().__init__(
             source=source,
@@ -351,7 +351,7 @@ class JsonSchemaParser(Parser):
             use_title_as_name=use_title_as_name,
             http_headers=http_headers,
             use_annotated=use_annotated,
-            use_typecheck_friendly_constrained_types=use_typecheck_friendly_constrained_types,
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -391,7 +391,6 @@ class JsonSchemaParser(Parser):
         if obj.type is None:
             return self.data_type_manager.get_data_type(
                 Types.any,
-                self.use_typecheck_friendly_constrained_types,
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
@@ -406,7 +405,6 @@ class JsonSchemaParser(Parser):
                 data_formats = json_schema_data_formats[type_]['default']
             return self.data_type_manager.get_data_type(
                 data_formats,
-                self.use_typecheck_friendly_constrained_types,
                 **obj.dict() if not self.field_constraints else {},
             )
 
@@ -670,7 +668,6 @@ class JsonSchemaParser(Parser):
                             is_dict=True,
                             dict_key=self.data_type_manager.get_data_type(
                                 Types.string,
-                                self.use_typecheck_friendly_constrained_types,
                                 pattern=k,
                             ),
                         )
@@ -686,7 +683,6 @@ class JsonSchemaParser(Parser):
                 )
             return self.data_type_manager.get_data_type(
                 Types.object,
-                self.use_typecheck_friendly_constrained_types
             )
         elif item.enum:
             if self.should_parse_enum_as_literal(item):
@@ -861,7 +857,6 @@ class JsonSchemaParser(Parser):
         else:
             data_type = self.data_type_manager.get_data_type(
                 Types.any,
-                self.use_typecheck_friendly_constrained_types,
             )
         if self.force_optional_for_required_fields:
             required: bool = False
@@ -954,7 +949,6 @@ class JsonSchemaParser(Parser):
                     default=default,
                     data_type=self.data_type_manager.get_data_type(
                         Types.any,
-                        self.use_typecheck_friendly_constrained_types
                     ),
                     required=True,
                     strip_default_none=self.strip_default_none,

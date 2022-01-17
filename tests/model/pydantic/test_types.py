@@ -20,7 +20,7 @@ from datamodel_code_generator.types import DataType, Types
 
 
 @pytest.mark.parametrize(
-    'types,typecheck_friendly_consrained,params,data_type',
+    'types,use_non_positive_negative_number_constrained_types,params,data_type',
     [
         (Types.integer, False, {}, DataType(type='int')),
         (
@@ -108,14 +108,21 @@ from datamodel_code_generator.types import DataType, Types
         ),
     ],
 )
-def test_get_data_int_type(types, typecheck_friendly_consrained, params, data_type):
+def test_get_data_int_type(
+    types, use_non_positive_negative_number_constrained_types, params, data_type
+):
     assert (
-        DataTypeManager().get_data_int_type(types, typecheck_friendly_consrained, **params).dict() == data_type.dict()
+        DataTypeManager(
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
+        )
+        .get_data_int_type(types, **params)
+        .dict()
+        == data_type.dict()
     )
 
 
 @pytest.mark.parametrize(
-    'types,typecheck_friendly_constrained,params,data_type',
+    'types,use_non_positive_negative_number_constrained_types,params,data_type',
     [
         (Types.float, False, {}, DataType(type='float')),
         (
@@ -221,8 +228,15 @@ def test_get_data_int_type(types, typecheck_friendly_consrained, params, data_ty
         ),
     ],
 )
-def test_get_data_float_type(types, typecheck_friendly_constrained, params, data_type):
-    assert DataTypeManager().get_data_float_type(types, typecheck_friendly_constrained, **params) == data_type
+def test_get_data_float_type(
+    types, use_non_positive_negative_number_constrained_types, params, data_type
+):
+    assert (
+        DataTypeManager(
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
+        ).get_data_float_type(types, **params)
+        == data_type
+    )
 
 
 @pytest.mark.parametrize(
@@ -348,7 +362,7 @@ def test_get_data_str_type(types, params, data_type):
     ],
 )
 def test_get_data_type(types, params, data_type):
-    assert DataTypeManager().get_data_type(types, False, **params) == data_type
+    assert DataTypeManager().get_data_type(types, **params) == data_type
 
 
 def test_data_type_type_hint():

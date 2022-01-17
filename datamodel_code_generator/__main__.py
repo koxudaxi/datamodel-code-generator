@@ -111,7 +111,7 @@ arg_parser.add_argument(
     default=None,
 )
 arg_parser.add_argument(
-    '--use_typecheck_friendly_constrained_types',
+    '--use_non_positive_negative_number_constrained_types',
     help='Use the Non{Positive,Negative}{FloatInt} types instead of the corresponding con* constrained types.',
     action='store_true',
     default=None,
@@ -406,7 +406,7 @@ class Config(BaseModel):
     use_title_as_name: bool = False
     http_headers: Optional[Sequence[Tuple[str, str]]] = None
     use_annotated: bool = False
-    use_typecheck_friendly_constrained_types = False
+    use_non_positive_negative_number_constrained_types: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -536,7 +536,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_title_as_name=config.use_title_as_name,
             http_headers=config.http_headers,
             use_annotated=config.use_annotated,
-            use_typecheck_friendly_constrained_types=config.use_typecheck_friendly_constrained_types,
+            use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
         )
         return Exit.OK
     except InvalidClassNameError as e:

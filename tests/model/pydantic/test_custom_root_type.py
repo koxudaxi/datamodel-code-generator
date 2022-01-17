@@ -67,4 +67,4 @@ def test_custom_root_type_decorator():
 
 
 def test_custom_root_type_get_data_type():
-    assert DataTypeManager().get_data_type(Types.integer, True) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')

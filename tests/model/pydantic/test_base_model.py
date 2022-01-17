@@ -106,7 +106,7 @@ def test_base_model_decorator():
 
 
 def test_base_model_get_data_type():
-    assert DataTypeManager().get_data_type(Types.integer, False) == DataType(type='int')
+    assert DataTypeManager().get_data_type(Types.integer) == DataType(type='int')
 
 
 @pytest.mark.parametrize(
