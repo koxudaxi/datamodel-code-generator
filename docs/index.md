@@ -41,6 +41,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--openapi-scopes {schemas,paths} [{schemas,paths} ...]]
                          [--output OUTPUT] [--base-class BASE_CLASS]
                          [--field-constraints] [--use-annotated]
+                         [--use_non_positive_negative_number_constrained_types]
                          [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
                          [--field-include-all-keys] [--snake-case-field]
                          [--strip-default-none]
@@ -81,6 +82,9 @@ optional arguments:
   --field-constraints   Use field constraints and not con* annotations
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-
                         constraints` option will be enabled.
+  --use_non_positive_negative_number_constrained_types
+                        Use the Non{Positive,Negative}{FloatInt} types instead of the corresponding con*
+                        constrained types.
   --field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]
                         Add extra keys to field parameters
   --field-include-all-keys
