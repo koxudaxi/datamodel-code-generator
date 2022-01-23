@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import call
 
 import isort
+import pydantic
 import pytest
 from _pytest.capture import CaptureFixture
 from _pytest.tmpdir import TempdirFactory
@@ -1824,6 +1825,9 @@ def test_main_jsonschema_multiple_files_json_pointer():
         main()
 
 
+@pytest.mark.skipif(
+    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_one():
     with TemporaryDirectory() as output_dir:
@@ -1853,6 +1857,9 @@ def test_main_openapi_enum_models_as_literal_one():
         main()
 
 
+@pytest.mark.skipif(
+    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_all():
     with TemporaryDirectory() as output_dir:
@@ -1882,6 +1889,9 @@ def test_main_openapi_enum_models_as_literal_all():
         main()
 
 
+@pytest.mark.skipif(
+    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_py37(capsys):
     with TemporaryDirectory() as output_dir:
