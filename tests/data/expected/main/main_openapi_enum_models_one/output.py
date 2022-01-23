@@ -21,6 +21,7 @@ class Pet(BaseModel):
     tag: Optional[str] = None
     kind: Optional[Kind] = None
     type: Optional[Literal['animal']] = None
+    number: Literal[1]
 
 
 class Pets(BaseModel):
