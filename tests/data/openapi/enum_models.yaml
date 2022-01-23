@@ -51,6 +51,7 @@ components:
       required:
         - id
         - name
+        - number
       properties:
         id:
           type: integer
@@ -65,6 +66,10 @@ components:
         type:
           type: string
           enum: [ 'animal' ]
+        number:
+          type: integer
+          enum: [ 1 ]
+
     Pets:
       type: array
       items:

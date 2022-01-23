@@ -13,12 +13,17 @@ class Type(Enum):
     animal = 'animal'
 
 
+class Number(Enum):
+    integer_1 = 1
+
+
 class Pet(BaseModel):
     id: int
     name: str
     tag: Optional[str] = None
     kind: Optional['Kind'] = None
     type: Optional['Type'] = None
+    number: 'Number'
 
 
 class Pets(BaseModel):

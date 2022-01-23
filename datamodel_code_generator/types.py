@@ -75,7 +75,7 @@ class DataType(_BaseModel):
     is_dict: bool = False
     is_list: bool = False
     is_custom_type: bool = False
-    literals: List[Union[int, str]] = []
+    literals: 'List[Union[int, str]]' = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
     alias: Optional[str] = None

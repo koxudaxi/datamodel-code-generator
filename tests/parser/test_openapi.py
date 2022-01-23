@@ -2,6 +2,7 @@ import platform
 from pathlib import Path
 from typing import List, Optional
 
+import pydantic
 import pytest
 
 from datamodel_code_generator import PythonVersion
@@ -378,6 +379,9 @@ class UnknownTypeNumber(Enum):
     )
 
 
+@pytest.mark.skipif(
+    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+)
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
         Path(DATA_PATH / 'enum_models.yaml').read_text(),
