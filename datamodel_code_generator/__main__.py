@@ -41,7 +41,11 @@ from datamodel_code_generator import (
     enable_debug_message,
     generate,
 )
-from datamodel_code_generator.format import PythonVersion, is_supported_in_black
+from datamodel_code_generator.format import (
+    PythonVersion,
+    black_find_project_root,
+    is_supported_in_black,
+)
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
@@ -435,7 +439,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         print(version)
         exit(0)
 
-    root = black.find_project_root((Path().resolve(),))
+    root = black_find_project_root((Path().resolve(),))
     pyproject_toml_path = root / "pyproject.toml"
     if pyproject_toml_path.is_file():
         pyproject_toml: Dict[str, Any] = {

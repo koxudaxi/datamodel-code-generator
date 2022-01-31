@@ -48,7 +48,7 @@ class CodeFormatter:
         if not settings_path:
             settings_path = Path().resolve()
 
-        root = black.find_project_root((settings_path,))
+        root = black_find_project_root((settings_path,))
         path = root / "pyproject.toml"
         if path.is_file():
             value = str(path)
