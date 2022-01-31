@@ -27,13 +27,13 @@ $ poetry install
 $ git checkout -b new-branch
 
 ## 5. Run unittest (you should pass all test and coverage should be 100%)
-$ poeyry run ./scripts/test.sh
+$ poetry run ./scripts/test.sh
 
 ## 6. Format code
-$ poeyry run ./scripts/format.sh
+$ poetry run ./scripts/format.sh
 
 ## 7. Check lint (mypy)
-$ poeyry run ./scripts/lint.sh
+$ poetry run ./scripts/lint.sh
 
 ## 8. Commit and Push...
 ```
