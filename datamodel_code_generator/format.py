@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
 from warnings import warn
 
 import black
@@ -28,6 +28,14 @@ BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
 
 def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
     return python_version in BLACK_PYTHON_VERSION
+
+
+def black_find_project_root(sources: Sequence[str]) -> Path:
+    project_root = black.find_project_root(sources)
+    if isinstance(project_root, tuple):
+        return project_root[0]
+    else:
+        return project_root
 
 
 class CodeFormatter:
