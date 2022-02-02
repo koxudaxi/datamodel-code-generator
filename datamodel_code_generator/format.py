@@ -19,11 +19,18 @@ class PythonVersion(Enum):
         return self.value >= self.PY_38.value  # type: ignore
 
 
-BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
-    v: getattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
-    for v in PythonVersion
-    if hasattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
-}
+if TYPE_CHECKING:
+
+    class _TargetVersion(Enum):
+        ...
+
+    BLACK_PYTHON_VERSION: Dict[PythonVersion, _TargetVersion]
+else:
+    BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
+        v: getattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
+        for v in PythonVersion
+        if hasattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
+    }
 
 
 def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
@@ -31,7 +38,17 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no 
 
 
 def black_find_project_root(sources: Sequence[Path]) -> Path:
-    project_root = black.find_project_root(str(s) for s in sources)
+    if TYPE_CHECKING:
+        from typing import Iterable, Tuple, Union
+
+        def _find_project_root(
+            srcs: Union[Sequence[str], Iterable[str]]
+        ) -> Union[Tuple[Path, str], Path]:
+            ...
+
+    else:
+        from black import find_project_root as _find_project_root
+    project_root = _find_project_root(tuple(str(s) for s in sources))
     if isinstance(project_root, tuple):
         return project_root[0]
     else:
