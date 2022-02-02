@@ -30,8 +30,8 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no 
     return python_version in BLACK_PYTHON_VERSION
 
 
-def black_find_project_root(sources: Sequence[str]) -> Path:
-    project_root = black.find_project_root(sources)
+def black_find_project_root(sources: Sequence[Path]) -> Path:
+    project_root = black.find_project_root(str(s) for s in sources)
     if isinstance(project_root, tuple):
         return project_root[0]
     else:
