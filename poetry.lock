@@ -393,7 +393,7 @@ strict_rfc3339 = ["strict-rfc3339"]
 
 [[package]]
 name = "openapi-spec-validator"
-version = "0.3.2"
+version = "0.3.3"
 description = "OpenAPI 2.0 (aka Swagger) and OpenAPI 3.0 spec validator"
 category = "main"
 optional = false
@@ -1047,8 +1047,8 @@ openapi-schema-validator = [
     {file = "openapi_schema_validator-0.1.6-py3-none-any.whl", hash = "sha256:af023ae0d16372cf8dd0d128c9f3eaa080dc3cd5dfc69e6a247579f25bd10503"},
 ]
 openapi-spec-validator = [
-    {file = "openapi-spec-validator-0.3.2.tar.gz", hash = "sha256:dd2d8d772b1c7cd5c1e965927c61a443802a3db7a69f2d2ad73212d6eb15fde2"},
-    {file = "openapi_spec_validator-0.3.2-py2.py3-none-any.whl", hash = "sha256:1053a6500303e574300bc61a3aaf4a9108e954fde34615db8d2e0894b207afbc"},
+    {file = "openapi-spec-validator-0.3.3.tar.gz", hash = "sha256:43d606c5910ed66e1641807993bd0a981de2fc5da44f03e1c4ca2bb65b94b68e"},
+    {file = "openapi_spec_validator-0.3.3-py2.py3-none-any.whl", hash = "sha256:49d7da81996714445116f6105c9c5955c0e197ef8636da4f368c913f64753443"},
 ]
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
