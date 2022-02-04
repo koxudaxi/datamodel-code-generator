@@ -52,6 +52,7 @@ components:
         - id
         - name
         - number
+        - boolean
       properties:
         id:
           type: integer
@@ -69,6 +70,9 @@ components:
         number:
           type: integer
           enum: [ 1 ]
+        boolean:
+          type: boolean
+          enum: [ true ]
 
     Pets:
       type: array

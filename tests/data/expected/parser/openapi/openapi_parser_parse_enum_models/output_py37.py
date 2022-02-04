@@ -19,6 +19,10 @@ class Number(Enum):
     integer_1 = 1
 
 
+class Boolean(Enum):
+    boolean_True = True
+
+
 class Pet(BaseModel):
     id: int
     name: str
@@ -26,6 +30,7 @@ class Pet(BaseModel):
     kind: Optional[Kind] = None
     type: Optional[Type] = None
     number: Number
+    boolean: Boolean
 
 
 class Pets(BaseModel):

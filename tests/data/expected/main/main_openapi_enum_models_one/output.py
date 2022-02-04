@@ -22,6 +22,7 @@ class Pet(BaseModel):
     kind: Optional[Kind] = None
     type: Optional[Literal['animal']] = None
     number: Literal[1]
+    boolean: Literal[True]
 
 
 class Pets(BaseModel):
