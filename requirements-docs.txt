@@ -1,2 +1,2 @@
 mkdocs==1.2.3
-mkdocs-material==8.1.9
+mkdocs-material==8.1.10
