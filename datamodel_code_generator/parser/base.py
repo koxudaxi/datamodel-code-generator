@@ -285,6 +285,7 @@ class Parser(ABC):
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
     ):
@@ -367,6 +368,7 @@ class Parser(ABC):
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
         self.http_headers: Optional[Sequence[Tuple[str, str]]] = http_headers
+        self.http_ignore_tls: bool = http_ignore_tls
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             raise Exception(
@@ -402,7 +404,7 @@ class Parser(ABC):
         from datamodel_code_generator.http import get_body
 
         return self.remote_text_cache.get_or_put(
-            url, default_factory=lambda url_: get_body(url, self.http_headers)
+            url, default_factory=lambda url_: get_body(url, self.http_headers, self.http_ignore_tls)
         )
 
     @classmethod
