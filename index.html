@@ -691,6 +691,7 @@
 <p>The <code>datamodel-codegen</code> command:</p>
 <div class="codehilite"><pre><span></span><code>usage: datamodel-codegen <span class="o">[</span>-h<span class="o">]</span> <span class="o">[</span>--input INPUT<span class="o">]</span> <span class="o">[</span>--url URL<span class="o">]</span>
                          <span class="o">[</span>--http-headers HTTP_HEADER <span class="o">[</span>HTTP_HEADER ...<span class="o">]]</span>
+                         <span class="o">[</span>--http-ignore-tls<span class="o">]</span>
                          <span class="o">[</span>--input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
                          <span class="o">[</span>--openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]]</span>
                          <span class="o">[</span>--output OUTPUT<span class="o">]</span> <span class="o">[</span>--base-class BASE_CLASS<span class="o">]</span>
@@ -726,6 +727,8 @@ optional arguments:
   --http-headers HTTP_HEADER <span class="o">[</span>HTTP_HEADER ...<span class="o">]</span>
                         Set headers <span class="k">in</span> HTTP requests to the remote host.
                         <span class="o">(</span>example: <span class="s2">&quot;Authorization: Basic dXNlcjpwYXNz&quot;</span><span class="o">)</span>
+  --http-ignore-tls     Disable verification of the remote host<span class="err">&#39;</span>s TLS
+                        certificate
   --input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}</span>
                         Input file <span class="nb">type</span> <span class="o">(</span>default: auto<span class="o">)</span>
   --openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]</span>
