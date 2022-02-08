@@ -83,6 +83,14 @@ arg_parser.add_argument(
     metavar='HTTP_HEADER',
     help='Set headers in HTTP requests to the remote host. (example: "Authorization: Basic dXNlcjpwYXNz")',
 )
+
+arg_parser.add_argument(
+    '--http-ignore-tls',
+    help="Disable verification of the remote host's TLS certificate",
+    action='store_true',
+    default=False,
+)
+
 arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
@@ -409,6 +417,7 @@ class Config(BaseModel):
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
     http_headers: Optional[Sequence[Tuple[str, str]]] = None
+    http_ignore_tls: bool = False
     use_annotated: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
 
@@ -539,6 +548,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             wrap_string_literal=config.wrap_string_literal,
             use_title_as_name=config.use_title_as_name,
             http_headers=config.http_headers,
+            http_ignore_tls=config.http_ignore_tls,
             use_annotated=config.use_annotated,
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
         )

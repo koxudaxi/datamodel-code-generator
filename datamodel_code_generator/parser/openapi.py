@@ -179,6 +179,7 @@ class OpenAPIParser(JsonSchemaParser):
         wrap_string_literal: Optional[bool] = False,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
     ):
@@ -222,6 +223,7 @@ class OpenAPIParser(JsonSchemaParser):
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
             http_headers=http_headers,
+            http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
             use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         )

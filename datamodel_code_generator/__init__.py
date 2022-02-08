@@ -234,6 +234,7 @@ def generate(
     wrap_string_literal: Optional[bool] = None,
     use_title_as_name: bool = False,
     http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+    http_ignore_tls: bool = False,
     use_annotated: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
 ) -> None:
@@ -244,7 +245,8 @@ def generate(
         from datamodel_code_generator.http import get_body
 
         input_text = remote_text_cache.get_or_put(
-            input_.geturl(), default_factory=lambda url: get_body(url, http_headers)
+            input_.geturl(),
+            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls),
         )
     else:
         input_text = None
@@ -351,6 +353,7 @@ def generate(
         wrap_string_literal=wrap_string_literal,
         use_title_as_name=use_title_as_name,
         http_headers=http_headers,
+        http_ignore_tls=http_ignore_tls,
         use_annotated=use_annotated,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         **kwargs,
