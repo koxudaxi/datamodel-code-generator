@@ -8,11 +8,15 @@ import isort
 import pydantic
 import pytest
 from _pytest.capture import CaptureFixture
-from _pytest.tmpdir import TempdirFactory
 from freezegun import freeze_time
 
 from datamodel_code_generator import InputFileType, chdir, generate
 from datamodel_code_generator.__main__ import Exit, main
+
+try:
+    from pytest import TempdirFactory
+except ImportError:
+    from _pytest.tmpdir import TempdirFactory
 
 DATA_PATH: Path = Path(__file__).parent / 'data'
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
