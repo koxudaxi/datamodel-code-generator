@@ -19,7 +19,7 @@ from typing import (
     Union,
 )
 
-from pydantic import create_model
+from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
 from datamodel_code_generator import Protocol, runtime_checkable
 from datamodel_code_generator.format import PythonVersion
@@ -75,7 +75,7 @@ class DataType(_BaseModel):
     is_dict: bool = False
     is_list: bool = False
     is_custom_type: bool = False
-    literals: 'List[Union[int, str]]' = []
+    literals: List[Union[StrictBool, StrictInt, StrictStr]] = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
     alias: Optional[str] = None
