@@ -404,7 +404,10 @@ class Parser(ABC):
         from datamodel_code_generator.http import get_body
 
         return self.remote_text_cache.get_or_put(
-            url, default_factory=lambda url_: get_body(url, self.http_headers, self.http_ignore_tls)
+            url,
+            default_factory=lambda url_: get_body(
+                url, self.http_headers, self.http_ignore_tls
+            ),
         )
 
     @classmethod

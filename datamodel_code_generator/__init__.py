@@ -245,7 +245,8 @@ def generate(
         from datamodel_code_generator.http import get_body
 
         input_text = remote_text_cache.get_or_put(
-            input_.geturl(), default_factory=lambda url: get_body(url, http_headers, http_ignore_tls)
+            input_.geturl(),
+            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls),
         )
     else:
         input_text = None

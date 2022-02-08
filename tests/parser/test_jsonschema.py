@@ -119,7 +119,9 @@ class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])'''
     )
     parser.parse_ref(obj, [])
-    mock_get.assert_called_once_with('https://example.org/schema.yaml', headers=None, verify=True)
+    mock_get.assert_called_once_with(
+        'https://example.org/schema.yaml', headers=None, verify=True
+    )
 
 
 def test_json_schema_object_cached_ref_url_yaml(mocker):
@@ -149,7 +151,9 @@ def test_json_schema_object_cached_ref_url_yaml(mocker):
 class User(BaseModel):
     name: Optional[str] = Field(None, example='ken')'''
     )
-    mock_get.assert_called_once_with('https://example.org/schema.yaml', headers=None, verify=True)
+    mock_get.assert_called_once_with(
+        'https://example.org/schema.yaml', headers=None, verify=True
+    )
 
 
 def test_json_schema_ref_url_json(mocker):
@@ -177,7 +181,9 @@ class User(BaseModel):
 class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])'''
     )
-    mock_get.assert_called_once_with('https://example.org/schema.json', headers=None, verify=True)
+    mock_get.assert_called_once_with(
+        'https://example.org/schema.json', headers=None, verify=True
+    )
 
 
 @pytest.mark.parametrize(

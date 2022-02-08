@@ -8,7 +8,11 @@ except ImportError:  # pragma: no cover
     )
 
 
-def get_body(url: str, headers: Optional[Sequence[Tuple[str, str]]] = None, ignore_tls: bool = False) -> str:
+def get_body(
+    url: str,
+    headers: Optional[Sequence[Tuple[str, str]]] = None,
+    ignore_tls: bool = False,
+) -> str:
     return httpx.get(url, headers=headers, verify=not ignore_tls).text
 
 

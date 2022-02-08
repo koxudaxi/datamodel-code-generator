@@ -2512,12 +2512,12 @@ def test_main_http_jsonschema(mocker):
         (
             ('Authorization: Basic dXNlcjpwYXNz',),
             [('Authorization', 'Basic dXNlcjpwYXNz')],
-            False
+            False,
         ),
         (
             ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
             [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
-            True
+            True,
         ),
     ],
 )
