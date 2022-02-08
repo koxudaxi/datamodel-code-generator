@@ -37,6 +37,7 @@ The `datamodel-codegen` command:
 ```bash
 usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--http-headers HTTP_HEADER [HTTP_HEADER ...]]
+                         [--http-ignore-tls]
                          [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
                          [--openapi-scopes {schemas,paths} [{schemas,paths} ...]]
                          [--output OUTPUT] [--base-class BASE_CLASS]
@@ -72,6 +73,8 @@ optional arguments:
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
+  --http-ignore-tls     Disable verification of the remote host's TLS
+                        certificate
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --openapi-scopes {schemas,paths} [{schemas,paths} ...]
