@@ -668,9 +668,11 @@ class JsonSchemaParser(Parser):
                         self.data_type(
                             data_types=[self.parse_item(name, v, object_path)],
                             is_dict=True,
-                            dict_key=self.data_type_manager.get_data_type(
-                                Types.string,
-                                pattern=k,
+                            dict_key=self.parse_item(
+                                f"{name}Key",
+                                JsonSchemaObject(type="string", pattern=k),
+                                object_path,
+                                parent=item
                             ),
                         )
                         for k, v in item.patternProperties.items()
