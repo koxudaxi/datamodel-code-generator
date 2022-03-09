@@ -670,9 +670,15 @@ class JsonSchemaParser(Parser):
                             is_dict=True,
                             dict_key=self.parse_item(
                                 f"{name}Key",
-                                JsonSchemaObject(type="string", pattern=k),
+                                JsonSchemaObject(
+                                    type="string",
+                                    pattern=k,
+                                    example=None,
+                                    examples=None,
+                                    default=None,
+                                ),
                                 object_path,
-                                parent=item
+                                parent=item,
                             ),
                         )
                         for k, v in item.patternProperties.items()
