@@ -670,12 +670,8 @@ class JsonSchemaParser(Parser):
                             is_dict=True,
                             dict_key=self.parse_item(
                                 f"{name}Key",
-                                JsonSchemaObject(
-                                    type="string",
-                                    pattern=k,
-                                    example=None,
-                                    examples=None,
-                                    default=None,
+                                JsonSchemaObject.parse_obj(
+                                    {"type": "string", "pattern": k}
                                 ),
                                 object_path,
                                 parent=item,
