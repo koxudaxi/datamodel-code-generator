@@ -51,7 +51,7 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
     project_root = _find_project_root(tuple(str(s) for s in sources))
     if isinstance(project_root, tuple):
         return project_root[0]
-    else:
+    else:  # pragma: no cover
         return project_root
 
 

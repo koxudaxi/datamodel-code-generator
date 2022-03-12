@@ -670,7 +670,7 @@ class JsonSchemaParser(Parser):
                             is_dict=True,
                             dict_key=self.data_type_manager.get_data_type(
                                 Types.string,
-                                pattern=k,
+                                pattern=k if not self.field_constraints else None,
                             ),
                         )
                         for k, v in item.patternProperties.items()
