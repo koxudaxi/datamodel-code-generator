@@ -522,7 +522,7 @@ six = "*"
 
 [[package]]
 name = "pysnooper"
-version = "1.1.0"
+version = "1.1.1"
 description = "A poor man's debugger for Python."
 category = "main"
 optional = false
@@ -1118,8 +1118,8 @@ pyrsistent = [
     {file = "pyrsistent-0.16.1.tar.gz", hash = "sha256:aa2ae1c2e496f4d6777f869ea5de7166a8ccb9c2e06ebcf6c7ff1b670c98c5ef"},
 ]
 pysnooper = [
-    {file = "PySnooper-1.1.0-py2.py3-none-any.whl", hash = "sha256:985c0dddf701e1d69d25534ffd45fc02f2877b58bcb5788fb017077c65896bfa"},
-    {file = "PySnooper-1.1.0.tar.gz", hash = "sha256:0fa932ad396d2bac089d4b1f94f0ce49cde4140ee64ddd24a4065fadea10fcc9"},
+    {file = "PySnooper-1.1.1-py2.py3-none-any.whl", hash = "sha256:378f13d731a3e04d3d0350e5f295bdd0f1b49fc8a8b8bf2067fe1e5290bd20be"},
+    {file = "PySnooper-1.1.1.tar.gz", hash = "sha256:d17dc91cca1593c10230dce45e46b1d3ff0f8910f0c38e941edf6ba1260b3820"},
 ]
 pytest = [
     {file = "pytest-7.0.1-py3-none-any.whl", hash = "sha256:9ce3ff477af913ecf6321fe337b93a2c0dcf2a0a1439c43f5452112c1e4280db"},
