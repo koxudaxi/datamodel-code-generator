@@ -232,7 +232,7 @@ class DataType(_BaseModel):
     def type_hint(self) -> str:
         type_: Optional[str] = self.alias or self.type
         if not type_:
-            if len(self.data_types) > 1:
+            if self.is_union:
                 type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
@@ -277,6 +277,10 @@ class DataType(_BaseModel):
                 return f'{type_}({kwargs})'
             return f'{type_}()'
         return type_
+
+    @property
+    def is_union(self) -> bool:
+        return len(self.data_types) > 1
 
 
 DataType.update_forward_refs()

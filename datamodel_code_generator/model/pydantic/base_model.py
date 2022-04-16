@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
+from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple, Union
 
 from pydantic import Field
 
@@ -15,10 +15,10 @@ from datamodel_code_generator.types import chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
-    gt: Optional[float] = Field(None, alias='exclusiveMinimum')
-    ge: Optional[float] = Field(None, alias='minimum')
-    lt: Optional[float] = Field(None, alias='exclusiveMaximum')
-    le: Optional[float] = Field(None, alias='maximum')
+    gt: Optional[Union[int, float]] = Field(None, alias='exclusiveMinimum')
+    ge: Optional[Union[int, float]] = Field(None, alias='minimum')
+    lt: Optional[Union[int, float]] = Field(None, alias='exclusiveMaximum')
+    le: Optional[Union[int, float]] = Field(None, alias='maximum')
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     min_items: Optional[int] = Field(None, alias='minItems')
     max_items: Optional[int] = Field(None, alias='maxItems')
@@ -44,6 +44,7 @@ class DataModelField(DataModelFieldBase):
         'max_length',
         'regex',
     }
+    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le'}
     constraints: Optional[Constraints] = None
 
     @property
@@ -74,6 +75,18 @@ class DataModelField(DataModelFieldBase):
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
 
+    def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
+        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
+            return value
+
+        for data_type in self.data_type.all_data_types:
+            if data_type.type == 'int':
+                value = int(value)
+            else:
+                value = float(value)
+                break
+        return value
+
     def __str__(self) -> str:
         data: Dict[str, Any] = {
             k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
@@ -85,7 +98,13 @@ class DataModelField(DataModelFieldBase):
             and not self.self_reference()
             and not self.data_type.strict
         ):
-            data = {**data, **self.constraints.dict()}
+            data = {
+                **data,
+                **{
+                    k: self._get_strict_field_constraint_value(k, v)
+                    for k, v in self.constraints.dict().items()
+                },
+            }
 
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None

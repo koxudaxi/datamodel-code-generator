@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: int = Field(..., ge=0.0)
+    id: int = Field(..., ge=0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
 
@@ -20,7 +20,7 @@ class Pets(BaseModel):
 
 
 class UID(BaseModel):
-    __root__: int = Field(..., ge=0.0)
+    __root__: int = Field(..., ge=0)
 
 
 class Phone(BaseModel):
@@ -32,12 +32,14 @@ class Fax(BaseModel):
 
 
 class User(BaseModel):
-    id: int = Field(..., ge=0.0)
+    id: int = Field(..., ge=0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
     uid: UID
     phones: Optional[List[Phone]] = Field(None, max_items=10)
     fax: Optional[List[Fax]] = None
+    height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
+    weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
 
 
 class Users(BaseModel):

@@ -156,6 +156,19 @@ components:
             items:
               type: string
               minLength: 3
+          height:
+            type:
+              - integer
+              - number
+            minimum: 1
+            maximum: 300
+          weight:
+            type:
+              - number
+              - integer
+            minimum: 1
+            maximum: 1000
+
     Id:
       type: string
     Rules:
