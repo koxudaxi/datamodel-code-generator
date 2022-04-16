@@ -571,6 +571,28 @@ class Parser(ABC):
                         from_ += "."
                     imports.append(Import(from_=from_, import_=import_, alias=alias))
 
+            # extract inherited enum
+            for model in models:
+                if model.fields:
+                    continue
+                enums: List[Enum] = []
+                for base_model in model.base_classes:
+                    if not base_model.reference:
+                        continue
+                    source_model = base_model.reference.source
+                    if isinstance(source_model, Enum):
+                        enums.append(source_model)
+                if enums:
+                    models.insert(
+                        models.index(model),
+                        enums[0].__class__(
+                            fields=[f for e in enums for f in e.fields],
+                            description=model.description,
+                            reference=model.reference,
+                        ),
+                    )
+                    models.remove(model)
+
             if self.reuse_model:
                 model_cache: Dict[Tuple[str, ...], Reference] = {}
                 duplicates = []
