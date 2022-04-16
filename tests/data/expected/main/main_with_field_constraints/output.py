@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -38,6 +38,8 @@ class User(BaseModel):
     uid: UID
     phones: Optional[List[Phone]] = Field(None, max_items=10)
     fax: Optional[List[FaxItem]] = None
+    height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
+    weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
 
 
 class Users(BaseModel):
