@@ -124,6 +124,7 @@ class JsonSchemaObject(BaseModel):
         'minLength',
         'maxLength',
         'pattern',
+        'uniqueItems'
     }
     __extra_key__: str = SPECIAL_PATH_FORMAT.format('extras')
 
@@ -157,7 +158,7 @@ class JsonSchemaObject(BaseModel):
         return value
 
     items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
-    uniqueItem: Optional[bool]
+    uniqueItems: Optional[bool]
     type: Union[str, List[str], None]
     format: Optional[str]
     pattern: Optional[str]

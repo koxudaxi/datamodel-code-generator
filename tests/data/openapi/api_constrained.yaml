@@ -122,6 +122,7 @@ components:
         $ref: "#/components/schemas/Pet"
       maxItems: 10
       minItems: 1
+      uniqueItems: true
     UID:
       type: integer
       minimum: 0

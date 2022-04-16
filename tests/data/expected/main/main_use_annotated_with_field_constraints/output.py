@@ -16,7 +16,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: Annotated[List[Pet], Field(max_items=10, min_items=1)]
+    __root__: Annotated[List[Pet], Field(max_items=10, min_items=1, unique_items=True)]
 
 
 class UID(BaseModel):
