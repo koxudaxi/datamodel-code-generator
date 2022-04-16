@@ -10,7 +10,7 @@ from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: Annotated[int, Field(ge=0.0)]
+    id: Annotated[int, Field(ge=0)]
     name: Annotated[str, Field(max_length=256)]
     tag: Annotated[Optional[str], Field(max_length=64)] = None
 
@@ -20,7 +20,7 @@ class Pets(BaseModel):
 
 
 class UID(BaseModel):
-    __root__: Annotated[int, Field(ge=0.0)]
+    __root__: Annotated[int, Field(ge=0)]
 
 
 class Phone(BaseModel):
@@ -32,7 +32,7 @@ class FaxItem(BaseModel):
 
 
 class User(BaseModel):
-    id: Annotated[int, Field(ge=0.0)]
+    id: Annotated[int, Field(ge=0)]
     name: Annotated[str, Field(max_length=256)]
     tag: Annotated[Optional[str], Field(max_length=64)] = None
     uid: UID

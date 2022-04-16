@@ -10,7 +10,7 @@ from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: int = Field(..., ge=0.0)
+    id: int = Field(..., ge=0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
 
@@ -20,7 +20,7 @@ class Pets(BaseModel):
 
 
 class UID(BaseModel):
-    __root__: int = Field(..., ge=0.0)
+    __root__: int = Field(..., ge=0)
 
 
 class Phone(BaseModel):
@@ -32,7 +32,7 @@ class Fax(BaseModel):
 
 
 class User(BaseModel):
-    id: int = Field(..., ge=0.0)
+    id: int = Field(..., ge=0)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
     uid: UID
