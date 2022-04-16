@@ -124,7 +124,7 @@ class JsonSchemaObject(BaseModel):
         'minLength',
         'maxLength',
         'pattern',
-        'uniqueItems'
+        'uniqueItems',
     }
     __extra_key__: str = SPECIAL_PATH_FORMAT.format('extras')
 
