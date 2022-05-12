@@ -37,11 +37,9 @@ def test_main_inheritance_forward_ref():
         return_code: Exit = main(
             [
                 '--input',
-                str(OPEN_API_DATA_PATH / 'nimads.yml'),
+                str(JSON_SCHEMA_DATA_PATH / 'inheritance_forward_ref.json'),
                 '--output',
                 str(output_file),
-                '--base-class',
-                'custom_module.Base',
             ]
         )
         assert return_code == Exit.OK
