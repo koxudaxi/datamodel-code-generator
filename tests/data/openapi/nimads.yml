@@ -1,0 +1,409 @@
+openapi: 3.0.0
+x-stoplight:
+  id: lm4zxc5x3cl0u
+info:
+  title: nimads
+  version: '1.0'
+components:
+  schemas:
+    studysetBase:
+      title: studysetBase
+      x-stoplight:
+        id: i9go6kajcady2
+      type: object
+      properties:
+        name:
+          type: string
+          description: Descriptive and human readable name of the studyset.
+          nullable: true
+        description:
+          type: string
+          description: A longform description of the studyset.
+          nullable: true
+        publication:
+          type: string
+          description: The journal/source the studyset is connected to if the studyset was published.
+          nullable: true
+        doi:
+          type: string
+          description: A DOI connected to the published studyset (may change to being automatically created so each studyset connected to a successful meta-analysis gets a DOI).
+          nullable: true
+        pmid:
+          type: string
+          description: 'If the article connected to the studyset was published on PubMed, then link the ID here.'
+          nullable: true
+    studysetRelationships:
+      title: studysetRelationships
+      x-stoplight:
+        id: p4ehtid3xkf6g
+      type: object
+      properties:
+        studies:
+          type: array
+          description: The collection of studies.
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/study'
+              - type: string
+                description: The id or uri indicating the location of the study.
+            description: 'Studies can either be presented in their full nested representation, or simply as a string referencing the location of the study.'
+    studyset:
+      title: studyset
+      x-stoplight:
+        id: gnuhmbd4ikted
+      allOf:
+        - $ref: '#/components/schemas/studysetBase'
+        - $ref: '#/components/schemas/studysetRelationships'
+      description: 'A collection of studies (e.g., publications).'
+    annotationBase:
+      title: annotationBase
+      x-stoplight:
+        id: jtcdsl5d7bdfa
+      type: object
+      properties:
+        name:
+          type: string
+          description: Descriptive name for the annotation.
+        description:
+          type: string
+          description: Long form description of the annotation.
+          nullable: true
+        metadata:
+          type: object
+          description: 'object describing metadata about the annotation, such as software used or descriptions of the keys used in the annotation.'
+          nullable: true
+        note_keys:
+          type: object
+          description: The keys (columns) in the annotation and the key's respective type.
+          example:
+            include: boolean
+          nullable: true
+    annotationRelationships:
+      title: annotationRelationships
+      x-stoplight:
+        id: gfb9gvmjnqcx6
+      type: object
+      properties:
+        studyset:
+          oneOf:
+            - $ref: '#/components/schemas/studyset'
+            - type: string
+          description: 'The studyset the annotation is associated with. Each annotation is associated with one and only one studyset, but a studyset can have multiple annotations. The representation can either be a studyset object or a string indicating the location to find the studyset object.'
+        notes:
+          type: array
+          description: The collection of notes for each analysis within the studyset. Each analysis will have all note_keys with the appropriately typed values.
+          items:
+            $ref: '#/components/schemas/noteCollection'
+    annotation:
+      title: annotation
+      x-stoplight:
+        id: 4q7pjd7n2lbhj
+      allOf:
+        - $ref: '#/components/schemas/annotationBase'
+        - $ref: '#/components/schemas/annotationRelationships'
+      description: 'A container for "subjective" information about each analysis in the studyset, such as exclusion criteria or whether the analysis needs commenting.'
+    noteCollectionBase:
+      title: noteCollectionBase
+      x-stoplight:
+        id: 4t4rdy2jukm4j
+      type: object
+      properties:
+        note:
+          type: object
+          description: The note will contain all note_keys as keys and have a value of either null or the value type specified in note_keys.
+          nullable: true
+    noteCollectionRelationships:
+      title: noteCollectionRelationships
+      x-stoplight:
+        id: i8hr2p2hnio37
+      type: object
+      properties:
+        analysis:
+          oneOf:
+            - $ref: '#/components/schemas/analysis'
+            - type: string
+          description: The analysis the note collection is associated with. Either represented as an analysis object or a string pointing to the location of the analysis object.
+        annotation:
+          oneOf:
+            - $ref: '#/components/schemas/annotation'
+            - type: string
+          description: The annotation this collection of notes is associated with. Either represented as an annotation object or a string pointing to the location of the annotation object.
+    noteCollection:
+      title: noteCollection
+      x-stoplight:
+        id: oiyhdquunqlx6
+      description: ''
+      allOf:
+        - $ref: '#/components/schemas/noteCollectionBase'
+        - $ref: '#/components/schemas/noteCollectionRelationships'
+    studyBase:
+      title: studyBase
+      x-stoplight:
+        id: m91cg8nyxgnzm
+      type: object
+      properties:
+        doi:
+          type: string
+          example: 10.1016/S0926-6410(97)00020-7
+          description: Digital object identifier of the study.
+          nullable: true
+        name:
+          type: string
+          example: 'Functional magnetic resonance imaging of category-specific cortical activation: evidence for semantic maps.'
+          description: Title of the study.
+          nullable: true
+        metadata:
+          description: Metadata associated with the study not covered by the other study attributes.
+          type: object
+          nullable: true
+        description:
+          type: string
+          description: 'Long form description of the study, typically the abstract.'
+          example: This is my very scientific abstract.
+          nullable: true
+        publication:
+          type: string
+          description: The journal/place of publication for the study.
+          example: Journal of Super Important Science.
+          nullable: true
+        pmid:
+          type: string
+          description: 'If the study was published on PubMed, place the PubMed ID here.'
+          nullable: true
+        authors:
+          type: string
+          description: The authors on the publication of this study.
+          nullable: true
+        year:
+          type: integer
+          description: The year this study was published.
+          nullable: true
+    studyRelationships:
+      title: studyRelationships
+      x-stoplight:
+        id: y3188t5lzg8s0
+      type: object
+      properties:
+        analyses:
+          type: array
+          description: 'The analyses making up the study. A study can have one or more analyses, since each analysis represents a contrast of conditions, where psychological, behavioral, pharmacological, or group based. Either represented as an analysis object or a string pointing to the location of the analysis object.'
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/analysis'
+              - type: string
+    study:
+      title: study
+      x-stoplight:
+        id: 5zlmr08oo8yrw
+      allOf:
+        - $ref: '#/components/schemas/studyBase'
+        - $ref: '#/components/schemas/studyRelationships'
+      description: A publishable unit of research.
+    analysisBase:
+      title: analysisBase
+      x-stoplight:
+        id: ag41ghxy1gsr8
+      type: object
+      properties:
+        name:
+          type: string
+          example: '"houses>faces"'
+          description: A name of the contrast being performed.
+          nullable: true
+        description:
+          type: string
+          description: A long form description of how the contrast was performed
+          nullable: true
+        weights:
+          type: array
+          description: 'Weight applied to each condition, must be the same length as the conditions attribute.'
+          items:
+            type: number
+    analysisRelationships:
+      title: analysisRelationships
+      x-stoplight:
+        id: 2e1u07kjem1dm
+      type: object
+      properties:
+        conditions:
+          description: 'Array of conditions (e.g., 2-back, memory, etc.) that must be the same length as the weights attribute. Either is an array of condition objects or strings that point to condition objects.'
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/condition'
+              - type: string
+        images:
+          type: array
+          description: 'Statistical images (e.g., beta, t-statistic, and/or z-statistic images) where each voxel gets a value. Either represented as an array of image objects or strings linking to image objects.'
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/image'
+              - type: string
+        points:
+          type: array
+          description: Coordinates of significance associated with the contrast. Either an array of point objects or an array of strings linking to point objects.
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/point'
+              - type: string
+        study:
+          oneOf:
+            - $ref: '#/components/schemas/study'
+            - type: string
+          description: 'The study this analysis is associated with. Each analysis can only be associated to one and only one study, but a study can have multiple analyses.'
+    analysis:
+      title: analysis
+      x-stoplight:
+        id: stjmwkv29g8ru
+      allOf:
+        - $ref: '#/components/schemas/analysisBase'
+        - $ref: '#/components/schemas/analysisRelationships'
+      description: A contrast of weighted conditions with associated statistical results.
+    imageBase:
+      title: imageBase
+      x-stoplight:
+        id: v7h7ub0yudp32
+      type: object
+      properties:
+        metadata:
+          type: object
+          description: Metadata about image such as software and version used and other relevant data about how the image was produced.
+          nullable: true
+        url:
+          type: string
+          format: uri
+          example: 'https://neurovault.org/media/images/4778/Positive_RPEs_zstat.nii.gz'
+          description: URL to image file.
+          nullable: true
+        filename:
+          type: string
+          example: Positive_RPEs_zstat.nii.gz
+          description: Name of the image file.
+          nullable: true
+        space:
+          type: string
+          example: MNI152NLin2009aAsym
+          description: 'The template space the image is in (e.g., MNI '
+          nullable: true
+        value_type:
+          type: string
+          example: Z
+          description: 'The values the image represents. For example, T-statistic or Z-statistic, or Betas.'
+          nullable: true
+        add_date:
+          type: string
+          format: date-time
+          description: Date the image was added.
+          nullable: true
+          readOnly: true
+    imageRelationships:
+      title: imageRelationships
+      x-stoplight:
+        id: gp7ueyngdwnof
+      type: object
+      properties:
+        analysis:
+          oneOf:
+            - $ref: '#/components/schemas/analysis'
+            - type: string
+          description: 'Analysis the image is associated with. Each image is associated with one and only one analysis, but an analysis can have multiple images. Either an analysis object or a string linking to an analysis object.'
+    image:
+      title: image
+      x-stoplight:
+        id: 1oc2nspyi992l
+      allOf:
+        - $ref: '#/components/schemas/imageBase'
+        - $ref: '#/components/schemas/imageRelationships'
+      description: A description of a brain image linking to the actual nifti file.
+    pointBase:
+      title: pointBase
+      x-stoplight:
+        id: bejaeqad8fvr0
+      type: object
+      properties:
+        coordinates:
+          type: array
+          minItems: 3
+          maxItems: 3
+          description: Location of the significant coordinate in three dimensional space.
+          items:
+            type: number
+            format: float
+            example: 63
+        space:
+          type: string
+          example: MNI
+          description: Template space used to determine coordinate Examples include TAL or MNI.
+          nullable: true
+        kind:
+          type: string
+          description: 'Method of how point was derived (e.g., center of mass)'
+          nullable: true
+        label_id:
+          type: string
+          description: 'If the point is associated with an image, this is the value the point takes in that image.'
+          nullable: true
+    pointRelationships:
+      title: pointRelationships
+      x-stoplight:
+        id: a87vvh4r0tz5c
+      type: object
+      properties:
+        image:
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/image'
+            - type: string
+              properties: {}
+          description: Statistical image the point was derived from. Either points to an image object or a string linking to an image object.
+        value:
+          type: array
+          description: 'An array of values at this point since each value could represent a beta, t-statistic and/or z-statistic, etc.'
+          items:
+            $ref: '#/components/schemas/pointValue'
+        analysis:
+          oneOf:
+            - $ref: '#/components/schemas/analysis'
+            - type: string
+              properties: {}
+          description: 'Analysis the point is associated with. Each point is associated with one and only one analysis, but an analysis can have multiple points. Either an analysis object or a string linking to an analysis object.'
+    pointValue:
+      title: pointValue
+      x-stoplight:
+        id: cra83arrfjms6
+      type: object
+      properties:
+        kind:
+          type: string
+          description: 'The kind of statistic the value represents, whether it is variance, beta, t-statistic, or z-statistic.'
+          nullable: true
+        value:
+          type: number
+          description: The value of the point for the "kind" of statistic.
+          nullable: true
+    point:
+      title: point
+      x-stoplight:
+        id: uw7dyv8sq7ehl
+      allOf:
+        - $ref: '#/components/schemas/pointBase'
+        - $ref: '#/components/schemas/pointRelationships'
+      description: A three dimensional coordinate representing a significant statistical peak associated with an analysis.
+    conditionBase:
+      title: conditionBase
+      x-stoplight:
+        id: n6m5ng3nit56m
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'Name of the condition being applied in the contrast, either psychological, pharmacological, or group based.'
+          nullable: true
+        description:
+          type: string
+          description: Long form description of how the condition is operationalized and/or specific meaning.
+          nullable: true
+    condition:
+      allOf:
+        - $ref: '#/components/schemas/conditionBase'
+      description: Base component making up constrasts.
