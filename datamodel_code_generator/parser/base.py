@@ -164,7 +164,7 @@ def sort_data_models(
                 add_model = False
                 for submodel in [getattr(s.reference, "path", None) for s in model.base_classes]:
                     if submodel in require_update_action_models:
-                        require_update_action_models.remove(submodel)
+                        # require_update_action_models.remove(submodel)
                         add_model = True
                 if add_model:
                     require_update_action_models.append(model.path)
