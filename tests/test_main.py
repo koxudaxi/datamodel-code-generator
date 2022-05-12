@@ -30,7 +30,7 @@ EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
 @freeze_time('2019-07-26')
-def test_main_subclass_references_class():
+def test_main_inheritance_forward_ref():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
@@ -45,10 +45,10 @@ def test_main_subclass_references_class():
             ]
         )
         assert return_code == Exit.OK
-        # assert (
-        #     output_file.read_text()
-        #     == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
-        # )
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_inheritance_forward_ref' / 'output.py').read_text()
+        )
 
     with pytest.raises(SystemExit):
         main()
