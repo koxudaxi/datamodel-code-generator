@@ -29,6 +29,30 @@ EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
+@freeze_time('2019-07-26')
+def test_main_subclass_references_class():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nimads.yml'),
+                '--output',
+                str(output_file),
+                '--base-class',
+                'custom_module.Base',
+            ]
+        )
+        assert return_code == Exit.OK
+        # assert (
+        #     output_file.read_text()
+        #     == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
+        # )
+
+    with pytest.raises(SystemExit):
+        main()
+
 
 @freeze_time('2019-07-26')
 def test_main():
