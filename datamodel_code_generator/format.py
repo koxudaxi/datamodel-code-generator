@@ -13,6 +13,7 @@ class PythonVersion(Enum):
     PY_37 = '3.7'
     PY_38 = '3.8'
     PY_39 = '3.9'
+    PY_310 = '3.10'
 
     @property
     def has_literal_type(self) -> bool:
