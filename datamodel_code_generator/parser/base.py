@@ -159,6 +159,16 @@ def sort_data_models(
             unresolved_model = (
                 model.reference_classes - {model.path} - set(sorted_data_models)
             )
+            base_models = [
+                getattr(s.reference, "path", None) for s in model.base_classes
+            ]
+            update_action_parent = set(require_update_action_models).intersection(
+                base_models
+            )
+            if not unresolved_model and update_action_parent:
+                sorted_data_models[model.path] = model
+                require_update_action_models.append(model.path)
+                continue
             if not unresolved_model:
                 sorted_data_models[model.path] = model
                 continue

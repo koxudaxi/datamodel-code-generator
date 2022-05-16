@@ -31,6 +31,31 @@ TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
 
 @freeze_time('2019-07-26')
+def test_main_inheritance_forward_ref():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'inheritance_forward_ref.json'),
+                '--output',
+                str(output_file),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_inheritance_forward_ref' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
