@@ -280,6 +280,7 @@ class Parser(ABC):
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
         set_default_enum_member: bool = False,
+        use_subclass_enum: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -330,6 +331,7 @@ class Parser(ABC):
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
         self.set_default_enum_member: bool = set_default_enum_member
+        self.use_subclass_enum: bool = use_subclass_enum
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
         self.enable_faux_immutability: bool = enable_faux_immutability

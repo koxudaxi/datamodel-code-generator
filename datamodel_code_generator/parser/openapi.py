@@ -165,6 +165,7 @@ class OpenAPIParser(JsonSchemaParser):
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
         set_default_enum_member: bool = False,
+        use_subclass_enum: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
