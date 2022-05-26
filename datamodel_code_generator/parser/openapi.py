@@ -211,6 +211,7 @@ class OpenAPIParser(JsonSchemaParser):
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             set_default_enum_member=set_default_enum_member,
+            use_subclass_enum=use_subclass_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,

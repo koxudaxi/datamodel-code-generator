@@ -61,7 +61,7 @@ class Enum(DataModel):
         if not base_classes and type_:
             base_class = SUBCLASS_BASE_CLASSES.get(type_)
             if base_class:
-                self.base_classes = [
+                self.base_classes: List[BaseClassDataType] = [
                     BaseClassDataType(type=base_class),
                     *self.base_classes,
                 ]

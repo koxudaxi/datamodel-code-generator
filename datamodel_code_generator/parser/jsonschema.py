@@ -248,10 +248,12 @@ def get_ref_type(ref: str) -> JSONReference:
     return JSONReference.REMOTE
 
 
-def _get_type(type_: str, format__: str) -> Optional[Types]:
+def _get_type(type_: str, format__: Optional[str] = None) -> Types:
     if not isinstance(type_, str) or type_ not in json_schema_data_formats:
-        return None
-    data_formats: Optional[Types] = json_schema_data_formats[type_].get(format__)
+        return Types.any
+    data_formats: Optional[Types] = json_schema_data_formats[type_].get(
+        'default' if format__ is None else format__
+    )
     if data_formats is not None:
         return data_formats
 
@@ -354,6 +356,7 @@ class JsonSchemaParser(Parser):
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             set_default_enum_member=set_default_enum_member,
+            use_subclass_enum=use_subclass_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
@@ -972,6 +975,8 @@ class JsonSchemaParser(Parser):
                 description=obj.description if self.use_schema_description else None,
                 custom_template_dir=self.custom_template_dir,
                 type_=_get_type(obj.type, obj.format)
+                if isinstance(obj.type, str)
+                else None
                 if self.use_subclass_enum
                 else None,
             )

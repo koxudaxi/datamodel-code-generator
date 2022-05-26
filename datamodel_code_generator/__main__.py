@@ -260,7 +260,7 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     '--use-subclass-enum',
-    help='Define Enum class as subclass with field type',
+    help='Define Enum class as subclass with field type when enum has type (int, float, bytes, str)',
     action='store_true',
     default=False,
 )
