@@ -34,8 +34,14 @@ class NonTypedEnum(Enum):
     field_3 = '3'
 
 
+class BooleanEnum(Enum):
+    boolean_True = True
+    boolean_False = False
+
+
 class Model(BaseModel):
     IntEnum: Optional[IntEnum] = None
     FloatEnum: Optional[FloatEnum] = None
     StrEnum: Optional[StrEnum] = None
     NonTypedEnum: Optional[NonTypedEnum] = None
+    BooleanEnum: Optional[BooleanEnum] = None

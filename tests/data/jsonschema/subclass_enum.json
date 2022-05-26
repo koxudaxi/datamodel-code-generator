@@ -32,6 +32,13 @@
         "2",
         "3"
       ]
+    },
+    "BooleanEnum": {
+      "type": "boolean",
+      "enum": [
+        true,
+        false
+      ]
     }
   }
 }
