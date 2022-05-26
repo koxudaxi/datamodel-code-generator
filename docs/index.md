@@ -57,6 +57,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--enum-field-as-literal {all,one}]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
+                         [--use-subclass-enum] 
                          [--class-name CLASS_NAME] [--use-title-as-name]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
@@ -127,6 +128,8 @@ optional arguments:
                         Set enum members as default values for enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
                         Set field name when enum value is empty (default: `_`)
+  --use-subclass-enum   Define Enum class as subclass with field type when enum has
+                        type (int, float, bytes, str)
   --class-name CLASS_NAME
                         Set class name of root model
   --use-title-as-name   use titles as class names of models
