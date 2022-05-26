@@ -249,7 +249,7 @@ def get_ref_type(ref: str) -> JSONReference:
 
 
 def _get_type(type_: str, format__: Optional[str] = None) -> Types:
-    if not isinstance(type_, str) or type_ not in json_schema_data_formats:
+    if type_ not in json_schema_data_formats:
         return Types.any
     data_formats: Optional[Types] = json_schema_data_formats[type_].get(
         'default' if format__ is None else format__

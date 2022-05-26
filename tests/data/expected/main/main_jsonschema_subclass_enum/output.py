@@ -39,9 +39,15 @@ class BooleanEnum(Enum):
     boolean_False = False
 
 
+class UnknownEnum(Enum):
+    a = 'a'
+    b = 'b'
+
+
 class Model(BaseModel):
     IntEnum: Optional[IntEnum] = None
     FloatEnum: Optional[FloatEnum] = None
     StrEnum: Optional[StrEnum] = None
     NonTypedEnum: Optional[NonTypedEnum] = None
     BooleanEnum: Optional[BooleanEnum] = None
+    UnknownEnum: Optional[UnknownEnum] = None

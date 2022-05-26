@@ -39,6 +39,13 @@
         true,
         false
       ]
+    },
+    "UnknownEnum": {
+      "type": "unknown",
+      "enum": [
+        "a",
+        "b"
+      ]
     }
   }
 }
