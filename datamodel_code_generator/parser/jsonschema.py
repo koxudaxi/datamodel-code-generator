@@ -975,9 +975,7 @@ class JsonSchemaParser(Parser):
                 description=obj.description if self.use_schema_description else None,
                 custom_template_dir=self.custom_template_dir,
                 type_=_get_type(obj.type, obj.format)
-                if isinstance(obj.type, str)
-                else None
-                if self.use_subclass_enum
+                if self.use_subclass_enum and isinstance(obj.type, str)
                 else None,
             )
             self.results.append(enum)
