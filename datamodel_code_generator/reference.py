@@ -146,20 +146,25 @@ class FieldNameResolver:
         self,
         name: str,
         excludes: Optional[Set[str]] = None,
+        ignore_snake_case_field: bool = False,
     ) -> str:
         if not name:
             name = self.empty_field_name
         if name[0] == '#':
             name = name[1:] or self.empty_field_name
 
-        if self.snake_case_field and self.original_delimiter is not None:
+        if (
+            self.snake_case_field
+            and not ignore_snake_case_field
+            and self.original_delimiter is not None
+        ):
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
         # TODO: when first character is a number
         name = re.sub(r'\W', '_', name)
         if name[0].isnumeric():
             name = f'field_{name}'
-        if self.snake_case_field:
+        if self.snake_case_field and not ignore_snake_case_field:
             name = camel_to_snake(name)
         count = 1
         if iskeyword(name) or not self._validate_field_name(name):
@@ -500,7 +505,9 @@ class ModelResolver:
 
     def default_class_name_generator(self, name: str) -> str:
         # TODO: create a validate for class name
-        name = self.field_name_resolvers[ModelType.CLASS].get_valid_name(name)
+        name = self.field_name_resolvers[ModelType.CLASS].get_valid_name(
+            name, ignore_snake_case_field=True
+        )
         return snake_to_upper_camel(name)
 
     def get_class_name(
@@ -516,7 +523,9 @@ class ModelResolver:
             split_name = name.split('.')
             prefix = '.'.join(
                 # TODO: create a validate for class name
-                self.field_name_resolvers[ModelType.CLASS].get_valid_name(n)
+                self.field_name_resolvers[ModelType.CLASS].get_valid_name(
+                    n, ignore_snake_case_field=True
+                )
                 for n in split_name[:-1]
             )
             prefix += '.'
