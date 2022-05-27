@@ -238,6 +238,7 @@ def generate(
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
+    original_field_name_delimiter: Optional[str] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -358,6 +359,7 @@ def generate(
         http_ignore_tls=http_ignore_tls,
         use_annotated=use_annotated,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+        original_field_name_delimiter=original_field_name_delimiter,
         **kwargs,
     )
 

@@ -183,6 +183,7 @@ class OpenAPIParser(JsonSchemaParser):
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
+        original_field_name_delimiter: Optional[str] = None,
     ):
         super().__init__(
             source=source,
@@ -228,6 +229,7 @@ class OpenAPIParser(JsonSchemaParser):
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
             use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            original_field_name_delimiter=original_field_name_delimiter,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

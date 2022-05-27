@@ -1468,6 +1468,25 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     )
 
 
+def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> None:
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+
+    return_code: Exit = main(
+        [
+            '--input',
+            str(input_filename),
+            '--original-field-name-delimiter',
+            '-',
+        ]
+    )
+    captured = capsys.readouterr()
+    assert return_code == Exit.ERROR
+    assert (
+        captured.err
+        == '`--original-field-name-delimiter` can not be used without `--snake-case-field`.\n'
+    )
+
+
 @freeze_time('2019-07-26')
 def test_main_external_definitions():
     with TemporaryDirectory() as output_dir:
@@ -2146,6 +2165,37 @@ def test_simple_json_snake_case_field():
                 output_file.read_text()
                 == (
                     EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
+                ).read_text()
+            )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_space_field_enum_snake_case_field():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        with chdir(JSON_SCHEMA_DATA_PATH / 'space_field_enum.json'):
+            return_code: Exit = main(
+                [
+                    '--input',
+                    'space_field_enum.json',
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'jsonschema',
+                    '--snake-case-field',
+                    '--original-field-name-delimiter',
+                    ' ',
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH
+                    / 'main_space_field_enum_snake_case_field'
+                    / 'output.py'
                 ).read_text()
             )
     with pytest.raises(SystemExit):
