@@ -365,6 +365,17 @@ class Config(BaseModel):
                 )
         return values
 
+    @root_validator
+    def validate_original_field_name_delimiter(
+        cls, values: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        if values.get('original_field_name_delimiter') is not None:
+            if not values.get('snake_case_field'):
+                raise Error(
+                    "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
+                )
+        return values
+
     # Pydantic 1.5.1 doesn't support each_item=True correctly
     @validator('http_headers', pre=True)
     def validate_http_headers(cls, value: Any) -> Optional[List[Tuple[str, str]]]:

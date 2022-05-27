@@ -1468,6 +1468,25 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     )
 
 
+def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> None:
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+
+    return_code: Exit = main(
+        [
+            '--input',
+            str(input_filename),
+            '--original-field-name-delimiter',
+            '-',
+        ]
+    )
+    captured = capsys.readouterr()
+    assert return_code == Exit.ERROR
+    assert (
+        captured.err
+        == '`--original-field-name-delimiter` can not be used without `--snake-case-field`.\n'
+    )
+
+
 @freeze_time('2019-07-26')
 def test_main_external_definitions():
     with TemporaryDirectory() as output_dir:
