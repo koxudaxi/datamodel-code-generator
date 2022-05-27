@@ -701,6 +701,7 @@
                          <span class="o">[</span>--use_non_positive_negative_number_constrained_types<span class="o">]</span>
                          <span class="o">[</span>--field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]]</span>
                          <span class="o">[</span>--field-include-all-keys<span class="o">]</span> <span class="o">[</span>--snake-case-field<span class="o">]</span>
+                         <span class="o">[</span>--original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER<span class="o">]</span>
                          <span class="o">[</span>--strip-default-none<span class="o">]</span>
                          <span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
                          <span class="o">[</span>--allow-population-by-field-name<span class="o">]</span>
@@ -750,6 +751,9 @@ optional arguments:
   --field-include-all-keys
                         Add all keys to field parameters
   --snake-case-field    Change camel-case field name to snake-case
+  --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER
+                        Set delimiter to convert to snake <span class="k">case</span>. This option only
+                        can be used with --snake-case-field <span class="o">(</span>default: <span class="sb">`</span>_<span class="sb">`</span> <span class="o">)</span>
   --strip-default-none  Strip default None on fields
   --disable-appending-item-suffix
                         Disable appending <span class="sb">`</span>Item<span class="sb">`</span> suffix to model name <span class="k">in</span> an
