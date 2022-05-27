@@ -1,7 +1,7 @@
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
-class {{ class_name }}(Enum):
+class {{ class_name }}({{ base_class }}):
 {%- if description %}
     """
     {{ description }}

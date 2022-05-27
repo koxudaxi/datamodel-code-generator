@@ -258,6 +258,12 @@ arg_parser.add_argument(
     default=None,
 )
 
+arg_parser.add_argument(
+    '--use-subclass-enum',
+    help='Define Enum class as subclass with field type when enum has type (int, float, bytes, str)',
+    action='store_true',
+    default=False,
+)
 
 arg_parser.add_argument(
     '--class-name',
@@ -404,6 +410,7 @@ class Config(BaseModel):
     encoding: str = 'utf-8'
     enum_field_as_literal: Optional[LiteralType] = None
     set_default_enum_member: bool = False
+    use_subclass_enum: bool = False
     strict_nullable: bool = False
     use_generic_container_types: bool = False
     enable_faux_immutability: bool = False
@@ -536,6 +543,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
             set_default_enum_member=config.set_default_enum_member,
+            use_subclass_enum=config.use_subclass_enum,
             strict_nullable=config.strict_nullable,
             use_generic_container_types=config.use_generic_container_types,
             enable_faux_immutability=config.enable_faux_immutability,

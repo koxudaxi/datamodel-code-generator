@@ -248,6 +248,22 @@ def get_ref_type(ref: str) -> JSONReference:
     return JSONReference.REMOTE
 
 
+def _get_type(type_: str, format__: Optional[str] = None) -> Types:
+    if type_ not in json_schema_data_formats:
+        return Types.any
+    data_formats: Optional[Types] = json_schema_data_formats[type_].get(
+        'default' if format__ is None else format__
+    )
+    if data_formats is not None:
+        return data_formats
+
+    warn(
+        "format of {!r} not understood for {!r} - using default"
+        "".format(format__, type_)
+    )
+    return json_schema_data_formats[type_]['default']
+
+
 JsonSchemaObject.update_forward_refs()
 
 DEFAULT_FIELD_KEYS: Set[str] = {
@@ -295,6 +311,7 @@ class JsonSchemaParser(Parser):
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
         set_default_enum_member: bool = False,
+        use_subclass_enum: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -339,6 +356,7 @@ class JsonSchemaParser(Parser):
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             set_default_enum_member=set_default_enum_member,
+            use_subclass_enum=use_subclass_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
@@ -397,17 +415,8 @@ class JsonSchemaParser(Parser):
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
-            data_formats: Optional[Types] = json_schema_data_formats[type_].get(
-                format__
-            )
-            if data_formats is None:
-                warn(
-                    "format of {!r} not understood for {!r} - using default"
-                    "".format(format__, type_)
-                )
-                data_formats = json_schema_data_formats[type_]['default']
             return self.data_type_manager.get_data_type(
-                data_formats,
+                _get_type(type_, format__),
                 **obj.dict() if not self.field_constraints else {},
             )
 
@@ -965,6 +974,9 @@ class JsonSchemaParser(Parser):
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
                 custom_template_dir=self.custom_template_dir,
+                type_=_get_type(obj.type, obj.format)
+                if self.use_subclass_enum and isinstance(obj.type, str)
+                else None,
             )
             self.results.append(enum)
             return self.data_type(reference=reference_)
