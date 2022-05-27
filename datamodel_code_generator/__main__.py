@@ -146,6 +146,13 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+
+arg_parser.add_argument(
+    '--original-field-name-delimiter',
+    help='Set delimiter to convert to snake case. This option only can be used with --snake-case-field (default: `_` )',
+    default=None,
+)
+
 arg_parser.add_argument(
     '--strip-default-none',
     help='Strip default None on fields',
@@ -427,6 +434,7 @@ class Config(BaseModel):
     http_ignore_tls: bool = False
     use_annotated: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
+    original_field_name_delimiter: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -559,6 +567,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             http_ignore_tls=config.http_ignore_tls,
             use_annotated=config.use_annotated,
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
+            original_field_name_delimiter=config.original_field_name_delimiter,
         )
         return Exit.OK
     except InvalidClassNameError as e:

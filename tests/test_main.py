@@ -2153,6 +2153,37 @@ def test_simple_json_snake_case_field():
 
 
 @freeze_time('2019-07-26')
+def test_main_space_field_enum_snake_case_field():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        with chdir(JSON_SCHEMA_DATA_PATH / 'space_field_enum.json'):
+            return_code: Exit = main(
+                [
+                    '--input',
+                    'space_field_enum.json',
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'jsonschema',
+                    '--snake-case-field',
+                    '--original-field-name-delimiter',
+                    ' ',
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH
+                    / 'main_space_field_enum_snake_case_field'
+                    / 'output.py'
+                ).read_text()
+            )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_all_of_ref():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

@@ -45,6 +45,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--use_non_positive_negative_number_constrained_types]
                          [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
                          [--field-include-all-keys] [--snake-case-field]
+                         [--original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER]
                          [--strip-default-none]
                          [--disable-appending-item-suffix]
                          [--allow-population-by-field-name]
@@ -94,6 +95,9 @@ optional arguments:
   --field-include-all-keys
                         Add all keys to field parameters
   --snake-case-field    Change camel-case field name to snake-case
+  --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER
+                        Set delimiter to convert to snake case. This option only
+                        can be used with --snake-case-field (default: `_` )
   --strip-default-none  Strip default None on fields
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an
