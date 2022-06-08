@@ -41,6 +41,8 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 -  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 -  ipv4
 -  ipv6
+-  ipv4-network
+-  ipv6-network
 -  hostname
 -  decimal
 
