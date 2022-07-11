@@ -32,7 +32,7 @@ OPTIONAL: str = 'Optional'
 ALL_MODEL: str = '#all#'
 
 
-class ConstraintsBase(BaseModel):
+class ConstraintsBase(BaseModel, smart_union=True):
     ...
 
 
