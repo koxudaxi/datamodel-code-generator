@@ -169,6 +169,12 @@ components:
               - integer
             minimum: 1
             maximum: 1000
+          iq:
+            type: number
+            format: float
+            minimum: 0.2
+            maximum: 149.5
+
 
     Id:
       type: string

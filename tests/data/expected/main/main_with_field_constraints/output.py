@@ -40,6 +40,7 @@ class User(BaseModel):
     fax: Optional[List[FaxItem]] = None
     height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
     weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
+    iq: Optional[float] = Field(None, ge=0.2, le=149.5)
 
 
 class Users(BaseModel):
