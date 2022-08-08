@@ -239,6 +239,7 @@ def generate(
     use_annotated: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
     original_field_name_delimiter: Optional[str] = None,
+    use_double_quotes: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -360,6 +361,7 @@ def generate(
         use_annotated=use_annotated,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         original_field_name_delimiter=original_field_name_delimiter,
+        use_double_quotes=use_double_quotes,
         **kwargs,
     )
 

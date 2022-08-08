@@ -300,6 +300,7 @@ class Parser(ABC):
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
         original_field_name_delimiter: Optional[str] = None,
+        use_double_quotes: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             target_python_version,
@@ -391,6 +392,7 @@ class Parser(ABC):
         self.use_non_positive_negative_number_constrained_types = (
             use_non_positive_negative_number_constrained_types
         )
+        self.use_double_quotes = use_double_quotes
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -454,7 +456,10 @@ class Parser(ABC):
 
         if format_:
             code_formatter: Optional[CodeFormatter] = CodeFormatter(
-                self.target_python_version, settings_path, self.wrap_string_literal
+                self.target_python_version,
+                settings_path,
+                self.wrap_string_literal,
+                skip_string_normalization=not self.use_double_quotes,
             )
         else:
             code_formatter = None
