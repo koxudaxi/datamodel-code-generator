@@ -313,6 +313,14 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    "--use-double-quotes",
+    action='store_true',
+    default=False,
+    help="Model generated with double quotes. Single quotes or "
+    "your black config skip_string_normalization value will be used without this option.",
+)
+
+arg_parser.add_argument(
     '--encoding',
     help=f'The encoding of input and output (default: {DEFAULT_ENCODING})',
     default=DEFAULT_ENCODING,
@@ -446,6 +454,7 @@ class Config(BaseModel):
     use_annotated: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
     original_field_name_delimiter: Optional[str] = None
+    use_double_quotes: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -579,6 +588,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_annotated=config.use_annotated,
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
             original_field_name_delimiter=config.original_field_name_delimiter,
+            use_double_quotes=config.use_double_quotes,
         )
         return Exit.OK
     except InvalidClassNameError as e:

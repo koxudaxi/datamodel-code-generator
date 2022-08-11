@@ -62,6 +62,7 @@ class CodeFormatter:
         python_version: PythonVersion,
         settings_path: Optional[Path] = None,
         wrap_string_literal: Optional[bool] = None,
+        skip_string_normalization: bool = True,
     ):
         if not settings_path:
             settings_path = Path().resolve()
@@ -95,12 +96,13 @@ class CodeFormatter:
                 ] = experimental_string_processing
 
         if TYPE_CHECKING:
-            self.back_mode: black.FileMode
+            self.black_mode: black.FileMode
         else:
-            self.back_mode = black.FileMode(
+            self.black_mode = black.FileMode(
                 target_versions={BLACK_PYTHON_VERSION[python_version]},
                 line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
-                string_normalization=not config.get("skip-string-normalization", True),
+                string_normalization=not skip_string_normalization
+                or not config.get("skip-string-normalization", True),
                 **black_kwargs,
             )
 
@@ -121,7 +123,7 @@ class CodeFormatter:
     def apply_black(self, code: str) -> str:
         return black.format_str(
             code,
-            mode=self.back_mode,
+            mode=self.black_mode,
         )
 
     if isort.__version__.startswith('4.'):
