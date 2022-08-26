@@ -48,6 +48,7 @@ class DataModelFieldBase(_BaseModel):
     parent: Optional[Any] = None
     extras: Dict[str, Any] = {}
     use_annotated: bool = False
+    has_default: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
@@ -151,6 +152,9 @@ class BaseClassDataType(DataType):
     ...
 
 
+UNDEFINED = object()
+
+
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ''
     BASE_CLASS: ClassVar[str] = ''
@@ -169,6 +173,7 @@ class DataModel(TemplateBase, ABC):
         methods: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
+        default: Any = UNDEFINED,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -218,6 +223,7 @@ class DataModel(TemplateBase, ABC):
             field.parent = self
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
+        self.default: Any = default
 
     def set_base_class(self) -> None:
         base_class_import = Import.from_full_path(
