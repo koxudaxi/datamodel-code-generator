@@ -152,7 +152,7 @@ class BaseClassDataType(DataType):
     ...
 
 
-UNDEFINED = object()
+UNDEFINED: Any = object()
 
 
 class DataModel(TemplateBase, ABC):
