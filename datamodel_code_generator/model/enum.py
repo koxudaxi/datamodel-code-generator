@@ -3,7 +3,7 @@ from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import BaseClassDataType
+from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
@@ -43,6 +43,7 @@ class Enum(DataModel):
         path: Optional[Path] = None,
         description: Optional[str] = None,
         type_: Optional[Types] = None,
+        default: Any = UNDEFINED,
     ):
 
         super().__init__(
@@ -56,6 +57,7 @@ class Enum(DataModel):
             methods=methods,
             path=path,
             description=description,
+            default=default,
         )
 
         if not base_classes and type_:

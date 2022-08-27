@@ -29,6 +29,7 @@ from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
+    UNDEFINED,
     BaseClassDataType,
     DataModel,
     DataModelFieldBase,
@@ -611,6 +612,18 @@ class Parser(ABC):
                         ),
                     )
                     models.remove(model)
+
+            for model in models:
+                for model_field in model.fields:
+                    if not model_field.data_type.reference or model_field.has_default:
+                        continue
+                    if isinstance(
+                        model_field.data_type.reference.source, DataModel
+                    ):  # pragma: no cover
+                        if model_field.data_type.reference.source.default != UNDEFINED:
+                            model_field.default = (
+                                model_field.data_type.reference.source.default
+                            )
 
             if self.reuse_model:
                 model_cache: Dict[Tuple[str, ...], Reference] = {}
