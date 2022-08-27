@@ -162,7 +162,7 @@ class FieldNameResolver:
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
         # TODO: when first character is a number
-        name = re.sub(r'\W', '_', name)
+        name = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹]|\W', '_', name)
         if name[0].isnumeric():
             name = f'field_{name}'
         if self.snake_case_field and not ignore_snake_case_field:
