@@ -272,6 +272,7 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'example',
     'examples',
     'description',
+    'discriminator',
     'title',
 }
 
