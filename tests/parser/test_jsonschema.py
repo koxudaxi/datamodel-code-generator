@@ -324,6 +324,7 @@ def test_parse_one_of_object(source_obj, generated_classes):
                     "number_array": {"type": "array", "default": [1, 2, 3]},
                     "string_array": {"type": "array", "default": ["a", "b", "c"]},
                     "object": {"type": "object", "default": {"key": "value"}},
+                    "optional": {"type": ["number", "null"], "default": "null"},
                 },
             },
             """class Defaults(BaseModel):
@@ -333,7 +334,8 @@ def test_parse_one_of_object(source_obj, generated_classes):
     number_on_field: Optional[float] = Field(123, description='description')
     number_array: Optional[List] = [1, 2, 3]
     string_array: Optional[List] = ['a', 'b', 'c']
-    object: Optional[Dict[str, Any]] = {'key': 'value'}""",
+    object: Optional[Dict[str, Any]] = {'key': 'value'}
+    optional: Optional[float] = None""",
         )
     ],
 )
