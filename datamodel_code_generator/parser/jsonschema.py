@@ -163,6 +163,12 @@ class JsonSchemaObject(BaseModel):
             return value.replace('#', '#/')
         return value
 
+    @validator('default')
+    def validate_default(cls, value: Any) -> Any:
+        if value == 'null':
+            return None
+        return value
+
     items: Union[List[JsonSchemaObject], JsonSchemaObject, None]
     uniqueItems: Optional[bool]
     type: Union[str, List[str], None]
