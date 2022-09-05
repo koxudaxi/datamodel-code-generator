@@ -3760,3 +3760,28 @@ def test_main_jsonschema_has_default_value():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_openapi_special_yaml_keywords():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'special_yaml_keywords.yaml'),
+                '--output',
+                str(output_file),
+                '--validation',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_special_yaml_keywords' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
