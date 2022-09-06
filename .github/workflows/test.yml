@@ -31,11 +31,11 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        VERSION: 1.2.0
-        VIRTUALENVS_PATH: .venv
-        VIRTUALENVS_CREATE: true
-        VIRTUALENVS_IN_PROJECT: true
-        INSTALLER_PARALLEL: true
+        version: 1.2.0
+        virtualenvs-path: .venv
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
     - name: Load cached venv
       id: cached-poetry-dependencies
       uses: actions/cache@v2
