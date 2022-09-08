@@ -148,6 +148,7 @@ class FieldNameResolver:
         name: str,
         excludes: Optional[Set[str]] = None,
         ignore_snake_case_field: bool = False,
+        upper_camel: bool = False,
     ) -> str:
         if not name:
             name = self.empty_field_name
@@ -170,11 +171,13 @@ class FieldNameResolver:
         count = 1
         if iskeyword(name) or not self._validate_field_name(name):
             name += '_'
-        new_name = name
-        while not (
-            new_name.isidentifier() or not self._validate_field_name(new_name)
-        ) or (excludes and new_name in excludes):
-            new_name = f'{name}_{count}'
+        new_name = snake_to_upper_camel(name) if upper_camel else name
+        while (
+            not (new_name.isidentifier() or not self._validate_field_name(new_name))
+            or iskeyword(new_name)
+            or (excludes and new_name in excludes)
+        ):
+            new_name = f'{name}{count}' if upper_camel else f'{name}_{count}'
             count += 1
         return new_name
 
@@ -506,10 +509,9 @@ class ModelResolver:
 
     def default_class_name_generator(self, name: str) -> str:
         # TODO: create a validate for class name
-        name = self.field_name_resolvers[ModelType.CLASS].get_valid_name(
-            name, ignore_snake_case_field=True
+        return self.field_name_resolvers[ModelType.CLASS].get_valid_name(
+            name, ignore_snake_case_field=True, upper_camel=True
         )
-        return snake_to_upper_camel(name)
 
     def get_class_name(
         self,

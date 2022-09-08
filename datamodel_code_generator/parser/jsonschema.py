@@ -34,7 +34,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.base import get_module_name
+from datamodel_code_generator.model.base import UNDEFINED, get_module_name
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -970,6 +970,7 @@ class JsonSchemaParser(Parser):
                     ),
                     required=True,
                     strip_default_none=self.strip_default_none,
+                    has_default=obj.has_default,
                 )
             )
 
@@ -983,6 +984,7 @@ class JsonSchemaParser(Parser):
                 type_=_get_type(obj.type, obj.format)
                 if self.use_subclass_enum and isinstance(obj.type, str)
                 else None,
+                default=obj.default if obj.has_default else UNDEFINED,
             )
             self.results.append(enum)
             return self.data_type(reference=reference_)
@@ -1021,12 +1023,14 @@ class JsonSchemaParser(Parser):
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,
+                    has_default=obj.has_default,
                 )
             ],
             custom_base_class=self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            default=obj.default if obj.has_default else UNDEFINED,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
