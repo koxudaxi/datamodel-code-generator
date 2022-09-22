@@ -268,7 +268,7 @@ def test_parse_object(source_obj, generated_classes):
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "title": "AnyJson",
                 "description": "This field accepts any object",
-                "discriminator": "type"
+                "discriminator": "type",
             },
             """class AnyObject(BaseModel):
     __root__: Any = Field(..., description='This field accepts any object',discriminator='type',title='AnyJson')""",
