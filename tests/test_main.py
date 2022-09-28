@@ -519,7 +519,7 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
     # Use builtin datamodel_code_generator pydantic template
     # tests templates `DATA_PATH / 'templates'` does not include config
-    custom_template_dir = Path("./datamodel_code_generator/model/template/\pydantic")
+    custom_template_dir = Path("./datamodel_code_generator/model/template/pydantic")
     extra_template_data = OPEN_API_DATA_PATH / 'extra_data.json'
 
     with freeze_time(TIMESTAMP):

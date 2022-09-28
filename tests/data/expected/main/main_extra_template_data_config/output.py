@@ -47,16 +47,16 @@ class Error(BaseModel):
 
 class Api(BaseModel):
     apiKey: Optional[str] = Field(
-        None, description="To be used as a dataset parameter value"
+        None, description='To be used as a dataset parameter value'
     )
     apiVersionNumber: Optional[str] = Field(
-        None, description="To be used as a version parameter value"
+        None, description='To be used as a version parameter value'
     )
     apiUrl: Optional[AnyUrl] = Field(
-        None, description="The URL describing the dataset\'s fields"
+        None, description="The URL describing the dataset's fields"
     )
     apiDocumentationUrl: Optional[AnyUrl] = Field(
-        None, description="A URL to the API console for each API"
+        None, description='A URL to the API console for each API'
     )
 
 
