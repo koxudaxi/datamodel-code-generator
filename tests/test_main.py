@@ -537,9 +537,12 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
     captured = capsys.readouterr()
     assert (
         captured.out
-        == (EXPECTED_MAIN_PATH / 'main_extra_template_data_config' / 'output.py').read_text()
+        == (
+            EXPECTED_MAIN_PATH / 'main_extra_template_data_config' / 'output.py'
+        ).read_text()
     )
     assert not captured.err
+
 
 def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     """Test main function with custom template directory."""
