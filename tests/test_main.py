@@ -2,10 +2,11 @@ import platform
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import pydantic
 from unittest.mock import call
 
 import isort
-import pydantic
+
 import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
@@ -38,7 +39,8 @@ def test_main_inheritance_forward_ref():
         return_code: Exit = main(
             [
                 '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'inheritance_forward_ref.json'),
+                str(JSON_SCHEMA_DATA_PATH / 'inheritance_forward_ref.json'
+                    ),
                 '--output',
                 str(output_file),
             ]
@@ -47,7 +49,9 @@ def test_main_inheritance_forward_ref():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_inheritance_forward_ref' / 'output.py'
+                EXPECTED_MAIN_PATH /
+                'main_inheritance_forward_ref'
+                / 'output.py'
             ).read_text()
         )
 
