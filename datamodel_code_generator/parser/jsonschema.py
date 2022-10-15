@@ -524,22 +524,6 @@ class JsonSchemaParser(Parser):
 
         exclude_field_names: Set[str] = set()
         for original_field_name, field in properties.items():
-            if isinstance(field, JsonSchemaObject):
-                if field.is_array or (
-                    self.field_constraints
-                    and not (
-                        field.ref
-                        or field.anyOf
-                        or field.oneOf
-                        or field.allOf
-                        or field.is_object
-                        or field.enum
-                    )
-                ):
-                    constraints: Optional[Mapping[str, Any]] = field.dict()
-                else:
-                    constraints = None
-
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 original_field_name, exclude_field_names
             )
@@ -563,8 +547,23 @@ class JsonSchemaParser(Parser):
                     )
                 )
                 continue
+
+            if field.is_array or (
+                self.field_constraints
+                and not (
+                    field.ref
+                    or field.anyOf
+                    or field.oneOf
+                    or field.allOf
+                    or field.is_object
+                    or field.enum
+                )
+            ):
+                constraints: Optional[Mapping[str, Any]] = field.dict()
             else:
-                field_type = self.parse_item(modular_name, field, [*path, field_name])
+                constraints = None
+
+            field_type = self.parse_item(modular_name, field, [*path, field_name])
 
             if self.force_optional_for_required_fields or (
                 self.apply_default_values_for_required_fields and field.has_default
