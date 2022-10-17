@@ -180,7 +180,7 @@ class JsonSchemaObject(BaseModel):
     allOf: List['JsonSchemaObject'] = []
     enum: List[Any] = []
     writeOnly: Optional[bool]
-    properties: Optional[Dict[str, 'JsonSchemaObject']]
+    properties: Optional[Dict[str, Union['JsonSchemaObject', bool]]]
     required: List[str] = []
     ref: Optional[str] = Field(default=None, alias='$ref')
     nullable: Optional[bool] = False
@@ -516,7 +516,7 @@ class JsonSchemaParser(Parser):
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str], module_name: Optional[str] = None
     ) -> List[DataModelFieldBase]:
-        properties: Dict[str, JsonSchemaObject] = (
+        properties: Dict[str, Union[JsonSchemaObject, bool]] = (
             {} if obj.properties is None else obj.properties
         )
         requires: Set[str] = {*()} if obj.required is None else {*obj.required}
@@ -524,6 +524,29 @@ class JsonSchemaParser(Parser):
 
         exclude_field_names: Set[str] = set()
         for original_field_name, field in properties.items():
+            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                original_field_name, exclude_field_names
+            )
+            modular_name = f'{module_name}.{field_name}' if module_name else field_name
+
+            exclude_field_names.add(field_name)
+
+            if isinstance(field, bool):
+                fields.append(
+                    self.data_model_field_type(
+                        name=field_name,
+                        data_type=self.data_type_manager.get_data_type(
+                            Types.any,
+                        ),
+                        required=False
+                        if self.force_optional_for_required_fields
+                        else original_field_name in requires,
+                        alias=alias,
+                        strip_default_none=self.strip_default_none,
+                        use_annotated=self.use_annotated,
+                    )
+                )
+                continue
 
             if field.is_array or (
                 self.field_constraints
@@ -539,13 +562,6 @@ class JsonSchemaParser(Parser):
                 constraints: Optional[Mapping[str, Any]] = field.dict()
             else:
                 constraints = None
-
-            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                original_field_name, exclude_field_names
-            )
-            modular_name = f'{module_name}.{field_name}' if module_name else field_name
-
-            exclude_field_names.add(field_name)
 
             field_type = self.parse_item(modular_name, field, [*path, field_name])
 
@@ -1116,8 +1132,9 @@ class JsonSchemaParser(Parser):
         for item in obj.oneOf:
             self.parse_ref(item, path)
         if obj.properties:
-            for value in obj.properties.values():
-                self.parse_ref(value, path)
+            for property_value in obj.properties.values():
+                if isinstance(property_value, JsonSchemaObject):
+                    self.parse_ref(property_value, path)
 
     def parse_id(self, obj: JsonSchemaObject, path: List[str]) -> None:
         if obj.id:
@@ -1138,8 +1155,9 @@ class JsonSchemaParser(Parser):
         for item in obj.allOf:
             self.parse_id(item, path)
         if obj.properties:
-            for value in obj.properties.values():
-                self.parse_id(value, path)
+            for property_value in obj.properties.values():
+                if isinstance(property_value, JsonSchemaObject):
+                    self.parse_id(property_value, path)
 
     @contextmanager
     def root_id_context(self, root_raw: Dict[str, Any]) -> Generator[None, None, None]:
