@@ -423,7 +423,7 @@ class ModelResolver:
             joined_path += '#'
         return joined_path
 
-    def add_ref(self, ref: str, resolved: bool = False) -> Reference:
+    def add_ref(self, ref: str, name: Optional[str] = None, resolved: bool = False) -> Reference:
         if not resolved:
             path = self.resolve_ref(ref)
         else:
@@ -432,7 +432,9 @@ class ModelResolver:
         if reference:
             return reference
         split_ref = ref.rsplit('/', 1)
-        if len(split_ref) == 1:
+        if name:
+            original_name = name
+        elif len(split_ref) == 1:
             original_name = Path(
                 split_ref[0][:-1] if self.is_external_root_ref(path) else split_ref[0]
             ).stem

@@ -51,7 +51,9 @@ def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]
         return schema
     elif len(keys) == 1:
         return schema.get(keys[0], {})
-    return get_model_by_path(schema[keys[0]], keys[1:])
+    if schema and schema.get(keys[0]):
+        return get_model_by_path(schema[keys[0]], keys[1:])
+    return {}
 
 
 SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
@@ -436,8 +438,8 @@ class JsonSchemaParser(Parser):
             )
         return _get_data_type(obj.type, obj.format or 'default')
 
-    def get_ref_data_type(self, ref: str) -> DataType:
-        reference = self.model_resolver.add_ref(ref)
+    def get_ref_data_type(self, ref: str, name: Optional[str]=None) -> DataType:
+        reference = self.model_resolver.add_ref(ref, name)
         return self.data_type(reference=reference)
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
@@ -657,7 +659,7 @@ class JsonSchemaParser(Parser):
                 root_type_path,
             )
         elif item.ref:
-            return self.get_ref_data_type(item.ref)
+            return self.get_ref_data_type(item.ref, name)
         elif item.custom_type_path:
             return self.data_type_manager.get_data_type_from_full_path(
                 item.custom_type_path, is_custom_type=True
