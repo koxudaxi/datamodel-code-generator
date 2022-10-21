@@ -692,7 +692,10 @@ class Parser(ABC):
                                     model_field.default
                                 )
                                 if enum_member:
+                                    model_field.default = enum_member
                                     enum_member_enum = enum_member.enum
+                                    if enum_member_enum in models:
+                                        continue
                                     scoped_model_resolver.get(enum_member_enum.path)
                                     if isinstance(enum_member_enum, Modular):
                                         enum_member_enum_name = f'{enum_member_enum.module_name}.{enum_member.enum.name}'
@@ -717,7 +720,7 @@ class Parser(ABC):
                                             from_=from_, import_=import_, alias=alias
                                         )
                                     )
-                                    model_field.default = enum_member
+
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
 
