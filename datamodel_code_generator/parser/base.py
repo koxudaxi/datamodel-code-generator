@@ -37,7 +37,12 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
-from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
+from datamodel_code_generator.types import (
+    DataType,
+    DataTypeManager,
+    Modular,
+    StrictTypes,
+)
 
 escape_characters = str.maketrans(
     {
@@ -688,6 +693,34 @@ class Parser(ABC):
                                 )
                                 if enum_member:
                                     model_field.default = enum_member
+                                    enum_member_enum = enum_member.enum
+                                    if enum_member_enum in models:
+                                        continue
+                                    scoped_model_resolver.get(enum_member_enum.path)
+                                    if isinstance(enum_member_enum, Modular):
+                                        enum_member_enum_name = f'{enum_member_enum.module_name}.{enum_member.enum.name}'
+                                    else:
+                                        enum_member_enum_name = enum_member.enum.name
+                                    from_, import_ = full_path = relative(
+                                        model.module_name, enum_member_enum_name
+                                    )
+
+                                    alias = scoped_model_resolver.add(
+                                        full_path, import_
+                                    ).name
+
+                                    name = data_type.reference.short_name
+                                    if from_ and import_ and alias != name:
+                                        enum_member.alias = f'{alias}.{name}'
+
+                                    if init:
+                                        from_ += "."
+                                    imports.append(
+                                        Import(
+                                            from_=from_, import_=import_, alias=alias
+                                        )
+                                    )
+
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
 

@@ -91,6 +91,9 @@ class Member:
     def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
         self.enum: Enum = enum
         self.field: DataModelFieldBase = field
+        self.alias: Optional[str] = None
 
     def __repr__(self) -> str:
+        if self.alias:
+            return self.alias
         return f'{self.enum.name}.{self.field.name}'
