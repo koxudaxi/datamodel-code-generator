@@ -430,7 +430,9 @@ class JsonSchemaParser(Parser):
         if isinstance(obj.type, list):
             return self.data_type(
                 data_types=[
-                    _get_data_type(t, 'default') for t in obj.type if t != 'null'
+                    _get_data_type(t, obj.format or 'default')
+                    for t in obj.type
+                    if t != 'null'
                 ],
                 is_optional='null' in obj.type,
             )
