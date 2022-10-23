@@ -423,7 +423,9 @@ class ModelResolver:
             joined_path += '#'
         return joined_path
 
-    def add_ref(self, ref: str, name: Optional[str] = None, resolved: bool = False) -> Reference:
+    def add_ref(
+        self, ref: str, name: Optional[str] = None, resolved: bool = False
+    ) -> Reference:
         if not resolved:
             path = self.resolve_ref(ref)
         else:
