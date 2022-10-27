@@ -60,7 +60,7 @@ pytest-cov = ">=2.12.1"
 pytest-mock = "*"
 mypy = { git = "https://github.com/koxudaxi/mypy.git", branch = "release-0.910-typed-ast-2"}
 isort = "==5.6.4"
-black = "==20.8b0"
+black = [{version = "20.8b0", python = "<3.7"}, {version = "==22.10.0", python = ">=3.7"} ]
 freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"

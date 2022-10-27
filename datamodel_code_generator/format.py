@@ -19,6 +19,10 @@ class PythonVersion(Enum):
     def has_literal_type(self) -> bool:
         return self.value not in {self.PY_36.value, self.PY_37.value}  # type: ignore
 
+    @property
+    def has_union_operator(self) -> bool:
+        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value, self.PY_39.value}  # type: ignore
+
 
 if TYPE_CHECKING:
 

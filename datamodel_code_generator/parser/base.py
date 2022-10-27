@@ -307,12 +307,14 @@ class Parser(ABC):
         use_non_positive_negative_number_constrained_types: bool = False,
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
+        use_union_operator: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
-            target_python_version,
-            use_standard_collections,
-            use_generic_container_types,
-            strict_types,
+            python_version=target_python_version,
+            use_standard_collections=use_standard_collections,
+            use_generic_container_types=use_generic_container_types,
+            strict_types=strict_types,
+            use_union_operator=use_union_operator,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
@@ -342,6 +344,7 @@ class Parser(ABC):
         self.use_subclass_enum: bool = use_subclass_enum
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
+        self.use_union_operator: bool = use_union_operator
         self.enable_faux_immutability: bool = enable_faux_immutability
         self.custom_class_name_generator: Optional[
             Callable[[str], str]
