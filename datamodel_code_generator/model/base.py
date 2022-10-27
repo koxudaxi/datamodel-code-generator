@@ -67,18 +67,26 @@ class DataModelFieldBase(_BaseModel):
             return OPTIONAL
         elif self.nullable is not None:
             if self.nullable:
-                return f'{OPTIONAL}[{type_hint}]'
+                if self.data_type.use_union_operator:
+                    return f'{type_hint} | None'
+                else:
+                    return f'{OPTIONAL}[{type_hint}]'
             return type_hint
         elif self.required:
             return type_hint
-        return f'{OPTIONAL}[{type_hint}]'
+        if self.data_type.use_union_operator:
+            return f'{type_hint} | None'
+        else:
+            return f'{OPTIONAL}[{type_hint}]'
 
     @property
     def imports(self) -> Tuple[Import, ...]:
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
             self.data_type.all_imports
         ]
-        if self.nullable or (self.nullable is None and not self.required):
+        if (
+            self.nullable or (self.nullable is None and not self.required)
+        ) and not self.data_type.use_union_operator:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated:
             imports.append((IMPORT_ANNOTATED,))
