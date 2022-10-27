@@ -3869,3 +3869,32 @@ def test_main_use_union_operator(tmpdir_factory: TempdirFactory) -> None:
             path.relative_to(main_nested_directory)
         ).read_text()
         assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_nullable_use_union_operator():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--use-union-operator',
+                '--strict-nullable',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_nullable_strict_nullable_use_union_operator'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
