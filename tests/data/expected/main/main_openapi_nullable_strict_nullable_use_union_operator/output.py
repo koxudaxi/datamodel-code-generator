@@ -29,7 +29,7 @@ class User(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: str | None  = Field(
+    apiKey: str | None = Field(
         None, description='To be used as a dataset parameter value'
     )
     apiVersionNumber: str | None = Field(

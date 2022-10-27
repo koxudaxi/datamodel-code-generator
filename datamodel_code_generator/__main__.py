@@ -8,7 +8,6 @@ import json
 import locale
 import signal
 import sys
-import warnings
 from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from enum import IntEnum

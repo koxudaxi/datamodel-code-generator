@@ -85,10 +85,8 @@ class DataModelFieldBase(_BaseModel):
             self.data_type.all_imports
         ]
         if (
-            self.nullable
-            or (self.nullable is None and not self.required)
-            and not self.data_type.use_union_operator
-        ):
+            self.nullable or (self.nullable is None and not self.required)
+        ) and not self.data_type.use_union_operator:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated:
             imports.append((IMPORT_ANNOTATED,))
