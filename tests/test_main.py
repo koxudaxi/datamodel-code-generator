@@ -3871,6 +3871,10 @@ def test_main_use_union_operator(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_nullable_use_union_operator():
     with TemporaryDirectory() as output_dir:
