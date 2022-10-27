@@ -14,10 +14,11 @@ classifiers = [
         "Natural Language :: English",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: Implementation :: CPython"]
 
 [build-system]
@@ -38,7 +39,7 @@ patterns = ["(^version: str = ')[^']*(')"]
 datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
+python = "^3.7"
 pydantic =  [{extras = ["email"], version = ">=1.5.1,<2.0", python = "<3.10"}, {extras = ["email"], version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 argcomplete = ">=1.10,<3.0"
 prance = ">=0.18.2,<1.0"
