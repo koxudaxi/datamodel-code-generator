@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
 
+import black
 import isort
 import pydantic
 import pytest
@@ -3837,4 +3838,34 @@ def test_main_jsonschema_modular_default_enum_member(
     )
     for path in main_modular_dir.rglob('*.py'):
         result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
+        assert result == path.read_text()
+
+
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
+@freeze_time('2019-07-26')
+def test_main_use_union_operator(tmpdir_factory: TempdirFactory) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    output_path = output_directory / 'model'
+    return_code: Exit = main(
+        [
+            '--input',
+            str(JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'),
+            '--output',
+            str(output_path),
+            '--input-file-type',
+            'jsonschema',
+            '--use-union-operator',
+        ]
+    )
+    assert return_code == Exit.OK
+    main_nested_directory = EXPECTED_MAIN_PATH / 'main_use_union_operator'
+
+    for path in main_nested_directory.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_nested_directory)
+        ).read_text()
         assert result == path.read_text()

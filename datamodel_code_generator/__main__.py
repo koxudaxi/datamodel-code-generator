@@ -8,6 +8,7 @@ import json
 import locale
 import signal
 import sys
+import warnings
 from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from enum import IntEnum
@@ -26,6 +27,7 @@ from typing import (
     cast,
 )
 from urllib.parse import ParseResult, urlparse
+from warnings import warn
 
 import argcomplete
 import black
@@ -228,6 +230,12 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+arg_parser.add_argument(
+    '--use-union-operator',
+    help='Use | operator for Union type (PEP 604).',
+    action='store_true',
+    default=None,
+)
 
 arg_parser.add_argument(
     '--use-schema-description',
@@ -404,12 +412,27 @@ class Config(BaseModel):
 
     @root_validator()
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        return cls._validate_use_annotated(values)
+        values = cls._validate_use_annotated(values)
+        return cls._validate_use_union_operator(values)
 
     @classmethod
     def _validate_use_annotated(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('use_annotated'):
             values['field_constraints'] = True
+        return values
+
+    @classmethod
+    def _validate_use_union_operator(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('use_union_operator'):
+            target_python_version: PythonVersion = values.get(
+                'target_python_version', PythonVersion.PY_37
+            )
+            if not target_python_version.has_union_operator:
+                warn(
+                    f"`--use-union-operator` can not be used with `--target-python_version` {target_python_version.value}.\n"
+                    f"`--target-python_version` {PythonVersion.PY_310.value} will be used."
+                )
+                values['target_python_version'] = PythonVersion.PY_310
         return values
 
     input: Optional[Union[Path, str]]
@@ -439,6 +462,7 @@ class Config(BaseModel):
     use_subclass_enum: bool = False
     strict_nullable: bool = False
     use_generic_container_types: bool = False
+    use_union_operator: bool = False
     enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None
     disable_appending_item_suffix: bool = False
@@ -461,6 +485,7 @@ class Config(BaseModel):
             f: getattr(args, f) for f in self.__fields__ if getattr(args, f) is not None
         }
         set_args = self._validate_use_annotated(set_args)
+        set_args = self._validate_use_union_operator(set_args)
         parsed_args = self.parse_obj(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
@@ -589,6 +614,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
+            use_union_operator=config.use_union_operator,
         )
         return Exit.OK
     except InvalidClassNameError as e:

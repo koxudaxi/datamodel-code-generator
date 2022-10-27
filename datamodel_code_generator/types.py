@@ -79,6 +79,7 @@ class DataType(_BaseModel):
     literals: List[Union[StrictBool, StrictInt, StrictStr]] = []
     use_standard_collections: bool = False
     use_generic_container: bool = False
+    use_union_operator: bool = False
     alias: Optional[str] = None
     parent: Optional[Any] = None
     children: List[Any] = []
@@ -165,8 +166,8 @@ class DataType(_BaseModel):
         if self.import_:
             yield self.import_
         imports: Tuple[Tuple[bool, Import], ...] = (
-            (self.is_optional, IMPORT_OPTIONAL),
-            (len(self.data_types) > 1, IMPORT_UNION),
+            (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
+            (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
         )
         if any(self.literals):
             import_literal = (
@@ -234,7 +235,12 @@ class DataType(_BaseModel):
         type_: Optional[str] = self.alias or self.type
         if not type_:
             if self.is_union:
-                type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
+                if self.use_union_operator:
+                    type_ = ' | '.join(
+                        data_type.type_hint for data_type in self.data_types
+                    )
+                else:
+                    type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
             elif self.literals:
@@ -271,7 +277,10 @@ class DataType(_BaseModel):
             else:  # pragma: no cover
                 type_ = dict_
         if self.is_optional and type_ != 'Any':
-            type_ = f'Optional[{type_}]'
+            if self.use_union_operator:
+                type_ = f'{type_} | None'
+            else:
+                type_ = f'Optional[{type_}]'
         elif self.is_func:
             if self.kwargs:
                 kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
@@ -332,6 +341,7 @@ class DataTypeManager(ABC):
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
         use_non_positive_negative_number_constrained_types: bool = False,
+        use_union_operator: bool = False,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
@@ -340,6 +350,7 @@ class DataTypeManager(ABC):
         self.use_non_positive_negative_number_constrained_types: bool = (
             use_non_positive_negative_number_constrained_types
         )
+        self.use_union_operator: bool = use_union_operator
 
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36
@@ -349,6 +360,13 @@ class DataTypeManager(ABC):
                 " The version will be not supported in a future version"
             )
 
+        if (
+            use_union_operator and not python_version.has_union_operator
+        ):  # pragma: no cover
+            raise Exception(
+                "use_union_operator can not be used with target_python_version 3.9 or earlier.\n"
+                " The version will be not supported in a future version"
+            )
         if TYPE_CHECKING:
             self.data_type: Type[DataType]
         else:
@@ -357,6 +375,7 @@ class DataTypeManager(ABC):
                 python_version=python_version,
                 use_standard_collections=use_standard_collections,
                 use_generic_container=use_generic_container_types,
+                use_union_operator=use_union_operator,
                 __base__=DataType,
             )
 
