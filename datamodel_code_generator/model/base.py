@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import lru_cache
@@ -281,7 +283,7 @@ class DataModel(TemplateBase, ABC):
         return get_module_name(self.name, self.file_path)
 
     @property
-    def all_data_types(self) -> Iterator['DataType']:
+    def all_data_types(self) -> Iterator[DataType]:
         for field in self.fields:
             yield from field.data_type.all_data_types
         yield from self.base_classes

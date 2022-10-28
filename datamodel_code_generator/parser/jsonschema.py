@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager

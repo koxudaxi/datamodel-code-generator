@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from collections import defaultdict
 from contextlib import contextmanager
@@ -76,7 +78,7 @@ class Reference(_BaseModel):
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
-    _exclude_fields: ClassVar = {'children'}
+    _exclude_fields: ClassVar[str] = {'children'}
 
     @validator('original_name')
     def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:

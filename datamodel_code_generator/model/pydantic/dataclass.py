@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import ClassVar, Tuple
 
 from datamodel_code_generator.imports import Import

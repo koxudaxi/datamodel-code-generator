@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterable, Optional
 
 from pydantic import BaseModel as _BaseModel
