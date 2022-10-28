@@ -78,7 +78,7 @@ class Reference(_BaseModel):
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
-    _exclude_fields: ClassVar[str] = {'children'}
+    _exclude_fields: ClassVar[Set[str]] = {'children'}
 
     @validator('original_name')
     def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:
