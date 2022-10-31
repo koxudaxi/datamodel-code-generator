@@ -6,6 +6,9 @@
   "properties": {
     "loggerLevel": {
       "$ref": "bar.json#/definitions/logLevels"
+    },
+    "AnotherLoggerLevel": {
+      "$ref": "nested_bar/bar.json#/definitions/logLevels"
     }
   }
 }
