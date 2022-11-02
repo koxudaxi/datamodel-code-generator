@@ -12,3 +12,4 @@ class InvalidEnum(Enum):
     _space = ' space'
     ___special = '*- special'
     schema = 'schema'
+    mro_ = 'mro'
