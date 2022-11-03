@@ -197,7 +197,19 @@ class PydanticFieldNameResolver(FieldNameResolver):
 
 
 class EnumFieldNameResolver(FieldNameResolver):
-    pass
+    def get_valid_name(
+        self,
+        name: str,
+        excludes: Optional[Set[str]] = None,
+        ignore_snake_case_field: bool = False,
+        upper_camel: bool = False,
+    ) -> str:
+        return super().get_valid_name(
+            name='mro_' if name == 'mro' else name,
+            excludes=excludes,
+            ignore_snake_case_field=ignore_snake_case_field,
+            upper_camel=upper_camel,
+        )
 
 
 class ModelType(Enum):
