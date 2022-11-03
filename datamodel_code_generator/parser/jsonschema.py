@@ -47,7 +47,7 @@ from datamodel_code_generator.reference import ModelType, Reference, is_url
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
 
 
-def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[Any, Any]:
     if not keys:
         return schema
     elif len(keys) == 1:
