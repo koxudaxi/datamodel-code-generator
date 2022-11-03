@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    ClassVar,
     DefaultDict,
     Dict,
     Iterable,
@@ -136,6 +137,8 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
+    SCHEMA_PATH: ClassVar[str] = '#/components/schemas'
+
     def __init__(
         self,
         source: Union[str, Path, List[Path], ParseResult],
