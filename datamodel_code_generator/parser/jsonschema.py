@@ -1295,10 +1295,10 @@ class JsonSchemaParser(Parser):
                 # parse $id before parsing $ref
                 root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
-                definitions = raw.get('definitions', {})
+                definitions = raw.get('components', {}).get("schemas", {})
                 for key, model in definitions.items():
                     obj = JsonSchemaObject.parse_obj(model)
-                    self.parse_id(obj, [*path_parts, '#/definitions', key])
+                    self.parse_id(obj, [*path_parts, "#/components/schemas", key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
@@ -1307,7 +1307,7 @@ class JsonSchemaParser(Parser):
                 else:
                     self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
-                    path = [*path_parts, '#/definitions', key]
+                    path = [*path_parts, "#/components/schemas", key]
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)
