@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    ClassVar,
     DefaultDict,
     Dict,
     Generator,
@@ -46,7 +47,7 @@ from datamodel_code_generator.reference import ModelType, Reference, is_url
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
 
 
-def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[Any, Any]:
     if not keys:
         return schema
     elif len(keys) == 1:
@@ -285,6 +286,8 @@ EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
 
 @snooper_to_methods(max_variable_length=None)
 class JsonSchemaParser(Parser):
+    SCHEMA_PATH: ClassVar[str] = '#/definitions'
+
     def __init__(
         self,
         source: Union[str, Path, List[Path], ParseResult],
@@ -403,6 +406,10 @@ class JsonSchemaParser(Parser):
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }
+
+    @cached_property
+    def schema_paths(self) -> List[str]:
+        return self.SCHEMA_PATH.lstrip('#/').split('/')
 
     @property
     def root_id(self) -> Optional[str]:
@@ -1295,10 +1302,13 @@ class JsonSchemaParser(Parser):
                 # parse $id before parsing $ref
                 root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
-                definitions = raw.get('definitions', {})
+                try:
+                    definitions = get_model_by_path(raw, self.schema_paths)
+                except KeyError:
+                    definitions = {}
                 for key, model in definitions.items():
                     obj = JsonSchemaObject.parse_obj(model)
-                    self.parse_id(obj, [*path_parts, '#/definitions', key])
+                    self.parse_id(obj, [*path_parts, self.SCHEMA_PATH, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
@@ -1307,7 +1317,7 @@ class JsonSchemaParser(Parser):
                 else:
                     self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
-                    path = [*path_parts, '#/definitions', key]
+                    path = [*path_parts, self.SCHEMA_PATH, key]
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)
