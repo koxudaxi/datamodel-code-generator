@@ -9,7 +9,9 @@ from typing import Optional
 from pydantic import BaseModel
 
 from . import bar
+from .nested_bar import bar as bar_1
 
 
 class Foo(BaseModel):
-    loggerLevel: Optional[bar.LogLevels] = bar.LogLevels
+    loggerLevel: Optional[bar.LogLevels] = bar.LogLevels.INFO
+    AnotherLoggerLevel: Optional[bar_1.LogLevels] = bar_1.LogLevels.ERROR

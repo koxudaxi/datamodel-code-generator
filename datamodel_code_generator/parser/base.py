@@ -596,7 +596,7 @@ class Parser(ABC):
                         data_type.alias = f'{alias}.{name}'
 
                     if init:
-                        from_ += "."
+                        from_ = "." + from_
                     imports.append(Import(from_=from_, import_=import_, alias=alias))
 
             # extract inherited enum

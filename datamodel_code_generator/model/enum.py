@@ -96,6 +96,4 @@ class Member:
         self.alias: Optional[str] = None
 
     def __repr__(self) -> str:
-        if self.alias:
-            return self.alias
-        return f'{self.enum.name}.{self.field.name}'
+        return f'{self.alias or self.enum.name}.{self.field.name}'
