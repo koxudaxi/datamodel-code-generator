@@ -4,6 +4,8 @@
 Main function.
 """
 
+from __future__ import annotations
+
 import json
 import locale
 import signal

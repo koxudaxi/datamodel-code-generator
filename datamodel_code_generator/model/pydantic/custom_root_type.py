@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import ClassVar
 
 from datamodel_code_generator.model.pydantic.base_model import BaseModel

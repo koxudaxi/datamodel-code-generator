@@ -1,12 +1,4 @@
 [[package]]
-name = "appdirs"
-version = "1.4.4"
-description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "argcomplete"
 version = "2.0.0"
 description = "Bash tab completion for argparse"
@@ -15,18 +7,10 @@ optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-importlib-metadata = {version = ">=0.23,<5", markers = "python_version == \"3.7\" or python_version == \"3.6\""}
+importlib-metadata = {version = ">=0.23,<5", markers = "python_version == \"3.7\""}
 
 [package.extras]
 test = ["wheel", "pexpect", "flake8", "coverage"]
-
-[[package]]
-name = "async-generator"
-version = "1.10"
-description = "Async generators and context managers for Python 3.5+"
-category = "main"
-optional = false
-python-versions = ">=3.5"
 
 [[package]]
 name = "atomicwrites"
@@ -49,30 +33,6 @@ dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", 
 docs = ["furo", "sphinx", "zope.interface", "sphinx-notfound-page"]
 tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "zope.interface", "cloudpickle"]
 tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "cloudpickle"]
-
-[[package]]
-name = "black"
-version = "20.8b0"
-description = "The uncompromising code formatter."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-appdirs = "*"
-attrs = ">=18.1.0"
-click = ">=6.5"
-dataclasses = {version = ">=0.6", markers = "python_version < \"3.7\""}
-mypy-extensions = ">=0.4.3"
-pathspec = ">=0.6,<1"
-regex = ">=2020.1.8"
-toml = ">=0.9.4"
-typed-ast = ">=1.4.0"
-typing-extensions = ">=3.7.4"
-
-[package.extras]
-colorama = ["colorama (>=0.4.3)"]
-d = ["aiohttp (>=3.3.2)", "aiohttp-cors"]
 
 [[package]]
 name = "black"
@@ -145,37 +105,18 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
-name = "contextvars"
-version = "2.4"
-description = "PEP 567 Backport"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-immutables = ">=0.9"
-
-[[package]]
 name = "coverage"
-version = "6.2"
+version = "6.5.0"
 description = "Code coverage measurement for Python"
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
-tomli = {version = "*", optional = true, markers = "extra == \"toml\""}
+tomli = {version = "*", optional = true, markers = "python_full_version <= \"3.11.0a6\" and extra == \"toml\""}
 
 [package.extras]
 toml = ["tomli"]
-
-[[package]]
-name = "dataclasses"
-version = "0.8"
-description = "A backport of the dataclasses module for Python 3.6"
-category = "main"
-optional = false
-python-versions = ">=3.6, <3.7"
 
 [[package]]
 name = "dnspython"
@@ -256,7 +197,6 @@ optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-async-generator = {version = "*", markers = "python_version < \"3.7\""}
 certifi = "*"
 charset-normalizer = "*"
 httpcore = ">=0.13.3,<0.14.0"
@@ -275,20 +215,6 @@ description = "Internationalized Domain Names in Applications (IDNA)"
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-
-[[package]]
-name = "immutables"
-version = "0.18"
-description = "Immutable Collections"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-typing-extensions = {version = ">=3.7.4.3", markers = "python_version < \"3.8\""}
-
-[package.extras]
-test = ["flake8 (>=3.8.4,<3.9.0)", "pycodestyle (>=2.6.0,<2.7.0)", "mypy (==0.942)", "pytest (>=6.2.4,<6.3.0)"]
 
 [[package]]
 name = "importlib-metadata"
@@ -554,7 +480,6 @@ optional = false
 python-versions = ">=3.6.1"
 
 [package.dependencies]
-dataclasses = {version = ">=0.6", markers = "python_version < \"3.7\""}
 email-validator = {version = ">=1.0.3", optional = true, markers = "extra == \"email\""}
 typing-extensions = ">=3.7.4.3"
 
@@ -683,14 +608,6 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
-name = "regex"
-version = "2022.8.17"
-description = "Alternative regular expression module, to replace re."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[[package]]
 name = "requests"
 version = "2.25.1"
 description = "Python HTTP for Humans."
@@ -769,9 +686,6 @@ category = "main"
 optional = false
 python-versions = ">=3.5"
 
-[package.dependencies]
-contextvars = {version = ">=2.1", markers = "python_version < \"3.7\""}
-
 [[package]]
 name = "toml"
 version = "0.10.2"
@@ -784,7 +698,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 name = "tomli"
 version = "1.2.3"
 description = "A lil' TOML parser"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -869,13 +783,11 @@ http = ["httpx"]
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.6.1"
-content-hash = "cbc008f1b1560bb24b6c4eb5eb9ae6ca059ae037dc69431ddfd897cc73d9ccf1"
+python-versions = "^3.7"
+content-hash = "5b8b779f1fe1158b071da75268697645412ef7c69653ce61d43488f04efefa2a"
 
 [metadata.files]
-appdirs = []
 argcomplete = []
-async-generator = []
 atomicwrites = []
 attrs = []
 black = []
@@ -884,9 +796,7 @@ chardet = []
 charset-normalizer = []
 click = []
 colorama = []
-contextvars = []
 coverage = []
-dataclasses = []
 dnspython = []
 email-validator = []
 freezegun = []
@@ -895,7 +805,6 @@ h11 = []
 httpcore = []
 httpx = []
 idna = []
-immutables = []
 importlib-metadata = []
 inflect = []
 iniconfig = []
@@ -925,7 +834,6 @@ pytest-cov = []
 pytest-mock = []
 python-dateutil = []
 pyyaml = []
-regex = []
 requests = []
 rfc3986 = []
 "ruamel.yaml" = []
