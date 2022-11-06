@@ -74,10 +74,10 @@ class Enum(DataModel):
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
         raise NotImplementedError
 
-    def get_member(self, field: DataModelFieldBase) -> 'Member':
+    def get_member(self, field: DataModelFieldBase) -> Member:
         return Member(self, field)
 
-    def find_member(self, value: Any) -> Optional['Member']:
+    def find_member(self, value: Any) -> Optional[Member]:
         repr_value = repr(value)
         for field in self.fields:  # pragma: no cover
             if field.default == repr_value:

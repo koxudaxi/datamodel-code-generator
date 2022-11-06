@@ -52,14 +52,14 @@ class _BaseModel(BaseModel):
     def dict(
         self,
         *,
-        include: Union['AbstractSetIntStr', 'MappingIntStrAny'] = None,
-        exclude: Union['AbstractSetIntStr', 'MappingIntStrAny'] = None,
+        include: Union[AbstractSetIntStr, MappingIntStrAny] = None,
+        exclude: Union[AbstractSetIntStr, MappingIntStrAny] = None,
         by_alias: bool = False,
         skip_defaults: bool = None,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ) -> 'DictStrAny':
+    ) -> DictStrAny:
         return super().dict(
             include=include,
             exclude=set(exclude or ()) | self._exclude_fields,

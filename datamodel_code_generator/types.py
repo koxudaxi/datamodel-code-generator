@@ -69,7 +69,7 @@ class DataType(_BaseModel):
 
     type: Optional[str]
     reference: Optional[Reference]
-    data_types: List['DataType'] = []
+    data_types: List[DataType] = []
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]]
     import_: Optional[Import] = None
@@ -86,14 +86,14 @@ class DataType(_BaseModel):
     parent: Optional[Any] = None
     children: List[Any] = []
     strict: bool = False
-    dict_key: Optional['DataType'] = None
+    dict_key: Optional[DataType] = None
 
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
 
     @classmethod
     def from_import(
-        cls: Type['DataTypeT'],
+        cls: Type[DataTypeT],
         import_: Import,
         *,
         is_optional: bool = False,
@@ -152,7 +152,7 @@ class DataType(_BaseModel):
         return self.reference.short_name  # type: ignore
 
     @property
-    def all_data_types(self) -> Iterator['DataType']:
+    def all_data_types(self) -> Iterator[DataType]:
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
