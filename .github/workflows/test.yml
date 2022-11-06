@@ -32,9 +32,9 @@ jobs:
             pydantic-version: default
           - python-version: 3.9
             pydantic-version: 1.5.1
-          - python: 3.10
+          - python-version: 3.10
             pydantic-version: 1.5.1
-          - python: 3.11
+          - python-version: 3.11
             pydantic-version: 1.5.1
     defaults:
       run:
