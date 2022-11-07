@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager
@@ -160,7 +162,7 @@ class JsonSchemaObject(BaseModel):
             return value.replace('#', '#/')
         return value
 
-    items: Union[List['JsonSchemaObject'], 'JsonSchemaObject', None]
+    items: Union[List[JsonSchemaObject], JsonSchemaObject, None]
     uniqueItems: Optional[bool]
     type: Union[str, List[str], None]
     format: Optional[str]
@@ -174,14 +176,14 @@ class JsonSchemaObject(BaseModel):
     multipleOf: Optional[float]
     exclusiveMaximum: Union[float, bool, None]
     exclusiveMinimum: Union[float, bool, None]
-    additionalProperties: Union['JsonSchemaObject', bool, None]
-    patternProperties: Optional[Dict[str, 'JsonSchemaObject']]
-    oneOf: List['JsonSchemaObject'] = []
-    anyOf: List['JsonSchemaObject'] = []
-    allOf: List['JsonSchemaObject'] = []
+    additionalProperties: Union[JsonSchemaObject, bool, None]
+    patternProperties: Optional[Dict[str, JsonSchemaObject]]
+    oneOf: List[JsonSchemaObject] = []
+    anyOf: List[JsonSchemaObject] = []
+    allOf: List[JsonSchemaObject] = []
     enum: List[Any] = []
     writeOnly: Optional[bool]
-    properties: Optional[Dict[str, Union['JsonSchemaObject', bool]]]
+    properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]]
     required: List[str] = []
     ref: Optional[str] = Field(default=None, alias='$ref')
     nullable: Optional[bool] = False
