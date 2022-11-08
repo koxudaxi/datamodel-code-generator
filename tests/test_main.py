@@ -10,6 +10,7 @@ import pydantic
 import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
+from packaging import version
 
 from datamodel_code_generator import InputFileType, chdir, generate
 from datamodel_code_generator.__main__ import Exit, main
@@ -1907,7 +1908,8 @@ def test_main_openapi_enum_models_as_literal_one():
 
 
 @pytest.mark.skipif(
-    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+    version.parse(pydantic.VERSION) < version.parse('1.9.0'),
+    reason='Require Pydantic version 1.9.0 or later ',
 )
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_all():

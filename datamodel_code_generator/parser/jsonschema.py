@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
@@ -195,15 +196,17 @@ class JsonSchemaObject(BaseModel):
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
     custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
-    extras: Dict[str, Any] = Field(default=None, alias=__extra_key__)
+    extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
 
-    def __init__(self, **data: Any) -> None:  # type: ignore
-        super().__init__(**data)
-        self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
+    if not TYPE_CHECKING:
+
+        def __init__(self, **data: Any) -> None:
+            super().__init__(**data)
+            self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
 
     @cached_property
     def is_object(self) -> bool:
