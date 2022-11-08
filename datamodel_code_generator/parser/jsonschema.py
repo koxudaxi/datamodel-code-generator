@@ -196,7 +196,7 @@ class JsonSchemaObject(BaseModel):
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
     custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
-    extras: Dict[str, Any] = Field(default=None, alias=__extra_key__)
+    extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True
