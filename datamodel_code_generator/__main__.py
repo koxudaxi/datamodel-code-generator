@@ -530,8 +530,12 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         return Exit.ERROR
 
     if not config.input and not config.url and sys.stdin.isatty():
+        print(
+            'Not Found Input: require `stdin` or arguments `--input` or `--url`',
+            file=sys.stderr,
+        )
         arg_parser.print_help()
-        return Exit.OK
+        return Exit.ERROR
 
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(

@@ -627,7 +627,7 @@ def test_show_help_when_no_input(mocker):
     )
     isatty_mock = mocker.patch('sys.stdin.isatty', return_value=True)
     return_code: Exit = main([])
-    assert return_code == Exit.OK
+    assert return_code == Exit.ERROR
     assert isatty_mock.called
     assert print_help_mock.called
 
