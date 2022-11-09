@@ -621,6 +621,17 @@ def test_stdin(monkeypatch):
         )
 
 
+def test_show_help_when_no_input(mocker):
+    print_help_mock = mocker.patch(
+        'datamodel_code_generator.__main__.arg_parser.print_help'
+    )
+    isatty_mock = mocker.patch('sys.stdin.isatty', return_value=True)
+    return_code: Exit = main([])
+    assert return_code == Exit.ERROR
+    assert isatty_mock.called
+    assert print_help_mock.called
+
+
 @freeze_time('2019-07-26')
 def test_validation():
     with TemporaryDirectory() as output_dir:
