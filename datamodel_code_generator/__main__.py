@@ -529,6 +529,14 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         print(e.message, file=sys.stderr)
         return Exit.ERROR
 
+    if not config.input and not config.url and sys.stdin.isatty():
+        print(
+            'Not Found Input: require `stdin` or arguments `--input` or `--url`',
+            file=sys.stderr,
+        )
+        arg_parser.print_help()
+        return Exit.ERROR
+
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"  # type: ignore
