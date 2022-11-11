@@ -282,6 +282,7 @@ class Parser(ABC):
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
+        use_field_description: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
@@ -337,6 +338,7 @@ class Parser(ABC):
             force_optional_for_required_fields
         )
         self.use_schema_description: bool = use_schema_description
+        self.use_field_description: bool = use_field_description
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal

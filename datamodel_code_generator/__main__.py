@@ -246,6 +246,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-field-description',
+    help='Use field description to populate field docstring',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--reuse-model',
     help='Re-use models on the field when a module has the model with the same content',
     action='store_true',
@@ -456,6 +463,7 @@ class Config(BaseModel):
     class_name: Optional[str] = None
     use_standard_collections: bool = False
     use_schema_description: bool = False
+    use_field_description: bool = False
     reuse_model: bool = False
     encoding: str = 'utf-8'
     enum_field_as_literal: Optional[LiteralType] = None
@@ -601,6 +609,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             class_name=config.class_name,
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
+            use_field_description=config.use_field_description,
             reuse_model=config.reuse_model,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,

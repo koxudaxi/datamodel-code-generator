@@ -28,4 +28,9 @@ class {{ class_name }}({{ base_class }}):
             %} = {{ field.represented_default }}
     {%- endif -%}
     {%- endif %}
+    {%- if field.docstring %}
+    """
+    {{ field.docstring }}
+    """
+    {%- endif %}
 {%- endif %}
