@@ -244,8 +244,8 @@ def test_main_use_field_description():
         assert return_code == Exit.OK
         generated = output_file.read_text()
         expected = (
-                EXPECTED_MAIN_KR_PATH / 'main_use_field_description' / 'output.py'
-            ).read_text()
+            EXPECTED_MAIN_KR_PATH / 'main_use_field_description' / 'output.py'
+        ).read_text()
         assert generated == expected
 
     with pytest.raises(SystemExit):
