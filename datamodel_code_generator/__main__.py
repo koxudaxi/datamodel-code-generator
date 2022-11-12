@@ -247,7 +247,7 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     '--use-field-description',
-    help='Use field description to populate field docstring',
+    help='Use schema description to populate field docstring',
     action='store_true',
     default=None,
 )
