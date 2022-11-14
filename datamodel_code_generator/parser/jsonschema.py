@@ -1079,14 +1079,25 @@ class JsonSchemaParser(Parser):
             ref, default_factory=lambda key: load_yaml(self._get_text_from_url(key))
         )
 
+    def _resolve_local_file(self, full_path):
+        if full_path.is_file():
+            return full_path
+        if len(full_path.suffix) == 0:
+            for suffix in ('.json', '.yaml'):
+                new_path = full_path.parent / (full_path.name + suffix)
+                if new_path.is_file():
+                    return new_path
+        return full_path
+
     def _get_ref_body_from_remote(self, resolved_ref: str) -> Dict[Any, Any]:
         # Remote Reference – $ref: 'document.json' Uses the whole document located on the same server and in
         # the same location. TODO treat edge case
         full_path = self.base_path / resolved_ref
+        local_path = self._resolve_local_file(full_path)
 
         return self.remote_object_cache.get_or_put(
             str(full_path),
-            default_factory=lambda _: load_yaml_from_path(full_path, self.encoding),
+            default_factory=lambda _: load_yaml_from_path(local_path, self.encoding),
         )
 
     def resolve_ref(self, object_ref: str) -> Reference:
