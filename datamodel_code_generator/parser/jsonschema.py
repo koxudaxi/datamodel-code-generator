@@ -1079,7 +1079,7 @@ class JsonSchemaParser(Parser):
             ref, default_factory=lambda key: load_yaml(self._get_text_from_url(key))
         )
 
-    def _resolve_local_file(self, full_path):
+    def _resolve_local_file(self, full_path: Path) -> Path:
         if full_path.is_file():
             return full_path
         if len(full_path.suffix) == 0:
