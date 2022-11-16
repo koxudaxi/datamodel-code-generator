@@ -303,11 +303,12 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 self.parse_schema(name, media_obj.schema_, [*path, media_type])
 
-    def parse_responses(
+    def _parse_responses_handler(
         self,
         name: str,
         responses: Dict[str, Union[ReferenceObject, ResponseObject]],
         path: List[str],
+        include_empty_models: bool = False,
     ) -> Dict[str, Dict[str, DataType]]:
         data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
@@ -321,8 +322,11 @@ class OpenAPIParser(JsonSchemaParser):
                 }
             else:
                 content = detail.content
-            for content_type, obj in content.items():
 
+            if include_empty_models and not content:
+                data_types[status_code]["application/json"] = DataType(type='None')
+
+            for content_type, obj in content.items():
                 object_schema = obj.schema_
                 if not object_schema:  # pragma: no cover
                     continue
@@ -336,6 +340,31 @@ class OpenAPIParser(JsonSchemaParser):
                     )
 
         return data_types
+
+    def parse_responses(
+        self,
+        name: str,
+        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
+        path: List[str],
+    ) -> Dict[str, Dict[str, DataType]]:
+        return self._parse_responses_handler(name, responses, path, False)
+
+    def parse_responses_with_none(
+        self,
+        name: str,
+        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
+        path: List[str],
+    ) -> Dict[str, Dict[str, DataType]]:
+        return self._parse_responses_handler(name, responses, path, True)
+
+    @classmethod
+    def parse_tags(
+        cls,
+        name: str,
+        tags: List[str],
+        path: List[str],
+    ) -> List[str]:
+        return tags
 
     @classmethod
     def _get_model_name(cls, path_name: str, method: str, suffix: str) -> str:
@@ -369,6 +398,11 @@ class OpenAPIParser(JsonSchemaParser):
             name=self._get_model_name(path_name, method, suffix='Response'),
             responses=operation.responses,
             path=[*path, 'responses'],
+        )
+        self.parse_tags(
+            name=self._get_model_name(path_name, method, suffix='Tags'),
+            tags=operation.tags,
+            path=[*path, 'tags'],
         )
 
     def parse_raw(self) -> None:
