@@ -715,11 +715,11 @@
                          <span class="o">[</span>--strict-types <span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span> <span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span> ...<span class="o">]]</span>
                          <span class="o">[</span>--disable-timestamp<span class="o">]</span> <span class="o">[</span>--use-standard-collections<span class="o">]</span>
                          <span class="o">[</span>--use-generic-container-types<span class="o">]</span>
-                         <span class="o">[</span>--use-schema-description<span class="o">]</span> <span class="o">[</span>--reuse-model<span class="o">]</span>
+                         <span class="o">[</span>--use-schema-description<span class="o">]</span> <span class="o">[</span>--use-field-description<span class="o">]</span> <span class="o">[</span>--reuse-model<span class="o">]</span>
                          <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
                          <span class="o">[</span>--set-default-enum-member<span class="o">]</span>
                          <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
-                         <span class="o">[</span>--use-subclass-enum<span class="o">]</span> 
+                         <span class="o">[</span>--use-subclass-enum<span class="o">]</span>
                          <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span> <span class="o">[</span>--use-title-as-name<span class="o">]</span>
                          <span class="o">[</span>--custom-template-dir CUSTOM_TEMPLATE_DIR<span class="o">]</span>
                          <span class="o">[</span>--extra-template-data EXTRA_TEMPLATE_DATA<span class="o">]</span>
@@ -783,6 +783,8 @@ optional arguments:
                         collections.abc instead of typing
   --use-schema-description
                         Use schema description to populate class docstring
+  --use-field-description
+                        Use schema description to populate field docstring
   --reuse-model         Re-use models on the field when a module has the model
                         with the same content
   --enum-field-as-literal <span class="o">{</span>all,one<span class="o">}</span>
