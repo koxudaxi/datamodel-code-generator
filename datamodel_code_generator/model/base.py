@@ -51,6 +51,7 @@ class DataModelFieldBase(_BaseModel):
     extras: Dict[str, Any] = {}
     use_annotated: bool = False
     has_default: bool = False
+    use_field_description: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
@@ -93,6 +94,14 @@ class DataModelFieldBase(_BaseModel):
         if self.use_annotated:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
+
+    @property
+    def docstring(self) -> Optional[str]:
+        if self.use_field_description:
+            description = self.extras.get('description', None)
+            if description is not None:
+                return f'{description}'
+        return None
 
     @property
     def unresolved_types(self) -> FrozenSet[str]:
