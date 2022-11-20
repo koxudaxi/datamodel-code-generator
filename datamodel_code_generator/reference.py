@@ -92,7 +92,7 @@ class Reference(_BaseModel):
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
-        copy_on_model_validation = False
+        copy_on_model_validation = 'none'
 
     @property
     def short_name(self) -> str:

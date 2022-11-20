@@ -64,8 +64,8 @@ class Modular(Protocol):
 
 class DataType(_BaseModel):
     class Config:
-        extra = "forbid"
-        copy_on_model_validation = False
+        extra = 'forbid'
+        copy_on_model_validation = 'none'
 
     type: Optional[str]
     reference: Optional[Reference]
