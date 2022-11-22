@@ -29,6 +29,8 @@ from typing import (
 )
 
 import inflect
+import pydantic
+from packaging import version
 from pydantic import BaseModel, validator
 
 from datamodel_code_generator import cached_property
@@ -92,7 +94,11 @@ class Reference(_BaseModel):
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
-        copy_on_model_validation = False
+        copy_on_model_validation = (
+            False
+            if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+            else 'none'
+        )
 
     @property
     def short_name(self) -> str:
