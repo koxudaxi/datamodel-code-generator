@@ -64,5 +64,5 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           build-args: |
-            VERSION=${{ steps.docker_meta.outputs.tags.0 }}
+            VERSION=${{ github.ref_name }}
           platforms: linux/amd64,linux/arm64

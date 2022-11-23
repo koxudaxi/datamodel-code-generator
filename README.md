@@ -67,6 +67,12 @@ If you want to resolve `$ref` for remote files then you should specify `http` ex
 $ pip install datamodel-code-generator[http]
 ```
 
+### Docker Image
+The docker image is in [Docker Hub](https://hub.docker.com/repository/docker/koxudaxi/datamodel-code-generator)
+```bash
+$ docker pull koxudaxi/datamodel-code-generator
+```
+
 ## Usage
 
 The `datamodel-codegen` command:
