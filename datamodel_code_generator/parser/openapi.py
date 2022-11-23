@@ -401,11 +401,12 @@ class OpenAPIParser(JsonSchemaParser):
             responses=operation.responses,
             path=[*path, 'responses'],
         )
-        self.parse_tags(
-            name=self._get_model_name(path_name, method, suffix='Tags'),
-            tags=operation.tags,
-            path=[*path, 'tags'],
-        )
+        if OpenAPIScope.Tags in self.open_api_scopes:
+            self.parse_tags(
+                name=self._get_model_name(path_name, method, suffix='Tags'),
+                tags=operation.tags,
+                path=[*path, 'tags'],
+            )
 
     def parse_raw(self) -> None:
         for source in self.iter_source:
