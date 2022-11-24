@@ -192,6 +192,7 @@ class OpenAPIParser(JsonSchemaParser):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
     ):
         super().__init__(
             source=source,
@@ -241,6 +242,7 @@ class OpenAPIParser(JsonSchemaParser):
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
+            allow_responses_without_content=allow_responses_without_content,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -305,12 +307,11 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 self.parse_schema(name, media_obj.schema_, [*path, media_type])
 
-    def _parse_responses_handler(
+    def parse_responses(
         self,
         name: str,
         responses: Dict[str, Union[ReferenceObject, ResponseObject]],
         path: List[str],
-        include_empty_models: bool = False,
     ) -> Dict[str, Dict[str, DataType]]:
         data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
@@ -325,7 +326,7 @@ class OpenAPIParser(JsonSchemaParser):
             else:
                 content = detail.content
 
-            if include_empty_models and not content:
+            if self.allow_responses_without_content and not content:
                 data_types[status_code]["application/json"] = DataType(type='None')
 
             for content_type, obj in content.items():
@@ -342,22 +343,6 @@ class OpenAPIParser(JsonSchemaParser):
                     )
 
         return data_types
-
-    def parse_responses(
-        self,
-        name: str,
-        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
-        path: List[str],
-    ) -> Dict[str, Dict[str, DataType]]:
-        return self._parse_responses_handler(name, responses, path, False)
-
-    def parse_responses_with_none(
-        self,
-        name: str,
-        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
-        path: List[str],
-    ) -> Dict[str, Dict[str, DataType]]:
-        return self._parse_responses_handler(name, responses, path, True)
 
     @classmethod
     def parse_tags(

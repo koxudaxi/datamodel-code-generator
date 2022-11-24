@@ -309,6 +309,7 @@ class Parser(ABC):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -404,6 +405,7 @@ class Parser(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_double_quotes = use_double_quotes
+        self.allow_responses_without_content = allow_responses_without_content
 
     @property
     def iter_source(self) -> Iterator[Source]:

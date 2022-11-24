@@ -245,6 +245,7 @@ def generate(
     original_field_name_delimiter: Optional[str] = None,
     use_double_quotes: bool = False,
     use_union_operator: bool = False,
+    allow_responses_without_content: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -369,6 +370,7 @@ def generate(
         original_field_name_delimiter=original_field_name_delimiter,
         use_double_quotes=use_double_quotes,
         use_union_operator=use_union_operator,
+        allow_responses_without_content=allow_responses_without_content,
         **kwargs,
     )
 
