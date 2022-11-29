@@ -68,19 +68,19 @@ class DataModelFieldBase(_BaseModel):
 
         if not type_hint:
             return OPTIONAL
-        elif self.nullable is not None:
-            if self.nullable:
+        if self.nullable is not None:
+            if self.nullable and not type_hint.startswith('Optional'):
                 if self.data_type.use_union_operator:
                     return f'{type_hint} | None'
-                else:
-                    return f'{OPTIONAL}[{type_hint}]'
+                return f'{OPTIONAL}[{type_hint}]'
             return type_hint
-        elif self.required:
+        if self.required:
+            return type_hint
+        if type_hint.startswith('Optional'):
             return type_hint
         if self.data_type.use_union_operator:
             return f'{type_hint} | None'
-        else:
-            return f'{OPTIONAL}[{type_hint}]'
+        return f'{OPTIONAL}[{type_hint}]'
 
     @property
     def imports(self) -> Tuple[Import, ...]:
