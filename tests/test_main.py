@@ -3335,6 +3335,35 @@ def test_main_openapi_body_and_parameters():
 
 
 @freeze_time('2019-07-26')
+def test_main_openapi_body_and_parameters_with_tags():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--openapi-scopes',
+                'paths',
+                'schemas',
+                'tags',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_openapi_body_and_parameters_remote_ref(mocker):
     input_path = OPEN_API_DATA_PATH / 'body_and_parameters_remote_ref.yaml'
     person_response = mocker.Mock()
@@ -3425,6 +3454,36 @@ def test_main_openapi_body_and_parameters_only_schemas():
             == (
                 EXPECTED_MAIN_PATH
                 / 'main_openapi_body_and_parameters_only_schemas'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_responses_without_content():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--openapi-scopes',
+                'paths',
+                '--allow-responses-without-content',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_paths'
                 / 'output.py'
             ).read_text()
         )
