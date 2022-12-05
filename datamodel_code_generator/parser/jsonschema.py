@@ -189,6 +189,7 @@ class JsonSchemaObject(BaseModel):
     ref: Optional[str] = Field(default=None, alias='$ref')
     nullable: Optional[bool] = False
     x_enum_varnames: List[str] = Field(default=[], alias='x-enum-varnames')
+    x_enum_fallback_value: Optional[str] = Field(default=None, alias='x-enum-fallback-value')
     description: Optional[str]
     title: Optional[str]
     example: Any
@@ -1015,6 +1016,27 @@ class JsonSchemaParser(Parser):
                 )
             )
 
+        if obj.x_enum_fallback_value is not None:
+            field_name = str(obj.x_enum_fallback_value)
+            default = f"'{field_name.translate(escape_characters)}'"
+            if field_name not in exclude_field_names:
+                field_name = self.model_resolver.get_valid_field_name(
+                    field_name, model_type=ModelType.ENUM
+                )
+                enum_fields.append(
+                    self.data_model_field_type(
+                        name=field_name,
+                        default=default,
+                        data_type=self.data_type_manager.get_data_type(
+                            Types.any,
+                        ),
+                        required=True,
+                        strip_default_none=self.strip_default_none,
+                        has_default=obj.has_default,
+                        use_field_description=self.use_field_description,
+                    )
+                )
+
         def create_enum(reference_: Reference) -> DataType:
             enum = Enum(
                 reference=reference_,
@@ -1026,6 +1048,7 @@ class JsonSchemaParser(Parser):
                 if self.use_subclass_enum and isinstance(obj.type, str)
                 else None,
                 default=obj.default if obj.has_default else UNDEFINED,
+                fallback=obj.x_enum_fallback_value if obj.x_enum_fallback_value is not None else UNDEFINED,
             )
             self.results.append(enum)
             return self.data_type(reference=reference_)

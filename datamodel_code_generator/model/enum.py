@@ -46,6 +46,7 @@ class Enum(DataModel):
         description: Optional[str] = None,
         type_: Optional[Types] = None,
         default: Any = UNDEFINED,
+        fallback: Any = UNDEFINED,
     ):
 
         super().__init__(
@@ -69,6 +70,9 @@ class Enum(DataModel):
                     BaseClassDataType(type=base_class),
                     *self.base_classes,
                 ]
+
+        if fallback != UNDEFINED:
+            self.extra_template_data.update({"fallback": fallback})
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:

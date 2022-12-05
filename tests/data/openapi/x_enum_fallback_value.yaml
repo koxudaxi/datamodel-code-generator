@@ -1,0 +1,50 @@
+openapi: 3.0
+components:
+  schemas:
+    enum_type_with_fallback:
+      type: string
+      description: Enum field with fallback value 'unknown'.
+      enum:
+        - 'a'
+        - 'b'
+      x-enum-fallback-value: "unknown"
+
+    enum_type_with_fallback_existing_field:
+      type: string
+      description: Enum field with fallback value 'unknown'.
+      enum:
+        - 'a'
+        - 'b'
+        - 'unknown'
+      x-enum-fallback-value: "unknown"
+
+    enum_type_with_fallback_and_different_default:
+      type: string
+      description: Enum field with default value 'a' and fallback value 'unknown'.
+      enum:
+        - 'a'
+        - 'b'
+        - 'unknown'
+      default: 'a'
+      x-enum-fallback-value: "unknown"
+
+    enum_type_with_fallback_and_same_default:
+      type: string
+      description: Enum field with default value and fallback value 'unknown'.
+      enum:
+        - 'a'
+        - 'b'
+        - 'unknown'
+      default: 'unknown'
+      x-enum-fallback-value: "unknown"
+
+    TopLevelModel:
+      required:
+        - enum_field
+      properties:
+        enum_field:
+          $ref: "#/components/schemas/enum_type_with_fallback"
+        enum_field_with_default:
+          $ref: "#/components/schemas/enum_type_with_fallback_and_different_default"
+        enum_field_with_default_fallback:
+          $ref: "#/components/schemas/enum_type_with_fallback_and_same_default"

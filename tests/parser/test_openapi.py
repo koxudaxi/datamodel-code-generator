@@ -379,6 +379,14 @@ class UnknownTypeNumber(Enum):
     )
 
 
+def test_openapi_parser_parse_x_enum_fallback_value():
+    parser = OpenAPIParser(
+        Path(DATA_PATH / 'x_enum_fallback_value.yaml'),
+    )
+    expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_x_enum_fallback_value'
+    assert parser.parse() == (expected_dir / 'output.py').read_text()
+
+
 @pytest.mark.skipif(
     pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
 )

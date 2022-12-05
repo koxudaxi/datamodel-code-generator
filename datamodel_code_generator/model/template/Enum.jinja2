@@ -15,3 +15,8 @@ class {{ class_name }}({{ base_class }}):
     """
     {%- endif %}
 {%- endfor -%}
+{%- if fallback %}
+    @classmethod
+    def _missing_(cls, value):
+      return {{ class_name }}.{{ fallback }}
+{%- endif %}
