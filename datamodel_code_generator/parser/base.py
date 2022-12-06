@@ -309,6 +309,7 @@ class Parser(ABC):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        collapse_root_models: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -404,6 +405,7 @@ class Parser(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_double_quotes = use_double_quotes
+        self.collapse_root_models = collapse_root_models
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -683,6 +685,14 @@ class Parser(ABC):
 
                 for duplicate in duplicates:
                     models.remove(duplicate)
+
+            if self.collapse_root_models:
+                for model in models:
+                    for model_field in model.fields:
+                        if ref := model_field.data_type.reference:
+                            if isinstance(ref.source, self.data_model_root_type):
+                                # Use root-type as model_field type
+                                model_field.data_type = ref.source.fields[0].data_type
 
             if self.set_default_enum_member:
                 for model in models:

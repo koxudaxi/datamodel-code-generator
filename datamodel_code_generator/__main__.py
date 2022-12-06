@@ -337,6 +337,14 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    "--collapse-root-models",
+    action='store_true',
+    default=False,
+    help="Models generated with a root-type field will be merged" 
+    "into the models using that root-type model",
+)
+
+arg_parser.add_argument(
     '--encoding',
     help=f'The encoding of input and output (default: {DEFAULT_ENCODING})',
     default=DEFAULT_ENCODING,
@@ -488,6 +496,7 @@ class Config(BaseModel):
     use_non_positive_negative_number_constrained_types: bool = False
     original_field_name_delimiter: Optional[str] = None
     use_double_quotes: bool = False
+    collapse_root_models: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -632,6 +641,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
+            collapse_root_models=config.collapse_root_models,
             use_union_operator=config.use_union_operator,
         )
         return Exit.OK

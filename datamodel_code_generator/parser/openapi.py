@@ -192,6 +192,7 @@ class OpenAPIParser(JsonSchemaParser):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        collapse_root_models: bool = False,
     ):
         super().__init__(
             source=source,
@@ -241,6 +242,7 @@ class OpenAPIParser(JsonSchemaParser):
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
+            collapse_root_models=collapse_root_models,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
