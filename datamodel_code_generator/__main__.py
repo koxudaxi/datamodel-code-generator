@@ -340,7 +340,7 @@ arg_parser.add_argument(
     "--collapse-root-models",
     action='store_true',
     default=False,
-    help="Models generated with a root-type field will be merged" 
+    help="Models generated with a root-type field will be merged"
     "into the models using that root-type model",
 )
 

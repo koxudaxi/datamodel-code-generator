@@ -393,7 +393,7 @@ class JsonSchemaParser(Parser):
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
-            collapse_root_models=collapse_root_models, 
+            collapse_root_models=collapse_root_models,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
