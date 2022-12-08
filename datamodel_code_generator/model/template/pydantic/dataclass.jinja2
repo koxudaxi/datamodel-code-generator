@@ -9,7 +9,7 @@ class {{ class_name }}:
 {%- endif %}
 {%- if description %}
     """
-    {{ description }}
+    {{ description | indent(4, false) }}
     """
 {%- endif %}
 {%- if not fields %}
@@ -23,7 +23,7 @@ class {{ class_name }}:
     {%- endif %}
     {%- if field.docstring %}
     """
-    {{ field.docstring }}
+    {{ field.docstring | indent(4, false) }}
     """
     {%- endif %}
 {%- endfor -%}

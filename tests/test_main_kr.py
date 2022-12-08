@@ -210,7 +210,7 @@ def test_main_use_schema_description():
         return_code: Exit = main(
             [
                 '--input',
-                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                str(OPEN_API_DATA_PATH / 'api_multiline_docstrings.yaml'),
                 '--output',
                 str(output_file),
                 '--use-schema-description',
@@ -235,7 +235,7 @@ def test_main_use_field_description():
         return_code: Exit = main(
             [
                 '--input',
-                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                str(OPEN_API_DATA_PATH / 'api_multiline_docstrings.yaml'),
                 '--output',
                 str(output_file),
                 '--use-field-description',

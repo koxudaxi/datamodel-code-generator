@@ -4,14 +4,14 @@
 class {{ class_name }}({{ base_class }}):
 {%- if description %}
     """
-    {{ description }}
+    {{ description | indent(4, false) }}
     """
 {%- endif %}
 {%- for field in fields %}
     {{ field.name }} = {{ field.default }}
     {%- if field.docstring %}
     """
-    {{ field.docstring }}
+    {{ field.docstring | indent(4, false) }}
     """
     {%- endif %}
 {%- endfor -%}
