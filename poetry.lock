@@ -317,7 +317,7 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "jsonschema"
-version = "3.2.0"
+version = "4.2.0"
 description = "An implementation of JSON Schema validation for Python"
 category = "main"
 optional = false
