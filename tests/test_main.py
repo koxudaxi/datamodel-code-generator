@@ -545,9 +545,15 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 @freeze_time('2019-07-26')
 def test_pyproject():
     if platform.system() == 'Windows':
-        get_path = lambda path: str(path).replace('\\', '\\\\')
+
+        def get_path(path):
+            return str(path).replace('\\', '\\\\')
+
     else:
-        get_path = lambda path: str(path)
+
+        def get_path(path):
+            return str(path)
+
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
 
@@ -2430,7 +2436,8 @@ def test_main_generate_from_directory():
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator():
-    custom_class_name_generator = lambda title: f'Custom{title}'
+    def custom_class_name_generator(title):
+        return f'Custom{title}'
 
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -2459,7 +2466,8 @@ def test_main_generate_custom_class_name_generator_modular(
         EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
     )
 
-    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+    def custom_class_name_generator(name):
+        return f'Custom{name[0].upper() + name[1:]}'
 
     with freeze_time(TIMESTAMP):
         input_ = (OPEN_API_DATA_PATH / 'modular.yaml').relative_to(Path.cwd())
@@ -2486,7 +2494,8 @@ def test_main_generate_custom_class_name_generator_additional_properties(
 
     output_file = output_directory / 'models.py'
 
-    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+    def custom_class_name_generator(name):
+        return f'Custom{name[0].upper() + name[1:]}'
 
     input_ = (
         JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
@@ -3335,35 +3344,6 @@ def test_main_openapi_body_and_parameters():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_body_and_parameters_with_tags():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'openapi',
-                '--openapi-scopes',
-                'paths',
-                'schemas',
-                'tags',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
-            ).read_text()
-        )
-    with pytest.raises(SystemExit):
-        main()
-
-
-@freeze_time('2019-07-26')
 def test_main_openapi_body_and_parameters_remote_ref(mocker):
     input_path = OPEN_API_DATA_PATH / 'body_and_parameters_remote_ref.yaml'
     person_response = mocker.Mock()
@@ -3454,36 +3434,6 @@ def test_main_openapi_body_and_parameters_only_schemas():
             == (
                 EXPECTED_MAIN_PATH
                 / 'main_openapi_body_and_parameters_only_schemas'
-                / 'output.py'
-            ).read_text()
-        )
-    with pytest.raises(SystemExit):
-        main()
-
-
-@freeze_time('2019-07-26')
-def test_main_openapi_responses_without_content():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'openapi',
-                '--openapi-scopes',
-                'paths',
-                '--allow-responses-without-content',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_openapi_body_and_parameters_only_paths'
                 / 'output.py'
             ).read_text()
         )

@@ -337,10 +337,6 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "--allow-responses-without-content", action='store_true', default=False, help=""
-)
-
-arg_parser.add_argument(
     '--encoding',
     help=f'The encoding of input and output (default: {DEFAULT_ENCODING})',
     default=DEFAULT_ENCODING,
@@ -492,7 +488,6 @@ class Config(BaseModel):
     use_non_positive_negative_number_constrained_types: bool = False
     original_field_name_delimiter: Optional[str] = None
     use_double_quotes: bool = False
-    allow_responses_without_content: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -638,7 +633,6 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
             use_union_operator=config.use_union_operator,
-            allow_responses_without_content=config.allow_responses_without_content,
         )
         return Exit.OK
     except InvalidClassNameError as e:
