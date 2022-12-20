@@ -5,7 +5,7 @@ from typing import List, Optional
 import pydantic
 import pytest
 
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator import OpenAPIScope, PythonVersion
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
@@ -674,5 +674,36 @@ def test_openapi_parser_parse_any():
         parser.parse()
         == (
             EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_any' / 'output.py'
+        ).read_text()
+    )
+
+
+def test_openapi_parser_responses_without_content():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'body_and_parameters.yaml'),
+        openapi_scopes=[OpenAPIScope.Paths],
+        allow_responses_without_content=True,
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_responses_without_content'
+            / 'output.py'
+        ).read_text()
+    )
+
+
+def test_openapi_parser_responses_with_tag():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'body_and_parameters.yaml'),
+        openapi_scopes=[OpenAPIScope.Tags, OpenAPIScope.Schemas, OpenAPIScope.Paths],
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH / 'openapi_parser_responses_with_tag' / 'output.py'
         ).read_text()
     )
