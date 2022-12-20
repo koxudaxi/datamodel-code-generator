@@ -170,6 +170,7 @@ RAW_DATA_TYPES: List[InputFileType] = [
 class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
+    Tags = 'tags'
 
 
 class Error(Exception):
