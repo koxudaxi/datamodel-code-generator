@@ -285,7 +285,7 @@ class DataType(_BaseModel):
             else:  # pragma: no cover
                 type_ = dict_
         if self.is_optional and type_ != 'Any':
-            if self.use_union_operator:
+            if self.use_union_operator:  # pragma: no cover
                 type_ = f'{type_} | None'
             else:
                 type_ = f'Optional[{type_}]'
