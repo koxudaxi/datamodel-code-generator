@@ -710,6 +710,7 @@
                          <span class="o">[</span>--strip-default-none<span class="o">]</span>
                          <span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
                          <span class="o">[</span>--allow-population-by-field-name<span class="o">]</span>
+                         <span class="o">[</span>--allow-extra-fields<span class="o">]</span>
                          <span class="o">[</span>--enable-faux-immutability<span class="o">]</span> <span class="o">[</span>--use-default<span class="o">]</span>
                          <span class="o">[</span>--force-optional<span class="o">]</span> <span class="o">[</span>--strict-nullable<span class="o">]</span>
                          <span class="o">[</span>--strict-types <span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span> <span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span> ...<span class="o">]]</span>
@@ -765,6 +766,9 @@ optional arguments:
                         array
   --allow-population-by-field-name
                         Allow population by field name
+  --allow-extra-fields
+                        Allow to pass extra fields. If this flag is not passed,
+                        extra fields are forbidden.
   --enable-faux-immutability
                         Enable faux immutability
   --use-default         Use default value even <span class="k">if</span> a field is required
