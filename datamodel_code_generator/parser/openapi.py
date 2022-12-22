@@ -245,7 +245,7 @@ class OpenAPIParser(JsonSchemaParser):
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
-            allow_responses_without_content=allow_responses_without_content,        
+            allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
