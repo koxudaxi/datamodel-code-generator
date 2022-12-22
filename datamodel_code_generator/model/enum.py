@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
 
@@ -72,10 +74,10 @@ class Enum(DataModel):
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
         raise NotImplementedError
 
-    def get_member(self, field: DataModelFieldBase) -> 'Member':
+    def get_member(self, field: DataModelFieldBase) -> Member:
         return Member(self, field)
 
-    def find_member(self, value: Any) -> Optional['Member']:
+    def find_member(self, value: Any) -> Optional[Member]:
         repr_value = repr(value)
         for field in self.fields:  # pragma: no cover
             if field.default == repr_value:
@@ -91,6 +93,7 @@ class Member:
     def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
         self.enum: Enum = enum
         self.field: DataModelFieldBase = field
+        self.alias: Optional[str] = None
 
     def __repr__(self) -> str:
-        return f'{self.enum.name}.{self.field.name}'
+        return f'{self.alias or self.enum.name}.{self.field.name}'

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
@@ -14,10 +16,15 @@ class PythonVersion(Enum):
     PY_38 = '3.8'
     PY_39 = '3.9'
     PY_310 = '3.10'
+    PY_311 = '3.11'
 
     @property
     def has_literal_type(self) -> bool:
-        return self.value >= self.PY_38.value  # type: ignore
+        return self.value not in {self.PY_36.value, self.PY_37.value}  # type: ignore
+
+    @property
+    def has_union_operator(self) -> bool:
+        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value, self.PY_39.value}  # type: ignore
 
 
 if TYPE_CHECKING:

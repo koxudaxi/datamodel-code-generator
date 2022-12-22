@@ -37,7 +37,12 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
-from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
+from datamodel_code_generator.types import (
+    DataType,
+    DataTypeManager,
+    Modular,
+    StrictTypes,
+)
 
 escape_characters = str.maketrans(
     {
@@ -277,6 +282,7 @@ class Parser(ABC):
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
+        use_field_description: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
@@ -302,12 +308,15 @@ class Parser(ABC):
         use_non_positive_negative_number_constrained_types: bool = False,
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
+        use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
-            target_python_version,
-            use_standard_collections,
-            use_generic_container_types,
-            strict_types,
+            python_version=target_python_version,
+            use_standard_collections=use_standard_collections,
+            use_generic_container_types=use_generic_container_types,
+            strict_types=strict_types,
+            use_union_operator=use_union_operator,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
@@ -330,6 +339,7 @@ class Parser(ABC):
             force_optional_for_required_fields
         )
         self.use_schema_description: bool = use_schema_description
+        self.use_field_description: bool = use_field_description
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
@@ -337,6 +347,7 @@ class Parser(ABC):
         self.use_subclass_enum: bool = use_subclass_enum
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
+        self.use_union_operator: bool = use_union_operator
         self.enable_faux_immutability: bool = enable_faux_immutability
         self.custom_class_name_generator: Optional[
             Callable[[str], str]
@@ -394,6 +405,7 @@ class Parser(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_double_quotes = use_double_quotes
+        self.allow_responses_without_content = allow_responses_without_content
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -588,7 +600,7 @@ class Parser(ABC):
                         data_type.alias = f'{alias}.{name}'
 
                     if init:
-                        from_ += "."
+                        from_ = "." + from_
                     imports.append(Import(from_=from_, import_=import_, alias=alias))
 
             # extract inherited enum
@@ -688,6 +700,34 @@ class Parser(ABC):
                                 )
                                 if enum_member:
                                     model_field.default = enum_member
+                                    enum_member_enum = enum_member.enum
+                                    if enum_member_enum in models:
+                                        continue
+                                    scoped_model_resolver.get(enum_member_enum.path)
+                                    if isinstance(enum_member_enum, Modular):
+                                        enum_member_enum_name = f'{enum_member_enum.module_name}.{enum_member.enum.name}'
+                                    else:
+                                        enum_member_enum_name = enum_member.enum.name
+                                    from_, import_ = full_path = relative(
+                                        model.module_name, enum_member_enum_name
+                                    )
+
+                                    alias = scoped_model_resolver.add(
+                                        full_path, import_
+                                    ).name
+
+                                    name = data_type.reference.short_name
+                                    if from_ and import_ and alias != name:
+                                        enum_member.alias = f'{alias}.{name}'
+
+                                    if init:
+                                        from_ += "."
+                                    imports.append(
+                                        Import(
+                                            from_=from_, import_=import_, alias=alias
+                                        )
+                                    )
+
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
 

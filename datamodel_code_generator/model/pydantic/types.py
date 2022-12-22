@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from decimal import Decimal
 from typing import Any, Dict, Optional, Sequence, Set, Type
 
@@ -161,6 +163,7 @@ class DataTypeManager(_DataTypeManager):
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
         use_non_positive_negative_number_constrained_types: bool = False,
+        use_union_operator: bool = False,
     ):
         super().__init__(
             python_version,
@@ -168,6 +171,7 @@ class DataTypeManager(_DataTypeManager):
             use_generic_container_types,
             strict_types,
             use_non_positive_negative_number_constrained_types,
+            use_union_operator,
         )
 
         self.type_map: Dict[Types, DataType] = type_map_factory(

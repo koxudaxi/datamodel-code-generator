@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from functools import lru_cache
 from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Union

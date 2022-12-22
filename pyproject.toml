@@ -14,10 +14,11 @@ classifiers = [
         "Natural Language :: English",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: Implementation :: CPython"]
 
 [build-system]
@@ -38,8 +39,8 @@ patterns = ["(^version: str = ')[^']*(')"]
 datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
-pydantic =  [{extras = ["email"], version = ">=1.5.1,<2.0", python = "<3.10"}, {extras = ["email"], version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
+python = "^3.7"
+pydantic =  [{extras = ["email"], version = ">=1.5.1,<2.0", python = "<3.10"}, {extras = ["email"], version = ">=1.9.0,<2.0", python = ">=3.10,<3.11"}, {extras = ["email"], version = ">=1.10.0,<2.0", python = ">=3.11"}]
 argcomplete = ">=1.10,<3.0"
 prance = ">=0.18.2,<1.0"
 openapi-spec-validator = ">=0.2.8,<0.4"
@@ -52,6 +53,7 @@ toml = ">=0.10.0,<1.0.0"
 genson = ">=1.2.1,<2.0"
 httpx = { version = "*", optional = true }
 typed-ast = [{version = ">=1.5.0", python = ">=3.9.8"}, {version = ">=1.4.2", python = "<3.9.8"}, ]
+packaging = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = ">6.0"
@@ -60,7 +62,7 @@ pytest-cov = ">=2.12.1"
 pytest-mock = "*"
 mypy = { git = "https://github.com/koxudaxi/mypy.git", branch = "release-0.910-typed-ast-2"}
 isort = "==5.6.4"
-black = "==20.8b0"
+black = "==22.12.0"
 freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
