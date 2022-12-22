@@ -67,6 +67,12 @@ If you want to resolve `$ref` for remote files then you should specify `http` ex
 $ pip install datamodel-code-generator[http]
 ```
 
+### Docker Image
+The docker image is in [Docker Hub](https://hub.docker.com/repository/docker/koxudaxi/datamodel-code-generator)
+```bash
+$ docker pull koxudaxi/datamodel-code-generator
+```
+
 ## Usage
 
 The `datamodel-codegen` command:
@@ -90,11 +96,11 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]]
                          [--disable-timestamp] [--use-standard-collections]
                          [--use-generic-container-types]
-                         [--use-schema-description] [--reuse-model]
+                         [--use-schema-description] [--use-field-description] [--reuse-model]
                          [--enum-field-as-literal {all,one}]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
-                         [--use-subclass-enum] 
+                         [--use-subclass-enum]
                          [--class-name CLASS_NAME] [--use-title-as-name]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
@@ -158,6 +164,8 @@ optional arguments:
                         collections.abc instead of typing
   --use-schema-description
                         Use schema description to populate class docstring
+  --use-field-description
+                        Use schema description to populate field docstring
   --reuse-model         Re-use models on the field when a module has the model
                         with the same content
   --enum-field-as-literal {all,one}

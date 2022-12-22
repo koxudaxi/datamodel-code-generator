@@ -11,4 +11,9 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- else %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
     {%- endif %}
+    {%- if field.docstring %}
+    """
+    {{ field.docstring }}
+    """
+    {%- endif %}
 {%- endfor -%}

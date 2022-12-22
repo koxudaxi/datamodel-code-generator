@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import BaseClassDataType
+from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
@@ -43,6 +45,7 @@ class Enum(DataModel):
         path: Optional[Path] = None,
         description: Optional[str] = None,
         type_: Optional[Types] = None,
+        default: Any = UNDEFINED,
     ):
 
         super().__init__(
@@ -56,6 +59,7 @@ class Enum(DataModel):
             methods=methods,
             path=path,
             description=description,
+            default=default,
         )
 
         if not base_classes and type_:
@@ -70,10 +74,10 @@ class Enum(DataModel):
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
         raise NotImplementedError
 
-    def get_member(self, field: DataModelFieldBase) -> 'Member':
+    def get_member(self, field: DataModelFieldBase) -> Member:
         return Member(self, field)
 
-    def find_member(self, value: Any) -> Optional['Member']:
+    def find_member(self, value: Any) -> Optional[Member]:
         repr_value = repr(value)
         for field in self.fields:  # pragma: no cover
             if field.default == repr_value:
@@ -89,6 +93,7 @@ class Member:
     def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
         self.enum: Enum = enum
         self.field: DataModelFieldBase = field
+        self.alias: Optional[str] = None
 
     def __repr__(self) -> str:
-        return f'{self.enum.name}.{self.field.name}'
+        return f'{self.alias or self.enum.name}.{self.field.name}'

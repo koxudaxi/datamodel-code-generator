@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import lru_cache
@@ -48,6 +50,8 @@ class DataModelFieldBase(_BaseModel):
     parent: Optional[Any] = None
     extras: Dict[str, Any] = {}
     use_annotated: bool = False
+    has_default: bool = False
+    use_field_description: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
@@ -66,22 +70,38 @@ class DataModelFieldBase(_BaseModel):
             return OPTIONAL
         elif self.nullable is not None:
             if self.nullable:
-                return f'{OPTIONAL}[{type_hint}]'
+                if self.data_type.use_union_operator:
+                    return f'{type_hint} | None'
+                else:
+                    return f'{OPTIONAL}[{type_hint}]'
             return type_hint
         elif self.required:
             return type_hint
-        return f'{OPTIONAL}[{type_hint}]'
+        if self.data_type.use_union_operator:
+            return f'{type_hint} | None'
+        else:
+            return f'{OPTIONAL}[{type_hint}]'
 
     @property
     def imports(self) -> Tuple[Import, ...]:
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
             self.data_type.all_imports
         ]
-        if self.nullable or (self.nullable is None and not self.required):
+        if (
+            self.nullable or (self.nullable is None and not self.required)
+        ) and not self.data_type.use_union_operator:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
+
+    @property
+    def docstring(self) -> Optional[str]:
+        if self.use_field_description:
+            description = self.extras.get('description', None)
+            if description is not None:
+                return f'{description}'
+        return None
 
     @property
     def unresolved_types(self) -> FrozenSet[str]:
@@ -151,6 +171,9 @@ class BaseClassDataType(DataType):
     ...
 
 
+UNDEFINED: Any = object()
+
+
 class DataModel(TemplateBase, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ''
     BASE_CLASS: ClassVar[str] = ''
@@ -169,6 +192,7 @@ class DataModel(TemplateBase, ABC):
         methods: Optional[List[str]] = None,
         path: Optional[Path] = None,
         description: Optional[str] = None,
+        default: Any = UNDEFINED,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -218,6 +242,7 @@ class DataModel(TemplateBase, ABC):
             field.parent = self
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
+        self.default: Any = default
 
     def set_base_class(self) -> None:
         base_class_import = Import.from_full_path(
@@ -267,7 +292,7 @@ class DataModel(TemplateBase, ABC):
         return get_module_name(self.name, self.file_path)
 
     @property
-    def all_data_types(self) -> Iterator['DataType']:
+    def all_data_types(self) -> Iterator[DataType]:
         for field in self.fields:
             yield from field.data_type.all_data_types
         yield from self.base_classes

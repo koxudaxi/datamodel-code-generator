@@ -4,11 +4,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
 
+import black
 import isort
 import pydantic
 import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
+from packaging import version
 
 from datamodel_code_generator import InputFileType, chdir, generate
 from datamodel_code_generator.__main__ import Exit, main
@@ -543,9 +545,15 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 @freeze_time('2019-07-26')
 def test_pyproject():
     if platform.system() == 'Windows':
-        get_path = lambda path: str(path).replace('\\', '\\\\')
+
+        def get_path(path):
+            return str(path).replace('\\', '\\\\')
+
     else:
-        get_path = lambda path: str(path)
+
+        def get_path(path):
+            return str(path)
+
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
 
@@ -617,6 +625,17 @@ def test_stdin(monkeypatch):
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
         )
+
+
+def test_show_help_when_no_input(mocker):
+    print_help_mock = mocker.patch(
+        'datamodel_code_generator.__main__.arg_parser.print_help'
+    )
+    isatty_mock = mocker.patch('sys.stdin.isatty', return_value=True)
+    return_code: Exit = main([])
+    assert return_code == Exit.ERROR
+    assert isatty_mock.called
+    assert print_help_mock.called
 
 
 @freeze_time('2019-07-26')
@@ -1906,7 +1925,8 @@ def test_main_openapi_enum_models_as_literal_one():
 
 
 @pytest.mark.skipif(
-    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+    version.parse(pydantic.VERSION) < version.parse('1.9.0'),
+    reason='Require Pydantic version 1.9.0 or later ',
 )
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_all():
@@ -2416,7 +2436,8 @@ def test_main_generate_from_directory():
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator():
-    custom_class_name_generator = lambda title: f'Custom{title}'
+    def custom_class_name_generator(title):
+        return f'Custom{title}'
 
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -2445,7 +2466,8 @@ def test_main_generate_custom_class_name_generator_modular(
         EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
     )
 
-    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+    def custom_class_name_generator(name):
+        return f'Custom{name[0].upper() + name[1:]}'
 
     with freeze_time(TIMESTAMP):
         input_ = (OPEN_API_DATA_PATH / 'modular.yaml').relative_to(Path.cwd())
@@ -2472,7 +2494,8 @@ def test_main_generate_custom_class_name_generator_additional_properties(
 
     output_file = output_directory / 'models.py'
 
-    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+    def custom_class_name_generator(name):
+        return f'Custom{name[0].upper() + name[1:]}'
 
     input_ = (
         JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
@@ -3734,6 +3757,170 @@ def test_main_nested_enum():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_nested_enum' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_has_default_value():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'has_default_value.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'has_default_value' / 'output.py').read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_openapi_special_yaml_keywords():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'special_yaml_keywords.yaml'),
+                '--output',
+                str(output_file),
+                '--validation',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_special_yaml_keywords' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_boolean_property():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'boolean_property.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_boolean_property' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_modular_default_enum_member(
+    tmpdir_factory: TempdirFactory,
+) -> None:
+
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = JSON_SCHEMA_DATA_PATH / 'modular_default_enum_member'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--set-default-enum-member',
+            ]
+        )
+    main_modular_dir = (
+        EXPECTED_MAIN_PATH / 'main_jsonschema_modular_default_enum_member'
+    )
+    for path in main_modular_dir.rglob('*.py'):
+        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
+        assert result == path.read_text()
+
+
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
+@freeze_time('2019-07-26')
+def test_main_use_union_operator(tmpdir_factory: TempdirFactory) -> None:
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    output_path = output_directory / 'model'
+    return_code: Exit = main(
+        [
+            '--input',
+            str(JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'),
+            '--output',
+            str(output_path),
+            '--input-file-type',
+            'jsonschema',
+            '--use-union-operator',
+        ]
+    )
+    assert return_code == Exit.OK
+    main_nested_directory = EXPECTED_MAIN_PATH / 'main_use_union_operator'
+
+    for path in main_nested_directory.rglob('*.py'):
+        result = output_path.joinpath(
+            path.relative_to(main_nested_directory)
+        ).read_text()
+        assert result == path.read_text()
+
+
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_nullable_use_union_operator():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--use-union-operator',
+                '--strict-nullable',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_nullable_strict_nullable_use_union_operator'
+                / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()

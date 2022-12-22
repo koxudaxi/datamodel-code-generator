@@ -10,11 +10,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
         black-version: [22.1.0, default]
         pydantic-version: [1.5.1, default]
+        exclude:
+          - os: windows-latest
+            black-version: 22.1.0
+          - os: macos-latest
+            black-version: 22.1.0
+          - os: windows-latest
+            isort-version: 4.3.21
+          - os: macos-latest
+            isort-version: 4.3.21
+          - os: windows-latest
+            pydantic-version: 1.5.1
+          - os: macos-latest
+            pydantic-version: 1.5.1
+          - python-version: 3.9
+            pydantic-version: 1.5.1
+          - python-version: 3.10
+            pydantic-version: 1.5.1
+          - python-version: 3.11
+            pydantic-version: 1.5.1
     defaults:
       run:
         shell: bash
@@ -31,12 +50,15 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
+        version: 1.2.2
+        virtualenvs-path: .venv
         virtualenvs-create: true
         virtualenvs-in-project: true
+        installer-parallel: true
     - name: Load cached venv
       id: cached-poetry-dependencies
       uses: actions/cache@v2
-      if: matrix.os != 'windows-latest' || matrix.python-version != '3.6'
+      if: matrix.os != 'windows-latest'
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ matrix.python-version }}-v1-${{ hashFiles('**/poetry.lock') }}
@@ -48,7 +70,7 @@ jobs:
       run: |
          poetry run pip install isort=="$ISORT"
     - name: Install Pydantic 1.5.1
-      if: matrix.pydantic-version == '1.5.1' && matrix.python-version != '3.9'  && matrix.python-version != '3.10'
+      if: matrix.pydantic-version == '1.5.1'
       run: |
          poetry run pip install pydantic=="1.5.1"
     - name: Install Black 22.1.0

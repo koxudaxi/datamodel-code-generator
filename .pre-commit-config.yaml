@@ -1,0 +1,13 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 22.12.0
+    hooks:
+      - id: black
+        files: "^datamodel_code_generator|^tests"
+        exclude: "^tests/data"
+  - repo: https://github.com/pycqa/isort
+    rev: v5.11.3
+    hooks:
+      - id: isort
+        files: "^datamodel_code_generator|^tests"
+        exclude: "^tests/data"
