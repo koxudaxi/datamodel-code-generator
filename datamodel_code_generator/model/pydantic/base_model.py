@@ -110,6 +110,9 @@ class DataModelField(DataModelFieldBase):
                 },
             }
 
+        if self.use_field_description:
+            data.pop('description', None)  # Description is part of field docstring
+
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
         )
@@ -170,9 +173,12 @@ class BaseModel(DataModel):
         config_parameters: Dict[str, Any] = {}
 
         additionalProperties = self.extra_template_data.get('additionalProperties')
-        if additionalProperties is not None:
+        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
+        if additionalProperties is not None or allow_extra_fields:
             config_parameters['extra'] = (
-                'Extra.allow' if additionalProperties else 'Extra.forbid'
+                'Extra.allow'
+                if additionalProperties or allow_extra_fields
+                else 'Extra.forbid'
             )
             self._additional_imports.append(IMPORT_EXTRA)
 

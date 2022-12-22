@@ -170,6 +170,7 @@ RAW_DATA_TYPES: List[InputFileType] = [
 class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
+    Tags = 'tags'
 
 
 class Error(Exception):
@@ -214,11 +215,13 @@ def generate(
     aliases: Optional[Mapping[str, str]] = None,
     disable_timestamp: bool = False,
     allow_population_by_field_name: bool = False,
+    allow_extra_fields: bool = False,
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
     class_name: Optional[str] = None,
     use_standard_collections: bool = False,
     use_schema_description: bool = False,
+    use_field_description: bool = False,
     reuse_model: bool = False,
     encoding: str = 'utf-8',
     enum_field_as_literal: Optional[LiteralType] = None,
@@ -335,6 +338,7 @@ def generate(
         strip_default_none=strip_default_none,
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
+        allow_extra_fields=allow_extra_fields,
         apply_default_values_for_required_fields=apply_default_values_for_required_fields,
         force_optional_for_required_fields=force_optional_for_required_fields,
         class_name=class_name,
@@ -343,6 +347,7 @@ def generate(
         if isinstance(input_, Path) and input_.is_file()
         else None,
         use_schema_description=use_schema_description,
+        use_field_description=use_field_description,
         reuse_model=reuse_model,
         enum_field_as_literal=enum_field_as_literal,
         set_default_enum_member=set_default_enum_member,

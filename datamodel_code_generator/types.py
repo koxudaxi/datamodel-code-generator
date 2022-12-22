@@ -21,6 +21,8 @@ from typing import (
     Union,
 )
 
+import pydantic
+from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
 from datamodel_code_generator import Protocol, runtime_checkable
@@ -64,8 +66,12 @@ class Modular(Protocol):
 
 class DataType(_BaseModel):
     class Config:
-        extra = "forbid"
-        copy_on_model_validation = False
+        extra = 'forbid'
+        copy_on_model_validation = (
+            False
+            if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+            else 'none'
+        )
 
     type: Optional[str]
     reference: Optional[Reference]
@@ -279,7 +285,7 @@ class DataType(_BaseModel):
             else:  # pragma: no cover
                 type_ = dict_
         if self.is_optional and type_ != 'Any':
-            if self.use_union_operator:
+            if self.use_union_operator:  # pragma: no cover
                 type_ = f'{type_} | None'
             else:
                 type_ = f'Optional[{type_}]'

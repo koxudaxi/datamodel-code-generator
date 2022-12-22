@@ -174,6 +174,12 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+arg_parser.add_argument(
+    '--allow-extra-fields',
+    help='Allow to pass extra fields, if this flag is not passed, extra fields are forbidden.',
+    action='store_true',
+    default=None,
+)
 
 arg_parser.add_argument(
     '--enable-faux-immutability',
@@ -241,6 +247,13 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--use-schema-description',
     help='Use schema description to populate class docstring',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
+    '--use-field-description',
+    help='Use schema description to populate field docstring',
     action='store_true',
     default=None,
 )
@@ -451,11 +464,13 @@ class Config(BaseModel):
     aliases: Optional[TextIOBase]
     disable_timestamp: bool = False
     allow_population_by_field_name: bool = False
+    allow_extra_fields: bool = False
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None
     use_standard_collections: bool = False
     use_schema_description: bool = False
+    use_field_description: bool = False
     reuse_model: bool = False
     encoding: str = 'utf-8'
     enum_field_as_literal: Optional[LiteralType] = None
@@ -529,6 +544,14 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         print(e.message, file=sys.stderr)
         return Exit.ERROR
 
+    if not config.input and not config.url and sys.stdin.isatty():
+        print(
+            'Not Found Input: require `stdin` or arguments `--input` or `--url`',
+            file=sys.stderr,
+        )
+        arg_parser.print_help()
+        return Exit.ERROR
+
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"  # type: ignore
@@ -588,11 +611,13 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
             allow_population_by_field_name=config.allow_population_by_field_name,
+            allow_extra_fields=config.allow_extra_fields,
             apply_default_values_for_required_fields=config.use_default,
             force_optional_for_required_fields=config.force_optional,
             class_name=config.class_name,
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
+            use_field_description=config.use_field_description,
             reuse_model=config.reuse_model,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,

@@ -9,7 +9,7 @@ class {{ class_name }}:
 {%- endif %}
 {%- if description %}
     """
-    {{ description }}
+    {{ description | indent(4) }}
     """
 {%- endif %}
 {%- if not fields %}
@@ -20,5 +20,10 @@ class {{ class_name }}:
     {{ field.name }}: {{ field.type_hint }} = {{field.default}}
     {%- else %}
     {{ field.name }}: {{ field.type_hint }}
+    {%- endif %}
+    {%- if field.docstring %}
+    """
+    {{ field.docstring | indent(4) }}
+    """
     {%- endif %}
 {%- endfor -%}

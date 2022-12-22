@@ -277,11 +277,13 @@ class Parser(ABC):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
+        allow_extra_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
+        use_field_description: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
@@ -308,6 +310,7 @@ class Parser(ABC):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -337,6 +340,7 @@ class Parser(ABC):
             force_optional_for_required_fields
         )
         self.use_schema_description: bool = use_schema_description
+        self.use_field_description: bool = use_field_description
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
@@ -376,6 +380,9 @@ class Parser(ABC):
         if allow_population_by_field_name:
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
 
+        if allow_extra_fields:
+            self.extra_template_data[ALL_MODEL]['allow_extra_fields'] = True
+
         if enable_faux_immutability:
             self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
 
@@ -402,6 +409,7 @@ class Parser(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_double_quotes = use_double_quotes
+        self.allow_responses_without_content = allow_responses_without_content
 
     @property
     def iter_source(self) -> Iterator[Source]:

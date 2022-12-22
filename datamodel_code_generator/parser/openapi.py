@@ -160,12 +160,14 @@ class OpenAPIParser(JsonSchemaParser):
         strip_default_none: bool = False,
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
+        allow_extra_fields: bool = False,
         apply_default_values_for_required_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
+        use_field_description: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
@@ -191,6 +193,7 @@ class OpenAPIParser(JsonSchemaParser):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
     ):
         super().__init__(
             source=source,
@@ -209,12 +212,14 @@ class OpenAPIParser(JsonSchemaParser):
             strip_default_none=strip_default_none,
             aliases=aliases,
             allow_population_by_field_name=allow_population_by_field_name,
+            allow_extra_fields=allow_extra_fields,
             apply_default_values_for_required_fields=apply_default_values_for_required_fields,
             force_optional_for_required_fields=force_optional_for_required_fields,
             class_name=class_name,
             use_standard_collections=use_standard_collections,
             base_path=base_path,
             use_schema_description=use_schema_description,
+            use_field_description=use_field_description,
             reuse_model=reuse_model,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
@@ -239,6 +244,7 @@ class OpenAPIParser(JsonSchemaParser):
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
+            allow_responses_without_content=allow_responses_without_content,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -321,8 +327,11 @@ class OpenAPIParser(JsonSchemaParser):
                 }
             else:
                 content = detail.content
-            for content_type, obj in content.items():
 
+            if self.allow_responses_without_content and not content:
+                data_types[status_code]["application/json"] = DataType(type='None')
+
+            for content_type, obj in content.items():
                 object_schema = obj.schema_
                 if not object_schema:  # pragma: no cover
                     continue
@@ -336,6 +345,15 @@ class OpenAPIParser(JsonSchemaParser):
                     )
 
         return data_types
+
+    @classmethod
+    def parse_tags(
+        cls,
+        name: str,
+        tags: List[str],
+        path: List[str],
+    ) -> List[str]:
+        return tags
 
     @classmethod
     def _get_model_name(cls, path_name: str, method: str, suffix: str) -> str:
@@ -370,6 +388,12 @@ class OpenAPIParser(JsonSchemaParser):
             responses=operation.responses,
             path=[*path, 'responses'],
         )
+        if OpenAPIScope.Tags in self.open_api_scopes:
+            self.parse_tags(
+                name=self._get_model_name(path_name, method, suffix='Tags'),
+                tags=operation.tags,
+                path=[*path, 'tags'],
+            )
 
     def parse_raw(self) -> None:
         for source in self.iter_source:

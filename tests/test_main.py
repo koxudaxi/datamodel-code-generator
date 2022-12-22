@@ -10,6 +10,7 @@ import pydantic
 import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
+from packaging import version
 
 from datamodel_code_generator import InputFileType, chdir, generate
 from datamodel_code_generator.__main__ import Exit, main
@@ -544,9 +545,15 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 @freeze_time('2019-07-26')
 def test_pyproject():
     if platform.system() == 'Windows':
-        get_path = lambda path: str(path).replace('\\', '\\\\')
+
+        def get_path(path):
+            return str(path).replace('\\', '\\\\')
+
     else:
-        get_path = lambda path: str(path)
+
+        def get_path(path):
+            return str(path)
+
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
 
@@ -618,6 +625,17 @@ def test_stdin(monkeypatch):
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
         )
+
+
+def test_show_help_when_no_input(mocker):
+    print_help_mock = mocker.patch(
+        'datamodel_code_generator.__main__.arg_parser.print_help'
+    )
+    isatty_mock = mocker.patch('sys.stdin.isatty', return_value=True)
+    return_code: Exit = main([])
+    assert return_code == Exit.ERROR
+    assert isatty_mock.called
+    assert print_help_mock.called
 
 
 @freeze_time('2019-07-26')
@@ -884,6 +902,29 @@ def test_allow_population_by_field_name():
             == (
                 EXPECTED_MAIN_PATH / 'allow_population_by_field_name' / 'output.py'
             ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_allow_extra_fields():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--allow-extra-fields',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'allow_extra_fields' / 'output.py').read_text()
         )
 
     with pytest.raises(SystemExit):
@@ -1907,7 +1948,8 @@ def test_main_openapi_enum_models_as_literal_one():
 
 
 @pytest.mark.skipif(
-    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
+    version.parse(pydantic.VERSION) < version.parse('1.9.0'),
+    reason='Require Pydantic version 1.9.0 or later ',
 )
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_all():
@@ -2417,7 +2459,8 @@ def test_main_generate_from_directory():
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator():
-    custom_class_name_generator = lambda title: f'Custom{title}'
+    def custom_class_name_generator(title):
+        return f'Custom{title}'
 
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -2446,7 +2489,8 @@ def test_main_generate_custom_class_name_generator_modular(
         EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
     )
 
-    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+    def custom_class_name_generator(name):
+        return f'Custom{name[0].upper() + name[1:]}'
 
     with freeze_time(TIMESTAMP):
         input_ = (OPEN_API_DATA_PATH / 'modular.yaml').relative_to(Path.cwd())
@@ -2473,7 +2517,8 @@ def test_main_generate_custom_class_name_generator_additional_properties(
 
     output_file = output_directory / 'models.py'
 
-    custom_class_name_generator = lambda name: f'Custom{name[0].upper() + name[1:]}'
+    def custom_class_name_generator(name):
+        return f'Custom{name[0].upper() + name[1:]}'
 
     input_ = (
         JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
