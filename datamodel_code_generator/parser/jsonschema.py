@@ -313,6 +313,7 @@ class JsonSchemaParser(Parser):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
+        allow_extra_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
@@ -343,6 +344,7 @@ class JsonSchemaParser(Parser):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
     ):
         super().__init__(
@@ -362,6 +364,7 @@ class JsonSchemaParser(Parser):
             strip_default_none=strip_default_none,
             aliases=aliases,
             allow_population_by_field_name=allow_population_by_field_name,
+            allow_extra_fields=allow_extra_fields,
             apply_default_values_for_required_fields=apply_default_values_for_required_fields,
             force_optional_for_required_fields=force_optional_for_required_fields,
             class_name=class_name,
@@ -393,6 +396,7 @@ class JsonSchemaParser(Parser):
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
+            allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
         )
 

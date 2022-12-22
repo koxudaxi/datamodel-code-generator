@@ -174,6 +174,12 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+arg_parser.add_argument(
+    '--allow-extra-fields',
+    help='Allow to pass extra fields, if this flag is not passed, extra fields are forbidden.',
+    action='store_true',
+    default=None,
+)
 
 arg_parser.add_argument(
     '--enable-faux-immutability',
@@ -466,6 +472,7 @@ class Config(BaseModel):
     aliases: Optional[TextIOBase]
     disable_timestamp: bool = False
     allow_population_by_field_name: bool = False
+    allow_extra_fields: bool = False
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None
@@ -613,6 +620,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
             allow_population_by_field_name=config.allow_population_by_field_name,
+            allow_extra_fields=config.allow_extra_fields,
             apply_default_values_for_required_fields=config.use_default,
             force_optional_for_required_fields=config.force_optional,
             class_name=config.class_name,

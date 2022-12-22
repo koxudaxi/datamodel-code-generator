@@ -277,6 +277,7 @@ class Parser(ABC):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
+        allow_extra_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
@@ -309,6 +310,7 @@ class Parser(ABC):
         original_field_name_delimiter: Optional[str] = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
+        allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -379,6 +381,9 @@ class Parser(ABC):
         if allow_population_by_field_name:
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
 
+        if allow_extra_fields:
+            self.extra_template_data[ALL_MODEL]['allow_extra_fields'] = True
+
         if enable_faux_immutability:
             self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
 
@@ -405,6 +410,7 @@ class Parser(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_double_quotes = use_double_quotes
+        self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
 
     @property
