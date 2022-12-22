@@ -49,6 +49,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--strip-default-none]
                          [--disable-appending-item-suffix]
                          [--allow-population-by-field-name]
+                         [--allow-extra-fields]
                          [--enable-faux-immutability] [--use-default]
                          [--force-optional] [--strict-nullable]
                          [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]]
@@ -104,6 +105,9 @@ optional arguments:
                         array
   --allow-population-by-field-name
                         Allow population by field name
+  --allow-extra-fields
+                        Allow to pass extra fields. If this flag is not passed,
+                        extra fields are forbidden.
   --enable-faux-immutability
                         Enable faux immutability
   --use-default         Use default value even if a field is required
