@@ -1,6 +1,7 @@
+import pytest
+
 from datamodel_code_generator.reference import FieldNameResolver
 
-import pytest
 
 @pytest.mark.parametrize(
     'name,expected_resolved',
