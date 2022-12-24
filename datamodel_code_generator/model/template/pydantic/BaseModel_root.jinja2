@@ -4,7 +4,7 @@
 class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     """
-    {{ description }}
+    {{ description | indent(4) }}
     """
 {%- endif %}
 {%- if config %}
@@ -30,7 +30,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- endif %}
     {%- if field.docstring %}
     """
-    {{ field.docstring }}
+    {{ field.docstring | indent(4) }}
     """
     {%- endif %}
 {%- endif %}
