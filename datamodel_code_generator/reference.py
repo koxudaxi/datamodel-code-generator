@@ -423,7 +423,7 @@ class ModelResolver:
             if (target_url.scheme, target_url.netloc) == (
                 root_id_url.scheme,
                 root_id_url.netloc,
-            ):
+            ):  # pragma: no cover
                 target_url_path = Path(target_url.path)
                 relative_target_base = get_relative_path(
                     Path(root_id_url.path).parent, target_url_path.parent
