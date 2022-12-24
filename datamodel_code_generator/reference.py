@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from urllib.parse import urlparse
 
 import inflect
 import pydantic
@@ -415,6 +416,22 @@ class ModelResolver:
             file_part, path_part = ref.split('#', 1)
             if file_part == self.root_id:
                 return f'{"/".join(self.current_root)}#{path_part}'
+            target_url = urlparse(file_part)
+            root_id_url = urlparse(self.root_id)
+            if (target_url.scheme, target_url.netloc) == (
+                root_id_url.scheme,
+                root_id_url.netloc,
+            ):
+                target_url_path = Path(target_url.path)
+                relative_target_base = get_relative_path(
+                    Path(root_id_url.path).parent, target_url_path.parent
+                )
+                target_path = (
+                    self.current_base_path / relative_target_base / target_url_path.name
+                )
+                if target_path.exists():
+                    return f'{target_path.resolve().relative_to(self._base_path)}#{path_part}'
+
         return ref
 
     def is_after_load(self, ref: str) -> bool:
