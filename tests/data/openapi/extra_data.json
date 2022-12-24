@@ -1,5 +1,6 @@
 {
   "Pet": {
-    "comment": "1 2, 1 2, this is just a pet"
+    "comment": "1 2, 1 2, this is just a pet",
+    "config":{"arbitrary_types_allowed": "True"}
   }
 }

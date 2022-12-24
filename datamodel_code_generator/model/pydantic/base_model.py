@@ -192,6 +192,10 @@ class BaseModel(DataModel):
                 config_parameters['arbitrary_types_allowed'] = True
                 break
 
+        if isinstance(self.extra_template_data.get('config'), dict):
+            for key, value in self.extra_template_data['config'].items():
+                config_parameters[key] = value
+
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config
 
