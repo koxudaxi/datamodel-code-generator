@@ -3998,3 +3998,27 @@ def test_main_openapi_nullable_use_union_operator():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_external_relative_ref():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'external_relative_ref' / 'model_b'),
+                '--output',
+                str(output_path),
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'external_relative_ref'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+    with pytest.raises(SystemExit):
+        main()
