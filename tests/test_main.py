@@ -515,6 +515,32 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     assert not captured.err
 
 
+def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
+    """Test main function with custom config data in extra template."""
+
+    input_filename = OPEN_API_DATA_PATH / 'api.yaml'
+    extra_template_data = OPEN_API_DATA_PATH / 'extra_data.json'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--extra-template-data',
+                str(extra_template_data),
+            ]
+        )
+
+    captured = capsys.readouterr()
+    assert (
+        captured.out
+        == (
+            EXPECTED_MAIN_PATH / 'main_extra_template_data_config' / 'output.py'
+        ).read_text()
+    )
+    assert not captured.err
+
+
 def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     """Test main function with custom template directory."""
 
@@ -1331,6 +1357,31 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
             [
                 call('https://example.com/person.json', headers=None, verify=True),
             ]
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'root_id_absolute_url.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
+            ).read_text()
         )
     with pytest.raises(SystemExit):
         main()
@@ -3945,5 +3996,29 @@ def test_main_openapi_nullable_use_union_operator():
                 / 'output.py'
             ).read_text()
         )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_external_relative_ref():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'external_relative_ref' / 'model_b'),
+                '--output',
+                str(output_path),
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'external_relative_ref'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
     with pytest.raises(SystemExit):
         main()
