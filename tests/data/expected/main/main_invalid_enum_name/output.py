@@ -9,7 +9,7 @@ from enum import Enum
 
 class InvalidEnum(Enum):
     field_1_value = '1 value'
-    _space = ' space'
-    ___special = '*- special'
+    field_space = ' space'
+    field___special = '*- special'
     schema = 'schema'
     mro_ = 'mro'
