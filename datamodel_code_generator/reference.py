@@ -171,10 +171,14 @@ class FieldNameResolver:
         ):
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
-        # TODO: when first character is a number
         name = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹]|\W', '_', name)
         if name[0].isnumeric():
-            name = f'field_{name}'
+            name = f'_{name}'
+
+        # We should avoid having a field begin with an underscore, as it
+        # causes pydantic to consider it as private
+        if name.startswith('_'):
+            name = f'field{name}'
         if self.snake_case_field and not ignore_snake_case_field:
             name = camel_to_snake(name)
         count = 1
