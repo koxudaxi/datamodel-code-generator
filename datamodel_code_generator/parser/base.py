@@ -311,6 +311,7 @@ class Parser(ABC):
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
+        special_field_name_prefix: Optional[str] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -395,6 +396,7 @@ class Parser(ABC):
             custom_class_name_generator=custom_class_name_generator,
             base_path=self.base_path,
             original_field_name_delimiter=original_field_name_delimiter,
+            special_field_name_prefix=special_field_name_prefix,
         )
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal

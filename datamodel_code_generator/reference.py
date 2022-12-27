@@ -142,11 +142,15 @@ class FieldNameResolver:
         snake_case_field: bool = False,
         empty_field_name: Optional[str] = None,
         original_delimiter: Optional[str] = None,
+        special_field_name_prefix: Optional[str] = None,
     ):
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self.empty_field_name: str = empty_field_name or '_'
         self.snake_case_field = snake_case_field
         self.original_delimiter: Optional[str] = original_delimiter
+        self.special_field_name_prefix: Optional[str] = (
+            'field' if special_field_name_prefix is None else special_field_name_prefix
+        )
 
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
@@ -178,7 +182,7 @@ class FieldNameResolver:
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
         if name.startswith('_'):
-            name = f'field{name}'
+            name = f'{self.special_field_name_prefix}{name}'
         if self.snake_case_field and not ignore_snake_case_field:
             name = camel_to_snake(name)
         count = 1
@@ -271,6 +275,7 @@ class ModelResolver:
             Dict[ModelType, Type[FieldNameResolver]]
         ] = None,
         original_field_name_delimiter: Optional[str] = None,
+        special_field_name_prefix: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -295,6 +300,7 @@ class ModelResolver:
                 snake_case_field=snake_case_field,
                 empty_field_name=empty_field_name,
                 original_delimiter=original_field_name_delimiter,
+                special_field_name_prefix=special_field_name_prefix,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }
