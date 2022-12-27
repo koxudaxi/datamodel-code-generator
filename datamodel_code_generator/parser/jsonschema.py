@@ -516,6 +516,7 @@ class JsonSchemaParser(Parser):
             )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
+            self.model_resolver.delete(path)
             return self.data_type(reference=base_classes[0])
         if self.use_title_as_name and obj.title:
             name = obj.title
