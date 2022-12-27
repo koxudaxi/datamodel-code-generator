@@ -421,6 +421,20 @@ def test_openapi_parser_parse_nested_oneof():
     )
 
 
+def test_openapi_parser_parse_allof_ref():
+    parser = OpenAPIParser(
+        Path(DATA_PATH / 'allof_same_prefix_with_ref.yaml'),
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_parse_allof_same_prefix_with_ref'
+            / 'output.py'
+        ).read_text()
+    )
+
+
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(
         Path(DATA_PATH / 'allof.yaml'),
