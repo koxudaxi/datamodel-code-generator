@@ -288,6 +288,12 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--special-field-name-prefix',
+    help='Set field name prefix when first character can\'t be used as Python field name (default:  `field`)',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--use-subclass-enum',
     help='Define Enum class as subclass with field type when enum has type (int, float, bytes, str)',
     action='store_true',
@@ -504,6 +510,7 @@ class Config(BaseModel):
     original_field_name_delimiter: Optional[str] = None
     use_double_quotes: bool = False
     collapse_root_models: bool = False
+    special_field_name_prefix: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -651,6 +658,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_double_quotes=config.use_double_quotes,
             collapse_root_models=config.collapse_root_models,
             use_union_operator=config.use_union_operator,
+            special_field_name_prefix=config.special_field_name_prefix,
         )
         return Exit.OK
     except InvalidClassNameError as e:

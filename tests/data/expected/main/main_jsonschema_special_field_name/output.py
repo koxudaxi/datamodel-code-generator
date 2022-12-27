@@ -15,4 +15,4 @@ class SpecialField(BaseModel):
     class_: Optional[int] = Field(None, alias='class')
     class_s: Optional[int] = Field(None, alias="class's")
     class_s_1: Optional[str] = Field(None, alias='class-s')
-    _: Optional[str] = Field(None, alias='#')
+    field_: Optional[str] = Field(None, alias='#')
