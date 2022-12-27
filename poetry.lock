@@ -799,7 +799,7 @@ http = ["httpx"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "9d2bbbf6d0f62f1f3c5231a55b91807ae6a058dd14ffee83ef70f9cd17d18c81"
+content-hash = "3d1047e35f80369f8fb38abe81ef81ca8a686afdb0a73aa718d09249d0cd4446"
 
 [metadata.files]
 anyio = [
