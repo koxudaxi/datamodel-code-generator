@@ -174,6 +174,12 @@ arg_parser.add_argument(
     action='store_true',
     default=None,
 )
+arg_parser.add_argument(
+    '--allow-extra-fields',
+    help='Allow to pass extra fields, if this flag is not passed, extra fields are forbidden.',
+    action='store_true',
+    default=None,
+)
 
 arg_parser.add_argument(
     '--enable-faux-immutability',
@@ -278,6 +284,12 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--empty-enum-field-name',
     help='Set field name when enum value is empty (default:  `_`)',
+    default=None,
+)
+
+arg_parser.add_argument(
+    '--special-field-name-prefix',
+    help='Set field name prefix when first character can\'t be used as Python field name (default:  `field`)',
     default=None,
 )
 
@@ -458,6 +470,7 @@ class Config(BaseModel):
     aliases: Optional[TextIOBase]
     disable_timestamp: bool = False
     allow_population_by_field_name: bool = False
+    allow_extra_fields: bool = False
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None
@@ -488,6 +501,7 @@ class Config(BaseModel):
     use_non_positive_negative_number_constrained_types: bool = False
     original_field_name_delimiter: Optional[str] = None
     use_double_quotes: bool = False
+    special_field_name_prefix: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -604,6 +618,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
             allow_population_by_field_name=config.allow_population_by_field_name,
+            allow_extra_fields=config.allow_extra_fields,
             apply_default_values_for_required_fields=config.use_default,
             force_optional_for_required_fields=config.force_optional,
             class_name=config.class_name,
@@ -633,6 +648,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
             use_union_operator=config.use_union_operator,
+            special_field_name_prefix=config.special_field_name_prefix,
         )
         return Exit.OK
     except InvalidClassNameError as e:

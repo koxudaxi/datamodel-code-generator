@@ -5,7 +5,7 @@ from typing import List, Optional
 import pydantic
 import pytest
 
-from datamodel_code_generator import PythonVersion
+from datamodel_code_generator import OpenAPIScope, PythonVersion
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
@@ -170,29 +170,6 @@ def test_parse_array(source_obj, generated_classes):
     parser = OpenAPIParser('')
     parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
-
-
-@pytest.mark.parametrize(
-    'source_obj,generated_classes',
-    [
-        (
-            {'type': 'string', 'nullable': True},
-            '''class Name(BaseModel):
-    __root__: Optional[str] = None''',
-        ),
-        (
-            {'type': 'string', 'nullable': False},
-            '''class Name(BaseModel):
-    __root__: str''',
-        ),
-    ],
-)
-def test_parse_root_type(source_obj, generated_classes):
-    parser = OpenAPIParser('')
-    parsed_templates = parser.parse_root_type(
-        'Name', JsonSchemaObject.parse_obj(source_obj)
-    )
-    assert dump_templates(list(parsed_templates)) == generated_classes
 
 
 @pytest.mark.parametrize(
@@ -444,6 +421,20 @@ def test_openapi_parser_parse_nested_oneof():
     )
 
 
+def test_openapi_parser_parse_allof_ref():
+    parser = OpenAPIParser(
+        Path(DATA_PATH / 'allof_same_prefix_with_ref.yaml'),
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_parse_allof_same_prefix_with_ref'
+            / 'output.py'
+        ).read_text()
+    )
+
+
 def test_openapi_parser_parse_allof():
     parser = OpenAPIParser(
         Path(DATA_PATH / 'allof.yaml'),
@@ -674,5 +665,36 @@ def test_openapi_parser_parse_any():
         parser.parse()
         == (
             EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_any' / 'output.py'
+        ).read_text()
+    )
+
+
+def test_openapi_parser_responses_without_content():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'body_and_parameters.yaml'),
+        openapi_scopes=[OpenAPIScope.Paths],
+        allow_responses_without_content=True,
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_responses_without_content'
+            / 'output.py'
+        ).read_text()
+    )
+
+
+def test_openapi_parser_responses_with_tag():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'body_and_parameters.yaml'),
+        openapi_scopes=[OpenAPIScope.Tags, OpenAPIScope.Schemas, OpenAPIScope.Paths],
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH / 'openapi_parser_responses_with_tag' / 'output.py'
         ).read_text()
     )

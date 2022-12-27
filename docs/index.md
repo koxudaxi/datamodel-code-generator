@@ -49,6 +49,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--strip-default-none]
                          [--disable-appending-item-suffix]
                          [--allow-population-by-field-name]
+                         [--allow-extra-fields]
                          [--enable-faux-immutability] [--use-default]
                          [--force-optional] [--strict-nullable]
                          [--strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]]
@@ -58,6 +59,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--enum-field-as-literal {all,one}]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
+                         [--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX]
                          [--use-subclass-enum]
                          [--class-name CLASS_NAME] [--use-title-as-name]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
@@ -104,6 +106,9 @@ optional arguments:
                         array
   --allow-population-by-field-name
                         Allow population by field name
+  --allow-extra-fields
+                        Allow to pass extra fields. If this flag is not passed,
+                        extra fields are forbidden.
   --enable-faux-immutability
                         Enable faux immutability
   --use-default         Use default value even if a field is required
@@ -133,6 +138,7 @@ optional arguments:
   --set-default-enum-member
                         Set enum members as default values for enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
+  --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name when enum value is empty (default: `_`)
   --use-subclass-enum   Define Enum class as subclass with field type when enum has
                         type (int, float, bytes, str)

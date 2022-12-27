@@ -14,11 +14,11 @@ class ModelEnum(Enum):
     True_ = True
     False_ = False
     empty = ''
-    _ = '\n'
-    __ = '\r\n'
-    __1 = '\t'
-    __2 = '\b'
-    __3 = '\\'
+    field_ = '\n'
+    field__ = '\r\n'
+    field__1 = '\t'
+    field__2 = '\b'
+    field__3 = '\\'
 
 
 class Model(BaseModel):

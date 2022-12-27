@@ -173,9 +173,12 @@ class BaseModel(DataModel):
         config_parameters: Dict[str, Any] = {}
 
         additionalProperties = self.extra_template_data.get('additionalProperties')
-        if additionalProperties is not None:
+        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
+        if additionalProperties is not None or allow_extra_fields:
             config_parameters['extra'] = (
-                'Extra.allow' if additionalProperties else 'Extra.forbid'
+                'Extra.allow'
+                if additionalProperties or allow_extra_fields
+                else 'Extra.forbid'
             )
             self._additional_imports.append(IMPORT_EXTRA)
 
@@ -188,6 +191,10 @@ class BaseModel(DataModel):
             if data_type.is_custom_type:
                 config_parameters['arbitrary_types_allowed'] = True
                 break
+
+        if isinstance(self.extra_template_data.get('config'), dict):
+            for key, value in self.extra_template_data['config'].items():
+                config_parameters[key] = value
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config
