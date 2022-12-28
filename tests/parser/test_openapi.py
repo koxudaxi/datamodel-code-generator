@@ -173,29 +173,6 @@ def test_parse_array(source_obj, generated_classes):
 
 
 @pytest.mark.parametrize(
-    'source_obj,generated_classes',
-    [
-        (
-            {'type': 'string', 'nullable': True},
-            '''class Name(BaseModel):
-    __root__: Optional[str] = None''',
-        ),
-        (
-            {'type': 'string', 'nullable': False},
-            '''class Name(BaseModel):
-    __root__: str''',
-        ),
-    ],
-)
-def test_parse_root_type(source_obj, generated_classes):
-    parser = OpenAPIParser('')
-    parsed_templates = parser.parse_root_type(
-        'Name', JsonSchemaObject.parse_obj(source_obj)
-    )
-    assert dump_templates(list(parsed_templates)) == generated_classes
-
-
-@pytest.mark.parametrize(
     'with_import, format_, base_class',
     [
         (
@@ -440,6 +417,20 @@ def test_openapi_parser_parse_nested_oneof():
         parser.parse()
         == (
             EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_nested_oneof' / 'output.py'
+        ).read_text()
+    )
+
+
+def test_openapi_parser_parse_allof_ref():
+    parser = OpenAPIParser(
+        Path(DATA_PATH / 'allof_same_prefix_with_ref.yaml'),
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_parse_allof_same_prefix_with_ref'
+            / 'output.py'
         ).read_text()
     )
 

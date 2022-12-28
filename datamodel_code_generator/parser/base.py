@@ -277,6 +277,7 @@ class Parser(ABC):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
+        allow_extra_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
@@ -310,6 +311,7 @@ class Parser(ABC):
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
+        special_field_name_prefix: Optional[str] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -379,6 +381,9 @@ class Parser(ABC):
         if allow_population_by_field_name:
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
 
+        if allow_extra_fields:
+            self.extra_template_data[ALL_MODEL]['allow_extra_fields'] = True
+
         if enable_faux_immutability:
             self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
 
@@ -391,6 +396,7 @@ class Parser(ABC):
             custom_class_name_generator=custom_class_name_generator,
             base_path=self.base_path,
             original_field_name_delimiter=original_field_name_delimiter,
+            special_field_name_prefix=special_field_name_prefix,
         )
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal

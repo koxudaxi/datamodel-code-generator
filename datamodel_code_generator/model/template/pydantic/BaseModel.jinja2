@@ -1,10 +1,10 @@
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
-class {{ class_name }}({{ base_class }}):
+class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     """
-    {{ description }}
+    {{ description | indent(4) }}
     """
 {%- endif %}
 {%- if not fields %}
@@ -30,7 +30,7 @@ class {{ class_name }}({{ base_class }}):
     {%- endif %}
     {%- if field.docstring %}
     """
-    {{ field.docstring }}
+    {{ field.docstring | indent(4) }}
     """
     {%- endif %}
 {%- for method in methods -%}

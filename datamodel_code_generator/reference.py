@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from urllib.parse import ParseResult, urlparse
 
 import inflect
 import pydantic
@@ -141,11 +142,15 @@ class FieldNameResolver:
         snake_case_field: bool = False,
         empty_field_name: Optional[str] = None,
         original_delimiter: Optional[str] = None,
+        special_field_name_prefix: Optional[str] = None,
     ):
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self.empty_field_name: str = empty_field_name or '_'
         self.snake_case_field = snake_case_field
         self.original_delimiter: Optional[str] = original_delimiter
+        self.special_field_name_prefix: Optional[str] = (
+            'field' if special_field_name_prefix is None else special_field_name_prefix
+        )
 
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
@@ -170,10 +175,14 @@ class FieldNameResolver:
         ):
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
-        # TODO: when first character is a number
         name = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹]|\W', '_', name)
         if name[0].isnumeric():
-            name = f'field_{name}'
+            name = f'_{name}'
+
+        # We should avoid having a field begin with an underscore, as it
+        # causes pydantic to consider it as private
+        if name.startswith('_'):
+            name = f'{self.special_field_name_prefix}{name}'
         if self.snake_case_field and not ignore_snake_case_field:
             name = camel_to_snake(name)
         count = 1
@@ -266,6 +275,7 @@ class ModelResolver:
             Dict[ModelType, Type[FieldNameResolver]]
         ] = None,
         original_field_name_delimiter: Optional[str] = None,
+        special_field_name_prefix: Optional[str] = None,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -290,6 +300,7 @@ class ModelResolver:
                 snake_case_field=snake_case_field,
                 empty_field_name=empty_field_name,
                 original_delimiter=original_field_name_delimiter,
+                special_field_name_prefix=special_field_name_prefix,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }
@@ -415,6 +426,24 @@ class ModelResolver:
             file_part, path_part = ref.split('#', 1)
             if file_part == self.root_id:
                 return f'{"/".join(self.current_root)}#{path_part}'
+            target_url: ParseResult = urlparse(file_part)
+            if not (self.root_id and self.current_base_path):
+                return ref
+            root_id_url: ParseResult = urlparse(self.root_id)
+            if (target_url.scheme, target_url.netloc) == (
+                root_id_url.scheme,
+                root_id_url.netloc,
+            ):  # pragma: no cover
+                target_url_path = Path(target_url.path)
+                relative_target_base = get_relative_path(
+                    Path(root_id_url.path).parent, target_url_path.parent
+                )
+                target_path = (
+                    self.current_base_path / relative_target_base / target_url_path.name
+                )
+                if target_path.exists():
+                    return f'{target_path.resolve().relative_to(self._base_path)}#{path_part}'
+
         return ref
 
     def is_after_load(self, ref: str) -> bool:
@@ -526,6 +555,9 @@ class ModelResolver:
 
     def get(self, path: Union[Sequence[str], str]) -> Optional[Reference]:
         return self.references.get(self.resolve_ref(path))
+
+    def delete(self, path: Union[Sequence[str], str]) -> None:
+        del self.references[self.resolve_ref(path)]
 
     def default_class_name_generator(self, name: str) -> str:
         # TODO: create a validate for class name

@@ -313,6 +313,7 @@ class JsonSchemaParser(Parser):
         aliases: Optional[Mapping[str, str]] = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
+        allow_extra_fields: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: Optional[str] = None,
         use_standard_collections: bool = False,
@@ -344,6 +345,7 @@ class JsonSchemaParser(Parser):
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
+        special_field_name_prefix: Optional[str] = None,
     ):
         super().__init__(
             source=source,
@@ -362,6 +364,7 @@ class JsonSchemaParser(Parser):
             strip_default_none=strip_default_none,
             aliases=aliases,
             allow_population_by_field_name=allow_population_by_field_name,
+            allow_extra_fields=allow_extra_fields,
             apply_default_values_for_required_fields=apply_default_values_for_required_fields,
             force_optional_for_required_fields=force_optional_for_required_fields,
             class_name=class_name,
@@ -394,6 +397,7 @@ class JsonSchemaParser(Parser):
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
+            special_field_name_prefix=special_field_name_prefix,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -514,6 +518,7 @@ class JsonSchemaParser(Parser):
             )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
+            self.model_resolver.delete(path)
             return self.data_type(reference=base_classes[0])
         if self.use_title_as_name and obj.title:
             name = obj.title

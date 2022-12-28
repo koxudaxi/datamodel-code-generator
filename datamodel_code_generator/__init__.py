@@ -215,6 +215,7 @@ def generate(
     aliases: Optional[Mapping[str, str]] = None,
     disable_timestamp: bool = False,
     allow_population_by_field_name: bool = False,
+    allow_extra_fields: bool = False,
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
     class_name: Optional[str] = None,
@@ -245,6 +246,7 @@ def generate(
     original_field_name_delimiter: Optional[str] = None,
     use_double_quotes: bool = False,
     use_union_operator: bool = False,
+    special_field_name_prefix: Optional[str] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -337,6 +339,7 @@ def generate(
         strip_default_none=strip_default_none,
         aliases=aliases,
         allow_population_by_field_name=allow_population_by_field_name,
+        allow_extra_fields=allow_extra_fields,
         apply_default_values_for_required_fields=apply_default_values_for_required_fields,
         force_optional_for_required_fields=force_optional_for_required_fields,
         class_name=class_name,
@@ -369,6 +372,7 @@ def generate(
         original_field_name_delimiter=original_field_name_delimiter,
         use_double_quotes=use_double_quotes,
         use_union_operator=use_union_operator,
+        special_field_name_prefix=special_field_name_prefix,
         **kwargs,
     )
 

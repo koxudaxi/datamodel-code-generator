@@ -13,12 +13,12 @@ from pydantic import BaseModel
 class ModelEnum(Enum):
     True_ = True
     False_ = False
-    field_ = ''
-    field__1 = '\n'
-    field__ = '\r\n'
-    field__2 = '\t'
-    field__3 = '\b'
-    field__4 = '\\'
+    special_ = ''
+    special__1 = '\n'
+    special__ = '\r\n'
+    special__2 = '\t'
+    special__3 = '\b'
+    special__4 = '\\'
 
 
 class Model(BaseModel):
