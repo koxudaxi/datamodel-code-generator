@@ -133,16 +133,21 @@ class DataType(_BaseModel):
             | ({self.reference.path} if self.reference else set())
         )
 
-    def replace_reference(self, reference: Reference) -> None:
+    def replace_reference(self, reference: Optional[Reference]) -> None:
         if not self.reference:  # pragma: no cover
             raise Exception(
                 f'`{self.__class__.__name__}.replace_reference()` can\'t be called'
                 f' when `reference` field is empty.'
             )
 
-        self.reference.children.remove(self)
+        while self in self.reference.children:
+            self.reference.children.remove(self)
         self.reference = reference
-        reference.children.append(self)
+        if reference:
+            reference.children.append(self)
+
+    def remove_reference(self) -> None:
+        self.replace_reference(None)
 
     @property
     def module_name(self) -> Optional[str]:

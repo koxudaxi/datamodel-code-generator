@@ -697,10 +697,15 @@ class Parser(ABC):
             if self.collapse_root_models:
                 for model in models:
                     for model_field in model.fields:
-                        if ref := model_field.data_type.reference:
-                            if isinstance(ref.source, self.data_model_root_type):
-                                # Use root-type as model_field type
-                                model_field.data_type = ref.source.fields[0].data_type
+                        reference = model_field.data_type.reference
+                        if reference and isinstance(
+                            reference.source, self.data_model_root_type
+                        ):
+                            # Use root-type as model_field type
+                            model_field.data_type.remove_reference()
+                            model_field.data_type = reference.source.fields[0].data_type
+                            if not reference.children:
+                                models.remove(reference.source)
 
             if self.set_default_enum_member:
                 for model in models:
