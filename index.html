@@ -720,6 +720,7 @@
                          <span class="o">[</span>--collapse-root-models<span class="o">]</span> <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
                          <span class="o">[</span>--set-default-enum-member<span class="o">]</span>
                          <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
+                         <span class="o">[</span>--capitalise-enum-members<span class="o">]</span>
                          <span class="o">[</span>--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX<span class="o">]</span>
                          <span class="o">[</span>--use-subclass-enum<span class="o">]</span>
                          <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span> <span class="o">[</span>--use-title-as-name<span class="o">]</span>
@@ -802,6 +803,8 @@ optional arguments:
   --set-default-enum-member
                         Set enum members as default values <span class="k">for</span> enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
+  --capitalise-enum-members
+                        Capitalize field names on enum
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name when enum value is empty <span class="o">(</span>default: <span class="sb">`</span>_<span class="sb">`</span><span class="o">)</span>
   --use-subclass-enum   Define Enum class as subclass with field <span class="nb">type</span> when enum has
