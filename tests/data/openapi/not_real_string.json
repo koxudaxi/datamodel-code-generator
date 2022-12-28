@@ -1,0 +1,33 @@
+{
+  "openapi" : "3.0.0",
+  "components" : {
+    "schemas" : {
+      "UserId" : {
+        "type" : "string"
+      },
+      "Tweet" : {
+        "type" : "object",
+        "properties" : {
+          "author_id" : {
+            "$ref" : "#/components/schemas/UserId"
+          }
+        }
+      },
+      "FileHash": {
+        "type": "string",
+        "minLength": 32,
+        "maxLength": 32,
+        "pattern": "^[a-fA-F\\d]{32}$"
+      },
+       "FileRequest": {
+        "type": "object",
+        "required": ["file_hash"],
+        "properties": {
+          "file_hash": {
+            "$ref": "#/components/schemas/FileHash"
+          }
+        }
+      }
+    }
+  }
+}
