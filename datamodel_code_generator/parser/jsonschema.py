@@ -673,6 +673,7 @@ class JsonSchemaParser(Parser):
             singular_name = False
         if (
             parent
+            and not item.enum
             and item.has_constraint
             and (parent.has_constraint or self.field_constraints)
         ):
