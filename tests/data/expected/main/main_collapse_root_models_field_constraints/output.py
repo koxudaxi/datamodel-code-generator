@@ -14,4 +14,4 @@ class Tweet(BaseModel):
 
 
 class FileRequest(BaseModel):
-    file_hash: str = Field(..., max_length=32, min_length=32, regex=r'^[a-fA-F\d]{32}$')
+    file_hash: str = Field(..., max_length=32, min_length=32, regex='^[a-fA-F\\d]{32}$')
