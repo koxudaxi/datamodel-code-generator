@@ -143,6 +143,7 @@ class FieldNameResolver:
         empty_field_name: Optional[str] = None,
         original_delimiter: Optional[str] = None,
         special_field_name_prefix: Optional[str] = None,
+        capitalise_enum_members: bool = False,
     ):
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self.empty_field_name: str = empty_field_name or '_'
@@ -151,6 +152,7 @@ class FieldNameResolver:
         self.special_field_name_prefix: Optional[str] = (
             'field' if special_field_name_prefix is None else special_field_name_prefix
         )
+        self.capitalise_enum_members: bool = capitalise_enum_members
 
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
@@ -183,12 +185,21 @@ class FieldNameResolver:
         # causes pydantic to consider it as private
         if name.startswith('_'):
             name = f'{self.special_field_name_prefix}{name}'
-        if self.snake_case_field and not ignore_snake_case_field:
+        if (
+            self.capitalise_enum_members
+            or self.snake_case_field
+            and not ignore_snake_case_field
+        ):
             name = camel_to_snake(name)
         count = 1
         if iskeyword(name) or not self._validate_field_name(name):
             name += '_'
-        new_name = snake_to_upper_camel(name) if upper_camel else name
+        if upper_camel:
+            new_name = snake_to_upper_camel(name)
+        elif self.capitalise_enum_members:
+            new_name = name.upper()
+        else:
+            new_name = name
         while (
             not (new_name.isidentifier() or not self._validate_field_name(new_name))
             or iskeyword(new_name)
@@ -276,6 +287,7 @@ class ModelResolver:
         ] = None,
         original_field_name_delimiter: Optional[str] = None,
         special_field_name_prefix: Optional[str] = None,
+        capitalise_enum_members: bool = False,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -301,6 +313,7 @@ class ModelResolver:
                 empty_field_name=empty_field_name,
                 original_delimiter=original_field_name_delimiter,
                 special_field_name_prefix=special_field_name_prefix,
+                capitalise_enum_members=capitalise_enum_members,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }
