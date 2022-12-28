@@ -265,6 +265,16 @@ arg_parser.add_argument(
     default=None,
 )
 
+
+arg_parser.add_argument(
+    "--collapse-root-models",
+    action='store_true',
+    default=False,
+    help="Models generated with a root-type field will be merged"
+    "into the models using that root-type model",
+)
+
+
 arg_parser.add_argument(
     '--enum-field-as-literal',
     help='Parse enum field as literal. '
@@ -501,6 +511,7 @@ class Config(BaseModel):
     use_non_positive_negative_number_constrained_types: bool = False
     original_field_name_delimiter: Optional[str] = None
     use_double_quotes: bool = False
+    collapse_root_models: bool = False
     special_field_name_prefix: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
@@ -647,6 +658,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
+            collapse_root_models=config.collapse_root_models,
             use_union_operator=config.use_union_operator,
             special_field_name_prefix=config.special_field_name_prefix,
         )

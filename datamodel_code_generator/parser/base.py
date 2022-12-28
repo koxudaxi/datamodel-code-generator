@@ -311,6 +311,7 @@ class Parser(ABC):
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
+        collapse_root_models: bool = False,
         special_field_name_prefix: Optional[str] = None,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -412,6 +413,7 @@ class Parser(ABC):
         )
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
+        self.collapse_root_models = collapse_root_models
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -691,6 +693,24 @@ class Parser(ABC):
 
                 for duplicate in duplicates:
                     models.remove(duplicate)
+
+            if self.collapse_root_models:
+                for model in models:
+                    for model_field in model.fields:
+                        reference = model_field.data_type.reference
+                        if reference and isinstance(
+                            reference.source, self.data_model_root_type
+                        ):
+                            # Use root-type as model_field type
+                            root_type_field = reference.source.fields[0]
+                            model_field.data_type.remove_reference()
+                            model_field.data_type = root_type_field.data_type
+                            model_field.data_type.parent = model_field
+                            model_field.extras = root_type_field.extras
+                            model_field.constraints = root_type_field.constraints
+
+                            if not reference.children:  # pragma: no cover
+                                models.remove(reference.source)
 
             if self.set_default_enum_member:
                 for model in models:
