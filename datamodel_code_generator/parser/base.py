@@ -313,6 +313,7 @@ class Parser(ABC):
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
         special_field_name_prefix: Optional[str] = None,
+        capitalise_enum_members: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -398,6 +399,7 @@ class Parser(ABC):
             base_path=self.base_path,
             original_field_name_delimiter=original_field_name_delimiter,
             special_field_name_prefix=special_field_name_prefix,
+            capitalise_enum_members=capitalise_enum_members,
         )
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
@@ -414,6 +416,7 @@ class Parser(ABC):
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
+        self.capitalise_enum_members = capitalise_enum_members
 
     @property
     def iter_source(self) -> Iterator[Source]:
