@@ -287,6 +287,14 @@ arg_parser.add_argument(
     default=None,
 )
 
+
+arg_parser.add_argument(
+    '--capitalise-enum-members',
+    help='Capitalize field names on enum',
+    action='store_true',
+    default=None,
+)
+
 arg_parser.add_argument(
     '--special-field-name-prefix',
     help='Set field name prefix when first character can\'t be used as Python field name (default:  `field`)',
@@ -511,6 +519,7 @@ class Config(BaseModel):
     use_double_quotes: bool = False
     collapse_root_models: bool = False
     special_field_name_prefix: Optional[str] = None
+    capitalise_enum_members: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -659,6 +668,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             collapse_root_models=config.collapse_root_models,
             use_union_operator=config.use_union_operator,
             special_field_name_prefix=config.special_field_name_prefix,
+            capitalise_enum_members=config.capitalise_enum_members,
         )
         return Exit.OK
     except InvalidClassNameError as e:
