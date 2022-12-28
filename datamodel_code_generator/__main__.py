@@ -265,6 +265,16 @@ arg_parser.add_argument(
     default=None,
 )
 
+
+arg_parser.add_argument(
+    "--collapse-root-models",
+    action='store_true',
+    default=False,
+    help="Models generated with a root-type field will be merged"
+    "into the models using that root-type model",
+)
+
+
 arg_parser.add_argument(
     '--enum-field-as-literal',
     help='Parse enum field as literal. '
@@ -346,14 +356,6 @@ arg_parser.add_argument(
     default=False,
     help="Model generated with double quotes. Single quotes or "
     "your black config skip_string_normalization value will be used without this option.",
-)
-
-arg_parser.add_argument(
-    "--collapse-root-models",
-    action='store_true',
-    default=False,
-    help="Models generated with a root-type field will be merged"
-    "into the models using that root-type model",
 )
 
 arg_parser.add_argument(
