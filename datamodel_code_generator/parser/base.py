@@ -704,7 +704,7 @@ class Parser(ABC):
                             # Use root-type as model_field type
                             model_field.data_type.remove_reference()
                             model_field.data_type = reference.source.fields[0].data_type
-                            if not reference.children:
+                            if not reference.children:  # pragma: no cover
                                 models.remove(reference.source)
 
             if self.set_default_enum_member:
