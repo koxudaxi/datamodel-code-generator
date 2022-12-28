@@ -717,7 +717,7 @@
                          <span class="o">[</span>--disable-timestamp<span class="o">]</span> <span class="o">[</span>--use-standard-collections<span class="o">]</span>
                          <span class="o">[</span>--use-generic-container-types<span class="o">]</span>
                          <span class="o">[</span>--use-schema-description<span class="o">]</span> <span class="o">[</span>--use-field-description<span class="o">]</span> <span class="o">[</span>--reuse-model<span class="o">]</span>
-                         <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
+                         <span class="o">[</span>--collapse-root-models<span class="o">]</span> <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
                          <span class="o">[</span>--set-default-enum-member<span class="o">]</span>
                          <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
                          <span class="o">[</span>--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX<span class="o">]</span>
@@ -792,6 +792,9 @@ optional arguments:
                         Use schema description to populate field docstring
   --reuse-model         Re-use models on the field when a module has the model
                         with the same content
+  --collapse-root-models
+                        Models generated with a root-type field will be
+                        merged into the models using that root-type model
   --enum-field-as-literal <span class="o">{</span>all,one<span class="o">}</span>
                         Parse enum field as literal. all: all enum field <span class="nb">type</span>
                         are Literal. one: field <span class="nb">type</span> is Literal when an enum
