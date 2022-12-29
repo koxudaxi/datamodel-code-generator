@@ -559,25 +559,13 @@ class Parser(ABC):
                     model.path, class_name, unique=True, class_name=True
                 ).name
                 if class_name != generated_name:
-                    if '.' in model.reference.name:
-                        model.reference.name = (
-                            f"{model.reference.name.rsplit('.', 1)[0]}.{generated_name}"
-                        )
-                    else:
-                        model.reference.name = generated_name
+                    model.class_name = generated_name
                 model_names[model.name] = model
 
             for model in models:
                 duplicate_name = model.duplicate_class_name
-                if not duplicate_name:
-                    continue
-                if duplicate_name not in model_names:
-                    if '.' in model.reference.name:
-                        model.reference.name = (
-                            f"{model.reference.name.rsplit('.', 1)[0]}.{duplicate_name}"
-                        )
-                    else:
-                        model.reference.name = duplicate_name
+                if duplicate_name and duplicate_name not in model_names:
+                    model.class_name = duplicate_name
 
         for module, models in module_models:
             init = False
