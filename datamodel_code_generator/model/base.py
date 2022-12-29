@@ -274,6 +274,10 @@ class DataModel(TemplateBase, ABC):
         return self.reference.name
 
     @property
+    def duplicate_name(self) -> str:
+        return self.reference.duplicate_name or ''
+
+    @property
     def base_class(self) -> str:
         return ', '.join(b.type_hint for b in self.base_classes)
 
@@ -282,6 +286,12 @@ class DataModel(TemplateBase, ABC):
         if '.' in self.name:
             return self.name.rsplit('.', 1)[-1]
         return self.name
+
+    @property
+    def duplicate_class_name(self) -> str:
+        if '.' in self.duplicate_name:
+            return self.duplicate_name.rsplit('.', 1)[-1]
+        return self.duplicate_name
 
     @property
     def module_path(self) -> List[str]:

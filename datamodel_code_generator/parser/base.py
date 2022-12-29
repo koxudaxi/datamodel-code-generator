@@ -522,7 +522,7 @@ class Parser(ABC):
                         and root_data_type.reference.name
                         == self.model_resolver.get_class_name(
                             model.reference.original_name, unique=False
-                        )
+                        ).name
                     ):
                         # Replace referenced duplicate model to original model
                         for child in model.reference.children[:]:
@@ -552,6 +552,7 @@ class Parser(ABC):
                 duplicate_name_suffix='Model',
             )
 
+            model_names: Dict[str, DataModel] = {}
             for model in models:
                 class_name: str = model.class_name
                 generated_name: str = scoped_model_resolver.add(
@@ -564,6 +565,19 @@ class Parser(ABC):
                         )
                     else:
                         model.reference.name = generated_name
+                model_names[model.name] = model
+
+            for model in models:
+                duplicate_name = model.duplicate_name
+                if not duplicate_name:
+                    continue
+                if duplicate_name not in model_names:
+                    if '.' in model.reference.name:
+                        model.reference.name = (
+                            f"{model.reference.name.rsplit('.', 1)[0]}.{duplicate_name}"
+                        )
+                    else:
+                        model.reference.name = duplicate_name
 
         for module, models in module_models:
             init = False

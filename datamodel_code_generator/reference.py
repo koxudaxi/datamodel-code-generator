@@ -18,6 +18,7 @@ from typing import (
     Generator,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Pattern,
     Sequence,
@@ -78,6 +79,7 @@ class Reference(_BaseModel):
     path: str
     original_name: str = ''
     name: str
+    duplicate_name: Optional[str]
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
@@ -251,6 +253,11 @@ DEFAULT_FIELD_NAME_RESOLVERS: Dict[ModelType, Type[FieldNameResolver]] = {
     ModelType.PYDANTIC: PydanticFieldNameResolver,
     ModelType.CLASS: FieldNameResolver,
 }
+
+
+class ClassName(NamedTuple):
+    name: str
+    duplicate_name: Optional[str]
 
 
 def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
@@ -504,7 +511,7 @@ class ModelResolver:
                 if self.is_external_root_ref(path)
                 else split_ref[1]
             )
-        name = self.get_class_name(original_name, unique=False)
+        name = self.get_class_name(original_name, unique=False).name
         reference = Reference(
             path=path,
             original_name=original_name,
@@ -538,8 +545,9 @@ class ModelResolver:
             ):
                 return reference
         name = original_name
+        duplicate_name: Optional[str] = None
         if class_name:
-            name = self.get_class_name(
+            name, duplicate_name = self.get_class_name(
                 name=name,
                 unique=unique,
                 reserved_name=reference.name if reference else None,
@@ -554,14 +562,22 @@ class ModelResolver:
                     name, singular_name_suffix or self.singular_name_suffix
                 )
             elif unique:  # pragma: no cover
-                name = self._get_uniq_name(name)
+                unique_name = self._get_unique_name(name)
+                if unique_name == name:
+                    duplicate_name = name
+                name = unique_name
         if reference:
             reference.original_name = original_name
             reference.name = name
             reference.loaded = loaded
+            reference.duplicate_name = duplicate_name
         else:
             reference = Reference(
-                path=joined_path, original_name=original_name, name=name, loaded=loaded
+                path=joined_path,
+                original_name=original_name,
+                name=name,
+                loaded=loaded,
+                duplicate_name=duplicate_name,
             )
             self.references[joined_path] = reference
         return reference
@@ -585,7 +601,7 @@ class ModelResolver:
         reserved_name: Optional[str] = None,
         singular_name: bool = False,
         singular_name_suffix: Optional[str] = None,
-    ) -> str:
+    ) -> ClassName:
 
         if '.' in name:
             split_name = name.split('.')
@@ -608,21 +624,24 @@ class ModelResolver:
             class_name = get_singular_name(
                 class_name, singular_name_suffix or self.singular_name_suffix
             )
-
+        duplicate_name: Optional[str] = None
         if unique:
             if reserved_name == class_name:
-                return class_name
-            class_name = self._get_uniq_name(class_name, camel=True)
+                return ClassName(name=class_name, duplicate_name=duplicate_name)
 
-        return f'{prefix}{class_name}'
+            unique_name = self._get_unique_name(class_name, camel=True)
+            if unique_name != class_name:
+                duplicate_name = class_name
+            class_name = unique_name
+        return ClassName(name=f'{prefix}{class_name}', duplicate_name=duplicate_name)
 
-    def _get_uniq_name(self, name: str, camel: bool = False) -> str:
-        uniq_name: str = name
+    def _get_unique_name(self, name: str, camel: bool = False) -> str:
+        unique_name: str = name
         count: int = 1
         reference_names = {
             r.name for r in self.references.values()
         } | self.exclude_names
-        while uniq_name in reference_names:
+        while unique_name in reference_names:
             if self.duplicate_name_suffix:
                 name_parts: List[Union[str, int]] = [
                     name,
@@ -632,9 +651,9 @@ class ModelResolver:
             else:
                 name_parts = [name, count]
             delimiter = '' if camel else '_'
-            uniq_name = delimiter.join(str(p) for p in name_parts if p)
+            unique_name = delimiter.join(str(p) for p in name_parts if p)
             count += 1
-        return uniq_name
+        return unique_name
 
     @classmethod
     def validate_name(cls, name: str) -> bool:
