@@ -568,7 +568,7 @@ class Parser(ABC):
                 model_names[model.name] = model
 
             for model in models:
-                duplicate_name = model.duplicate_name
+                duplicate_name = model.duplicate_class_name
                 if not duplicate_name:
                     continue
                 if duplicate_name not in model_names:
