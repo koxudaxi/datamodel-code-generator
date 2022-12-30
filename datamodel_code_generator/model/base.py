@@ -255,6 +255,7 @@ class DataModel(TemplateBase, ABC):
             if field.name:
                 if field.name in names:
                     warn(f'Field name `{field.name}` is duplicated on {self.name}')
+                    continue
                 else:
                     names.add(field.name)
             unique_fields.append(field)

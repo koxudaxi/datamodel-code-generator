@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 
 class Home(BaseModel):
-    id: Optional[int] = None
     address: Optional[str] = None
     zip: Optional[str] = None
 

@@ -10,6 +10,14 @@
     },
     {
       "$ref": "#/definitions/Id"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
     }
   ],
   "type": [
@@ -27,9 +35,6 @@
     "Home": {
       "type": "object",
       "properties": {
-                "id": {
-          "type": "integer"
-        },
         "address": {
           "type": "string"
         },
