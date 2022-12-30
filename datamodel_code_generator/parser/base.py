@@ -718,7 +718,7 @@ class Parser(ABC):
                             if not reference.children:  # pragma: no cover
                                 unused_root_models.append(reference.source)
                 for model in models:
-                    if model in unused_root_models:
+                    if model in unused_root_models:  # pragma: no cover
                         models.remove(model)
 
             if self.set_default_enum_member:
