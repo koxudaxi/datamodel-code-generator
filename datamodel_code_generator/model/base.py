@@ -18,6 +18,7 @@ from typing import (
     Tuple,
     Union,
 )
+from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel
@@ -204,7 +205,6 @@ class DataModel(TemplateBase, ABC):
                 template_file_path = custom_template_file_path
         self._template_file_path = template_file_path
 
-        self.fields: List[DataModelFieldBase] = fields or []
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
         self.custom_base_class = custom_base_class
@@ -226,6 +226,8 @@ class DataModel(TemplateBase, ABC):
             else defaultdict(dict)
         )
 
+        self.fields = self._validate_fields(fields) if fields else []
+
         for base_class in self.base_classes:
             if base_class.reference:
                 base_class.reference.children.append(self)
@@ -243,6 +245,21 @@ class DataModel(TemplateBase, ABC):
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
         self.default: Any = default
+
+    def _validate_fields(
+        self, fields: List[DataModelFieldBase]
+    ) -> List[DataModelFieldBase]:
+        names: Set[str] = set()
+        unique_fields: List[DataModelFieldBase] = []
+        for field in fields:
+            if field.name:
+                if field.name in names:
+                    warn(f'Field name `{field.name}` is duplicated on {self.name}')
+                    continue
+                else:
+                    names.add(field.name)
+            unique_fields.append(field)
+        return unique_fields
 
     def set_base_class(self) -> None:
         base_class_import = Import.from_full_path(
