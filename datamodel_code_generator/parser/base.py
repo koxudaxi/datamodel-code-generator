@@ -700,6 +700,7 @@ class Parser(ABC):
                     models.remove(duplicate)
 
             if self.collapse_root_models:
+                unused_root_models: List[DataModel] = []
                 for model in models:
                     for model_field in model.fields:
                         reference = model_field.data_type.reference
@@ -715,7 +716,10 @@ class Parser(ABC):
                             model_field.constraints = root_type_field.constraints
 
                             if not reference.children:  # pragma: no cover
-                                models.remove(reference.source)
+                                unused_root_models.append(reference.source)
+                for model in models:
+                    if model in unused_root_models:
+                        models.remove(model)
 
             if self.set_default_enum_member:
                 for model in models:
