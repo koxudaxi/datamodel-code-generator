@@ -465,6 +465,254 @@ class Parser(ABC):
     def parse_raw(self) -> None:
         raise NotImplementedError
 
+    def __delete_duplicate_models(self, models: List[DataModel]) -> None:
+        for model in models:
+            if isinstance(model, self.data_model_root_type):
+                root_data_type = model.fields[0].data_type
+
+                # backward compatible
+                # Remove duplicated root model
+                if (
+                    root_data_type.reference
+                    and not root_data_type.is_dict
+                    and not root_data_type.is_list
+                    and root_data_type.reference.source in models
+                    and root_data_type.reference.name
+                    == self.model_resolver.get_class_name(
+                        model.reference.original_name, unique=False
+                    ).name
+                ):
+                    # Replace referenced duplicate model to original model
+                    for child in model.reference.children[:]:
+                        child.replace_reference(root_data_type.reference)
+                    models.remove(model)
+                    continue
+
+                #  Custom root model can't be inherited on restriction of Pydantic
+                for child in model.reference.children:
+                    # inheritance model
+                    if isinstance(child, DataModel):
+                        for base_class in child.base_classes:
+                            if base_class.reference == model.reference:
+                                child.base_classes.remove(base_class)
+                        if not child.base_classes:
+                            child.set_base_class()
+
+    @classmethod
+    def __replace_duplicate_name_in_module(cls, models: List[DataModel]) -> None:
+        scoped_model_resolver = ModelResolver(
+            exclude_names={i.alias or i.import_ for m in models for i in m.imports},
+            duplicate_name_suffix='Model',
+        )
+
+        model_names: Dict[str, DataModel] = {}
+        for model in models:
+            class_name: str = model.class_name
+            generated_name: str = scoped_model_resolver.add(
+                model.path, class_name, unique=True, class_name=True
+            ).name
+            if class_name != generated_name:
+                model.class_name = generated_name
+            model_names[model.name] = model
+
+        for model in models:
+            duplicate_name = model.duplicate_class_name
+            # check only first desired name
+            if duplicate_name and duplicate_name not in model_names:
+                model.class_name = duplicate_name
+
+    @classmethod
+    def __change_from_import(
+        cls,
+        models: List[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
+        init: bool,
+    ) -> None:
+        for model in models:
+            imports.append(model.imports)
+            for data_type in model.all_data_types:
+                # To change from/import
+
+                if not data_type.reference or data_type.reference.source in models:
+                    # No need to import non-reference model.
+                    # Or, Referenced model is in the same file. we don't need to import the model
+                    continue
+
+                if isinstance(data_type, BaseClassDataType):
+                    from_ = ''.join(relative(model.module_name, data_type.full_name))
+                    import_ = data_type.reference.short_name
+                    full_path = from_, import_
+                else:
+                    from_, import_ = full_path = relative(
+                        model.module_name, data_type.full_name
+                    )
+
+                alias = scoped_model_resolver.add(full_path, import_).name
+
+                name = data_type.reference.short_name
+                if from_ and import_ and alias != name:
+                    data_type.alias = f'{alias}.{name}'
+
+                if init:
+                    from_ = "." + from_
+                imports.append(Import(from_=from_, import_=import_, alias=alias))
+
+    @classmethod
+    def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
+        for model in models:
+            if model.fields:
+                continue
+            enums: List[Enum] = []
+            for base_model in model.base_classes:
+                if not base_model.reference:
+                    continue
+                source_model = base_model.reference.source
+                if isinstance(source_model, Enum):
+                    enums.append(source_model)
+            if enums:
+                models.insert(
+                    models.index(model),
+                    enums[0].__class__(
+                        fields=[f for e in enums for f in e.fields],
+                        description=model.description,
+                        reference=model.reference,
+                    ),
+                )
+                models.remove(model)
+
+    @classmethod
+    def __set_reference_default_value_to_field(cls, models: List[DataModel]) -> None:
+        for model in models:
+            for model_field in model.fields:
+                if not model_field.data_type.reference or model_field.has_default:
+                    continue
+                if isinstance(
+                    model_field.data_type.reference.source, DataModel
+                ):  # pragma: no cover
+                    if model_field.data_type.reference.source.default != UNDEFINED:
+                        model_field.default = (
+                            model_field.data_type.reference.source.default
+                        )
+
+    def __reuse_model(
+        self, models: List[DataModel], require_update_action_models: List[str]
+    ) -> None:
+        if not self.reuse_model:
+            return None
+        model_cache: Dict[Tuple[str, ...], Reference] = {}
+        duplicates = []
+        for model in models:
+            model_key = tuple(
+                to_hashable(v)
+                for v in (
+                    model.base_classes,
+                    model.extra_template_data,
+                    model.fields,
+                )
+            )
+            cached_model_reference = model_cache.get(model_key)
+            if cached_model_reference:
+                if isinstance(model, Enum):
+                    for child in model.reference.children[:]:
+                        # child is resolved data_type by reference
+                        data_model = get_most_of_parent(child)
+                        # TODO: replace reference in all modules
+                        if data_model in models:  # pragma: no cover
+                            child.replace_reference(cached_model_reference)
+                    duplicates.append(model)
+                else:
+                    index = models.index(model)
+                    inherited_model = model.__class__(
+                        fields=[],
+                        base_classes=[cached_model_reference],
+                        description=model.description,
+                        reference=Reference(
+                            name=model.name,
+                            path=model.reference.path + '/reuse',
+                        ),
+                    )
+                    if cached_model_reference.path in require_update_action_models:
+                        require_update_action_models.append(inherited_model.path)
+                    models.insert(index, inherited_model)
+                    models.remove(model)
+
+            else:
+                model_cache[model_key] = model.reference
+
+        for duplicate in duplicates:
+            models.remove(duplicate)
+
+    def __collapse_root_models(self, models: List[DataModel]) -> None:
+        if not self.collapse_root_models:
+            return None
+        unused_root_models: List[DataModel] = []
+        for model in models:
+            for model_field in model.fields:
+                reference = model_field.data_type.reference
+                if reference and isinstance(
+                    reference.source, self.data_model_root_type
+                ):
+                    # Use root-type as model_field type
+                    root_type_field = reference.source.fields[0]
+                    model_field.data_type.remove_reference()
+                    model_field.data_type = root_type_field.data_type
+                    model_field.data_type.parent = model_field
+                    model_field.extras = root_type_field.extras
+                    model_field.constraints = root_type_field.constraints
+
+                    if not reference.children:  # pragma: no cover
+                        unused_root_models.append(reference.source)
+                for model in models:
+                    if model in unused_root_models:
+                        models.remove(model)
+
+    def __set_default_enum_member(
+        self,
+        models: List[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
+        init: bool,
+    ) -> None:
+        if not self.set_default_enum_member:
+            return None
+        for model in models:
+            for model_field in model.fields:
+                if not model_field.default:
+                    continue
+                for data_type in model_field.data_type.all_data_types:
+                    if data_type.reference and isinstance(
+                        data_type.reference.source, Enum
+                    ):  # pragma: no cover
+                        enum_member = data_type.reference.source.find_member(
+                            model_field.default
+                        )
+                        if enum_member:
+                            model_field.default = enum_member
+                            enum_member_enum = enum_member.enum
+                            if enum_member_enum in models:
+                                continue
+                            scoped_model_resolver.get(enum_member_enum.path)
+                            if isinstance(enum_member_enum, Modular):
+                                enum_member_enum_name = f'{enum_member_enum.module_name}.{enum_member.enum.name}'
+                            else:
+                                enum_member_enum_name = enum_member.enum.name
+                            from_, import_ = full_path = relative(
+                                model.module_name, enum_member_enum_name
+                            )
+
+                            alias = scoped_model_resolver.add(full_path, import_).name
+
+                            name = data_type.reference.short_name
+                            if from_ and import_ and alias != name:
+                                enum_member.alias = f'{alias}.{name}'
+
+                            if init:
+                                from_ += "."
+                            imports.append(
+                                Import(from_=from_, import_=import_, alias=alias)
+                            )
+
     def parse(
         self,
         with_import: Optional[bool] = True,
@@ -507,65 +755,14 @@ class Parser(ABC):
         for module, models in (
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
-
-            for model in models:
-                if isinstance(model, self.data_model_root_type):
-                    root_data_type = model.fields[0].data_type
-
-                    # backward compatible
-                    # Remove duplicated root model
-                    if (
-                        root_data_type.reference
-                        and not root_data_type.is_dict
-                        and not root_data_type.is_list
-                        and root_data_type.reference.source in models
-                        and root_data_type.reference.name
-                        == self.model_resolver.get_class_name(
-                            model.reference.original_name, unique=False
-                        ).name
-                    ):
-                        # Replace referenced duplicate model to original model
-                        for child in model.reference.children[:]:
-                            child.replace_reference(root_data_type.reference)
-                        models.remove(model)
-                        continue
-
-                    #  Custom root model can't be inherited on restriction of Pydantic
-                    for child in model.reference.children:
-                        # inheritance model
-                        if isinstance(child, DataModel):
-                            for base_class in child.base_classes:
-                                if base_class.reference == model.reference:
-                                    child.base_classes.remove(base_class)
-                            if not child.base_classes:
-                                child.set_base_class()
-
+            self.__delete_duplicate_models(models)
+            self.__replace_duplicate_name_in_module(models)
             module_models.append(
                 (
                     module,
                     models,
                 )
             )
-
-            scoped_model_resolver = ModelResolver(
-                exclude_names={i.alias or i.import_ for m in models for i in m.imports},
-                duplicate_name_suffix='Model',
-            )
-
-            model_names: Dict[str, DataModel] = {}
-            for model in models:
-                class_name: str = model.class_name
-                generated_name: str = scoped_model_resolver.add(
-                    model.path, class_name, unique=True, class_name=True
-                ).name
-                if class_name != generated_name:
-                    model.class_name = generated_name
-                model_names[model.name] = model
-
-            for model in models:
-                duplicate_name = model.duplicate_class_name
-                if duplicate_name and duplicate_name not in model_names:
-                    model.class_name = duplicate_name
 
         for module, models in module_models:
             init = False
@@ -584,184 +781,12 @@ class Parser(ABC):
             result: List[str] = []
             imports = Imports()
             scoped_model_resolver = ModelResolver()
-
-            for model in models:
-                imports.append(model.imports)
-                for data_type in model.all_data_types:
-                    # To change from/import
-
-                    if not data_type.reference or data_type.reference.source in models:
-                        # No need to import non-reference model.
-                        # Or, Referenced model is in the same file. we don't need to import the model
-                        continue
-
-                    if isinstance(data_type, BaseClassDataType):
-                        from_ = ''.join(
-                            relative(model.module_name, data_type.full_name)
-                        )
-                        import_ = data_type.reference.short_name
-                        full_path = from_, import_
-                    else:
-                        from_, import_ = full_path = relative(
-                            model.module_name, data_type.full_name
-                        )
-
-                    alias = scoped_model_resolver.add(full_path, import_).name
-
-                    name = data_type.reference.short_name
-                    if from_ and import_ and alias != name:
-                        data_type.alias = f'{alias}.{name}'
-
-                    if init:
-                        from_ = "." + from_
-                    imports.append(Import(from_=from_, import_=import_, alias=alias))
-
-            # extract inherited enum
-            for model in models:
-                if model.fields:
-                    continue
-                enums: List[Enum] = []
-                for base_model in model.base_classes:
-                    if not base_model.reference:
-                        continue
-                    source_model = base_model.reference.source
-                    if isinstance(source_model, Enum):
-                        enums.append(source_model)
-                if enums:
-                    models.insert(
-                        models.index(model),
-                        enums[0].__class__(
-                            fields=[f for e in enums for f in e.fields],
-                            description=model.description,
-                            reference=model.reference,
-                        ),
-                    )
-                    models.remove(model)
-
-            for model in models:
-                for model_field in model.fields:
-                    if not model_field.data_type.reference or model_field.has_default:
-                        continue
-                    if isinstance(
-                        model_field.data_type.reference.source, DataModel
-                    ):  # pragma: no cover
-                        if model_field.data_type.reference.source.default != UNDEFINED:
-                            model_field.default = (
-                                model_field.data_type.reference.source.default
-                            )
-
-            if self.reuse_model:
-                model_cache: Dict[Tuple[str, ...], Reference] = {}
-                duplicates = []
-                for model in models:
-                    model_key = tuple(
-                        to_hashable(v)
-                        for v in (
-                            model.base_classes,
-                            model.extra_template_data,
-                            model.fields,
-                        )
-                    )
-                    cached_model_reference = model_cache.get(model_key)
-                    if cached_model_reference:
-                        if isinstance(model, Enum):
-                            for child in model.reference.children[:]:
-                                # child is resolved data_type by reference
-                                data_model = get_most_of_parent(child)
-                                # TODO: replace reference in all modules
-                                if data_model in models:  # pragma: no cover
-                                    child.replace_reference(cached_model_reference)
-                            duplicates.append(model)
-                        else:
-                            index = models.index(model)
-                            inherited_model = model.__class__(
-                                fields=[],
-                                base_classes=[cached_model_reference],
-                                description=model.description,
-                                reference=Reference(
-                                    name=model.name,
-                                    path=model.reference.path + '/reuse',
-                                ),
-                            )
-                            if (
-                                cached_model_reference.path
-                                in require_update_action_models
-                            ):
-                                require_update_action_models.append(
-                                    inherited_model.path
-                                )
-                            models.insert(index, inherited_model)
-                            models.remove(model)
-
-                    else:
-                        model_cache[model_key] = model.reference
-
-                for duplicate in duplicates:
-                    models.remove(duplicate)
-
-            if self.collapse_root_models:
-                unused_root_models: List[DataModel] = []
-                for model in models:
-                    for model_field in model.fields:
-                        reference = model_field.data_type.reference
-                        if reference and isinstance(
-                            reference.source, self.data_model_root_type
-                        ):
-                            # Use root-type as model_field type
-                            root_type_field = reference.source.fields[0]
-                            model_field.data_type.remove_reference()
-                            model_field.data_type = root_type_field.data_type
-                            model_field.data_type.parent = model_field
-                            model_field.extras = root_type_field.extras
-                            model_field.constraints = root_type_field.constraints
-
-                            if not reference.children:  # pragma: no cover
-                                unused_root_models.append(reference.source)
-                for model in models:
-                    if model in unused_root_models:  # pragma: no cover
-                        models.remove(model)
-
-            if self.set_default_enum_member:
-                for model in models:
-                    for model_field in model.fields:
-                        if not model_field.default:
-                            continue
-                        for data_type in model_field.data_type.all_data_types:
-                            if data_type.reference and isinstance(
-                                data_type.reference.source, Enum
-                            ):  # pragma: no cover
-                                enum_member = data_type.reference.source.find_member(
-                                    model_field.default
-                                )
-                                if enum_member:
-                                    model_field.default = enum_member
-                                    enum_member_enum = enum_member.enum
-                                    if enum_member_enum in models:
-                                        continue
-                                    scoped_model_resolver.get(enum_member_enum.path)
-                                    if isinstance(enum_member_enum, Modular):
-                                        enum_member_enum_name = f'{enum_member_enum.module_name}.{enum_member.enum.name}'
-                                    else:
-                                        enum_member_enum_name = enum_member.enum.name
-                                    from_, import_ = full_path = relative(
-                                        model.module_name, enum_member_enum_name
-                                    )
-
-                                    alias = scoped_model_resolver.add(
-                                        full_path, import_
-                                    ).name
-
-                                    name = data_type.reference.short_name
-                                    if from_ and import_ and alias != name:
-                                        enum_member.alias = f'{alias}.{name}'
-
-                                    if init:
-                                        from_ += "."
-                                    imports.append(
-                                        Import(
-                                            from_=from_, import_=import_, alias=alias
-                                        )
-                                    )
+            self.__change_from_import(models, imports, scoped_model_resolver, init)
+            self.__extract_inherited_enum(models)
+            self.__set_reference_default_value_to_field(models)
+            self.__reuse_model(models, require_update_action_models)
+            self.__collapse_root_models(models)
+            self.__set_default_enum_member(models, imports, scoped_model_resolver, init)
 
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
