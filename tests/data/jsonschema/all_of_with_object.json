@@ -10,6 +10,14 @@
     },
     {
       "$ref": "#/definitions/Id"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
     }
   ],
   "type": [
