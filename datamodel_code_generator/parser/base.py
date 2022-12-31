@@ -467,6 +467,8 @@ class Parser(ABC):
         raise NotImplementedError
 
     def __delete_duplicate_models(self, models: List[DataModel]) -> None:
+        model_class_names: Dict[str, DataModel] = {}
+        duplicate_models: Dict[DataModel, DataModel] = {}
         for model in models:
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
@@ -498,6 +500,32 @@ class Parser(ABC):
                                 child.base_classes.remove(base_class)
                         if not child.base_classes:
                             child.set_base_class()
+
+            class_name = model.duplicate_class_name or model.class_name
+            if class_name in model_class_names:
+                model_key = tuple(
+                    to_hashable(v)
+                    for v in (
+                        model.base_classes,
+                        model.extra_template_data,
+                        model.fields,
+                    )
+                )
+
+                target_model_key = tuple(
+                    to_hashable(v)
+                    for v in (
+                        model_class_names[class_name].base_classes,
+                        model_class_names[class_name].extra_template_data,
+                        model_class_names[class_name].fields,
+                    )
+                )
+                if model_key == target_model_key:
+                    duplicate_models[model]
+                    continue
+            model_class_names[class_name] = model
+        for duplicate_model in duplicate_models:
+            models.remove(duplicate_model)
 
     @classmethod
     def __replace_duplicate_name_in_module(cls, models: List[DataModel]) -> None:
