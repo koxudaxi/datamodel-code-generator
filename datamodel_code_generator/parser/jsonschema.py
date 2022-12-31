@@ -163,7 +163,7 @@ class JsonSchemaObject(BaseModel):
             return value.replace('#', '#/')
         return value
 
-    items: Union[List[JsonSchemaObject], JsonSchemaObject, None]
+    items: Union[List[JsonSchemaObject], JsonSchemaObject, bool, None]
     uniqueItems: Optional[bool]
     type: Union[str, List[str], None]
     format: Optional[str]
@@ -800,14 +800,18 @@ class JsonSchemaParser(Parser):
             else:
                 required = not obj.nullable and required
                 nullable = None
+        if isinstance(obj.items, JsonSchemaObject):
+            items: List[JsonSchemaObject] = [obj.items]
+        elif isinstance(obj.items, list):
+            items = obj.items
+        else:
+            items = []
 
         data_types: List[DataType] = [
             self.data_type(
                 data_types=self.parse_list_item(
                     name,
-                    [obj.items]
-                    if isinstance(obj.items, JsonSchemaObject)
-                    else obj.items or [],
+                    items,
                     path,
                     obj,
                     singular_name=singular_name,
@@ -1155,8 +1159,9 @@ class JsonSchemaParser(Parser):
             if isinstance(obj.items, JsonSchemaObject):
                 self.parse_ref(obj.items, path)
             else:
-                for item in obj.items:
-                    self.parse_ref(item, path)
+                if isinstance(obj.items, list):
+                    for item in obj.items:
+                        self.parse_ref(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_ref(obj.additionalProperties, path)
         if obj.patternProperties:
@@ -1180,8 +1185,9 @@ class JsonSchemaParser(Parser):
             if isinstance(obj.items, JsonSchemaObject):
                 self.parse_id(obj.items, path)
             else:
-                for item in obj.items:
-                    self.parse_id(item, path)
+                if isinstance(obj.items, list):
+                    for item in obj.items:
+                        self.parse_id(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_id(obj.additionalProperties, path)
         if obj.patternProperties:
