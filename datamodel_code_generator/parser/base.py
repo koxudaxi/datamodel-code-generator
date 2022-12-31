@@ -12,6 +12,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Sequence,
     Set,
@@ -643,10 +644,11 @@ class Parser(ABC):
         for duplicate in duplicates:
             models.remove(duplicate)
 
-    def __collapse_root_models(self, models: List[DataModel]) -> None:
+    def __collapse_root_models(
+        self, models: List[DataModel], unused_models: List[DataModel]
+    ) -> None:
         if not self.collapse_root_models:
             return None
-        unused_root_models: List[DataModel] = []
         for model in models:
             for model_field in model.fields:
                 reference = model_field.data_type.reference
@@ -662,10 +664,7 @@ class Parser(ABC):
                     model_field.constraints = root_type_field.constraints
 
                     if not reference.children:  # pragma: no cover
-                        unused_root_models.append(reference.source)
-        for model in models:
-            if model in unused_root_models:
-                models.remove(model)
+                        unused_models.append(reference.source)
 
     def __set_default_enum_member(
         self,
@@ -741,7 +740,6 @@ class Parser(ABC):
         )
 
         results: Dict[Tuple[str, ...], Result] = {}
-
         module_key = lambda x: x.module_path
 
         # process in reverse order to correctly establish module levels
@@ -751,10 +749,14 @@ class Parser(ABC):
         )
 
         module_models: List[Tuple[Tuple[str, ...], List[DataModel]]] = []
+        unused_models: List[DataModel] = []
+        model_to_models: Dict[DataModel, List[DataModel]] = {}
 
         for module, models in (
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
+            for model in models:
+                model_to_models[model] = models
             self.__delete_duplicate_models(models)
             self.__replace_duplicate_name_in_module(models)
             module_models.append(
@@ -764,6 +766,13 @@ class Parser(ABC):
                 )
             )
 
+        class Processed(NamedTuple):
+            module: Tuple[str, ...]
+            models: List[DataModel]
+            init: bool
+            imports: Imports
+
+        processed_models: List[Processed] = []
         for module, models in module_models:
             init = False
             if module:
@@ -778,16 +787,22 @@ class Parser(ABC):
             else:
                 module = ('__init__.py',)
 
-            result: List[str] = []
             imports = Imports()
             scoped_model_resolver = ModelResolver()
             self.__change_from_import(models, imports, scoped_model_resolver, init)
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
-            self.__collapse_root_models(models)
+            self.__collapse_root_models(models, unused_models)
             self.__set_default_enum_member(models, imports, scoped_model_resolver, init)
 
+            processed_models.append(Processed(module, models, init, imports))
+
+        for unused_model in unused_models:
+            model_to_models[unused_model].remove(unused_model)
+
+        for module, models, init, imports in processed_models:
+            result: List[str] = []
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
 
