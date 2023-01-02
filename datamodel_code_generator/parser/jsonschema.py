@@ -498,6 +498,7 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         fields: List[DataModelFieldBase] = []
         base_classes: List[Reference] = []
+        required: List[str] = []
         if len(obj.allOf) == 1 and not obj.properties:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
@@ -509,13 +510,17 @@ class JsonSchemaParser(Parser):
             if all_of_item.ref:  # $ref
                 base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
             else:
-                fields.extend(
-                    self.parse_object_fields(
-                        all_of_item,
-                        path,
-                        get_module_name(name, None),
-                    )
+                object_fields = self.parse_object_fields(
+                    all_of_item,
+                    path,
+                    get_module_name(name, None),
                 )
+                if object_fields:
+                    fields.extend(object_fields)
+                else:
+                    if all_of_item.required:
+                        required.extend(all_of_item.required)
+
         if obj.properties:
             fields.extend(
                 self.parse_object_fields(obj, path, get_module_name(name, None))
@@ -524,6 +529,10 @@ class JsonSchemaParser(Parser):
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             self.model_resolver.delete(path)
             return self.data_type(reference=base_classes[0])
+        if required:
+            for field in fields:
+                if field.name in required:
+                    field.required = True
         if self.use_title_as_name and obj.title:
             name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
