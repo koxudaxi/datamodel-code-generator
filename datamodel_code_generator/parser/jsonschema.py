@@ -509,7 +509,6 @@ class JsonSchemaParser(Parser):
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if isinstance(obj.additionalProperties, bool):
-            # TODO check additional property types.
             self.extra_template_data[name][
                 'additionalProperties'
             ] = obj.additionalProperties
@@ -674,7 +673,6 @@ class JsonSchemaParser(Parser):
         if fields or not isinstance(obj.additionalProperties, JsonSchemaObject):
             data_model_type_class = self.data_model_type
         else:
-            special_path = get_special_path('additionalProperties', path)
             fields.append(
                 self.get_object_field(
                     field_name=None,
@@ -683,7 +681,10 @@ class JsonSchemaParser(Parser):
                     field_type=self.data_type(
                         data_types=[
                             self.parse_item(
-                                name, obj.additionalProperties, special_path
+                                # TODO: Improve naming for nested ClassName
+                                name,
+                                obj.additionalProperties,
+                                [*path, 'additionalProperties'],
                             )
                         ],
                         is_dict=True,
