@@ -686,152 +686,152 @@
 </ul>
 <h2 id="installation">Installation</h2>
 <p>To install <code>datamodel-code-generator</code>:</p>
-<div class="codehilite"><pre><span></span><code>$ pip install datamodel-code-generator
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator
 </code></pre></div>
 
 <h3 id="http-extra-option"><code>http</code> extra option</h3>
 <p>If you want to resolve <code>$ref</code> for remote files then you should specify <code>http</code> extra option.</p>
-<div class="codehilite"><pre><span></span><code>$ pip install datamodel-code-generator<span class="o">[</span>http<span class="o">]</span>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator<span class="o">[</span>http<span class="o">]</span>
 </code></pre></div>
 
 <h2 id="usage">Usage</h2>
 <p>The <code>datamodel-codegen</code> command:</p>
-<div class="codehilite"><pre><span></span><code>usage: datamodel-codegen <span class="o">[</span>-h<span class="o">]</span> <span class="o">[</span>--input INPUT<span class="o">]</span> <span class="o">[</span>--url URL<span class="o">]</span>
-                         <span class="o">[</span>--http-headers HTTP_HEADER <span class="o">[</span>HTTP_HEADER ...<span class="o">]]</span>
-                         <span class="o">[</span>--http-ignore-tls<span class="o">]</span>
-                         <span class="o">[</span>--input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
-                         <span class="o">[</span>--openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]]</span>
-                         <span class="o">[</span>--output OUTPUT<span class="o">]</span> <span class="o">[</span>--base-class BASE_CLASS<span class="o">]</span>
-                         <span class="o">[</span>--field-constraints<span class="o">]</span> <span class="o">[</span>--use-annotated<span class="o">]</span>
-                         <span class="o">[</span>--use_non_positive_negative_number_constrained_types<span class="o">]</span>
-                         <span class="o">[</span>--field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]]</span>
-                         <span class="o">[</span>--field-include-all-keys<span class="o">]</span> <span class="o">[</span>--snake-case-field<span class="o">]</span>
-                         <span class="o">[</span>--original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER<span class="o">]</span>
-                         <span class="o">[</span>--strip-default-none<span class="o">]</span>
-                         <span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
-                         <span class="o">[</span>--allow-population-by-field-name<span class="o">]</span>
-                         <span class="o">[</span>--allow-extra-fields<span class="o">]</span>
-                         <span class="o">[</span>--enable-faux-immutability<span class="o">]</span> <span class="o">[</span>--use-default<span class="o">]</span>
-                         <span class="o">[</span>--force-optional<span class="o">]</span> <span class="o">[</span>--strict-nullable<span class="o">]</span>
-                         <span class="o">[</span>--strict-types <span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span> <span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span> ...<span class="o">]]</span>
-                         <span class="o">[</span>--disable-timestamp<span class="o">]</span> <span class="o">[</span>--use-standard-collections<span class="o">]</span>
-                         <span class="o">[</span>--use-generic-container-types<span class="o">]</span>
-                         <span class="o">[</span>--use-schema-description<span class="o">]</span> <span class="o">[</span>--use-field-description<span class="o">]</span> <span class="o">[</span>--reuse-model<span class="o">]</span>
-                         <span class="o">[</span>--collapse-root-models<span class="o">]</span> <span class="o">[</span>--enum-field-as-literal <span class="o">{</span>all,one<span class="o">}]</span>
-                         <span class="o">[</span>--set-default-enum-member<span class="o">]</span>
-                         <span class="o">[</span>--empty-enum-field-name EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
-                         <span class="o">[</span>--capitalise-enum-members<span class="o">]</span>
-                         <span class="o">[</span>--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX<span class="o">]</span>
-                         <span class="o">[</span>--use-subclass-enum<span class="o">]</span>
-                         <span class="o">[</span>--class-name CLASS_NAME<span class="o">]</span> <span class="o">[</span>--use-title-as-name<span class="o">]</span>
-                         <span class="o">[</span>--custom-template-dir CUSTOM_TEMPLATE_DIR<span class="o">]</span>
-                         <span class="o">[</span>--extra-template-data EXTRA_TEMPLATE_DATA<span class="o">]</span>
-                         <span class="o">[</span>--aliases ALIASES<span class="o">]</span>
-                         <span class="o">[</span>--target-python-version <span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}]</span>
-                         <span class="o">[</span>--wrap-string-literal<span class="o">]</span> <span class="o">[</span>--validation<span class="o">]</span>
-                         <span class="o">[</span>--encoding ENCODING<span class="o">]</span> <span class="o">[</span>--debug<span class="o">]</span> <span class="o">[</span>--version<span class="o">]</span>
+<div class="codehilite"><pre><span></span><code>usage:<span class="w"> </span>datamodel-codegen<span class="w"> </span><span class="o">[</span>-h<span class="o">]</span><span class="w"> </span><span class="o">[</span>--input<span class="w"> </span>INPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--url<span class="w"> </span>URL<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]]</span>
+<span class="w">                         </span><span class="o">[</span>--http-ignore-tls<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
+<span class="w">                         </span><span class="o">[</span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
+<span class="w">                         </span><span class="o">[</span>--output<span class="w"> </span>OUTPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--base-class<span class="w"> </span>BASE_CLASS<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--field-constraints<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-annotated<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--use_non_positive_negative_number_constrained_types<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--field-extra-keys<span class="w"> </span>FIELD_EXTRA_KEYS<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS<span class="w"> </span>...<span class="o">]]</span>
+<span class="w">                         </span><span class="o">[</span>--field-include-all-keys<span class="o">]</span><span class="w"> </span><span class="o">[</span>--snake-case-field<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--original-field-name-delimiter<span class="w"> </span>ORIGINAL_FIELD_NAME_DELIMITER<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--strip-default-none<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--allow-population-by-field-name<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--allow-extra-fields<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--enable-faux-immutability<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-default<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--force-optional<span class="o">]</span><span class="w"> </span><span class="o">[</span>--strict-nullable<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--strict-types<span class="w"> </span><span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span><span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
+<span class="w">                         </span><span class="o">[</span>--disable-timestamp<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-standard-collections<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--use-generic-container-types<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--use-schema-description<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-field-description<span class="o">]</span><span class="w"> </span><span class="o">[</span>--reuse-model<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--collapse-root-models<span class="o">]</span><span class="w"> </span><span class="o">[</span>--enum-field-as-literal<span class="w"> </span><span class="o">{</span>all,one<span class="o">}]</span>
+<span class="w">                         </span><span class="o">[</span>--set-default-enum-member<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--empty-enum-field-name<span class="w"> </span>EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--capitalise-enum-members<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--use-subclass-enum<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--class-name<span class="w"> </span>CLASS_NAME<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-title-as-name<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--extra-template-data<span class="w"> </span>EXTRA_TEMPLATE_DATA<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--aliases<span class="w"> </span>ALIASES<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--target-python-version<span class="w"> </span><span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}]</span>
+<span class="w">                         </span><span class="o">[</span>--wrap-string-literal<span class="o">]</span><span class="w"> </span><span class="o">[</span>--validation<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--encoding<span class="w"> </span>ENCODING<span class="o">]</span><span class="w"> </span><span class="o">[</span>--debug<span class="o">]</span><span class="w"> </span><span class="o">[</span>--version<span class="o">]</span>
 
-optional arguments:
-  -h, --help            show this <span class="nb">help</span> message and <span class="nb">exit</span>
-  --input INPUT         Input file/directory <span class="o">(</span>default: stdin<span class="o">)</span>
-  --url URL             Input file URL. <span class="sb">`</span>--input<span class="sb">`</span> is ignore when <span class="sb">`</span>--url<span class="sb">`</span> is
-                        used
-  --http-headers HTTP_HEADER <span class="o">[</span>HTTP_HEADER ...<span class="o">]</span>
-                        Set headers <span class="k">in</span> HTTP requests to the remote host.
-                        <span class="o">(</span>example: <span class="s2">&quot;Authorization: Basic dXNlcjpwYXNz&quot;</span><span class="o">)</span>
-  --http-ignore-tls     Disable verification of the remote host<span class="err">&#39;</span>s TLS
-                        certificate
-  --input-file-type <span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}</span>
-                        Input file <span class="nb">type</span> <span class="o">(</span>default: auto<span class="o">)</span>
-  --openapi-scopes <span class="o">{</span>schemas,paths<span class="o">}</span> <span class="o">[{</span>schemas,paths<span class="o">}</span> ...<span class="o">]</span>
-                        Scopes of OpenAPI model generation <span class="o">(</span>default: schemas<span class="o">)</span>
-  --output OUTPUT       Output file <span class="o">(</span>default: stdout<span class="o">)</span>
-  --base-class BASE_CLASS
-                        Base Class <span class="o">(</span>default: pydantic.BaseModel<span class="o">)</span>
-  --field-constraints   Use field constraints and not con* annotations
-  --use-annotated       Use typing.Annotated <span class="k">for</span> Field<span class="o">()</span>. Also, <span class="sb">`</span>--field-
-                        constraints<span class="sb">`</span> option will be enabled.
-  --use_non_positive_negative_number_constrained_types
-                        Use the Non<span class="o">{</span>Positive,Negative<span class="o">}{</span>FloatInt<span class="o">}</span> types instead of the corresponding con*
-                        constrained types.
-  --field-extra-keys FIELD_EXTRA_KEYS <span class="o">[</span>FIELD_EXTRA_KEYS ...<span class="o">]</span>
-                        Add extra keys to field parameters
-  --field-include-all-keys
-                        Add all keys to field parameters
-  --snake-case-field    Change camel-case field name to snake-case
-  --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER
-                        Set delimiter to convert to snake <span class="k">case</span>. This option only
-                        can be used with --snake-case-field <span class="o">(</span>default: <span class="sb">`</span>_<span class="sb">`</span> <span class="o">)</span>
-  --strip-default-none  Strip default None on fields
-  --disable-appending-item-suffix
-                        Disable appending <span class="sb">`</span>Item<span class="sb">`</span> suffix to model name <span class="k">in</span> an
-                        array
-  --allow-population-by-field-name
-                        Allow population by field name
-  --allow-extra-fields
-                        Allow to pass extra fields. If this flag is not passed,
-                        extra fields are forbidden.
-  --enable-faux-immutability
-                        Enable faux immutability
-  --use-default         Use default value even <span class="k">if</span> a field is required
-  --force-optional      Force optional <span class="k">for</span> required fields
-  --strict-nullable     Treat default field as a non-nullable field <span class="o">(</span>Only
-                        OpenAPI<span class="o">)</span>
-  --strict-types <span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span> <span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span> ...<span class="o">]</span>
-                        Use strict types
-  --disable-timestamp   Disable timestamp on file headers
-  --use-standard-collections
-                        Use standard collections <span class="k">for</span> <span class="nb">type</span> hinting <span class="o">(</span>list, dict<span class="o">)</span>
-  --use-generic-container-types
-                        Use generic container types <span class="k">for</span> <span class="nb">type</span> hinting
-                        <span class="o">(</span>typing.Sequence, typing.Mapping<span class="o">)</span>. If <span class="sb">`</span>--use-standard-
-                        collections<span class="sb">`</span> option is set, <span class="k">then</span> import from
-                        collections.abc instead of typing
-  --use-schema-description
-                        Use schema description to populate class docstring
-  --use-field-description
-                        Use schema description to populate field docstring
-  --reuse-model         Re-use models on the field when a module has the model
-                        with the same content
-  --collapse-root-models
-                        Models generated with a root-type field will be
-                        merged into the models using that root-type model
-  --enum-field-as-literal <span class="o">{</span>all,one<span class="o">}</span>
-                        Parse enum field as literal. all: all enum field <span class="nb">type</span>
-                        are Literal. one: field <span class="nb">type</span> is Literal when an enum
-                        has only one possible value
-  --set-default-enum-member
-                        Set enum members as default values <span class="k">for</span> enum field
-  --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
-  --capitalise-enum-members
-                        Capitalize field names on enum
-  --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
-                        Set field name when enum value is empty <span class="o">(</span>default: <span class="sb">`</span>_<span class="sb">`</span><span class="o">)</span>
-  --use-subclass-enum   Define Enum class as subclass with field <span class="nb">type</span> when enum has
-                        <span class="nb">type</span> <span class="o">(</span>int, float, bytes, str<span class="o">)</span>
-  --class-name CLASS_NAME
-                        Set class name of root model
-  --use-title-as-name   use titles as class names of models
-  --custom-template-dir CUSTOM_TEMPLATE_DIR
-                        Custom template directory
-  --extra-template-data EXTRA_TEMPLATE_DATA
-                        Extra template data
-  --aliases ALIASES     Alias mapping file
-  --target-python-version <span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}</span>
-                        target python version <span class="o">(</span>default: <span class="m">3</span>.7<span class="o">)</span>
-  --wrap-string-literal
-                        Wrap string literal by using black <span class="sb">`</span>experimental-
-                        string-processing<span class="sb">`</span> option <span class="o">(</span>require black <span class="m">20</span>.8b0 or
-                        later<span class="o">)</span>
-  --validation          Enable validation <span class="o">(</span>Only OpenAPI<span class="o">)</span>
-  --encoding ENCODING   The encoding of input and output <span class="o">(</span>default: UTF-8<span class="o">)</span>
-  --debug               show debug message
-  --version             show version
+optional<span class="w"> </span>arguments:
+<span class="w">  </span>-h,<span class="w"> </span>--help<span class="w">            </span>show<span class="w"> </span>this<span class="w"> </span><span class="nb">help</span><span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span><span class="nb">exit</span>
+<span class="w">  </span>--input<span class="w"> </span>INPUT<span class="w">         </span>Input<span class="w"> </span>file/directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>stdin<span class="o">)</span>
+<span class="w">  </span>--url<span class="w"> </span>URL<span class="w">             </span>Input<span class="w"> </span>file<span class="w"> </span>URL.<span class="w"> </span><span class="sb">`</span>--input<span class="sb">`</span><span class="w"> </span>is<span class="w"> </span>ignore<span class="w"> </span>when<span class="w"> </span><span class="sb">`</span>--url<span class="sb">`</span><span class="w"> </span>is
+<span class="w">                        </span>used
+<span class="w">  </span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]</span>
+<span class="w">                        </span>Set<span class="w"> </span>headers<span class="w"> </span><span class="k">in</span><span class="w"> </span>HTTP<span class="w"> </span>requests<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host.
+<span class="w">                        </span><span class="o">(</span>example:<span class="w"> </span><span class="s2">&quot;Authorization: Basic dXNlcjpwYXNz&quot;</span><span class="o">)</span>
+<span class="w">  </span>--http-ignore-tls<span class="w">     </span>Disable<span class="w"> </span>verification<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host<span class="err">&#39;</span>s<span class="w"> </span>TLS
+<span class="w">                        </span>certificate
+<span class="w">  </span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}</span>
+<span class="w">                        </span>Input<span class="w"> </span>file<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>auto<span class="o">)</span>
+<span class="w">  </span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths<span class="o">}</span><span class="w"> </span>...<span class="o">]</span>
+<span class="w">                        </span>Scopes<span class="w"> </span>of<span class="w"> </span>OpenAPI<span class="w"> </span>model<span class="w"> </span>generation<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>schemas<span class="o">)</span>
+<span class="w">  </span>--output<span class="w"> </span>OUTPUT<span class="w">       </span>Output<span class="w"> </span>file<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>stdout<span class="o">)</span>
+<span class="w">  </span>--base-class<span class="w"> </span>BASE_CLASS
+<span class="w">                        </span>Base<span class="w"> </span>Class<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>pydantic.BaseModel<span class="o">)</span>
+<span class="w">  </span>--field-constraints<span class="w">   </span>Use<span class="w"> </span>field<span class="w"> </span>constraints<span class="w"> </span>and<span class="w"> </span>not<span class="w"> </span>con*<span class="w"> </span>annotations
+<span class="w">  </span>--use-annotated<span class="w">       </span>Use<span class="w"> </span>typing.Annotated<span class="w"> </span><span class="k">for</span><span class="w"> </span>Field<span class="o">()</span>.<span class="w"> </span>Also,<span class="w"> </span><span class="sb">`</span>--field-
+<span class="w">                        </span>constraints<span class="sb">`</span><span class="w"> </span>option<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>enabled.
+<span class="w">  </span>--use_non_positive_negative_number_constrained_types
+<span class="w">                        </span>Use<span class="w"> </span>the<span class="w"> </span>Non<span class="o">{</span>Positive,Negative<span class="o">}{</span>FloatInt<span class="o">}</span><span class="w"> </span>types<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>corresponding<span class="w"> </span>con*
+<span class="w">                        </span>constrained<span class="w"> </span>types.
+<span class="w">  </span>--field-extra-keys<span class="w"> </span>FIELD_EXTRA_KEYS<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS<span class="w"> </span>...<span class="o">]</span>
+<span class="w">                        </span>Add<span class="w"> </span>extra<span class="w"> </span>keys<span class="w"> </span>to<span class="w"> </span>field<span class="w"> </span>parameters
+<span class="w">  </span>--field-include-all-keys
+<span class="w">                        </span>Add<span class="w"> </span>all<span class="w"> </span>keys<span class="w"> </span>to<span class="w"> </span>field<span class="w"> </span>parameters
+<span class="w">  </span>--snake-case-field<span class="w">    </span>Change<span class="w"> </span>camel-case<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>to<span class="w"> </span>snake-case
+<span class="w">  </span>--original-field-name-delimiter<span class="w"> </span>ORIGINAL_FIELD_NAME_DELIMITER
+<span class="w">                        </span>Set<span class="w"> </span>delimiter<span class="w"> </span>to<span class="w"> </span>convert<span class="w"> </span>to<span class="w"> </span>snake<span class="w"> </span><span class="k">case</span>.<span class="w"> </span>This<span class="w"> </span>option<span class="w"> </span>only
+<span class="w">                        </span>can<span class="w"> </span>be<span class="w"> </span>used<span class="w"> </span>with<span class="w"> </span>--snake-case-field<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>_<span class="sb">`</span><span class="w"> </span><span class="o">)</span>
+<span class="w">  </span>--strip-default-none<span class="w">  </span>Strip<span class="w"> </span>default<span class="w"> </span>None<span class="w"> </span>on<span class="w"> </span>fields
+<span class="w">  </span>--disable-appending-item-suffix
+<span class="w">                        </span>Disable<span class="w"> </span>appending<span class="w"> </span><span class="sb">`</span>Item<span class="sb">`</span><span class="w"> </span>suffix<span class="w"> </span>to<span class="w"> </span>model<span class="w"> </span>name<span class="w"> </span><span class="k">in</span><span class="w"> </span>an
+<span class="w">                        </span>array
+<span class="w">  </span>--allow-population-by-field-name
+<span class="w">                        </span>Allow<span class="w"> </span>population<span class="w"> </span>by<span class="w"> </span>field<span class="w"> </span>name
+<span class="w">  </span>--allow-extra-fields
+<span class="w">                        </span>Allow<span class="w"> </span>to<span class="w"> </span>pass<span class="w"> </span>extra<span class="w"> </span>fields.<span class="w"> </span>If<span class="w"> </span>this<span class="w"> </span>flag<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>passed,
+<span class="w">                        </span>extra<span class="w"> </span>fields<span class="w"> </span>are<span class="w"> </span>forbidden.
+<span class="w">  </span>--enable-faux-immutability
+<span class="w">                        </span>Enable<span class="w"> </span>faux<span class="w"> </span>immutability
+<span class="w">  </span>--use-default<span class="w">         </span>Use<span class="w"> </span>default<span class="w"> </span>value<span class="w"> </span>even<span class="w"> </span><span class="k">if</span><span class="w"> </span>a<span class="w"> </span>field<span class="w"> </span>is<span class="w"> </span>required
+<span class="w">  </span>--force-optional<span class="w">      </span>Force<span class="w"> </span>optional<span class="w"> </span><span class="k">for</span><span class="w"> </span>required<span class="w"> </span>fields
+<span class="w">  </span>--strict-nullable<span class="w">     </span>Treat<span class="w"> </span>default<span class="w"> </span>field<span class="w"> </span>as<span class="w"> </span>a<span class="w"> </span>non-nullable<span class="w"> </span>field<span class="w"> </span><span class="o">(</span>Only
+<span class="w">                        </span>OpenAPI<span class="o">)</span>
+<span class="w">  </span>--strict-types<span class="w"> </span><span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span><span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span>...<span class="o">]</span>
+<span class="w">                        </span>Use<span class="w"> </span>strict<span class="w"> </span>types
+<span class="w">  </span>--disable-timestamp<span class="w">   </span>Disable<span class="w"> </span>timestamp<span class="w"> </span>on<span class="w"> </span>file<span class="w"> </span>headers
+<span class="w">  </span>--use-standard-collections
+<span class="w">                        </span>Use<span class="w"> </span>standard<span class="w"> </span>collections<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nb">type</span><span class="w"> </span>hinting<span class="w"> </span><span class="o">(</span>list,<span class="w"> </span>dict<span class="o">)</span>
+<span class="w">  </span>--use-generic-container-types
+<span class="w">                        </span>Use<span class="w"> </span>generic<span class="w"> </span>container<span class="w"> </span>types<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nb">type</span><span class="w"> </span>hinting
+<span class="w">                        </span><span class="o">(</span>typing.Sequence,<span class="w"> </span>typing.Mapping<span class="o">)</span>.<span class="w"> </span>If<span class="w"> </span><span class="sb">`</span>--use-standard-
+<span class="w">                        </span>collections<span class="sb">`</span><span class="w"> </span>option<span class="w"> </span>is<span class="w"> </span>set,<span class="w"> </span><span class="k">then</span><span class="w"> </span>import<span class="w"> </span>from
+<span class="w">                        </span>collections.abc<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>typing
+<span class="w">  </span>--use-schema-description
+<span class="w">                        </span>Use<span class="w"> </span>schema<span class="w"> </span>description<span class="w"> </span>to<span class="w"> </span>populate<span class="w"> </span>class<span class="w"> </span>docstring
+<span class="w">  </span>--use-field-description
+<span class="w">                        </span>Use<span class="w"> </span>schema<span class="w"> </span>description<span class="w"> </span>to<span class="w"> </span>populate<span class="w"> </span>field<span class="w"> </span>docstring
+<span class="w">  </span>--reuse-model<span class="w">         </span>Re-use<span class="w"> </span>models<span class="w"> </span>on<span class="w"> </span>the<span class="w"> </span>field<span class="w"> </span>when<span class="w"> </span>a<span class="w"> </span>module<span class="w"> </span>has<span class="w"> </span>the<span class="w"> </span>model
+<span class="w">                        </span>with<span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>content
+<span class="w">  </span>--collapse-root-models
+<span class="w">                        </span>Models<span class="w"> </span>generated<span class="w"> </span>with<span class="w"> </span>a<span class="w"> </span>root-type<span class="w"> </span>field<span class="w"> </span>will<span class="w"> </span>be
+<span class="w">                        </span>merged<span class="w"> </span>into<span class="w"> </span>the<span class="w"> </span>models<span class="w"> </span>using<span class="w"> </span>that<span class="w"> </span>root-type<span class="w"> </span>model
+<span class="w">  </span>--enum-field-as-literal<span class="w"> </span><span class="o">{</span>all,one<span class="o">}</span>
+<span class="w">                        </span>Parse<span class="w"> </span>enum<span class="w"> </span>field<span class="w"> </span>as<span class="w"> </span>literal.<span class="w"> </span>all:<span class="w"> </span>all<span class="w"> </span>enum<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span>
+<span class="w">                        </span>are<span class="w"> </span>Literal.<span class="w"> </span>one:<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>is<span class="w"> </span>Literal<span class="w"> </span>when<span class="w"> </span>an<span class="w"> </span>enum
+<span class="w">                        </span>has<span class="w"> </span>only<span class="w"> </span>one<span class="w"> </span>possible<span class="w"> </span>value
+<span class="w">  </span>--set-default-enum-member
+<span class="w">                        </span>Set<span class="w"> </span>enum<span class="w"> </span>members<span class="w"> </span>as<span class="w"> </span>default<span class="w"> </span>values<span class="w"> </span><span class="k">for</span><span class="w"> </span>enum<span class="w"> </span>field
+<span class="w">  </span>--empty-enum-field-name<span class="w"> </span>EMPTY_ENUM_FIELD_NAME
+<span class="w">  </span>--capitalise-enum-members
+<span class="w">                        </span>Capitalize<span class="w"> </span>field<span class="w"> </span>names<span class="w"> </span>on<span class="w"> </span>enum
+<span class="w">  </span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX
+<span class="w">                        </span>Set<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>when<span class="w"> </span>enum<span class="w"> </span>value<span class="w"> </span>is<span class="w"> </span>empty<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>_<span class="sb">`</span><span class="o">)</span>
+<span class="w">  </span>--use-subclass-enum<span class="w">   </span>Define<span class="w"> </span>Enum<span class="w"> </span>class<span class="w"> </span>as<span class="w"> </span>subclass<span class="w"> </span>with<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>when<span class="w"> </span>enum<span class="w"> </span>has
+<span class="w">                        </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>int,<span class="w"> </span>float,<span class="w"> </span>bytes,<span class="w"> </span>str<span class="o">)</span>
+<span class="w">  </span>--class-name<span class="w"> </span>CLASS_NAME
+<span class="w">                        </span>Set<span class="w"> </span>class<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>root<span class="w"> </span>model
+<span class="w">  </span>--use-title-as-name<span class="w">   </span>use<span class="w"> </span>titles<span class="w"> </span>as<span class="w"> </span>class<span class="w"> </span>names<span class="w"> </span>of<span class="w"> </span>models
+<span class="w">  </span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR
+<span class="w">                        </span>Custom<span class="w"> </span>template<span class="w"> </span>directory
+<span class="w">  </span>--extra-template-data<span class="w"> </span>EXTRA_TEMPLATE_DATA
+<span class="w">                        </span>Extra<span class="w"> </span>template<span class="w"> </span>data
+<span class="w">  </span>--aliases<span class="w"> </span>ALIASES<span class="w">     </span>Alias<span class="w"> </span>mapping<span class="w"> </span>file
+<span class="w">  </span>--target-python-version<span class="w"> </span><span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9<span class="o">}</span>
+<span class="w">                        </span>target<span class="w"> </span>python<span class="w"> </span>version<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="m">3</span>.7<span class="o">)</span>
+<span class="w">  </span>--wrap-string-literal
+<span class="w">                        </span>Wrap<span class="w"> </span>string<span class="w"> </span>literal<span class="w"> </span>by<span class="w"> </span>using<span class="w"> </span>black<span class="w"> </span><span class="sb">`</span>experimental-
+<span class="w">                        </span>string-processing<span class="sb">`</span><span class="w"> </span>option<span class="w"> </span><span class="o">(</span>require<span class="w"> </span>black<span class="w"> </span><span class="m">20</span>.8b0<span class="w"> </span>or
+<span class="w">                        </span>later<span class="o">)</span>
+<span class="w">  </span>--validation<span class="w">          </span>Enable<span class="w"> </span>validation<span class="w"> </span><span class="o">(</span>Only<span class="w"> </span>OpenAPI<span class="o">)</span>
+<span class="w">  </span>--encoding<span class="w"> </span>ENCODING<span class="w">   </span>The<span class="w"> </span>encoding<span class="w"> </span>of<span class="w"> </span>input<span class="w"> </span>and<span class="w"> </span>output<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>UTF-8<span class="o">)</span>
+<span class="w">  </span>--debug<span class="w">               </span>show<span class="w"> </span>debug<span class="w"> </span>message
+<span class="w">  </span>--version<span class="w">             </span>show<span class="w"> </span>version
 </code></pre></div>
 
 <h2 id="example">Example</h2>
 <h3 id="openapi">OpenAPI</h3>
-<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input api.yaml --output model.py
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>api.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
 </code></pre></div>
 
 <details>
@@ -839,152 +839,152 @@ optional arguments:
 <pre>
 <code>
 
-<div class="codehilite"><pre><span></span><code><span class="nt">openapi</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.0.0&quot;</span><span class="w"></span>
-<span class="nt">info</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0.0</span><span class="w"></span>
-<span class="w">  </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Swagger Petstore</span><span class="w"></span>
-<span class="w">  </span><span class="nt">license</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MIT</span><span class="w"></span>
-<span class="nt">servers</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://petstore.swagger.io/v1</span><span class="w"></span>
-<span class="nt">paths</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">/pets</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">get</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">List all pets</span><span class="w"></span>
-<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">listPets</span><span class="w"></span>
-<span class="w">      </span><span class="nt">tags</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span><span class="w"></span>
-<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">limit</span><span class="w"></span>
-<span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">query</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">How many items to return at one time (max 100)</span><span class="w"></span>
-<span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"></span>
-<span class="w">          </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span><span class="w"></span>
-<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span><span class="w"></span>
-<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A paged array of pets</span><span class="w"></span>
-<span class="w">          </span><span class="nt">headers</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">x-next</span><span class="p">:</span><span class="w"></span>
-<span class="w">              </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A link to the next page of responses</span><span class="w"></span>
-<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
-<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span><span class="w"></span>
-<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
-<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span><span class="w"></span>
-<span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">uri</span><span class="p">:</span><span class="w"></span>
-<span class="w">                    </span><span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span><span class="w"></span>
-<span class="w">    </span><span class="nt">post</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create a pet</span><span class="w"></span>
-<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">createPets</span><span class="w"></span>
-<span class="w">      </span><span class="nt">tags</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span><span class="w"></span>
-<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="s">&#39;201&#39;</span><span class="p p-Indicator">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Null response</span><span class="w"></span>
-<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span><span class="w"></span>
-<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
-<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span><span class="w"></span>
-<span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">uri</span><span class="p">:</span><span class="w"></span>
-<span class="w">                    </span><span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span><span class="w"></span>
-<span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/pets/{petId}</span><span class="p p-Indicator">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">get</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Info for a specific pet</span><span class="w"></span>
-<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">showPetById</span><span class="w"></span>
-<span class="w">      </span><span class="nt">tags</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span><span class="w"></span>
-<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">petId</span><span class="w"></span>
-<span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">path</span><span class="w"></span>
-<span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">The id of the pet to retrieve</span><span class="w"></span>
-<span class="w">          </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">      </span><span class="nt">responses</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Expected response to a valid request</span><span class="w"></span>
-<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
-<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span><span class="w"></span>
-<span class="w">          </span><span class="nt">content</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span><span class="w"></span>
-<span class="w">              </span><span class="nt">schema</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">uri</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">Fn::Sub</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span><span class="w"></span>
-<span class="w">      </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span><span class="w"></span>
-<span class="w">      </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span><span class="w"></span>
-<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span><span class="w"></span>
-<span class="nt">components</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">schemas</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">Pet</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">required</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">id</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">name</span><span class="w"></span>
-<span class="w">      </span><span class="nt">properties</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">id</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span><span class="w"></span>
-<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int64</span><span class="w"></span>
-<span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">        </span><span class="nt">tag</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">    </span><span class="nt">Pets</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span><span class="w"></span>
-<span class="w">      </span><span class="nt">items</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pet&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="nt">Error</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">required</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code</span><span class="w"></span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">message</span><span class="w"></span>
-<span class="w">      </span><span class="nt">properties</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">code</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span><span class="w"></span>
-<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span><span class="w"></span>
-<span class="w">        </span><span class="nt">message</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">    </span><span class="nt">apis</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span><span class="w"></span>
-<span class="w">      </span><span class="nt">items</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object</span><span class="w"></span>
-<span class="w">        </span><span class="nt">properties</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="nt">apiKey</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a dataset parameter value</span><span class="w"></span>
-<span class="w">          </span><span class="nt">apiVersionNumber</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a version parameter value</span><span class="w"></span>
-<span class="w">          </span><span class="nt">apiUrl</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span><span class="w"></span>
-<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;The</span><span class="nv"> </span><span class="s">URL</span><span class="nv"> </span><span class="s">describing</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">dataset&#39;s</span><span class="nv"> </span><span class="s">fields&quot;</span><span class="w"></span>
-<span class="w">          </span><span class="nt">apiDocumentationUrl</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span><span class="w"></span>
-<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span><span class="w"></span>
-<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A URL to the API console for each API</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="nt">openapi</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.0.0&quot;</span>
+<span class="nt">info</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0.0</span>
+<span class="w">  </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Swagger Petstore</span>
+<span class="w">  </span><span class="nt">license</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MIT</span>
+<span class="nt">servers</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://petstore.swagger.io/v1</span>
+<span class="nt">paths</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">/pets</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">get</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">List all pets</span>
+<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">listPets</span>
+<span class="w">      </span><span class="nt">tags</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span>
+<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">limit</span>
+<span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">query</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">How many items to return at one time (max 100)</span>
+<span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">          </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span>
+<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span>
+<span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A paged array of pets</span>
+<span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">x-next</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A link to the next page of responses</span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span>
+<span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
+<span class="w">                  </span><span class="nt">uri</span><span class="p">:</span>
+<span class="w">                    </span><span class="nt">Fn::Sub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
+<span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
+<span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
+<span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
+<span class="w">    </span><span class="nt">post</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create a pet</span>
+<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">createPets</span>
+<span class="w">      </span><span class="nt">tags</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span>
+<span class="w">        </span><span class="s">&#39;201&#39;</span><span class="p p-Indicator">:</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Null response</span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span>
+<span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
+<span class="w">                  </span><span class="nt">uri</span><span class="p">:</span>
+<span class="w">                    </span><span class="nt">Fn::Sub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
+<span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
+<span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
+<span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
+<span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/pets/{petId}</span><span class="p p-Indicator">:</span>
+<span class="w">    </span><span class="nt">get</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Info for a specific pet</span>
+<span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">showPetById</span>
+<span class="w">      </span><span class="nt">tags</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span>
+<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">petId</span>
+<span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">path</span>
+<span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">The id of the pet to retrieve</span>
+<span class="w">          </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">      </span><span class="nt">responses</span><span class="p">:</span>
+<span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Expected response to a valid request</span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
+<span class="w">          </span><span class="nt">content</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span>
+<span class="w">    </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">uri</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">Fn::Sub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
+<span class="w">      </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
+<span class="w">      </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
+<span class="nt">components</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">schemas</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">Pet</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">required</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">id</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">name</span>
+<span class="w">      </span><span class="nt">properties</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">id</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span>
+<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int64</span>
+<span class="w">        </span><span class="nt">name</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">        </span><span class="nt">tag</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">    </span><span class="nt">Pets</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span>
+<span class="w">      </span><span class="nt">items</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pet&quot;</span>
+<span class="w">    </span><span class="nt">Error</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">required</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">message</span>
+<span class="w">      </span><span class="nt">properties</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">code</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span>
+<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span>
+<span class="w">        </span><span class="nt">message</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">    </span><span class="nt">apis</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span>
+<span class="w">      </span><span class="nt">items</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object</span>
+<span class="w">        </span><span class="nt">properties</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">apiKey</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a dataset parameter value</span>
+<span class="w">          </span><span class="nt">apiVersionNumber</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a version parameter value</span>
+<span class="w">          </span><span class="nt">apiUrl</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;The</span><span class="nv"> </span><span class="s">URL</span><span class="nv"> </span><span class="s">describing</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">dataset&#39;s</span><span class="nv"> </span><span class="s">fields&quot;</span>
+<span class="w">          </span><span class="nt">apiDocumentationUrl</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
+<span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span>
+<span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A URL to the API console for each API</span>
 </code></pre></div>
 
 

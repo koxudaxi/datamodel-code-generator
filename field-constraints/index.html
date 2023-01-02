@@ -540,20 +540,20 @@ The option resolves the problem.</p>
 <p>Convert simple JSON Schema <code>model.json</code> to pydantic model <code>model.py</code></p>
 <p>Input JSON Schema</p>
 <p><code>model.json</code></p>
-<div class="codehilite"><pre><span></span><code><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w">  </span><span class="s2">&quot;object&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;maxLength&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="w">  </span><span class="p">},</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w">  </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;maxLength&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+<span class="p">}</span>
 </code></pre></div>
 
 <h3 id="without-field-constraints-option">Without <code>--field-constraints</code> option</h3>
-<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input a.json --input-file-type jsonschema &gt; model.py 
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>a.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>&gt;<span class="w"> </span>model.py<span class="w"> </span>
 </code></pre></div>
 
 <p>Generated Model</p>
@@ -572,15 +572,15 @@ The option resolves the problem.</p>
 </code></pre></div>
 
 <p>Run mypy...</p>
-<div class="codehilite"><pre><span></span><code>$ mypy model.py 
-model.py:3: error: Invalid <span class="nb">type</span> comment or annotation
-model.py:3: note: Suggestion: use constr<span class="o">[</span>...<span class="o">]</span> instead of constr<span class="o">(</span>...<span class="o">)</span>
-Found <span class="m">1</span> error <span class="k">in</span> <span class="m">1</span> file <span class="o">(</span>checked <span class="m">1</span> <span class="nb">source</span> file<span class="o">)</span>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>mypy<span class="w"> </span>model.py<span class="w"> </span>
+model.py:3:<span class="w"> </span>error:<span class="w"> </span>Invalid<span class="w"> </span><span class="nb">type</span><span class="w"> </span>comment<span class="w"> </span>or<span class="w"> </span>annotation
+model.py:3:<span class="w"> </span>note:<span class="w"> </span>Suggestion:<span class="w"> </span>use<span class="w"> </span>constr<span class="o">[</span>...<span class="o">]</span><span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>constr<span class="o">(</span>...<span class="o">)</span>
+Found<span class="w"> </span><span class="m">1</span><span class="w"> </span>error<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>file<span class="w"> </span><span class="o">(</span>checked<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>file<span class="o">)</span>
 </code></pre></div>
 
 <p>mypy show errors...</p>
 <h3 id="with-field-constraints-option">With <code>--field-constraints</code> option</h3>
-<div class="codehilite"><pre><span></span><code>$ datamodel-codegen --input model.json --input-file-type jsonschema --field-constraints &gt; model.py 
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--field-constraints<span class="w"> </span>&gt;<span class="w"> </span>model.py<span class="w"> </span>
 </code></pre></div>
 
 <p>Generated Model</p>
@@ -599,8 +599,8 @@ Found <span class="m">1</span> error <span class="k">in</span> <span class="m">1
 </code></pre></div>
 
 <p>Run mypy...</p>
-<div class="codehilite"><pre><span></span><code>$ mypy model.py 
-Success: no issues found <span class="k">in</span> <span class="m">1</span> <span class="nb">source</span> file
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>mypy<span class="w"> </span>model.py<span class="w"> </span>
+Success:<span class="w"> </span>no<span class="w"> </span>issues<span class="w"> </span>found<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>file
 </code></pre></div>
 
 <h2 id="related-issues">Related issues</h2>
