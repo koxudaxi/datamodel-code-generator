@@ -22,6 +22,8 @@ components:
         type:
           type: string
           pattern: service
+        name:
+          type: string
       allOf:
         - $ref: '#/components/schemas/Foo'
         - required:
