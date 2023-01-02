@@ -461,7 +461,7 @@ class JsonSchemaParser(Parser):
                 or field.enum
             )
         ):
-            constraints = field.dict()
+            constraints: Optional[Mapping[str, Any]] = field.dict()
         else:
             constraints = None
         return self.data_model_field_type(
