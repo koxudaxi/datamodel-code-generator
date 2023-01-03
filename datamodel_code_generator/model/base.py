@@ -75,6 +75,8 @@ class DataModelFieldBase(_BaseModel):
 
         if not type_hint:
             return OPTIONAL
+        elif self.data_type.is_optional and self.data_type.type != 'Any':
+            return type_hint
         elif self.nullable is not None:
             if self.nullable:
                 if self.data_type.use_union_operator:
