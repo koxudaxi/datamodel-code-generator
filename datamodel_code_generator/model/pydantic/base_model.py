@@ -113,6 +113,9 @@ class DataModelField(DataModelFieldBase):
         if self.use_field_description:
             data.pop('description', None)  # Description is part of field docstring
 
+        if self.const:
+            data['const'] = True
+
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
         )

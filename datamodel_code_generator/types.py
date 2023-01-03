@@ -413,3 +413,21 @@ class DataTypeManager(ABC):
         return self.data_type.from_import(
             Import.from_full_path(full_path), is_custom_type=is_custom_type
         )
+
+    def get_data_type_from_value(self, value: Any) -> DataType:
+        type_: Optional[Types] = None
+        if isinstance(value, str):
+            type_ = Types.string
+        elif isinstance(value, bool):
+            type_ = Types.boolean
+        elif isinstance(value, int):
+            type_ = Types.integer
+        elif isinstance(value, float):
+            type_ = Types.float
+        elif isinstance(value, dict):
+            return self.data_type.from_import(IMPORT_DICT)
+        elif isinstance(value, list):
+            return self.data_type.from_import(IMPORT_LIST)
+        else:
+            type_ = Types.any
+        return self.get_data_type(type_)

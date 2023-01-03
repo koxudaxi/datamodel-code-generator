@@ -284,6 +284,7 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'description',
     'discriminator',
     'title',
+    'const',
 }
 
 EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
@@ -486,6 +487,10 @@ class JsonSchemaParser(Parser):
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:
+            if 'const' in obj.extras:
+                return self.data_type_manager.get_data_type_from_value(
+                    obj.extras['const']
+                )
             return self.data_type_manager.get_data_type(
                 Types.any,
             )
