@@ -35,7 +35,7 @@ import pydantic
 from packaging import version
 from pydantic import BaseModel, validator
 
-from datamodel_code_generator import cached_property
+from datamodel_code_generator import Protocol, cached_property, runtime_checkable
 
 if TYPE_CHECKING:
     from pydantic.typing import AbstractSetIntStr, DictStrAny, MappingIntStrAny

@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_OPTIONAL, Import
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.types import DataType, chain_as_tuple
+from datamodel_code_generator.types import DataType, Nullable, chain_as_tuple
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
@@ -175,7 +175,7 @@ class BaseClassDataType(DataType):
 UNDEFINED: Any = object()
 
 
-class DataModel(TemplateBase, ABC):
+class DataModel(TemplateBase, Nullable, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ''
     BASE_CLASS: ClassVar[str] = ''
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()
@@ -194,6 +194,7 @@ class DataModel(TemplateBase, ABC):
         path: Optional[Path] = None,
         description: Optional[str] = None,
         default: Any = UNDEFINED,
+        nullable: bool = False,
     ) -> None:
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
@@ -245,6 +246,7 @@ class DataModel(TemplateBase, ABC):
 
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
         self.default: Any = default
+        self._nullable: bool = nullable
 
     def _validate_fields(
         self, fields: List[DataModelFieldBase]
@@ -334,6 +336,10 @@ class DataModel(TemplateBase, ABC):
         for field in self.fields:
             yield from field.data_type.all_data_types
         yield from self.base_classes
+
+    @property
+    def nullable(self) -> bool:
+        return self._nullable
 
     @cached_property
     def path(self) -> str:

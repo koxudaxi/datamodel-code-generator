@@ -64,6 +64,13 @@ class Modular(Protocol):
         raise NotImplementedError
 
 
+@runtime_checkable
+class Nullable(Protocol):
+    @property
+    def nullable(self) -> bool:
+        raise NotImplementedError
+
+
 class DataType(_BaseModel):
     class Config:
         extra = 'forbid'
@@ -267,6 +274,10 @@ class DataType(_BaseModel):
                     # TODO support strict Any
                     # type_ = 'Any'
                     type_ = ''
+        if self.reference:
+            source = self.reference.source
+            if isinstance(source, Nullable) and source.nullable:
+                self.is_optional = True
         if self.reference and self.python_version == PythonVersion.PY_36:
             type_ = f"'{type_}'"
         if self.is_list:

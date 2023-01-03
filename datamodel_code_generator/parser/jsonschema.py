@@ -246,6 +246,10 @@ class JsonSchemaObject(BaseModel):
             return get_ref_type(self.ref)
         return None  # pragma: no cover
 
+    @cached_property
+    def type_has_null(self) -> bool:
+        return isinstance(self.type, list) and "null" in self.type
+
 
 @lru_cache()
 def get_ref_type(ref: str) -> JSONReference:
@@ -703,6 +707,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            nullable=obj.type_has_null,
         )
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
@@ -935,6 +940,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            nullable=obj.type_has_null,
         )
         self.results.append(data_model_root)
         return self.data_type(reference=reference)
@@ -1008,6 +1014,7 @@ class JsonSchemaParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
+            nullable=obj.type_has_null,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
@@ -1136,6 +1143,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             default=obj.default if obj.has_default else UNDEFINED,
+            nullable=obj.type_has_null,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
