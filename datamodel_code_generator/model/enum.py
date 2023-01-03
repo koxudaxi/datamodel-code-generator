@@ -46,6 +46,7 @@ class Enum(DataModel):
         description: Optional[str] = None,
         type_: Optional[Types] = None,
         default: Any = UNDEFINED,
+        nullable: bool = False,
     ):
 
         super().__init__(
@@ -60,6 +61,7 @@ class Enum(DataModel):
             path=path,
             description=description,
             default=default,
+            nullable=nullable,
         )
 
         if not base_classes and type_:

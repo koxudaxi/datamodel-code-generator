@@ -152,6 +152,7 @@ class BaseModel(DataModel):
         path: Optional[Path] = None,
         description: Optional[str] = None,
         default: Any = UNDEFINED,
+        nullable: bool = False,
     ):
 
         methods: List[str] = [field.method for field in fields if field.method]
@@ -168,6 +169,7 @@ class BaseModel(DataModel):
             path=path,
             description=description,
             default=default,
+            nullable=nullable,
         )
 
         config_parameters: Dict[str, Any] = {}
