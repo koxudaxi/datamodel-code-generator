@@ -8,7 +8,7 @@
       "description": "The person's first name."
     },
     "lastName": {
-      "type": "string",
+      "type": ["string", "null"],
       "description": "The person's last name."
     },
     "age": {
