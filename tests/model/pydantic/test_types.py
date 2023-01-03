@@ -392,5 +392,5 @@ def test_data_type_type_hint():
         (None, DataTypeManager().get_data_type_from_full_path('typing.Any', False)),
     ],
 )
-def test_get_data_type(types, data_type):
+def test_get_data_type_from_value(types, data_type):
     assert DataTypeManager().get_data_type_from_value(types) == data_type
