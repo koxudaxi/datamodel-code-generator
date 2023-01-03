@@ -372,3 +372,25 @@ def test_data_type_type_hint():
         DataType(type='constr', is_func=True, kwargs={'min_length': 10}).type_hint
         == 'constr(min_length=10)'
     )
+
+
+@pytest.mark.parametrize(
+    'types,data_type',
+    [
+        ('string', DataType(type='str')),
+        (10, DataType(type='int')),
+        (20.3, DataType(type='float')),
+        (True, DataType(type='bool')),
+        (
+            [1, 2, 3],
+            DataTypeManager().get_data_type_from_full_path('typing.List', False),
+        ),
+        (
+            {'a': 1, 'b': 2, 'c': 3},
+            DataTypeManager().get_data_type_from_full_path('typing.Dict', False),
+        ),
+        (None, DataTypeManager().get_data_type_from_full_path('typing.Any', False)),
+    ],
+)
+def test_get_data_type(types, data_type):
+    assert DataTypeManager().get_data_type_from_value(types) == data_type

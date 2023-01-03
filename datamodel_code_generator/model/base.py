@@ -53,6 +53,7 @@ class DataModelFieldBase(_BaseModel):
     use_annotated: bool = False
     has_default: bool = False
     use_field_description: bool = False
+    const: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 
@@ -62,6 +63,11 @@ class DataModelFieldBase(_BaseModel):
             super().__init__(**data)
             if self.data_type.reference or self.data_type.data_types:
                 self.data_type.parent = self
+            if 'const' in self.extras:
+                self.default = self.extras['const']
+                self.const = True
+                self.required = False
+                self.nullable = False
 
     @property
     def type_hint(self) -> str:
