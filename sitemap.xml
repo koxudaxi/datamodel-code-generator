@@ -2,52 +2,52 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/development-contributing/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/field-constraints/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/formatting/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/jsondata/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/jsonschema/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/openapi/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/support-data-types/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/using_as_module/</loc>
-         <lastmod>2023-01-03</lastmod>
+         <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
