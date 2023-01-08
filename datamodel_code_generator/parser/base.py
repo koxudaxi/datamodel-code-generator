@@ -799,7 +799,7 @@ class Parser(ABC):
             processed_models.append(Processed(module, models, init, imports))
 
         for unused_model in unused_models:
-            if unused_model in model_to_models[unused_model]:  # pragma: no cover
+            if unused_model in model_to_models[unused_model]:
                 model_to_models[unused_model].remove(unused_model)
 
         for module, models, init, imports in processed_models:
