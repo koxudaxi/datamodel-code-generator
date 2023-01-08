@@ -1,4 +1,5 @@
 import re
+import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
@@ -85,7 +86,7 @@ def dump_templates(templates: List[DataModel]) -> str:
 ReferenceMapSet = Dict[str, Set[str]]
 SortedDataModels = Dict[str, DataModel]
 
-MAX_RECURSION_COUNT: int = 100
+MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
 
 def sort_data_models(
@@ -126,7 +127,7 @@ def sort_data_models(
                     require_update_action_models,
                     recursion_count - 1,
                 )
-            except RecursionError:
+            except RecursionError:  # pragma: no cover
                 pass
 
         # sort on base_class dependency
