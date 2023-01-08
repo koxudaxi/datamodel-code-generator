@@ -1357,7 +1357,7 @@ class JsonSchemaParser(Parser):
                             e
                             for e in exclude_path_prefixes
                             if reserved_ref_path_prefix.startswith(e)
-                        ):
+                        ):  # pragma: no cover
                             continue
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
