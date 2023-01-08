@@ -4388,7 +4388,7 @@ def test_main_openapi_reference_to_object_properties():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_reference_to_object_properties_reuse_model():
+def test_main_openapi_reference_to_object_properties_collapse_root_models():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -4399,6 +4399,7 @@ def test_main_openapi_reference_to_object_properties_reuse_model():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--collapse-root-models',
             ]
         )
         assert return_code == Exit.OK
@@ -4406,7 +4407,7 @@ def test_main_openapi_reference_to_object_properties_reuse_model():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH
-                / 'main_openapi_reference_to_object_properties'
+                / 'main_openapi_reference_to_object_properties_collapse_root_models'
                 / 'output.py'
             ).read_text()
         )
