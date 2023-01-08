@@ -466,3 +466,9 @@ class OpenAPIParser(JsonSchemaParser):
                                 raw_operation,
                                 [*path, operation_name],
                             )
+
+        if OpenAPIScope.Schemas not in self.open_api_scopes:
+            exclude_path_prefixes: Optional[List[str]] = ['components/schemas/']
+        else:
+            exclude_path_prefixes = None
+        self._resolve_unparsed_json_pointer(exclude_path_prefixes)
