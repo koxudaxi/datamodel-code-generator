@@ -467,7 +467,7 @@ class Parser(ABC):
         raise NotImplementedError
 
     def __delete_duplicate_models(self, models: List[DataModel]) -> None:
-        for model in models:
+        for model in models[:]:
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
 
@@ -493,7 +493,7 @@ class Parser(ABC):
                 for child in model.reference.children:
                     # inheritance model
                     if isinstance(child, DataModel):
-                        for base_class in child.base_classes:
+                        for base_class in child.base_classes[:]:
                             if base_class.reference == model.reference:
                                 child.base_classes.remove(base_class)
                         if not child.base_classes:
@@ -561,7 +561,7 @@ class Parser(ABC):
 
     @classmethod
     def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
-        for model in models:
+        for model in models[:]:
             if model.fields:
                 continue
             enums: List[Enum] = []
@@ -603,7 +603,7 @@ class Parser(ABC):
             return None
         model_cache: Dict[Tuple[str, ...], Reference] = {}
         duplicates = []
-        for model in models:
+        for model in models[:]:
             model_key = tuple(
                 to_hashable(v)
                 for v in (
@@ -799,7 +799,8 @@ class Parser(ABC):
             processed_models.append(Processed(module, models, init, imports))
 
         for unused_model in unused_models:
-            model_to_models[unused_model].remove(unused_model)
+            if unused_model in model_to_models[unused_model]:
+                model_to_models[unused_model].remove(unused_model)
 
         for module, models, init, imports in processed_models:
             result: List[str] = []
