@@ -1,4 +1,5 @@
 import re
+import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
@@ -85,7 +86,7 @@ def dump_templates(templates: List[DataModel]) -> str:
 ReferenceMapSet = Dict[str, Set[str]]
 SortedDataModels = Dict[str, DataModel]
 
-MAX_RECURSION_COUNT: int = 100
+MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
 
 def sort_data_models(
@@ -98,6 +99,7 @@ def sort_data_models(
         sorted_data_models = OrderedDict()
     if require_update_action_models is None:
         require_update_action_models = []
+    sorted_model_count: int = len(sorted_data_models)
 
     unresolved_references: List[DataModel] = []
     for model in unsorted_data_models:
@@ -117,7 +119,7 @@ def sort_data_models(
         else:
             unresolved_references.append(model)
     if unresolved_references:
-        if recursion_count:
+        if sorted_model_count != len(sorted_data_models) and recursion_count:
             try:
                 return sort_data_models(
                     unresolved_references,
@@ -125,7 +127,7 @@ def sort_data_models(
                     require_update_action_models,
                     recursion_count - 1,
                 )
-            except RecursionError:
+            except RecursionError:  # pragma: no cover
                 pass
 
         # sort on base_class dependency
@@ -142,7 +144,7 @@ def sort_data_models(
                 if indexes:
                     ordered_models.append(
                         (
-                            min(indexes),
+                            max(indexes),
                             model,
                         )
                     )
@@ -172,12 +174,10 @@ def sort_data_models(
             update_action_parent = set(require_update_action_models).intersection(
                 base_models
             )
-            if not unresolved_model and update_action_parent:
-                sorted_data_models[model.path] = model
-                require_update_action_models.append(model.path)
-                continue
             if not unresolved_model:
                 sorted_data_models[model.path] = model
+                if update_action_parent:
+                    require_update_action_models.append(model.path)
                 continue
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
