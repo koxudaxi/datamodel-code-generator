@@ -36,6 +36,8 @@ class User(BaseModel):
     fax: Optional[List[constr(min_length=3)]] = None
     height: Optional[Union[conint(ge=1, le=300), confloat(ge=1.0, le=300.0)]] = None
     weight: Optional[Union[confloat(ge=1.0, le=1000.0), conint(ge=1, le=1000)]] = None
+    age: Optional[conint(le=200, gt=0)] = None
+    rating: Optional[confloat(le=5.0, gt=0.0)] = None
 
 
 class Users(BaseModel):

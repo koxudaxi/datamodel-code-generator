@@ -167,8 +167,18 @@ components:
             type:
               - number
               - integer
-            minimum: 1
-            maximum: 1000
+            minimum: 1.0
+            maximum: 1000.0
+          age:
+            type: integer
+            minimum: 0.0
+            maximum: 200.0
+            exclusiveMinimum: true
+          rating:
+            type: number
+            minimum: 0
+            exclusiveMinimum: True
+            maximum: 5
 
     Id:
       type: string
