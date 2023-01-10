@@ -1335,7 +1335,9 @@ class JsonSchemaParser(Parser):
 
         self._resolve_unparsed_json_pointer()
 
-    def _resolve_unparsed_json_pointer(self) -> None:
+    def _resolve_unparsed_json_pointer(
+        self, exclude_path_prefixes: Optional[List[str]] = None
+    ) -> None:
         model_count: int = len(self.results)
         for source in self.iter_source:
             path_parts = list(source.path.parts)
@@ -1349,6 +1351,14 @@ class JsonSchemaParser(Parser):
                 source.path.parent
             ), self.model_resolver.current_root_context(path_parts):
                 for reserved_ref in sorted(reserved_refs):
+                    if exclude_path_prefixes:
+                        reserved_ref_path_prefix = reserved_ref.split('#/', 1)[-1]
+                        if any(
+                            e
+                            for e in exclude_path_prefixes
+                            if reserved_ref_path_prefix.startswith(e)
+                        ):  # pragma: no cover
+                            continue
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
                     # for root model
