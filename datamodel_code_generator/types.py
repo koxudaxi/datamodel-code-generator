@@ -251,9 +251,6 @@ class DataType(_BaseModel):
         if self.reference:
             self.reference.children.append(self)
 
-    def __repr__(self) -> str:
-        return self.type_hint
-
     @property
     def type_hint(self) -> str:
         type_: Optional[str] = self.alias or self.type
