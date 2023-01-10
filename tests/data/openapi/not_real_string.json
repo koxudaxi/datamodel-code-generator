@@ -13,6 +13,12 @@
           }
         }
       },
+      "Users": {
+        "type": "array",
+        "items": [{
+          "$ref":  "#/components/schemas/UserId"
+        }]
+      },
       "FileHash": {
         "type": "string",
         "minLength": 32,
@@ -26,6 +32,12 @@
           "file_hash": {
             "$ref": "#/components/schemas/FileHash"
           }
+        }
+      },
+      "FileHashes": {
+        "type": "array",
+        "items": {
+           "$ref": "#/components/schemas/FileHash"
         }
       }
     }

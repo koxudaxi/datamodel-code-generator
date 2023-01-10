@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, constr
 
@@ -13,5 +13,13 @@ class Tweet(BaseModel):
     author_id: Optional[str] = None
 
 
+class Users(BaseModel):
+    __root__: List[str]
+
+
 class FileRequest(BaseModel):
     file_hash: constr(regex=r'^[a-fA-F\d]{32}$', min_length=32, max_length=32)
+
+
+class FileHashes(BaseModel):
+    __root__: List[constr(regex=r'^[a-fA-F\d]{32}$', min_length=32, max_length=32)]

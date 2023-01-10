@@ -672,9 +672,18 @@ class Parser(ABC):
                     ):
                         continue
 
+                    # Use root-type as model_field type
+                    root_type_model = reference.source
+                    root_type_field = root_type_model.fields[0]
+
                     if (
                         self.field_constraints
-                        and model_field.constraints
+                        and isinstance(root_type_field.constraints, BaseModel)
+                        and any(
+                            v
+                            for v in root_type_field.constraints.dict().values()
+                            if v is not None
+                        )
                         and any(
                             d
                             for d in model_field.data_type.all_data_types
