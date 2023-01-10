@@ -19,7 +19,6 @@ from typing import (
     Set,
     Tuple,
     Type,
-    TypeVar,
     Union,
 )
 from urllib.parse import ParseResult
@@ -46,8 +45,6 @@ from datamodel_code_generator.types import (
     Modular,
     StrictTypes,
 )
-
-T = TypeVar('T')
 
 escape_characters = str.maketrans(
     {
@@ -234,14 +231,6 @@ class Child(Protocol):
 def get_most_of_parent(value: Any) -> Optional[Any]:
     if isinstance(value, Child):
         return get_most_of_parent(value.parent)
-    return value
-
-
-def get_parent_of_type(value: Any, type_: Type[T]) -> Optional[T]:
-    if isinstance(value, type_):
-        return value
-    if isinstance(value, Child):
-        return get_parent_of_type(value.parent, type_)
     return value
 
 
