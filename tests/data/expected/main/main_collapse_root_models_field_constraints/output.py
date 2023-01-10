@@ -18,11 +18,33 @@ class Users(BaseModel):
 
 
 class FileHash(BaseModel):
-    __root__: str = Field(..., max_length=32, min_length=32, regex='^[a-fA-F\\d]{32}$')
+    __root__: str = Field(
+        ...,
+        description='For file',
+        max_length=32,
+        min_length=32,
+        regex='^[a-fA-F\\d]{32}$',
+    )
 
 
 class FileRequest(BaseModel):
-    file_hash: str = Field(..., max_length=32, min_length=32, regex='^[a-fA-F\\d]{32}$')
+    file_hash: str = Field(
+        ...,
+        description='For file',
+        max_length=32,
+        min_length=32,
+        regex='^[a-fA-F\\d]{32}$',
+    )
+
+
+class ImageRequest(BaseModel):
+    image_hash: Optional[str] = Field(
+        None,
+        description='For image',
+        max_length=32,
+        min_length=32,
+        regex='^[a-fA-F\\d]{32}$',
+    )
 
 
 class FileHashes(BaseModel):

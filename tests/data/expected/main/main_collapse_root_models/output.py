@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, Field, constr
 
 
 class Tweet(BaseModel):
@@ -18,7 +18,15 @@ class Users(BaseModel):
 
 
 class FileRequest(BaseModel):
-    file_hash: constr(regex=r'^[a-fA-F\d]{32}$', min_length=32, max_length=32)
+    file_hash: constr(regex=r'^[a-fA-F\d]{32}$', min_length=32, max_length=32) = Field(
+        ..., description='For file'
+    )
+
+
+class ImageRequest(BaseModel):
+    image_hash: Optional[
+        constr(regex=r'^[a-fA-F\d]{32}$', min_length=32, max_length=32)
+    ] = Field(None, description='For image')
 
 
 class FileHashes(BaseModel):
