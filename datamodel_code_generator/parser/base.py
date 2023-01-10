@@ -33,6 +33,7 @@ from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
     BaseClassDataType,
+    ConstraintsBase,
     DataModel,
     DataModelFieldBase,
 )
@@ -667,12 +668,8 @@ class Parser(ABC):
 
                     if (
                         self.field_constraints
-                        and isinstance(root_type_field.constraints, BaseModel)
-                        and any(
-                            v
-                            for v in root_type_field.constraints.dict().values()
-                            if v is not None
-                        )
+                        and isinstance(root_type_field.constraints, ConstraintsBase)
+                        and root_type_field.constraints.has_constraints
                         and any(
                             d
                             for d in model_field.data_type.all_data_types
@@ -694,7 +691,11 @@ class Parser(ABC):
                         # override empty field by root-type field
                         if not model_field.extras:
                             model_field.extras = root_type_field.extras.copy()
-                        if not model_field.constraints:
+                        if (
+                            not model_field.constraints
+                            or isinstance(model_field.constraints, ConstraintsBase)
+                            and not model_field.constraints.has_constraints
+                        ) and isinstance(root_type_field.constraints, ConstraintsBase):
                             model_field.constraints = root_type_field.constraints.copy()
                     elif isinstance(data_type.parent, DataType):
                         # for data_type

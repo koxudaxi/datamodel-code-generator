@@ -35,8 +35,16 @@ OPTIONAL: str = 'Optional'
 ALL_MODEL: str = '#all#'
 
 
-class ConstraintsBase(BaseModel):
-    ...
+class ConstraintsBase(_BaseModel):
+    _exclude_fields: ClassVar[Set[str]] = {'has_constraints'}
+
+    class Config:
+        arbitrary_types_allowed = True
+        keep_untouched = (cached_property,)
+
+    @cached_property
+    def has_constraints(self) -> bool:
+        return any(v for v in self.dict().values() if v is not None)
 
 
 class DataModelFieldBase(_BaseModel):
