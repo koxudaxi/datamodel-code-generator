@@ -688,7 +688,9 @@ class Parser(ABC):
                             root_type_field.extras, **model_field.extras
                         )
                         if self.field_constraints:
-                            if isinstance(root_type_field.constraints, ConstraintsBase):
+                            if isinstance(
+                                root_type_field.constraints, ConstraintsBase
+                            ):  # pragma: no cover
                                 model_field.constraints = root_type_field.constraints.copy(
                                     update={
                                         k: v
@@ -703,7 +705,6 @@ class Parser(ABC):
                         else:
                             pass
                             # skip function type-hint kwargs overriding
-                            # model_field.data_type.kwargs = dict((root_type_field.data_type.kwargs or {}), **(model_field.data_type.kwargs or {}))
 
                         data_type.parent.data_type = copied_data_type
                     elif isinstance(data_type.parent, DataType):
