@@ -41,8 +41,8 @@ class ImageRequest(BaseModel):
     image_hash: Optional[str] = Field(
         None,
         description='For image',
-        max_length=32,
-        min_length=32,
+        max_length=64,
+        min_length=64,
         regex='^[a-fA-F\\d]{32}$',
     )
 

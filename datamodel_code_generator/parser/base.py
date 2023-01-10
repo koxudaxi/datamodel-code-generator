@@ -678,25 +678,34 @@ class Parser(ABC):
                     ):
                         continue
 
-                    # Use root-type as model_field type
-                    root_type_model = reference.source
-                    root_type_field = root_type_model.fields[0]
-
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.copy()
                     if isinstance(data_type.parent, self.data_model_field_type):
-                        # for field
-                        data_type.parent.data_type = copied_data_type
 
+                        # for field
                         # override empty field by root-type field
-                        if not model_field.extras:
-                            model_field.extras = root_type_field.extras.copy()
-                        if (
-                            not model_field.constraints
-                            or isinstance(model_field.constraints, ConstraintsBase)
-                            and not model_field.constraints.has_constraints
-                        ) and isinstance(root_type_field.constraints, ConstraintsBase):
-                            model_field.constraints = root_type_field.constraints.copy()
+                        model_field.extras = dict(
+                            root_type_field.extras, **model_field.extras
+                        )
+                        if self.field_constraints:
+                            if isinstance(root_type_field.constraints, ConstraintsBase):
+                                model_field.constraints = root_type_field.constraints.copy(
+                                    update={
+                                        k: v
+                                        for k, v in model_field.constraints.dict().items()
+                                        if v is not None
+                                    }
+                                    if isinstance(
+                                        model_field.constraints, ConstraintsBase
+                                    )
+                                    else {}
+                                )
+                        else:
+                            pass
+                            # skip function type-hint kwargs overriding
+                            # model_field.data_type.kwargs = dict((root_type_field.data_type.kwargs or {}), **(model_field.data_type.kwargs or {}))
+
+                        data_type.parent.data_type = copied_data_type
                     elif isinstance(data_type.parent, DataType):
                         # for data_type
                         data_type_id = id(data_type)

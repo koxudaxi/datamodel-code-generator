@@ -27,7 +27,9 @@
         "description": "For file"
       },
       "ImageHash": {
-        "$ref": "#/components/schemas/FileHash"
+        "$ref": "#/components/schemas/FileHash",
+        "maxLength": 64,
+        "minLength": 64
       },
        "FileRequest": {
         "type": "object",
