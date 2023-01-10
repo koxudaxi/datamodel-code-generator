@@ -146,9 +146,10 @@ class DataType(_BaseModel):
                 f'`{self.__class__.__name__}.replace_reference()` can\'t be called'
                 f' when `reference` field is empty.'
             )
-
-        while self in self.reference.children:
-            self.reference.children.remove(self)
+        self_id = id(self)
+        self.reference.children = [
+            c for c in self.reference.children if id(c) != self_id
+        ]
         self.reference = reference
         if reference:
             reference.children.append(self)

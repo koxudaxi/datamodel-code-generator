@@ -33,6 +33,7 @@ from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
     BaseClassDataType,
+    ConstraintsBase,
     DataModel,
     DataModelFieldBase,
 )
@@ -487,6 +488,9 @@ class Parser(ABC):
                     for child in model.reference.children[:]:
                         child.replace_reference(root_data_type.reference)
                     models.remove(model)
+                    for data_type in model.all_data_types:
+                        if data_type.reference:
+                            data_type.remove_reference()
                     continue
 
                 #  Custom root model can't be inherited on restriction of Pydantic
@@ -651,20 +655,77 @@ class Parser(ABC):
             return None
         for model in models:
             for model_field in model.fields:
-                reference = model_field.data_type.reference
-                if reference and isinstance(
-                    reference.source, self.data_model_root_type
-                ):
-                    # Use root-type as model_field type
-                    root_type_field = reference.source.fields[0]
-                    model_field.data_type.remove_reference()
-                    model_field.data_type = root_type_field.data_type
-                    model_field.data_type.parent = model_field
-                    model_field.extras = root_type_field.extras
-                    model_field.constraints = root_type_field.constraints
+                for data_type in model_field.data_type.all_data_types:
+                    reference = data_type.reference
+                    if not reference or not isinstance(
+                        reference.source, self.data_model_root_type
+                    ):
+                        continue
 
-                    if not reference.children:  # pragma: no cover
-                        unused_models.append(reference.source)
+                    # Use root-type as model_field type
+                    root_type_model = reference.source
+                    root_type_field = root_type_model.fields[0]
+
+                    if (
+                        self.field_constraints
+                        and isinstance(root_type_field.constraints, ConstraintsBase)
+                        and root_type_field.constraints.has_constraints
+                        and any(
+                            d
+                            for d in model_field.data_type.all_data_types
+                            if d.is_dict or d.is_list or d.is_union
+                        )
+                    ):
+                        continue
+
+                    # set copied data_type
+                    copied_data_type = root_type_field.data_type.copy()
+                    if isinstance(data_type.parent, self.data_model_field_type):
+
+                        # for field
+                        # override empty field by root-type field
+                        model_field.extras = dict(
+                            root_type_field.extras, **model_field.extras
+                        )
+                        if self.field_constraints:
+                            if isinstance(
+                                root_type_field.constraints, ConstraintsBase
+                            ):  # pragma: no cover
+                                model_field.constraints = root_type_field.constraints.copy(
+                                    update={
+                                        k: v
+                                        for k, v in model_field.constraints.dict().items()
+                                        if v is not None
+                                    }
+                                    if isinstance(
+                                        model_field.constraints, ConstraintsBase
+                                    )
+                                    else {}
+                                )
+                        else:
+                            pass
+                            # skip function type-hint kwargs overriding
+
+                        data_type.parent.data_type = copied_data_type
+                    elif isinstance(data_type.parent, DataType):
+                        # for data_type
+                        data_type_id = id(data_type)
+                        data_type.parent.data_types = [
+                            d
+                            for d in (*data_type.parent.data_types, copied_data_type)
+                            if id(d) != data_type_id
+                        ]
+                    else:  # pragma: no cover
+                        continue
+
+                    data_type.remove_reference()
+
+                    root_type_model.reference.children = [
+                        c for c in root_type_model.reference.children if c.parent
+                    ]
+
+                    if not root_type_model.reference.children:
+                        unused_models.append(root_type_model)
 
     def __set_default_enum_member(
         self,
@@ -799,7 +860,7 @@ class Parser(ABC):
             processed_models.append(Processed(module, models, init, imports))
 
         for unused_model in unused_models:
-            if unused_model in model_to_models[unused_model]:
+            if unused_model in model_to_models[unused_model]:  # pragma: no cover
                 model_to_models[unused_model].remove(unused_model)
 
         for module, models, init, imports in processed_models:
