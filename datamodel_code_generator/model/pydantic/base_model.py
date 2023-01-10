@@ -18,10 +18,10 @@ from datamodel_code_generator.types import chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
-    gt: Optional[Union[int, float]] = Field(None, alias='exclusiveMinimum')
-    ge: Optional[Union[int, float]] = Field(None, alias='minimum')
-    lt: Optional[Union[int, float]] = Field(None, alias='exclusiveMaximum')
-    le: Optional[Union[int, float]] = Field(None, alias='maximum')
+    gt: Optional[Union[float, int]] = Field(None, alias='exclusiveMinimum')
+    ge: Optional[Union[float, int]] = Field(None, alias='minimum')
+    lt: Optional[Union[float, int]] = Field(None, alias='exclusiveMaximum')
+    le: Optional[Union[float, int]] = Field(None, alias='maximum')
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     min_items: Optional[int] = Field(None, alias='minItems')
     max_items: Optional[int] = Field(None, alias='maxItems')
