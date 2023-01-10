@@ -40,6 +40,8 @@ class User(BaseModel):
     fax: Optional[List[FaxItem]] = None
     height: Annotated[Optional[Union[int, float]], Field(ge=1.0, le=300.0)] = None
     weight: Annotated[Optional[Union[float, int]], Field(ge=1.0, le=1000.0)] = None
+    age: Annotated[Optional[int], Field(gt=0, le=200)] = None
+    rating: Annotated[Optional[float], Field(gt=0.0, le=5.0)] = None
 
 
 class Users(BaseModel):
