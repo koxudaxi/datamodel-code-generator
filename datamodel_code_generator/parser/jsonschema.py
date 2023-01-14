@@ -454,6 +454,7 @@ class JsonSchemaParser(Parser):
         required: bool,
         field_type: DataType,
         alias: Optional[str],
+        original_field_name: Optional[str],
     ) -> DataModelFieldBase:
         if field.is_array or (
             self.field_constraints
@@ -483,6 +484,7 @@ class JsonSchemaParser(Parser):
             extras={**self.get_field_extras(field)},
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
+            original_name=original_field_name,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -580,6 +582,13 @@ class JsonSchemaParser(Parser):
             for field in fields:
                 if field.name in required:
                     field.required = True
+        if obj.required:
+            for required_ in obj.required:
+                fields.append(
+                    self.data_model_field_type(
+                        required=True, original_name=required_, data_type=DataType()
+                    )
+                )
         if self.use_title_as_name and obj.title:
             name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
@@ -630,6 +639,7 @@ class JsonSchemaParser(Parser):
                         strip_default_none=self.strip_default_none,
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,
+                        original_name=original_field_name,
                     )
                 )
                 continue
@@ -649,6 +659,7 @@ class JsonSchemaParser(Parser):
                     required=required,
                     field_type=field_type,
                     alias=alias,
+                    original_field_name=original_field_name,
                 )
             )
         return fields
@@ -687,6 +698,7 @@ class JsonSchemaParser(Parser):
                     field_name=None,
                     field=obj.additionalProperties,
                     required=False,
+                    original_field_name=None,
                     field_type=self.data_type(
                         data_types=[
                             self.parse_item(
@@ -900,6 +912,7 @@ class JsonSchemaParser(Parser):
             extras=self.get_field_extras(obj),
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
+            original_name=None,
         )
 
     def parse_array(
@@ -935,6 +948,7 @@ class JsonSchemaParser(Parser):
                 extras=field.extras,
                 use_annotated=self.use_annotated,
                 use_field_description=self.use_field_description,
+                original_name=None,
             )
 
         data_model_root = self.data_model_root_type(
@@ -1013,6 +1027,7 @@ class JsonSchemaParser(Parser):
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,
                     use_field_description=self.use_field_description,
+                    original_name=None,
                 )
             ],
             custom_base_class=self.base_class,
@@ -1087,6 +1102,7 @@ class JsonSchemaParser(Parser):
                     strip_default_none=self.strip_default_none,
                     has_default=obj.has_default,
                     use_field_description=self.use_field_description,
+                    original_name=None,
                 )
             )
 
@@ -1141,6 +1157,7 @@ class JsonSchemaParser(Parser):
                     use_annotated=self.use_annotated,
                     has_default=obj.has_default,
                     use_field_description=self.use_field_description,
+                    original_name=None,
                 )
             ],
             custom_base_class=self.base_class,

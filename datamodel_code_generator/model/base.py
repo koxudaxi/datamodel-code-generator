@@ -62,6 +62,7 @@ class DataModelFieldBase(_BaseModel):
     has_default: bool = False
     use_field_description: bool = False
     const: bool = False
+    original_name: Optional[str] = None
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
 

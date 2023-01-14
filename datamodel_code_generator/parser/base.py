@@ -241,6 +241,50 @@ def title_to_class_name(title: str) -> str:
     return classname
 
 
+def _find_base_classes(model: DataModel) -> List[DataModel]:
+    return [
+        b.reference.source
+        for b in model.base_classes
+        if b.reference and isinstance(b.reference.source, DataModel)
+    ]
+
+
+def _find_field(
+    original_name: str, models: List[DataModel]
+) -> Optional[DataModelFieldBase]:
+    def _find_field_and_base_classes(
+        model_: DataModel,
+    ) -> Tuple[Optional[DataModelFieldBase], List[DataModel]]:
+        for field_ in model_.fields:
+            if field_.original_name == original_name:
+                return field_, []
+        return None, _find_base_classes(model_)
+
+    for model in models:
+        field, base_models = _find_field_and_base_classes(model)
+        if field:
+            return field
+        models.extend(base_models)
+
+    return None
+
+
+def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
+    copied_data_types: List[DataType] = []
+    for data_type_ in data_types:
+        if data_type_.reference:
+            copied_data_types.append(
+                data_type_.__class__(reference=data_type_.reference)
+            )
+        elif data_type_.data_types:
+            copied_data_type = data_type_.copy()
+            copied_data_type.data_types = _copy_data_types(data_type_.data_types)
+            copied_data_types.append(copied_data_type)
+        else:
+            copied_data_types.append(data_type_.copy())
+    return copied_data_types
+
+
 class Result(BaseModel):
     body: str
     source: Optional[Path]
@@ -773,6 +817,51 @@ class Parser(ABC):
                                 Import(from_=from_, import_=import_, alias=alias)
                             )
 
+    def __override_required_field(
+        self,
+        models: List[DataModel],
+    ) -> None:
+        for model in models:
+            if isinstance(model, (Enum, self.data_model_root_type)):
+                continue
+            for index, model_field in enumerate(model.fields[:]):
+                if (
+                    not model_field.original_name
+                    or not model_field.required
+                    and (
+                        model_field.data_type.data_types
+                        or model_field.data_type.reference
+                        or model_field.data_type.type
+                    )
+                ):
+                    continue
+
+                original_field = _find_field(
+                    model_field.original_name, _find_base_classes(model)
+                )
+                if not original_field:
+                    continue
+                copied_original_field = original_field.copy()
+                if original_field.data_type.reference:
+                    data_type = self.data_type_manager.data_type(
+                        reference=original_field.data_type.reference,
+                    )
+                elif original_field.data_type.data_types:
+                    data_type = original_field.data_type.copy()
+                    data_type.data_types = _copy_data_types(
+                        original_field.data_type.data_types
+                    )
+                    for data_type_ in data_type.data_types:
+                        data_type_.parent = data_type
+                else:
+                    data_type = original_field.data_type.copy()
+                data_type.parent = copied_original_field
+                copied_original_field.data_type = data_type
+                copied_original_field.parent = model
+                copied_original_field.required = True
+                model.fields.insert(index, copied_original_field)
+                model.fields.remove(model_field)
+
     def parse(
         self,
         with_import: Optional[bool] = True,
@@ -856,6 +945,7 @@ class Parser(ABC):
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models)
             self.__set_default_enum_member(models, imports, scoped_model_resolver, init)
+            self.__override_required_field(models)
 
             processed_models.append(Processed(module, models, init, imports))
 
