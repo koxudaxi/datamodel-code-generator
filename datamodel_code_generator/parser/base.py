@@ -269,6 +269,22 @@ def _find_field(
     return None
 
 
+def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
+    copied_data_types: List[DataType] = []
+    for data_type_ in data_types:
+        if data_type_.reference:
+            copied_data_types.append(
+                data_type_.__class__(reference=data_type_.reference)
+            )
+        elif data_type_.data_types:
+            copied_data_type = data_type_.copy()
+            copied_data_type.data_types = _copy_data_types(data_type_.data_types)
+            copied_data_types.append(copied_data_type)
+        else:
+            copied_data_types.append(data_type_.copy())
+    return copied_data_types
+
+
 class Result(BaseModel):
     body: str
     source: Optional[Path]
@@ -829,15 +845,17 @@ class Parser(ABC):
                 if original_field.data_type.reference:
                     data_type = self.data_type_manager.data_type(
                         reference=original_field.data_type.reference,
-                        parent=copied_original_field,
                     )
                 elif original_field.data_type.data_types:
-                    data_type = self.data_type_manager.data_type(
-                        data_types=original_field.data_type.data_types,
-                        parent=copied_original_field,
+                    data_type = original_field.data_type.copy()
+                    data_type.data_types = _copy_data_types(
+                        original_field.data_type.data_types
                     )
+                    for data_type_ in data_type.data_types:
+                        data_type_.parent = data_type
                 else:
                     data_type = original_field.data_type.copy()
+                data_type.parent = copied_original_field
                 copied_original_field.data_type = data_type
                 copied_original_field.parent = model
                 copied_original_field.required = True

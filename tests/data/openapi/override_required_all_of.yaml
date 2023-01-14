@@ -18,7 +18,11 @@ components:
           type:
             - integer
             - number
-
+        allIn:
+          oneOf:
+            - $ref: '#/components/schemas/ObjectBase/properties/name'
+            - $ref: '#/components/schemas/ObjectBase/properties/type'
+            - $ref: '#/components/schemas/ObjectBase/properties/rank'
     CreateObjectRequest:
       description: Request schema for object creation
       type: object
@@ -28,6 +32,7 @@ components:
         - name
         - type
         - rank
+        - allIn
     UpdateObjectRequest:
       description: Request schema for object updates
       type: object

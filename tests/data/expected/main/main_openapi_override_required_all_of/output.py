@@ -15,16 +15,23 @@ class Type(Enum):
     my_second_object = 'my_second_object'
 
 
+class TypeModel(Enum):
+    my_first_object = 'my_first_object'
+    my_second_object = 'my_second_object'
+
+
 class ObjectBase(BaseModel):
     name: Optional[str] = Field(None, description='Name of the object')
     type: Optional[Type] = Field(None, description='Object type')
     rank: Optional[Union[int, float]] = Field(None, description='User rank')
+    allIn: Optional[Union[TypeModel, str, Union[int, float]]] = None
 
 
 class CreateObjectRequest(ObjectBase):
     name: str = Field(..., description='Name of the object')
     type: Type = Field(..., description='Object type')
     rank: Union[int, float] = Field(..., description='User rank')
+    allIn: Union[TypeModel, str, Union[int, float]]
 
 
 class UpdateObjectRequest(ObjectBase):
