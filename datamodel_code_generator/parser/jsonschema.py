@@ -535,7 +535,7 @@ class JsonSchemaParser(Parser):
         if not obj.properties and not obj.required:
             return data_types
         return [
-            self._parse_object_commom_part(
+            self._parse_object_common_part(
                 name,
                 obj,
                 [*get_special_path('anyOfCommon', path), str(i)],
@@ -555,7 +555,7 @@ class JsonSchemaParser(Parser):
         if not obj.properties and not obj.required:
             return data_types
         return [
-            self._parse_object_commom_part(
+            self._parse_object_common_part(
                 name,
                 obj,
                 [*get_special_path('oneOfCommon', path), str(i)],
@@ -568,7 +568,7 @@ class JsonSchemaParser(Parser):
             if d.reference
         ]
 
-    def _parse_object_commom_part(
+    def _parse_object_common_part(
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -648,7 +648,7 @@ class JsonSchemaParser(Parser):
                     if all_of_item.required:
                         required.extend(all_of_item.required)
 
-        return self._parse_object_commom_part(
+        return self._parse_object_common_part(
             name, obj, path, ignore_duplicate_model, fields, base_classes, required
         )
 
