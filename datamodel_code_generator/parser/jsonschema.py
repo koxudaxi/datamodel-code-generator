@@ -1040,10 +1040,6 @@ class JsonSchemaParser(Parser):
                 data_type = self.data_type(data_types=data_types)
             else:  # pragma: no cover
                 data_type = data_types[0]
-        elif obj.is_object:
-            data_type = self.parse_object(
-                name, obj, get_special_path('object', [*path, name])
-            )
         elif obj.type:
             data_type = self.get_data_type(obj)
         else:
@@ -1353,6 +1349,8 @@ class JsonSchemaParser(Parser):
         elif obj.allOf:
             self.parse_all_of(name, obj, path)
         elif obj.oneOf:
+            self.parse_root_type(name, obj, path)
+        elif obj.anyOf:
             self.parse_root_type(name, obj, path)
         elif obj.is_object:
             self.parse_object(name, obj, path)
