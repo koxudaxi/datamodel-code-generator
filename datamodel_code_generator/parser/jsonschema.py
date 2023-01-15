@@ -531,44 +531,51 @@ class JsonSchemaParser(Parser):
     def parse_any_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        return self.parse_list_item(name, obj.anyOf, path, obj)
+        data_types = self.parse_list_item(name, obj.anyOf, path, obj)
+        if not obj.properties and not obj.required:
+            return data_types
+        return [
+            self._parse_object_commom_part(
+                name,
+                obj,
+                [*get_special_path('anyOfCommon', path), str(i)],
+                ignore_duplicate_model=True,
+                fields=[],
+                base_classes=[d.reference],
+                required=[],
+            )
+            for i, d in enumerate(data_types)
+        ]
 
     def parse_one_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        return self.parse_list_item(name, obj.oneOf, path, obj)
+        data_types = self.parse_list_item(name, obj.oneOf, path, obj)
+        if not obj.properties and not obj.required:
+            return data_types
+        return [
+            self._parse_object_commom_part(
+                name,
+                obj,
+                [*get_special_path('oneOfCommon', path), str(i)],
+                ignore_duplicate_model=True,
+                fields=[],
+                base_classes=[d.reference],
+                required=[],
+            )
+            for i, d in enumerate(data_types)
+        ]
 
-    def parse_all_of(
+    def _parse_object_commom_part(
         self,
         name: str,
         obj: JsonSchemaObject,
         path: List[str],
-        ignore_duplicate_model: bool = False,
+        ignore_duplicate_model: bool,
+        fields: List[DataModelFieldBase],
+        base_classes: List[Reference],
+        required: List[str],
     ) -> DataType:
-        fields: List[DataModelFieldBase] = []
-        base_classes: List[Reference] = []
-        required: List[str] = []
-        if len(obj.allOf) == 1 and not obj.properties:
-            single_obj = obj.allOf[0]
-            if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
-                if get_model_by_path(self.raw_obj, single_obj.ref[2:].split('/')).get(
-                    'enum'
-                ):
-                    return self.get_ref_data_type(single_obj.ref)
-        for all_of_item in obj.allOf:
-            if all_of_item.ref:  # $ref
-                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
-            else:
-                object_fields = self.parse_object_fields(
-                    all_of_item,
-                    path,
-                    get_module_name(name, None),
-                )
-                if object_fields:
-                    fields.extend(object_fields)
-                else:
-                    if all_of_item.required:
-                        required.extend(all_of_item.required)
 
         if obj.properties:
             fields.extend(
@@ -606,6 +613,42 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_type)
 
         return self.data_type(reference=reference)
+
+    def parse_all_of(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        ignore_duplicate_model: bool = False,
+    ) -> DataType:
+        fields: List[DataModelFieldBase] = []
+        base_classes: List[Reference] = []
+        required: List[str] = []
+        if len(obj.allOf) == 1 and not obj.properties:
+            single_obj = obj.allOf[0]
+            if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
+                if get_model_by_path(self.raw_obj, single_obj.ref[2:].split('/')).get(
+                    'enum'
+                ):
+                    return self.get_ref_data_type(single_obj.ref)
+        for all_of_item in obj.allOf:
+            if all_of_item.ref:  # $ref
+                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
+            else:
+                object_fields = self.parse_object_fields(
+                    all_of_item,
+                    path,
+                    get_module_name(name, None),
+                )
+                if object_fields:
+                    fields.extend(object_fields)
+                else:
+                    if all_of_item.required:
+                        required.extend(all_of_item.required)
+
+        return self._parse_object_commom_part(
+            name, obj, path, ignore_duplicate_model, fields, base_classes, required
+        )
 
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str], module_name: Optional[str] = None
@@ -976,27 +1019,25 @@ class JsonSchemaParser(Parser):
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
             )
-        elif obj.is_object or obj.anyOf or obj.oneOf:
-            data_types: List[DataType] = []
+        elif obj.anyOf or obj.oneOf:
             object_path = [*path, name]
-            if obj.is_object:
-                data_types.append(
-                    self.parse_object(
-                        name, obj, get_special_path('object', object_path)
-                    )
-                )
             if obj.anyOf:
-                data_types.extend(
-                    self.parse_any_of(name, obj, get_special_path('anyOf', object_path))
+                data_types: List[DataType] = self.parse_any_of(
+                    name, obj, get_special_path('anyOf', object_path)
                 )
-            if obj.oneOf:
-                data_types.extend(
-                    self.parse_one_of(name, obj, get_special_path('oneOf', object_path))
+            else:
+                data_types = self.parse_one_of(
+                    name, obj, get_special_path('oneOf', object_path)
                 )
+
             if len(data_types) > 1:
                 data_type = self.data_type(data_types=data_types)
             else:  # pragma: no cover
                 data_type = data_types[0]
+        elif obj.is_object:
+            data_type = self.parse_object(
+                name, obj, get_special_path('object', [*path, name])
+            )
         elif obj.type:
             data_type = self.get_data_type(obj)
         else:
