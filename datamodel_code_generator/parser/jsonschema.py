@@ -589,15 +589,19 @@ class JsonSchemaParser(Parser):
             return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
-                if field.name in required:
+                if (field.original_name or field.name) in required:
                     field.required = True
         if obj.required:
+            field_name_to_field = {f.original_name or f.name: f for f in fields}
             for required_ in obj.required:
-                fields.append(
-                    self.data_model_field_type(
-                        required=True, original_name=required_, data_type=DataType()
+                if required_ in field_name_to_field:
+                    field_name_to_field[required_].required = True
+                else:
+                    fields.append(
+                        self.data_model_field_type(
+                            required=True, original_name=required_, data_type=DataType()
+                        )
                     )
-                )
         if self.use_title_as_name and obj.title:
             name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
