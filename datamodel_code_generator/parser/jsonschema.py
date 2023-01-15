@@ -545,6 +545,7 @@ class JsonSchemaParser(Parser):
                 required=[],
             )
             for i, d in enumerate(data_types)
+            if d.reference
         ]
 
     def parse_one_of(
@@ -564,6 +565,7 @@ class JsonSchemaParser(Parser):
                 required=[],
             )
             for i, d in enumerate(data_types)
+            if d.reference
         ]
 
     def _parse_object_commom_part(
