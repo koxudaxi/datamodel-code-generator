@@ -9,15 +9,6 @@ from typing import Optional, Union
 from pydantic import BaseModel, Extra, Field
 
 
-class MySchema1(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    AddressLine1: str
-    AddressLine2: Optional[str] = None
-    City: Optional[str] = None
-
-
 class MySchemaItem(BaseModel):
     State: Optional[str] = None
     ZipCode: str
@@ -28,10 +19,26 @@ class MySchemaItem1(BaseModel):
     PostCode: str
 
 
+class MySchema1(MySchemaItem):
+    class Config:
+        extra = Extra.allow
+
+    AddressLine1: str
+    AddressLine2: Optional[str] = None
+    City: Optional[str] = None
+
+
+class MySchema2(MySchemaItem1):
+    class Config:
+        extra = Extra.allow
+
+    AddressLine1: str
+    AddressLine2: Optional[str] = None
+    City: Optional[str] = None
+
+
 class MySchema(BaseModel):
     class Config:
         extra = Extra.allow
 
-    __root__: Union[MySchema1, MySchemaItem, MySchemaItem1] = Field(
-        ..., title='My schema'
-    )
+    __root__: Union[MySchema1, MySchema2] = Field(..., title='My schema')
