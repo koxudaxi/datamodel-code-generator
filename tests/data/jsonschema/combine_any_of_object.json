@@ -9,7 +9,7 @@
         "City":         { "type": "string" }
     },
     "required": [ "AddressLine1" ],
-    "oneOf": [
+    "anyOf": [
         {
             "type": "object",
             "properties": {
