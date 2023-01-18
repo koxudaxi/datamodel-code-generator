@@ -104,7 +104,7 @@ arg_parser.add_argument(
     help='Scopes of OpenAPI model generation (default: schemas)',
     choices=[o.value for o in OpenAPIScope],
     nargs='+',
-    default=[OpenAPIScope.Schemas.value],
+    default=None,
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 
@@ -510,7 +510,7 @@ class Config(BaseModel):
     empty_enum_field_name: Optional[str] = None
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
-    openapi_scopes: Optional[List[OpenAPIScope]] = None
+    openapi_scopes: Optional[List[OpenAPIScope]] = [OpenAPIScope.Schemas]
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
     http_headers: Optional[Sequence[Tuple[str, str]]] = None
