@@ -369,7 +369,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--encoding',
     help=f'The encoding of input and output (default: {DEFAULT_ENCODING})',
-    default=DEFAULT_ENCODING,
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -496,7 +496,7 @@ class Config(BaseModel):
     use_schema_description: bool = False
     use_field_description: bool = False
     reuse_model: bool = False
-    encoding: str = 'utf-8'
+    encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
