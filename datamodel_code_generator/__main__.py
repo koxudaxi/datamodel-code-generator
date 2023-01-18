@@ -91,7 +91,7 @@ arg_parser.add_argument(
     '--http-ignore-tls',
     help="Disable verification of the remote host's TLS certificate",
     action='store_true',
-    default=False,
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -315,7 +315,7 @@ arg_parser.add_argument(
     '--use-subclass-enum',
     help='Define Enum class as subclass with field type when enum has type (int, float, bytes, str)',
     action='store_true',
-    default=False,
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -361,7 +361,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "--use-double-quotes",
     action='store_true',
-    default=False,
+    default=None,
     help="Model generated with double quotes. Single quotes or "
     "your black config skip_string_normalization value will be used without this option.",
 )
