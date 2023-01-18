@@ -91,7 +91,7 @@ arg_parser.add_argument(
     '--http-ignore-tls',
     help="Disable verification of the remote host's TLS certificate",
     action='store_true',
-    default=False,
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -104,7 +104,7 @@ arg_parser.add_argument(
     help='Scopes of OpenAPI model generation (default: schemas)',
     choices=[o.value for o in OpenAPIScope],
     nargs='+',
-    default=[OpenAPIScope.Schemas.value],
+    default=None,
 )
 arg_parser.add_argument('--output', help='Output file (default: stdout)')
 
@@ -315,7 +315,7 @@ arg_parser.add_argument(
     '--use-subclass-enum',
     help='Define Enum class as subclass with field type when enum has type (int, float, bytes, str)',
     action='store_true',
-    default=False,
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -361,7 +361,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "--use-double-quotes",
     action='store_true',
-    default=False,
+    default=None,
     help="Model generated with double quotes. Single quotes or "
     "your black config skip_string_normalization value will be used without this option.",
 )
@@ -369,7 +369,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--encoding',
     help=f'The encoding of input and output (default: {DEFAULT_ENCODING})',
-    default=DEFAULT_ENCODING,
+    default=None,
 )
 
 arg_parser.add_argument(
@@ -496,7 +496,7 @@ class Config(BaseModel):
     use_schema_description: bool = False
     use_field_description: bool = False
     reuse_model: bool = False
-    encoding: str = 'utf-8'
+    encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
@@ -510,7 +510,7 @@ class Config(BaseModel):
     empty_enum_field_name: Optional[str] = None
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
-    openapi_scopes: Optional[List[OpenAPIScope]] = None
+    openapi_scopes: Optional[List[OpenAPIScope]] = [OpenAPIScope.Schemas]
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
     http_headers: Optional[Sequence[Tuple[str, str]]] = None
