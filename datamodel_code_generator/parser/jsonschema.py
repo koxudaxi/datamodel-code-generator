@@ -50,12 +50,26 @@ from datamodel_code_generator.reference import ModelType, Reference, is_url
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
 
 
-def get_model_by_path(schema: Dict[str, Any], keys: List[str]) -> Dict[Any, Any]:
+def get_model_by_path(
+    schema: Union[Dict[str, Any], List[Any]], keys: Union[List[str], List[int]]
+) -> Dict[Any, Any]:
+    model: Union[Dict[Any, Any], List[Any]]
     if not keys:
-        return schema
+        model = schema
     elif len(keys) == 1:
-        return schema.get(keys[0], {})
-    return get_model_by_path(schema[keys[0]], keys[1:])
+        if isinstance(schema, dict):
+            model = schema.get(keys[0], {})  # type: ignore
+        else:  # pragma: no cover
+            model = schema[int(keys[0])]
+    elif isinstance(schema, dict):
+        model = get_model_by_path(schema[keys[0]], keys[1:])  # type: ignore
+    else:
+        model = get_model_by_path(schema[int(keys[0])], keys[1:])
+    if isinstance(model, dict):
+        return model
+    raise NotImplementedError(  # pragma: no cover
+        f'Does not support json pointer to array. schema={schema}, key={keys}'
+    )
 
 
 SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
