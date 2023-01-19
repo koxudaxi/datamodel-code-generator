@@ -20,39 +20,6 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 -  JSON/YAML/CSV Data (it will be converted to JSON Schema)
 -  Python dictionary (it will be converted to JSON Schema)
 
-## Implemented list
-### OpenAPI 3 and JsonSchema
-#### DataType
--  string (include patter/minLength/maxLenght)
--  number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  boolean
--  array
--  object
-
-##### String Format
--  date
--  datetime
--  time
--  password
--  email
--  idn-email
--  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
--  ipv4
--  ipv6
--  ipv4-network
--  ipv6-network
--  hostname
--  decimal
-
-#### Other schema
--  enum (as enum.Enum or typing.Literal)
--  allOf (as Multiple inheritance)
--  anyOf (as typing.Union)
--  oneOf (as typing.Union)
--  $ref ([http extra](#http-extra-option) is required when resolving $ref for remote files.)
--  $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
-
 ## Installation
 
 To install `datamodel-code-generator`:
@@ -414,6 +381,40 @@ class Api(BaseModel):
 class Apis(BaseModel):
     __root__: List[Api]
 ```
+
+## Implemented list
+### OpenAPI 3 and JsonSchema
+#### DataType
+-  string (include patter/minLength/maxLenght)
+-  number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
+-  integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
+-  boolean
+-  array
+-  object
+
+##### String Format
+-  date
+-  datetime
+-  time
+-  password
+-  email
+-  idn-email
+-  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
+-  ipv4
+-  ipv6
+-  ipv4-network
+-  ipv6-network
+-  hostname
+-  decimal
+
+#### Other schema
+-  enum (as enum.Enum or typing.Literal)
+-  allOf (as Multiple inheritance)
+-  anyOf (as typing.Union)
+-  oneOf (as typing.Union)
+-  $ref ([http extra](#http-extra-option) is required when resolving $ref for remote files.)
+-  $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
+
 
 ## Related projects
 ### fastapi-code-generator
