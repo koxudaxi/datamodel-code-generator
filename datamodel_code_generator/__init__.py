@@ -248,6 +248,7 @@ def generate(
     use_union_operator: bool = False,
     collapse_root_models: bool = False,
     special_field_name_prefix: Optional[str] = None,
+    remove_special_field_name_prefix: bool = False,
     capitalise_enum_members: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
@@ -376,6 +377,7 @@ def generate(
         use_union_operator=use_union_operator,
         collapse_root_models=collapse_root_models,
         special_field_name_prefix=special_field_name_prefix,
+        remove_special_field_name_prefix=remove_special_field_name_prefix,
         capitalise_enum_members=capitalise_enum_members,
         **kwargs,
     )

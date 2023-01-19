@@ -366,6 +366,7 @@ class JsonSchemaParser(Parser):
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
         special_field_name_prefix: Optional[str] = None,
+        remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
     ):
         super().__init__(
@@ -420,6 +421,7 @@ class JsonSchemaParser(Parser):
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
             special_field_name_prefix=special_field_name_prefix,
+            remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
         )
 
