@@ -330,6 +330,7 @@ class Parser(ABC):
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_default_kwarg: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
@@ -391,6 +392,7 @@ class Parser(ABC):
         )
         self.use_schema_description: bool = use_schema_description
         self.use_field_description: bool = use_field_description
+        self.use_default_kwarg: bool = use_default_kwarg
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
         self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal

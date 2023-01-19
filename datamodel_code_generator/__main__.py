@@ -259,6 +259,12 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-default-kwarg',
+    action='store_true',
+    help="Use `default=` instead of a positional argument for Fields that have default values.",
+)
+
+arg_parser.add_argument(
     '--reuse-model',
     help='Re-use models on the field when a module has the model with the same content',
     action='store_true',
@@ -502,6 +508,7 @@ class Config(BaseModel):
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
+    use_default_kwarg: bool = True
     reuse_model: bool = False
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None
@@ -653,6 +660,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
             use_field_description=config.use_field_description,
+            use_default_kwarg=config.use_default_kwarg,
             reuse_model=config.reuse_model,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
