@@ -17,40 +17,17 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 ## Sponsors
 [![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
 
-
-## Supported source types
--  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
--  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
--  JSON/YAML/CSV Data (it will be converted to JSON Schema)
--  Python dictionary (it will be converted to JSON Schema)
-
-## Installation
+## Quick Installation
 
 To install `datamodel-code-generator`:
 ```bash
 $ pip install datamodel-code-generator
 ```
 
-### `http` extra option
-If you want to resolve `$ref` for remote files then you should specify `http` extra option.
-```bash
-$ pip install datamodel-code-generator[http]
-```
-
-### Docker Image
-The docker image is in [Docker Hub](https://hub.docker.com/r/koxudaxi/datamodel-code-generator)
-```bash
-$ docker pull koxudaxi/datamodel-code-generator
-```
 ## Simple usage 
 You can generate models from a local file.
 ```bash
 $ datamodel-codegen --input api.yaml --output model.py
-```
-Or, get schema from a URL.
-
-```bash
-$ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
 
 <details>
@@ -256,6 +233,57 @@ class Apis(BaseModel):
     __root__: List[Api]
 ```
 </details>
+
+## Which project uses it?
+These OSS use datamodel-code-generator to generate many models. We can learn about use-cases from these projects.
+- [Netflix/consoleme](https://github.com/Netflix/consoleme) 
+  - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
+- [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
+  - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
+- [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
+  - *Not used. But, introduced [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official docuemnt*
+- [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
+  - [Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)
+- [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
+  - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
+- [IBM/compliance-trestle](https://github.com/IBM/compliance-trestle)
+  - *[Building the models from the OSCAL schemas.](https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas)*
+- [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
+  - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
+## Supported source types
+-  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
+-  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
+-  JSON/YAML/CSV Data (it will be converted to JSON Schema)
+-  Python dictionary (it will be converted to JSON Schema)
+
+
+
+## Installation
+
+To install `datamodel-code-generator`:
+```bash
+$ pip install datamodel-code-generator
+```
+
+### `http` extra option
+If you want to resolve `$ref` for remote files then you should specify `http` extra option.
+```bash
+$ pip install datamodel-code-generator[http]
+```
+
+### Docker Image
+The docker image is in [Docker Hub](https://hub.docker.com/r/koxudaxi/datamodel-code-generator)
+```bash
+$ docker pull koxudaxi/datamodel-code-generator
+```
+
+## Advanced Uses
+You can genearte models from a URL.
+```bash
+$ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
+```
+This method needs  [http extra option](#http-extra-option)
+
 
 ## All Command Options
 
