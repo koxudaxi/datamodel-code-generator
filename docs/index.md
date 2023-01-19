@@ -59,7 +59,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--collapse-root-models] [--enum-field-as-literal {all,one}]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
-                         [--capitalise-enum-members]
+                         [--capitalise-enum-members] [--remove-special-field-name-prefix]
                          [--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX]
                          [--use-subclass-enum]
                          [--class-name CLASS_NAME] [--use-title-as-name]
@@ -146,6 +146,7 @@ optional arguments:
                         Capitalize field names on enum
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name when enum value is empty (default: `_`)
+  --remove-special-field-name-prefix  Remove field name prefix when first character can't be used as Python field name
   --use-subclass-enum   Define Enum class as subclass with field type when enum has
                         type (int, float, bytes, str)
   --class-name CLASS_NAME
