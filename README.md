@@ -26,6 +26,7 @@ $ pip install datamodel-code-generator
 
 ## Simple usage
 You can generate models from a local file.
+```bash
 $ datamodel-codegen --input api.yaml --output model.py
 ```
 
