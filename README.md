@@ -1,6 +1,6 @@
 # datamodel-code-generator
 
-This code generator creates pydantic model from an openapi file and others.
+This code generator creates [pydantic](https://docs.pydantic.dev/) model from an openapi file and others.
 
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
