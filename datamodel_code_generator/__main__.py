@@ -10,6 +10,7 @@ import json
 import locale
 import signal
 import sys
+import warnings
 from argparse import ArgumentParser, FileType, Namespace
 from collections import defaultdict
 from enum import IntEnum
@@ -388,6 +389,9 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--debug', help='show debug message', action='store_true', default=None
 )
+arg_parser.add_argument(
+    '--disable-warnings', help='disable warnings', action='store_true', default=None
+)
 arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
@@ -475,14 +479,15 @@ class Config(BaseModel):
     @classmethod
     def _validate_use_union_operator(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('use_union_operator'):
-            target_python_version: PythonVersion = values.get(
-                'target_python_version', PythonVersion.PY_37
+            target_python_version: PythonVersion = PythonVersion(
+                values.get('target_python_version', PythonVersion.PY_37.value)
             )
             if not target_python_version.has_union_operator:
-                warn(
-                    f"`--use-union-operator` can not be used with `--target-python_version` {target_python_version.value}.\n"
-                    f"`--target-python_version` {PythonVersion.PY_310.value} will be used."
-                )
+                if not values.get('disable_warnings'):
+                    warn(
+                        f"`--use-union-operator` can not be used with `--target-python_version` {target_python_version.value}.\n"
+                        f"`--target-python_version` {PythonVersion.PY_310.value} will be used."
+                    )
                 values['target_python_version'] = PythonVersion.PY_310
         return values
 
@@ -490,6 +495,7 @@ class Config(BaseModel):
     input_file_type: InputFileType = InputFileType.Auto
     output: Optional[Path]
     debug: bool = False
+    disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
     base_class: str = DEFAULT_BASE_CLASS
     custom_template_dir: Optional[Path]
@@ -606,6 +612,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if config.debug:  # pragma: no cover
         enable_debug_message()
 
+    if config.disable_warnings:
+        warnings.simplefilter('ignore')
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]]
     if config.extra_template_data is None:
         extra_template_data = None

@@ -4593,3 +4593,46 @@ def test_main_json_snake_case_field():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@pytest.mark.filterwarnings('error')
+def test_main_disable_warnings_config(capsys: CaptureFixture):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'person.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--use-union-operator',
+                '--target-python-version',
+                '3.6',
+                '--disable-warnings',
+            ]
+        )
+        captured = capsys.readouterr()
+        assert return_code == Exit.OK
+        assert captured.err == ''
+
+
+@pytest.mark.filterwarnings('error')
+def test_main_disable_warnings(capsys: CaptureFixture):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'all_of_with_object.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--disable-warnings',
+            ]
+        )
+        captured = capsys.readouterr()
+        assert return_code == Exit.OK
+        assert captured.err == ''

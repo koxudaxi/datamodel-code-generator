@@ -317,7 +317,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
                          [--capitalise-enum-members]
                          [--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX]
-                          [--remove-special-field-name-prefix]
+                         [--remove-special-field-name-prefix]
                          [--use-subclass-enum] [--class-name CLASS_NAME]
                          [--use-title-as-name]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
@@ -326,7 +326,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}]
                          [--wrap-string-literal] [--validation]
                          [--use-double-quotes] [--encoding ENCODING] [--debug]
-                         [--version]
+                          [--disable-warnings] [--version]
 
 options:
   -h, --help            show this help message and exit
@@ -434,6 +434,7 @@ options:
                         be used without this option.
   --encoding ENCODING   The encoding of input and output (default: cp1252)
   --debug               show debug message
+  --disable-warnings    disable warnings
   --version             show version
 ```
 
