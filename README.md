@@ -326,7 +326,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}]
                          [--wrap-string-literal] [--validation]
                          [--use-double-quotes] [--encoding ENCODING] [--debug]
-                         [--version]
+                         [--disable-warnings] [--version]
 
 options:
   -h, --help            show this help message and exit
@@ -434,6 +434,7 @@ options:
                         be used without this option.
   --encoding ENCODING   The encoding of input and output (default: cp1252)
   --debug               show debug message
+  --disable-warnings    disable warnings
   --version             show version
 ```
 
