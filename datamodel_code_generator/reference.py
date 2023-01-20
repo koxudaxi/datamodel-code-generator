@@ -145,6 +145,7 @@ class FieldNameResolver:
         empty_field_name: Optional[str] = None,
         original_delimiter: Optional[str] = None,
         special_field_name_prefix: Optional[str] = None,
+        remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
     ):
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
@@ -154,6 +155,7 @@ class FieldNameResolver:
         self.special_field_name_prefix: Optional[str] = (
             'field' if special_field_name_prefix is None else special_field_name_prefix
         )
+        self.remove_special_field_name_prefix: bool = remove_special_field_name_prefix
         self.capitalise_enum_members: bool = capitalise_enum_members
 
     @classmethod
@@ -185,8 +187,12 @@ class FieldNameResolver:
 
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
-        if name.startswith('_'):
-            name = f'{self.special_field_name_prefix}{name}'
+        while name.startswith('_'):
+            if self.remove_special_field_name_prefix:
+                name = name[1:]
+            else:
+                name = f'{self.special_field_name_prefix}{name}'
+                break
         if (
             self.capitalise_enum_members
             or self.snake_case_field
@@ -294,6 +300,7 @@ class ModelResolver:
         ] = None,
         original_field_name_delimiter: Optional[str] = None,
         special_field_name_prefix: Optional[str] = None,
+        remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
     ) -> None:
         self.references: Dict[str, Reference] = {}
@@ -320,6 +327,7 @@ class ModelResolver:
                 empty_field_name=empty_field_name,
                 original_delimiter=original_field_name_delimiter,
                 special_field_name_prefix=special_field_name_prefix,
+                remove_special_field_name_prefix=remove_special_field_name_prefix,
                 capitalise_enum_members=capitalise_enum_members
                 if k == ModelType.ENUM
                 else False,

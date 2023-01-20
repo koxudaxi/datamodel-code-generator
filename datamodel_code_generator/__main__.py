@@ -259,6 +259,12 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-default-kwarg',
+    action='store_true',
+    help="Use `default=` instead of a positional argument for Fields that have default values.",
+)
+
+arg_parser.add_argument(
     '--reuse-model',
     help='Re-use models on the field when a module has the model with the same content',
     action='store_true',
@@ -308,6 +314,13 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--special-field-name-prefix',
     help='Set field name prefix when first character can\'t be used as Python field name (default:  `field`)',
+    default=None,
+)
+
+arg_parser.add_argument(
+    '--remove-special-field-name-prefix',
+    help='Remove field name prefix when first character can\'t be used as Python field name',
+    action='store_true',
     default=None,
 )
 
@@ -495,6 +508,7 @@ class Config(BaseModel):
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
+    use_default_kwarg: bool = True
     reuse_model: bool = False
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None
@@ -521,6 +535,7 @@ class Config(BaseModel):
     use_double_quotes: bool = False
     collapse_root_models: bool = False
     special_field_name_prefix: Optional[str] = None
+    remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
 
     def merge_args(self, args: Namespace) -> None:
@@ -645,6 +660,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
             use_field_description=config.use_field_description,
+            use_default_kwarg=config.use_default_kwarg,
             reuse_model=config.reuse_model,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
@@ -670,6 +686,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             collapse_root_models=config.collapse_root_models,
             use_union_operator=config.use_union_operator,
             special_field_name_prefix=config.special_field_name_prefix,
+            remove_special_field_name_prefix=config.remove_special_field_name_prefix,
             capitalise_enum_members=config.capitalise_enum_members,
         )
         return Exit.OK

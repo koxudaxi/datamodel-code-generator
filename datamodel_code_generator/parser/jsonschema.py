@@ -339,6 +339,7 @@ class JsonSchemaParser(Parser):
         base_path: Optional[Path] = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_default_kwarg: bool = False,
         reuse_model: bool = False,
         encoding: str = 'utf-8',
         enum_field_as_literal: Optional[LiteralType] = None,
@@ -366,6 +367,7 @@ class JsonSchemaParser(Parser):
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
         special_field_name_prefix: Optional[str] = None,
+        remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
     ):
         super().__init__(
@@ -393,6 +395,7 @@ class JsonSchemaParser(Parser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             use_field_description=use_field_description,
+            use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
@@ -420,6 +423,7 @@ class JsonSchemaParser(Parser):
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
             special_field_name_prefix=special_field_name_prefix,
+            remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
         )
 
@@ -498,6 +502,7 @@ class JsonSchemaParser(Parser):
             extras={**self.get_field_extras(field)},
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
+            use_default_kwarg=self.use_default_kwarg,
             original_name=original_field_name,
         )
 
