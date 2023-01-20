@@ -360,6 +360,7 @@ class Parser(ABC):
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
         special_field_name_prefix: Optional[str] = None,
+        remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -447,6 +448,7 @@ class Parser(ABC):
             base_path=self.base_path,
             original_field_name_delimiter=original_field_name_delimiter,
             special_field_name_prefix=special_field_name_prefix,
+            remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
         )
         self.class_name: Optional[str] = class_name

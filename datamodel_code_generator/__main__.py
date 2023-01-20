@@ -318,6 +318,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--remove-special-field-name-prefix',
+    help='Remove field name prefix when first character can\'t be used as Python field name',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--use-subclass-enum',
     help='Define Enum class as subclass with field type when enum has type (int, float, bytes, str)',
     action='store_true',
@@ -528,6 +535,7 @@ class Config(BaseModel):
     use_double_quotes: bool = False
     collapse_root_models: bool = False
     special_field_name_prefix: Optional[str] = None
+    remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
 
     def merge_args(self, args: Namespace) -> None:
@@ -678,6 +686,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             collapse_root_models=config.collapse_root_models,
             use_union_operator=config.use_union_operator,
             special_field_name_prefix=config.special_field_name_prefix,
+            remove_special_field_name_prefix=config.remove_special_field_name_prefix,
             capitalise_enum_members=config.capitalise_enum_members,
         )
         return Exit.OK
