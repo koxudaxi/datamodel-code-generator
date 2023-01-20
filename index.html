@@ -1120,6 +1120,7 @@
 <span class="w">                         </span><span class="o">[</span>--empty-enum-field-name<span class="w"> </span>EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--capitalise-enum-members<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX<span class="o">]</span>
+<span class="w">                          </span><span class="o">[</span>--remove-special-field-name-prefix<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--use-subclass-enum<span class="o">]</span><span class="w"> </span><span class="o">[</span>--class-name<span class="w"> </span>CLASS_NAME<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--use-title-as-name<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR<span class="o">]</span>
@@ -1211,6 +1212,9 @@ options:
 <span class="s1">  --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX</span>
 <span class="s1">                        Set field name prefix when first character can&#39;</span>t<span class="w"> </span>be
 <span class="w">                        </span>used<span class="w"> </span>as<span class="w"> </span>Python<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>field<span class="sb">`</span><span class="o">)</span>
+<span class="w">  </span>--remove-special-field-name-prefix
+<span class="w">                        </span>Remove<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>prefix<span class="w"> </span>when<span class="w"> </span>first<span class="w"> </span>character<span class="w"> </span>can<span class="err">&#39;</span>t<span class="w"> </span>be
+<span class="w">                        </span>used<span class="w"> </span>as<span class="w"> </span>Python<span class="w"> </span>field<span class="w"> </span>name
 <span class="w">  </span>--use-subclass-enum<span class="w">   </span>Define<span class="w"> </span>Enum<span class="w"> </span>class<span class="w"> </span>as<span class="w"> </span>subclass<span class="w"> </span>with<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>when
 <span class="w">                        </span>enum<span class="w"> </span>has<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>int,<span class="w"> </span>float,<span class="w"> </span>bytes,<span class="w"> </span>str<span class="o">)</span>
 <span class="w">  </span>--class-name<span class="w"> </span>CLASS_NAME
