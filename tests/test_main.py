@@ -4567,3 +4567,29 @@ def test_main_use_default_kwarg():
         )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_json_snake_case_field():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_DATA_PATH / 'snake_case.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'json',
+                '--snake-case-field',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_snake_case_field' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
