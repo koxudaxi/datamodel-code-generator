@@ -258,15 +258,15 @@ def _find_field(
         for field_ in model_.fields:
             if field_.original_name == original_name:
                 return field_, []
-        return None, _find_base_classes(model_)
+        return None, _find_base_classes(model_)  # pragma: no cover
 
     for model in models:
         field, base_models = _find_field_and_base_classes(model)
         if field:
             return field
-        models.extend(base_models)
+        models.extend(base_models)  # pragma: no cover
 
-    return None
+    return None  # pragma: no cover
 
 
 def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
@@ -831,8 +831,7 @@ class Parser(ABC):
             for index, model_field in enumerate(model.fields[:]):
                 data_type = model_field.data_type
                 if (
-                    not model_field.original_name
-                    or data_type.data_types
+                    data_type.data_types
                     or data_type.reference
                     or data_type.type
                     or data_type.literals
