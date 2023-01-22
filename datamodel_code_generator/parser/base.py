@@ -829,21 +829,22 @@ class Parser(ABC):
             if isinstance(model, (Enum, self.data_model_root_type)):
                 continue
             for index, model_field in enumerate(model.fields[:]):
+                data_type = model_field.data_type
                 if (
                     not model_field.original_name
-                    or not model_field.required
-                    and (
-                        model_field.data_type.data_types
-                        or model_field.data_type.reference
-                        or model_field.data_type.type
-                    )
+                    or data_type.data_types
+                    or data_type.reference
+                    or data_type.type
+                    or data_type.literals
+                    or data_type.dict_key
                 ):
                     continue
 
                 original_field = _find_field(
                     model_field.original_name, _find_base_classes(model)
                 )
-                if not original_field:
+                if not original_field:  # pragma: no cover
+                    model.fields.remove(model_field)
                     continue
                 copied_original_field = original_field.copy()
                 if original_field.data_type.reference:
