@@ -831,7 +831,8 @@ class Parser(ABC):
             for index, model_field in enumerate(model.fields[:]):
                 data_type = model_field.data_type
                 if (
-                    data_type.data_types
+                    not model_field.original_name
+                    or data_type.data_types
                     or data_type.reference
                     or data_type.type
                     or data_type.literals
