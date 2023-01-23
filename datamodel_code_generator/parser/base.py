@@ -477,8 +477,12 @@ class Parser(ABC):
             yield Source(path=Path(), text=self.source)
         elif isinstance(self.source, Path):  # pragma: no cover
             if self.source.is_dir():
-                wrapper = sorted if self.keep_model_order else lambda x: x
-                for path in wrapper(self.source.rglob('*')):
+                paths = (
+                    sorted(self.source.rglob('*'))
+                    if self.keep_model_order
+                    else self.source.rglob('*')
+                )
+                for path in paths:
                     if path.is_file():
                         yield Source.from_path(path, self.base_path, self.encoding)
             else:
