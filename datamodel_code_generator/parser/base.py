@@ -2,6 +2,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
+from graphlib import TopologicalSorter
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -867,6 +868,31 @@ class Parser(ABC):
                 model.fields.insert(index, copied_original_field)
                 model.fields.remove(model_field)
 
+    def __sort_models(
+        self,
+        models: List[DataModel],
+        imports: Imports,
+    ) -> None:
+        class_name_to_model: Dict[str, DataModel] = {m.class_name: m for m in models}
+        imported: Set[str] = set(i for v in imports.values() for i in v)
+        class_name_to_base_classes = {}
+        for model in models:
+            class_name = model.class_name
+            resolved = imported | {class_name}
+            class_name_to_base_classes[class_name] = {
+                b.type_hint
+                for b in model.base_classes
+                if b.reference and b.type_hint not in resolved
+            }
+        models.clear()
+
+        topological_sorter = TopologicalSorter(class_name_to_base_classes)
+        topological_sorter.prepare()
+        while topological_sorter.is_active():
+            nodes = sorted(node for node in topological_sorter.get_ready())
+            models.extend(class_name_to_model[n] for n in nodes)
+            topological_sorter.done(*nodes)
+
     def parse(
         self,
         with_import: Optional[bool] = True,
@@ -951,6 +977,7 @@ class Parser(ABC):
             self.__collapse_root_models(models, unused_models)
             self.__set_default_enum_member(models, imports, scoped_model_resolver, init)
             self.__override_required_field(models)
+            self.__sort_models(models, imports)
 
             processed_models.append(Processed(module, models, init, imports))
 
