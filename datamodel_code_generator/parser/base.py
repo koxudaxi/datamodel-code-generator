@@ -363,6 +363,7 @@ class Parser(ABC):
         special_field_name_prefix: Optional[str] = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
+        keep_model_order: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -468,6 +469,7 @@ class Parser(ABC):
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
         self.capitalise_enum_members = capitalise_enum_members
+        self.keep_model_order = keep_model_order
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -475,7 +477,8 @@ class Parser(ABC):
             yield Source(path=Path(), text=self.source)
         elif isinstance(self.source, Path):  # pragma: no cover
             if self.source.is_dir():
-                for path in self.source.rglob('*'):
+                wrapper = sorted if self.keep_model_order else lambda x: x
+                for path in wrapper(self.source.rglob('*')):
                     if path.is_file():
                         yield Source.from_path(path, self.base_path, self.encoding)
             else:
@@ -873,6 +876,8 @@ class Parser(ABC):
         models: List[DataModel],
         imports: Imports,
     ) -> None:
+        if not self.keep_model_order:
+            return
         class_name_to_model: Dict[str, DataModel] = {m.class_name: m for m in models}
         imported: Set[str] = set(i for v in imports.values() for i in v)
         class_name_to_base_classes = {}

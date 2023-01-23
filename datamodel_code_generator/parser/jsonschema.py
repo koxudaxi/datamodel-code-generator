@@ -369,6 +369,7 @@ class JsonSchemaParser(Parser):
         special_field_name_prefix: Optional[str] = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
+        keep_model_order: bool = False,
     ):
         super().__init__(
             source=source,
@@ -425,6 +426,7 @@ class JsonSchemaParser(Parser):
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
+            keep_model_order=keep_model_order,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()

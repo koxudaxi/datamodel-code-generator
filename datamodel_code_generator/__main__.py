@@ -272,6 +272,12 @@ arg_parser.add_argument(
     default=None,
 )
 
+arg_parser.add_argument(
+    '--keep-model-order',
+    help='Keep generated models\' order',
+    action='store_true',
+    default=None,
+)
 
 arg_parser.add_argument(
     "--collapse-root-models",
@@ -543,6 +549,7 @@ class Config(BaseModel):
     special_field_name_prefix: Optional[str] = None
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
+    keep_model_order: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -696,6 +703,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             special_field_name_prefix=config.special_field_name_prefix,
             remove_special_field_name_prefix=config.remove_special_field_name_prefix,
             capitalise_enum_members=config.capitalise_enum_members,
+            keep_model_order=config.keep_model_order,
         )
         return Exit.OK
     except InvalidClassNameError as e:
