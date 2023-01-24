@@ -2,7 +2,6 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
-from graphlib import TopologicalSorter
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -882,25 +881,29 @@ class Parser(ABC):
     ) -> None:
         if not self.keep_model_order:
             return
-        class_name_to_model: Dict[str, DataModel] = {m.class_name: m for m in models}
-        imported: Set[str] = set(i for v in imports.values() for i in v)
-        class_name_to_base_classes = {}
+
+        models.sort(key=lambda x: x.class_name)
+
+        imported = set(i for v in imports.values() for i in v)
+        model_class_name_baseclasses: Dict[DataModel, Tuple[str, Set[str]]] = {}
         for model in models:
             class_name = model.class_name
-            resolved = imported | {class_name}
-            class_name_to_base_classes[class_name] = {
-                b.type_hint
-                for b in model.base_classes
-                if b.reference and b.type_hint not in resolved
-            }
-        models.clear()
+            model_class_name_baseclasses[model] = class_name, {
+                b.type_hint for b in model.base_classes if b.reference
+            } - {class_name}
 
-        topological_sorter = TopologicalSorter(class_name_to_base_classes)
-        topological_sorter.prepare()
-        while topological_sorter.is_active():
-            nodes = sorted(node for node in topological_sorter.get_ready())
-            models.extend(class_name_to_model[n] for n in nodes)
-            topological_sorter.done(*nodes)
+        changed: bool = True
+        while changed:
+            changed = False
+            resolved = imported.copy()
+            for i in range(len(models) - 1):
+                model = models[i]
+                class_name, baseclasses = model_class_name_baseclasses[model]
+                if not baseclasses - resolved:
+                    resolved.add(class_name)
+                    continue
+                models[i], models[i + 1] = models[i + 1], model
+                changed = True
 
     def parse(
         self,
