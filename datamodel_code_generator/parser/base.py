@@ -362,6 +362,7 @@ class Parser(ABC):
         special_field_name_prefix: Optional[str] = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
+        keep_model_order: bool = False,
     ):
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -467,6 +468,7 @@ class Parser(ABC):
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
         self.capitalise_enum_members = capitalise_enum_members
+        self.keep_model_order = keep_model_order
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -474,7 +476,12 @@ class Parser(ABC):
             yield Source(path=Path(), text=self.source)
         elif isinstance(self.source, Path):  # pragma: no cover
             if self.source.is_dir():
-                for path in self.source.rglob('*'):
+                paths = (
+                    sorted(self.source.rglob('*'))
+                    if self.keep_model_order
+                    else self.source.rglob('*')
+                )
+                for path in paths:
                     if path.is_file():
                         yield Source.from_path(path, self.base_path, self.encoding)
             else:
@@ -867,6 +874,37 @@ class Parser(ABC):
                 model.fields.insert(index, copied_original_field)
                 model.fields.remove(model_field)
 
+    def __sort_models(
+        self,
+        models: List[DataModel],
+        imports: Imports,
+    ) -> None:
+        if not self.keep_model_order:
+            return
+
+        models.sort(key=lambda x: x.class_name)
+
+        imported = set(i for v in imports.values() for i in v)
+        model_class_name_baseclasses: Dict[DataModel, Tuple[str, Set[str]]] = {}
+        for model in models:
+            class_name = model.class_name
+            model_class_name_baseclasses[model] = class_name, {
+                b.type_hint for b in model.base_classes if b.reference
+            } - {class_name}
+
+        changed: bool = True
+        while changed:
+            changed = False
+            resolved = imported.copy()
+            for i in range(len(models) - 1):
+                model = models[i]
+                class_name, baseclasses = model_class_name_baseclasses[model]
+                if not baseclasses - resolved:
+                    resolved.add(class_name)
+                    continue
+                models[i], models[i + 1] = models[i + 1], model
+                changed = True
+
     def parse(
         self,
         with_import: Optional[bool] = True,
@@ -951,6 +989,7 @@ class Parser(ABC):
             self.__collapse_root_models(models, unused_models)
             self.__set_default_enum_member(models, imports, scoped_model_resolver, init)
             self.__override_required_field(models)
+            self.__sort_models(models, imports)
 
             processed_models.append(Processed(module, models, init, imports))
 
