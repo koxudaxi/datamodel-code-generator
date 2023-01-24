@@ -1067,6 +1067,24 @@ class JsonSchemaParser(Parser):
                 data_type = self.data_type(data_types=data_types)
             else:  # pragma: no cover
                 data_type = data_types[0]
+        elif obj.patternProperties:
+            data_type = self.data_type(
+                data_types=[
+                    self.data_type(
+                        data_types=[
+                            self.parse_item(
+                                name, v, get_special_path('patternProperties', path)
+                            )
+                        ],
+                        is_dict=True,
+                        dict_key=self.data_type_manager.get_data_type(
+                            Types.string,
+                            pattern=k if not self.field_constraints else None,
+                        ),
+                    )
+                    for k, v in obj.patternProperties.items()
+                ],
+            )
         elif obj.type:
             data_type = self.get_data_type(obj)
         else:
@@ -1379,7 +1397,11 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         elif obj.anyOf:
             self.parse_root_type(name, obj, path)
-        elif obj.is_object:
+        elif obj.properties:
+            self.parse_object(name, obj, path)
+        elif obj.patternProperties:
+            self.parse_root_type(name, obj, path)
+        elif obj.type == 'object':
             self.parse_object(name, obj, path)
         elif obj.enum:
             self.parse_enum(name, obj, path)
