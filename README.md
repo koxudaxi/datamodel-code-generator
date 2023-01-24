@@ -311,7 +311,8 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--use-generic-container-types]
                          [--use-union-operator] [--use-schema-description]
                          [--use-field-description] [--use-default-kwarg]
-                         [--reuse-model] [--collapse-root-models]
+                         [--reuse-model] [--keep-model-order]
+                         [--collapse-root-models]
                          [--enum-field-as-literal {all,one}]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
@@ -393,6 +394,7 @@ options:
                         Fields that have default values.
   --reuse-model         Re-use models on the field when a module has the model
                         with the same content
+  --keep-model-order    Keep generated models' order
   --collapse-root-models
                         Models generated with a root-type field will be
                         mergedinto the models using that root-type model
