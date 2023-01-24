@@ -805,6 +805,32 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
 
+    def parse_pattern_properties(
+        self,
+        name: str,
+        pattern_properties: Dict[str, JsonSchemaObject],
+        path: List[str],
+    ) -> DataType:
+        return self.data_type(
+            data_types=[
+                self.data_type(
+                    data_types=[
+                        self.parse_item(
+                            name,
+                            kv[1],
+                            get_special_path(f'patternProperties/{i}', path),
+                        )
+                    ],
+                    is_dict=True,
+                    dict_key=self.data_type_manager.get_data_type(
+                        Types.string,
+                        pattern=kv[0] if not self.field_constraints else None,
+                    ),
+                )
+                for i, kv in enumerate(pattern_properties.items())
+            ],
+        )
+
     def parse_item(
         self,
         name: str,
@@ -873,18 +899,8 @@ class JsonSchemaParser(Parser):
                 )
             elif item.patternProperties:
                 # support only single key dict.
-                return self.data_type(
-                    data_types=[
-                        self.data_type(
-                            data_types=[self.parse_item(name, v, object_path)],
-                            is_dict=True,
-                            dict_key=self.data_type_manager.get_data_type(
-                                Types.string,
-                                pattern=k if not self.field_constraints else None,
-                            ),
-                        )
-                        for k, v in item.patternProperties.items()
-                    ],
+                return self.parse_pattern_properties(
+                    name, item.patternProperties, object_path
                 )
             elif isinstance(item.additionalProperties, JsonSchemaObject):
                 return self.data_type(
@@ -1068,23 +1084,7 @@ class JsonSchemaParser(Parser):
             else:  # pragma: no cover
                 data_type = data_types[0]
         elif obj.patternProperties:
-            data_type = self.data_type(
-                data_types=[
-                    self.data_type(
-                        data_types=[
-                            self.parse_item(
-                                name, v, get_special_path('patternProperties', path)
-                            )
-                        ],
-                        is_dict=True,
-                        dict_key=self.data_type_manager.get_data_type(
-                            Types.string,
-                            pattern=k if not self.field_constraints else None,
-                        ),
-                    )
-                    for k, v in obj.patternProperties.items()
-                ],
-            )
+            data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
         elif obj.type:
             data_type = self.get_data_type(obj)
         else:
