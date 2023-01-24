@@ -132,6 +132,11 @@ class JSONReference(_enum.Enum):
     URL = 'URL'
 
 
+class Discriminator(BaseModel):
+    propertyName: str
+    mapping: Optional[Dict[str, str]]
+
+
 class JsonSchemaObject(BaseModel):
     __constraint_fields__: Set[str] = {
         'exclusiveMinimum',
@@ -211,6 +216,7 @@ class JsonSchemaObject(BaseModel):
     id: Optional[str] = Field(default=None, alias='$id')
     custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
+    discriminator: Union[Discriminator, str, None]
 
     class Config:
         arbitrary_types_allowed = True
@@ -501,7 +507,7 @@ class JsonSchemaParser(Parser):
             if self.strict_nullable and (field.has_default or required)
             else None,
             strip_default_none=self.strip_default_none,
-            extras={**self.get_field_extras(field)},
+            extras=self.get_field_extras(field),
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
             use_default_kwarg=self.use_default_kwarg,

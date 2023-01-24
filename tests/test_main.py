@@ -4664,3 +4664,28 @@ def test_main_disable_warnings(capsys: CaptureFixture):
         captured = capsys.readouterr()
         assert return_code == Exit.OK
         assert captured.err == ''
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_discriminator():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_discriminator' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()

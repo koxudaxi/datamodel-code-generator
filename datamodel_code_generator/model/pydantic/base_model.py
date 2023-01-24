@@ -121,6 +121,12 @@ class DataModelField(DataModelFieldBase):
         if self.const:
             data['const'] = True
 
+        discriminator = data.pop('discriminator', None)
+        if discriminator:
+            if isinstance(discriminator, str):
+                data['discriminator'] = discriminator
+            elif isinstance(discriminator, dict):  # pragma: no cover
+                data['discriminator'] = discriminator['propertyName']
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
         )
