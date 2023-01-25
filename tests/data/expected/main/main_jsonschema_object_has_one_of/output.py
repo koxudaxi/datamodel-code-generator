@@ -65,15 +65,11 @@ class V2Test2(V2TestItem1):
     field_1: Field11
 
 
-class Field12(Enum):
-    response_2 = 'response_2'
-
-
 class V2Test3(V2TestItem2):
     class Config:
         extra = Extra.allow
 
-    field_1: Field12
+    field_1: Field11
 
 
 class V2Test(BaseModel):
