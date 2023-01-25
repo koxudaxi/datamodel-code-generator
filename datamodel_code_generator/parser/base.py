@@ -612,13 +612,15 @@ class Parser(ABC):
             ).name
             if class_name != generated_name:
                 model.class_name = generated_name
-            model_names[model.name] = model
+            model_names[model.class_name] = model
 
         for model in models:
             duplicate_name = model.duplicate_class_name
             # check only first desired name
             if duplicate_name and duplicate_name not in model_names:
+                del model_names[model.class_name]
                 model.class_name = duplicate_name
+                model_names[duplicate_name] = model
 
     @classmethod
     def __change_from_import(
@@ -1021,6 +1023,7 @@ class Parser(ABC):
 
             imports = Imports()
             scoped_model_resolver = ModelResolver()
+
             self.__change_from_import(models, imports, scoped_model_resolver, init)
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
