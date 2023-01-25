@@ -7,6 +7,13 @@
         "name": {
           "type": "string",
           "example": "ken"
+        },
+        "pets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/User"
+          },
+          "default_factory": "list"
         }
       }
     },
@@ -15,7 +22,10 @@
       "properties": {
         "name": {
           "type": "string",
-          "examples": ["dog", "cat"]
+          "examples": [
+            "dog",
+            "cat"
+          ]
         }
       }
     }

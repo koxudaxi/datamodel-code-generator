@@ -35,7 +35,6 @@ class DataModelField(DataModelFieldBase):
     _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
         'alias',
         'default',
-        'default_factory',
         'const',
         'gt',
         'ge',
@@ -127,20 +126,28 @@ class DataModelField(DataModelFieldBase):
                 data['discriminator'] = discriminator
             elif isinstance(discriminator, dict):  # pragma: no cover
                 data['discriminator'] = discriminator['propertyName']
+
+        default_factory = data.pop('default_factory', None)
+
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
         )
-        if not field_arguments:
+
+        if not field_arguments and not default_factory:
             if self.nullable and self.required:
                 return 'Field(...)'  # Field() is for mypy
             return ""
 
-        kwargs = ",".join(field_arguments)
         if self.use_annotated:
-            return f'Field({kwargs})'
-        value_arg = "..." if self.required else repr(self.default)
+            pass
+        elif self.required:
+            field_arguments = ['...', *field_arguments]
+        elif default_factory:
+            field_arguments = [f'default_factory={default_factory}', *field_arguments]
+        else:
+            field_arguments = [f'{repr(self.default)}', *field_arguments]
 
-        return f'Field({value_arg}, {kwargs})'
+        return f'Field({", ".join(field_arguments)})'
 
     @property
     def annotated(self) -> Optional[str]:

@@ -113,6 +113,7 @@ def test_json_schema_object_ref_url_yaml(mocker):
         dump_templates(list(parser.results))
         == '''class User(BaseModel):
     name: Optional[str] = Field(None, example='ken')
+    pets: Optional[List[User]] = Field(default_factory=list)
 
 
 class Pet(BaseModel):
@@ -149,7 +150,8 @@ def test_json_schema_object_cached_ref_url_yaml(mocker):
 
 
 class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')'''
+    name: Optional[str] = Field(None, example='ken')
+    pets: Optional[List[User]] = Field(default_factory=list)'''
     )
     mock_get.assert_called_once_with(
         'https://example.org/schema.yaml', headers=None, verify=True
@@ -176,6 +178,7 @@ def test_json_schema_ref_url_json(mocker):
 
 class User(BaseModel):
     name: Optional[str] = Field(None, example='ken')
+    pets: Optional[List[User]] = Field(default_factory=list)
 
 
 class Pet(BaseModel):
@@ -271,7 +274,7 @@ def test_parse_object(source_obj, generated_classes):
                 "discriminator": "type",
             },
             """class AnyObject(BaseModel):
-    __root__: Any = Field(..., description='This field accepts any object',discriminator='type',title='AnyJson')""",
+    __root__: Any = Field(..., description='This field accepts any object', discriminator='type', title='AnyJson')""",
         )
     ],
 )
