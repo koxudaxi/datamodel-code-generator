@@ -305,6 +305,7 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'discriminator',
     'title',
     'const',
+    'default_factory',
 }
 
 EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
