@@ -523,6 +523,10 @@ class Parser(ABC):
         raise NotImplementedError
 
     def __delete_duplicate_models(self, models: List[DataModel]) -> None:
+        model_class_names: Dict[str, DataModel] = {}
+        model_to_duplicate_models: DefaultDict[
+            DataModel, List[DataModel]
+        ] = defaultdict(list)
         for model in models[:]:
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
@@ -557,6 +561,41 @@ class Parser(ABC):
                                 child.base_classes.remove(base_class)
                         if not child.base_classes:
                             child.set_base_class()
+
+            class_name = model.duplicate_class_name or model.class_name
+            if class_name in model_class_names:
+                model_key = tuple(
+                    to_hashable(v)
+                    for v in (
+                        model.base_classes,
+                        model.extra_template_data,
+                        model.fields,
+                        model.description,
+                        model.default,
+                        model.decorators,
+                    )
+                )
+                original_model = model_class_names[class_name]
+                original_model_key = tuple(
+                    to_hashable(v)
+                    for v in (
+                        original_model.base_classes,
+                        original_model.extra_template_data,
+                        original_model.fields,
+                        original_model.description,
+                        original_model.default,
+                        original_model.decorators,
+                    )
+                )
+                if model_key == original_model_key:
+                    model_to_duplicate_models[original_model].append(model)
+                    continue
+            model_class_names[class_name] = model
+        for model, duplicate_models in model_to_duplicate_models.items():
+            for duplicate_model in duplicate_models:
+                for child in duplicate_model.reference.children[:]:
+                    child.replace_reference(model.reference)
+                models.remove(duplicate_model)
 
     @classmethod
     def __replace_duplicate_name_in_module(cls, models: List[DataModel]) -> None:
