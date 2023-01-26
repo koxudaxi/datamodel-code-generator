@@ -225,6 +225,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--enable-version-header',
+    help='Enable package version on file headers',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--use-standard-collections',
     help='Use standard collections for type hinting (list, dict)',
     action='store_true',
@@ -512,6 +519,7 @@ class Config(BaseModel):
     strip_default_none: bool = False
     aliases: Optional[TextIOBase]
     disable_timestamp: bool = False
+    enable_version_header: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     use_default: bool = False
@@ -667,6 +675,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             extra_template_data=extra_template_data,
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
+            enable_version_header=config.enable_version_header,
             allow_population_by_field_name=config.allow_population_by_field_name,
             allow_extra_fields=config.allow_extra_fields,
             apply_default_values_for_required_fields=config.use_default,
