@@ -431,6 +431,8 @@ class OpenAPIParser(JsonSchemaParser):
                 path_parts = list(source.path.parts)
             with self.model_resolver.current_root_context(path_parts):
                 if OpenAPIScope.Schemas in self.open_api_scopes:
+                    if "$ref" in schemas:
+                        schemas = self._get_ref_body(schemas["$ref"])
                     for (
                         obj_name,
                         raw_obj,
