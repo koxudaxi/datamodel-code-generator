@@ -938,6 +938,29 @@ def test_disable_timestamp():
 
 
 @freeze_time('2019-07-26')
+def test_enable_version_header():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--enable-version-header',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'enable_version_header' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_allow_population_by_field_name():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
