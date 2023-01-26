@@ -99,7 +99,7 @@ def get_version() -> str:
         from importlib.metadata import version
 
         return version(package)
-    except:
+    except ImportError:
         import pkg_resources
 
         return pkg_resources.get_distribution(package).version
