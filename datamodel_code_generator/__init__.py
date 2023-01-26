@@ -4,7 +4,6 @@ import contextlib
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from importlib.metadata import version
 from pathlib import Path
 from typing import (
     IO,
@@ -93,16 +92,24 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
         return load_yaml(f)
 
 
-def get_version() -> str:
-    package = "datamodel-code-generator"
-    try:
-        from importlib.metadata import version
+if TYPE_CHECKING:
 
-        return version(package)
-    except ImportError:
-        import pkg_resources
+    def get_version() -> str:
+        ...
 
-        return pkg_resources.get_distribution(package).version
+else:
+
+    def get_version() -> str:
+        package = "datamodel-code-generator"
+
+        try:
+            from importlib.metadata import version
+
+            return version(package)
+        except ImportError:
+            import pkg_resources
+
+            return pkg_resources.get_distribution(package).version
 
 
 def enable_debug_message() -> None:  # pragma: no cover
