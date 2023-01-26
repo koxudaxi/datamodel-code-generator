@@ -4,8 +4,8 @@ import contextlib
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
 from importlib.metadata import version
+from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
