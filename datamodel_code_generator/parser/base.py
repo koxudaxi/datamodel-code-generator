@@ -947,8 +947,8 @@ class Parser(ABC):
 
         results: Dict[Tuple[str, ...], Result] = {}
 
-        def module_key(x):
-            return x.module_path
+        def module_key(data_model: DataModel) -> Tuple[str, ...]:
+            return tuple(data_model.module_path)
 
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
