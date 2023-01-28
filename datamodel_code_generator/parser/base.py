@@ -840,11 +840,11 @@ class Parser(ABC):
                         enum_member = data_type.reference.source.find_member(
                             model_field.default
                         )
-                        if enum_member:
-                            model_field.default = enum_member
-                            if data_type.alias:
-                                enum_member.alias = data_type.alias
+                        if not enum_member:
                             continue
+                        model_field.default = enum_member
+                        if data_type.alias:
+                            enum_member.alias = data_type.alias
 
     def __override_required_field(
         self,
