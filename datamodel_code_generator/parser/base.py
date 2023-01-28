@@ -40,12 +40,7 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
-from datamodel_code_generator.types import (
-    DataType,
-    DataTypeManager,
-    Modular,
-    StrictTypes,
-)
+from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 escape_characters = str.maketrans(
     {
@@ -951,7 +946,9 @@ class Parser(ABC):
         )
 
         results: Dict[Tuple[str, ...], Result] = {}
-        module_key = lambda x: x.module_path
+
+        def module_key(x):
+            return x.module_path
 
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
