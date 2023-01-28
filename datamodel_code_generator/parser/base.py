@@ -40,12 +40,7 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
-from datamodel_code_generator.types import (
-    DataType,
-    DataTypeManager,
-    Modular,
-    StrictTypes,
-)
+from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 escape_characters = str.maketrans(
     {
@@ -826,9 +821,6 @@ class Parser(ABC):
     def __set_default_enum_member(
         self,
         models: List[DataModel],
-        imports: Imports,
-        scoped_model_resolver: ModelResolver,
-        init: bool,
     ) -> None:
         if not self.set_default_enum_member:
             return None
@@ -843,31 +835,11 @@ class Parser(ABC):
                         enum_member = data_type.reference.source.find_member(
                             model_field.default
                         )
-                        if enum_member:
-                            model_field.default = enum_member
-                            enum_member_enum = enum_member.enum
-                            if enum_member_enum in models:
-                                continue
-                            scoped_model_resolver.get(enum_member_enum.path)
-                            if isinstance(enum_member_enum, Modular):
-                                enum_member_enum_name = f'{enum_member_enum.module_name}.{enum_member.enum.name}'
-                            else:
-                                enum_member_enum_name = enum_member.enum.name
-                            from_, import_ = full_path = relative(
-                                model.module_name, enum_member_enum_name
-                            )
-
-                            alias = scoped_model_resolver.add(full_path, import_).name
-
-                            name = data_type.reference.short_name
-                            if from_ and import_ and alias != name:
-                                enum_member.alias = f'{alias}.{name}'
-
-                            if init:
-                                from_ += "."
-                            imports.append(
-                                Import(from_=from_, import_=import_, alias=alias)
-                            )
+                        if not enum_member:
+                            continue
+                        model_field.default = enum_member
+                        if data_type.alias:
+                            enum_member.alias = data_type.alias
 
     def __override_required_field(
         self,
@@ -974,7 +946,9 @@ class Parser(ABC):
         )
 
         results: Dict[Tuple[str, ...], Result] = {}
-        module_key = lambda x: x.module_path
+
+        def module_key(data_model: DataModel) -> Tuple[str, ...]:
+            return tuple(data_model.module_path)
 
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
@@ -1029,7 +1003,7 @@ class Parser(ABC):
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models)
-            self.__set_default_enum_member(models, imports, scoped_model_resolver, init)
+            self.__set_default_enum_member(models)
             self.__override_required_field(models)
             self.__sort_models(models, imports)
 
