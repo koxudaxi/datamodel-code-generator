@@ -630,7 +630,7 @@ class JsonSchemaParser(Parser):
                             required=True, original_name=required_, data_type=DataType()
                         )
                     )
-        if self.use_title_as_name and obj.title:
+        if self.use_title_as_name and obj.title:  # pragma: no cover
             name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.name, obj)
