@@ -24,6 +24,11 @@ class NestedCommentTitle(BaseModel):
     comment: Optional[str] = None
 
 
+class ProcessingStatusDetail(BaseModel):
+    id: Optional[int] = None
+    description: Optional[str] = None
+
+
 class ProcessingTasksTitle(BaseModel):
     __root__: List[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
 
@@ -41,18 +46,14 @@ class ExtendedProcessingTasksTitle(BaseModel):
 
 
 class ProcessingTaskTitle(BaseModel):
-    processing_status_union: Optional[ProcessingStatusUnionTitle] = Field(
-        'COMPLETED', title='Processing Status Union Title'
-    )
+    processing_status_union: Optional[
+        Union[
+            ProcessingStatusDetail, ExtendedProcessingTaskTitle, ProcessingStatusTitle
+        ]
+    ] = Field('COMPLETED', title='Processing Status Union Title')
     processing_status: Optional[ProcessingStatusTitle] = 'COMPLETED'
     name: Optional[str] = None
     kind: Optional[Kind] = None
 
 
-class ProcessingStatusUnionTitle(BaseModel):
-    id: Optional[int] = None
-    description: Optional[str] = None
-
-
 ProcessingTasksTitle.update_forward_refs()
-ProcessingTaskTitle.update_forward_refs()
