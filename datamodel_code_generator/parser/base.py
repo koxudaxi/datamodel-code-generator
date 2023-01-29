@@ -37,7 +37,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model.enum import Enum
+from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -832,14 +832,28 @@ class Parser(ABC):
                     if data_type.reference and isinstance(
                         data_type.reference.source, Enum
                     ):  # pragma: no cover
-                        enum_member = data_type.reference.source.find_member(
-                            model_field.default
-                        )
+                        if isinstance(model_field.default, list):
+                            enum_member: Union[List[Member], Optional[Member]] = [
+                                e
+                                for e in (
+                                    data_type.reference.source.find_member(d)
+                                    for d in model_field.default
+                                )
+                                if e
+                            ]
+                        else:
+                            enum_member = data_type.reference.source.find_member(
+                                model_field.default
+                            )
                         if not enum_member:
                             continue
                         model_field.default = enum_member
                         if data_type.alias:
-                            enum_member.alias = data_type.alias
+                            if isinstance(enum_member, list):
+                                for enum_member_ in enum_member:
+                                    enum_member_.alias = data_type.alias
+                            else:
+                                enum_member.alias = data_type.alias
 
     def __override_required_field(
         self,
