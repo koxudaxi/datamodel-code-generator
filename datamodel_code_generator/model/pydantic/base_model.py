@@ -95,6 +95,24 @@ class DataModelField(DataModelFieldBase):
                 break
         return value
 
+    def _get_default_as_pydantic_model(self) -> Optional[str]:
+        for data_type in self.data_type.data_types or (self.data_type,):
+            # TODO: Check nested data_types
+            if data_type.is_dict or self.data_type.is_union:
+                # TODO: Parse Union and dict model for default
+                continue
+            elif data_type.is_list and len(data_type.data_types) == 1:
+                data_type = data_type.data_types[0]
+                if data_type.reference and isinstance(
+                    data_type.reference.source, BaseModel
+                ):  # pragma: no cover
+                    return f'lambda :[{data_type.reference.source.class_name}.parse_obj(v) for v in {repr(self.default)}]'
+            elif data_type.reference and isinstance(
+                data_type.reference.source, BaseModel
+            ):  # pragma: no cover
+                return f'lambda :{data_type.reference.source.class_name}.parse_obj({repr(self.default)})'
+        return None
+
     def __str__(self) -> str:
         data: Dict[str, Any] = {
             k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
@@ -127,7 +145,12 @@ class DataModelField(DataModelFieldBase):
             elif isinstance(discriminator, dict):  # pragma: no cover
                 data['discriminator'] = discriminator['propertyName']
 
-        default_factory = data.pop('default_factory', None)
+        if self.required:
+            default_factory = None
+        elif self.default and 'default_factory' not in data:
+            default_factory = self._get_default_as_pydantic_model()
+        else:
+            default_factory = data.pop('default_factory', None)
 
         field_arguments = sorted(
             f"{k}={repr(v)}" for k, v in data.items() if v is not None
