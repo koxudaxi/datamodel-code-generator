@@ -24,6 +24,11 @@ class ExtendedProcessingTaskItem(BaseModel):
     comment: Optional[str] = None
 
 
+class ProcessingStatusUnionItem(BaseModel):
+    id: Optional[int] = None
+    description: Optional[str] = None
+
+
 class ProcessingTasksTitle(BaseModel):
     __root__: List[ProcessingTask] = Field(..., title='Processing Tasks Title')
 
@@ -41,18 +46,12 @@ class ExtendedProcessingTasks(BaseModel):
 
 
 class ProcessingTask(BaseModel):
-    processing_status_union: Optional[ProcessingStatusUnion] = Field(
-        'COMPLETED', title='Processing Status Union Title'
-    )
+    processing_status_union: Optional[
+        Union[ProcessingStatusUnionItem, ExtendedProcessingTask, ProcessingStatus]
+    ] = Field('COMPLETED', title='Processing Status Union Title')
     processing_status: Optional[ProcessingStatus] = 'COMPLETED'
     name: Optional[str] = None
     kind: Optional[Kind] = None
 
 
-class ProcessingStatusUnion(BaseModel):
-    id: Optional[int] = None
-    description: Optional[str] = None
-
-
 ProcessingTasksTitle.update_forward_refs()
-ProcessingTask.update_forward_refs()

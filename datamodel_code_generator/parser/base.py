@@ -554,7 +554,7 @@ class Parser(ABC):
                         for base_class in child.base_classes[:]:
                             if base_class.reference == model.reference:
                                 child.base_classes.remove(base_class)
-                        if not child.base_classes:
+                        if not child.base_classes:  # pragma: no cover
                             child.set_base_class()
 
             class_name = model.duplicate_class_name or model.class_name

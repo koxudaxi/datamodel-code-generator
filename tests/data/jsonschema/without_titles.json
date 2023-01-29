@@ -40,7 +40,7 @@
       "type": "object",
       "properties": {
         "processing_status_union": {
-          "allOf": [
+          "oneOf": [
                {
               "type": "object",
               "properties": {
@@ -54,6 +54,9 @@
             },
             {
               "$ref": "#/definitions/ExtendedProcessingTask"
+            },
+            {
+              "$ref": "#/definitions/ProcessingStatus"
             }
           ],
           "default": "COMPLETED"
