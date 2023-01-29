@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -15,3 +15,7 @@ from .nested_bar import bar as bar_1
 class Foo(BaseModel):
     loggerLevel: Optional[bar.LogLevels] = bar.LogLevels.INFO
     AnotherLoggerLevel: Optional[bar_1.LogLevels] = bar_1.LogLevels.ERROR
+    OtherLoggerLevels: Optional[List[bar_1.LogLevels]] = [
+        bar_1.LogLevels.INFO,
+        bar_1.LogLevels.ERROR,
+    ]
