@@ -58,3 +58,26 @@ components:
               number: 123
             - text: efg
               number: 456
+        nested_foo:
+          $ref: '#/components/schemas/Nested.Foo'
+          default: 'default foo'
+    Another.Foo:
+      type: string
+    Another.Bar:
+      type: object
+      properties:
+        original_foo:
+          allOf:
+            - $ref: '#/components/schemas/Foo'
+          default:
+            text: abc
+            number: 123
+        nested_foo:
+          type: array
+          items:
+            $ref: '#/components/schemas/Nested.Foo'
+          default:
+            - text: abc
+              number: 123
+            - text: efg
+              number: 456

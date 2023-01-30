@@ -9,6 +9,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from . import Foo as Foo_1
+from . import Nested
 
 
 class Foo(BaseModel):
@@ -16,15 +17,12 @@ class Foo(BaseModel):
 
 
 class Bar(BaseModel):
-    foo: Optional[Foo_1] = Field(
+    original_foo: Optional[Foo_1] = Field(
         default_factory=lambda: Foo_1.parse_obj({'text': 'abc', 'number': 123})
     )
-    baz: Optional[List[Foo_1]] = Field(
+    nested_foo: Optional[List[Nested.Foo]] = Field(
         default_factory=lambda: [
-            Foo_1.parse_obj(v)
+            Nested.Foo.parse_obj(v)
             for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
         ]
-    )
-    nested_foo: Optional[Foo] = Field(
-        default_factory=lambda: Foo.parse_obj('default foo')
     )
