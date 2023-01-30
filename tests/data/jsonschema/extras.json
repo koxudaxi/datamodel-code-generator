@@ -14,7 +14,9 @@
       "$comment": "comment",
       "$id": "#name",
       "register": "hij",
-      "schema": "klm"
+      "schema": "klm",
+      "x-repr": true,
+      "x-abc": true
     }
   }
 }

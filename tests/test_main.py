@@ -3475,6 +3475,8 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
                 '--input-file-type',
                 'jsonschema',
                 '--field-include-all-keys',
+                '--field-extra-keys-without-x-prefix',
+                'x-repr',
             ]
         )
         assert return_code == Exit.OK
@@ -3505,6 +3507,8 @@ def test_main_jsonschema_field_extras_field_extra_keys():
                 '--field-extra-keys',
                 'key2',
                 'invalid-key-1',
+                '--field-extra-keys-without-x-prefix',
+                'x-repr',
             ]
         )
         assert return_code == Exit.OK

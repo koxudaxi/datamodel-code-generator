@@ -298,7 +298,9 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--field-constraints] [--use-annotated]
                          [--use-non-positive-negative-number-constrained-types]
                          [--field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]]
-                         [--field-include-all-keys] [--snake-case-field]
+                         [--field-include-all-keys]
+                         [--field-extra-keys-without-x-prefix FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX [FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX ...]] 
+                         [--snake-case-field]
                          [--original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER]
                          [--strip-default-none]
                          [--disable-appending-item-suffix]
@@ -356,6 +358,9 @@ options:
                         Add extra keys to field parameters
   --field-include-all-keys
                         Add all keys to field parameters
+  --field-extra-keys-without-x-prefix
+                        Add extra keys with `x-` prefix to field parameters.
+                        The extra keys are stripped of the `x-` prefix.
   --snake-case-field    Change camel-case field name to snake-case
   --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER
                         Set delimiter to convert to snake case. This option

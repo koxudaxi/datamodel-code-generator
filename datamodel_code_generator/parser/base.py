@@ -343,6 +343,7 @@ class Parser(ABC):
         ] = title_to_class_name,
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
+        field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
@@ -402,6 +403,9 @@ class Parser(ABC):
             Callable[[str], str]
         ] = custom_class_name_generator
         self.field_extra_keys: Set[str] = field_extra_keys or set()
+        self.field_extra_keys_without_x_prefix: Set[str] = (
+            field_extra_keys_without_x_prefix or set()
+        )
         self.field_include_all_keys: bool = field_include_all_keys
 
         self.remote_text_cache: DefaultPutDict[str, str] = (

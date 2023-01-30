@@ -20,5 +20,7 @@ class Extras(BaseModel):
         key1=123,
         key2=456,
         register_='hij',
+        repr=True,
         schema_='klm',
+        x_abc=True,
     )
