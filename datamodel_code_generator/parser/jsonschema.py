@@ -362,6 +362,7 @@ class JsonSchemaParser(Parser):
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
         field_extra_keys: Optional[Set[str]] = None,
         field_include_all_keys: bool = False,
+        field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
@@ -419,6 +420,7 @@ class JsonSchemaParser(Parser):
             custom_class_name_generator=custom_class_name_generator,
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
+            field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
             http_headers=http_headers,
@@ -441,17 +443,25 @@ class JsonSchemaParser(Parser):
         self._root_id: Optional[str] = None
         self._root_id_base_path: Optional[str] = None
         self.reserved_refs: DefaultDict[Tuple[str], Set[str]] = defaultdict(set)
-        self.field_keys: Set[str] = {*DEFAULT_FIELD_KEYS, *self.field_extra_keys}
+        self.field_keys: Set[str] = {
+            *DEFAULT_FIELD_KEYS,
+            *self.field_extra_keys,
+            *self.field_extra_keys_without_x_prefix,
+        }
 
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(k)[0]: v
+                self.model_resolver.get_valid_field_name_and_alias(
+                    k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
+                )[0]: v
                 for k, v in obj.extras.items()
             }
         else:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(k)[0]: v
+                self.model_resolver.get_valid_field_name_and_alias(
+                    k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
+                )[0]: v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }

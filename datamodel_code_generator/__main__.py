@@ -145,6 +145,12 @@ arg_parser.add_argument(
     default=None,
 )
 arg_parser.add_argument(
+    '--field-extra-keys-without-x-prefix',
+    help='Add extra keys with `x-` prefix to field parameters. The extra keys are stripped of the `x-` prefix.',
+    type=str,
+    nargs='+',
+)
+arg_parser.add_argument(
     '--snake-case-field',
     help='Change camel-case field name to snake-case',
     action='store_true',
@@ -544,6 +550,7 @@ class Config(BaseModel):
     empty_enum_field_name: Optional[str] = None
     field_extra_keys: Optional[Set[str]] = None
     field_include_all_keys: bool = False
+    field_extra_keys_without_x_prefix: Optional[Set[str]] = None
     openapi_scopes: Optional[List[OpenAPIScope]] = [OpenAPIScope.Schemas]
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
@@ -698,6 +705,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             empty_enum_field_name=config.empty_enum_field_name,
             field_extra_keys=config.field_extra_keys,
             field_include_all_keys=config.field_include_all_keys,
+            field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
             openapi_scopes=config.openapi_scopes,
             wrap_string_literal=config.wrap_string_literal,
             use_title_as_name=config.use_title_as_name,
