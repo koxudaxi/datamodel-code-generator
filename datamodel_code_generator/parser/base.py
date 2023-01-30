@@ -626,6 +626,8 @@ class Parser(ABC):
         init: bool,
     ) -> None:
         for model in models:
+            scoped_model_resolver.add(model.path, model.class_name)
+        for model in models:
             imports.append(model.imports)
             for data_type in model.all_data_types:
                 # To change from/import
@@ -648,7 +650,11 @@ class Parser(ABC):
 
                 name = data_type.reference.short_name
                 if from_ and import_ and alias != name:
-                    data_type.alias = f'{alias}.{name}'
+                    data_type.alias = (
+                        alias
+                        if from_ == '.' and data_type.full_name == import_
+                        else f'{alias}.{name}'
+                    )
 
                 if init:
                     from_ = "." + from_
