@@ -626,6 +626,8 @@ class Parser(ABC):
         init: bool,
     ) -> None:
         for model in models:
+            scoped_model_resolver.add(model.path, model.class_name)
+        for model in models:
             imports.append(model.imports)
             for data_type in model.all_data_types:
                 # To change from/import

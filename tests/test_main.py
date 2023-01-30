@@ -4717,23 +4717,25 @@ def test_main_jsonschema_pattern_properties_by_reference():
 @freeze_time('2019-07-26')
 def test_main_openapi_default_object():
     with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
+        output_path: Path = Path(output_dir)
         return_code: Exit = main(
             [
                 '--input',
                 str(OPEN_API_DATA_PATH / 'default_object.yaml'),
                 '--output',
-                str(output_file),
+                str(output_dir),
                 '--input-file-type',
                 'openapi',
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_openapi_default_object' / 'output.py'
+
+        main_modular_dir = EXPECTED_MAIN_PATH / 'main_openapi_default_object'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
             ).read_text()
-        )
+            assert result == path.read_text()
+
     with pytest.raises(SystemExit):
         main()

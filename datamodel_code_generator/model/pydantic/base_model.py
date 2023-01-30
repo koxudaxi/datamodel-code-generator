@@ -103,16 +103,17 @@ class DataModelField(DataModelFieldBase):
                 continue
             elif data_type.is_list and len(data_type.data_types) == 1:
                 data_type = data_type.data_types[0]
+                data_type.alias
                 if (
                     data_type.reference
                     and isinstance(data_type.reference.source, BaseModel)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
-                    return f'lambda :[{data_type.reference.source.class_name}.parse_obj(v) for v in {repr(self.default)}]'
+                    return f'lambda :[{data_type.alias or data_type.reference.source.class_name}.parse_obj(v) for v in {repr(self.default)}]'
             elif data_type.reference and isinstance(
                 data_type.reference.source, BaseModel
             ):  # pragma: no cover
-                return f'lambda :{data_type.reference.source.class_name}.parse_obj({repr(self.default)})'
+                return f'lambda :{data_type.alias or data_type.reference.source.class_name}.parse_obj({repr(self.default)})'
         return None
 
     def __str__(self) -> str:
