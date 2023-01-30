@@ -127,7 +127,7 @@ arg_parser.add_argument(
     default=None,
 )
 arg_parser.add_argument(
-    '--use_non_positive_negative_number_constrained_types',
+    '--use-non-positive-negative-number-constrained-types',
     help='Use the Non{Positive,Negative}{FloatInt} types instead of the corresponding con* constrained types.',
     action='store_true',
     default=None,
