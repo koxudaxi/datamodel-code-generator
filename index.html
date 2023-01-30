@@ -1101,7 +1101,9 @@
 <span class="w">                         </span><span class="o">[</span>--field-constraints<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-annotated<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--use-non-positive-negative-number-constrained-types<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--field-extra-keys<span class="w"> </span>FIELD_EXTRA_KEYS<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS<span class="w"> </span>...<span class="o">]]</span>
-<span class="w">                         </span><span class="o">[</span>--field-include-all-keys<span class="o">]</span><span class="w"> </span><span class="o">[</span>--snake-case-field<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--field-include-all-keys<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--field-extra-keys-without-x-prefix<span class="w"> </span>FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX<span class="w"> </span>...<span class="o">]]</span><span class="w"> </span>
+<span class="w">                         </span><span class="o">[</span>--snake-case-field<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--original-field-name-delimiter<span class="w"> </span>ORIGINAL_FIELD_NAME_DELIMITER<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--strip-default-none<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
@@ -1159,6 +1161,9 @@ options:
 <span class="s1">                        Add extra keys to field parameters</span>
 <span class="s1">  --field-include-all-keys</span>
 <span class="s1">                        Add all keys to field parameters</span>
+<span class="s1">  --field-extra-keys-without-x-prefix</span>
+<span class="s1">                        Add extra keys with `x-` prefix to field parameters.</span>
+<span class="s1">                        The extra keys are stripped of the `x-` prefix.</span>
 <span class="s1">  --snake-case-field    Change camel-case field name to snake-case</span>
 <span class="s1">  --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER</span>
 <span class="s1">                        Set delimiter to convert to snake case. This option</span>
