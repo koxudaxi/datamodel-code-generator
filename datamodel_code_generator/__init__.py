@@ -187,6 +187,11 @@ RAW_DATA_TYPES: List[InputFileType] = [
 ]
 
 
+class OutputModelType(Enum):
+    PydanticBaseModel = 'pydantic.BaseModel'
+    dataclassesDataclass = 'dataclasses.dataclass'
+
+
 class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
@@ -224,6 +229,7 @@ def generate(
     input_filename: Optional[str] = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Optional[Path] = None,
+    output_model_type: OutputModelType = OutputModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_37,
     base_class: str = DEFAULT_BASE_CLASS,
     custom_template_dir: Optional[Path] = None,

@@ -42,6 +42,7 @@ from datamodel_code_generator import (
     InputFileType,
     InvalidClassNameError,
     OpenAPIScope,
+    OutputModelType,
     enable_debug_message,
     generate,
 )
@@ -99,6 +100,11 @@ arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
     choices=[i.value for i in InputFileType],
+)
+arg_parser.add_argument(
+    '--output-model-type',
+    help='Output model type (default: pydantic.BaseModel)',
+    choices=[i.value for i in OutputModelType],
 )
 arg_parser.add_argument(
     '--openapi-scopes',
@@ -512,6 +518,7 @@ class Config(BaseModel):
 
     input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
+    output_model_type: OutputModelType = OutputModelType.PydanticBaseModel
     output: Optional[Path]
     debug: bool = False
     disable_warnings: bool = False
@@ -672,6 +679,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             input_=config.url or config.input or sys.stdin.read(),
             input_file_type=config.input_file_type,
             output=config.output,
+            output_model_type=config.output_model_type,
             target_python_version=config.target_python_version,
             base_class=config.base_class,
             custom_template_dir=config.custom_template_dir,
