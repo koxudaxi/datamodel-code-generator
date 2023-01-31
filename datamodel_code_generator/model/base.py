@@ -282,9 +282,10 @@ class DataModel(TemplateBase, Nullable, ABC):
         return unique_fields
 
     def set_base_class(self) -> None:
-        base_class_import = Import.from_full_path(
-            self.custom_base_class or self.BASE_CLASS
-        )
+        base_class = self.custom_base_class or self.BASE_CLASS
+        if not base_class:
+            return None
+        base_class_import = Import.from_full_path(base_class)
         self._additional_imports.append(base_class_import)
         self.base_classes = [BaseClassDataType.from_import(base_class_import)]
 
