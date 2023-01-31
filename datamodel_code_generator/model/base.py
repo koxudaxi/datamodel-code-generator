@@ -278,6 +278,7 @@ class DataModel(TemplateBase, Nullable, ABC):
     def set_base_class(self) -> None:
         base_class = self.custom_base_class or self.BASE_CLASS
         if not base_class:
+            self.base_classes = []
             return None
         base_class_import = Import.from_full_path(base_class)
         self._additional_imports.append(base_class_import)
