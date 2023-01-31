@@ -38,11 +38,11 @@ from pydantic import BaseModel, root_validator, validator
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
+    DataModelType,
     Error,
     InputFileType,
     InvalidClassNameError,
     OpenAPIScope,
-    OutputModelType,
     enable_debug_message,
     generate,
 )
@@ -104,7 +104,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--output-model-type',
     help='Output model type (default: pydantic.BaseModel)',
-    choices=[i.value for i in OutputModelType],
+    choices=[i.value for i in DataModelType],
 )
 arg_parser.add_argument(
     '--openapi-scopes',
@@ -516,9 +516,16 @@ class Config(BaseModel):
                 values['target_python_version'] = PythonVersion.PY_310
         return values
 
+    @classmethod
+    def _validate_base_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if 'base_class' not in values and 'output_model_type' in values:
+            if values['output_model_type'] != DataModelType.PydanticBaseModel.value:
+                values['base_class'] = ''
+        return values
+
     input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
-    output_model_type: OutputModelType = OutputModelType.PydanticBaseModel
+    output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path]
     debug: bool = False
     disable_warnings: bool = False
