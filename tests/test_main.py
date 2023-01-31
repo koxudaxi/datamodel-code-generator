@@ -569,6 +569,33 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
     assert not captured.err
 
 
+def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
+    """Test main function with custom template directory."""
+
+    input_filename = OPEN_API_DATA_PATH / 'api.yaml'
+    custom_template_dir = DATA_PATH / 'templates_old_style'
+    extra_template_data = OPEN_API_DATA_PATH / 'extra_data.json'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--custom-template-dir',
+                str(custom_template_dir),
+                '--extra-template-data',
+                str(extra_template_data),
+            ]
+        )
+
+    captured = capsys.readouterr()
+    assert (
+        captured.out
+        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+    )
+    assert not captured.err
+
+
 def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     """Test main function with custom template directory."""
 
