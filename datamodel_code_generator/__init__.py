@@ -187,6 +187,11 @@ RAW_DATA_TYPES: List[InputFileType] = [
 ]
 
 
+class DataModelType(Enum):
+    PydanticBaseModel = 'pydantic.BaseModel'
+    DataclassesDataclass = 'dataclasses.dataclass'
+
+
 class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
@@ -216,9 +221,6 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
             if child.is_file():
                 return child
     raise Error('File not found')
-
-
-from .model import DataModelType
 
 
 def generate(

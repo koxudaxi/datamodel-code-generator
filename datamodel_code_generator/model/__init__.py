@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import NamedTuple, Type
+from typing import TYPE_CHECKING, NamedTuple, Type
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
-__all__ = ['ConstraintsBase', 'DataModel', 'DataModelFieldBase']
-
-
-class DataModelType(Enum):
-    PydanticBaseModel = 'pydantic.BaseModel'
-    DataclassesDataclass = 'dataclasses.dataclass'
+if TYPE_CHECKING:
+    from .. import DataModelType
 
 
 class DataModelSet(NamedTuple):
@@ -20,6 +15,7 @@ class DataModelSet(NamedTuple):
 
 
 def get_data_model_types(data_model_type: DataModelType) -> DataModelSet:
+    from .. import DataModelType
     from . import dataclass, pydantic, rootmodel
 
     if data_model_type == DataModelType.PydanticBaseModel:
@@ -35,3 +31,6 @@ def get_data_model_types(data_model_type: DataModelType) -> DataModelSet:
             field_model=dataclass.DataModelField,
         )
     raise ValueError(f'{data_model_type} is unsupported data model type')
+
+
+__all__ = ['ConstraintsBase', 'DataModel', 'DataModelFieldBase']
