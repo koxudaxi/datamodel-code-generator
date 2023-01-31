@@ -5,6 +5,7 @@ from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple,
 
 from pydantic import Field
 
+from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
     ConstraintsBase,
@@ -255,3 +256,16 @@ class BaseModel(DataModel):
         if any(f for f in self.fields if f.field):
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
+
+    @cached_property
+    def template_file_path(self) -> Path:
+        # This property is for Backward compatibility
+        # Current version supports '{custom_template_dir}/BaseModel.jinja'
+        # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
+        if self._custom_template_dir is not None:
+            custom_template_file_path = (
+                self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
+            )
+            if custom_template_file_path.exists():
+                return custom_template_file_path
+        return super().template_file_path
