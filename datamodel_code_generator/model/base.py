@@ -217,13 +217,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
 
-        template_file_path = Path(self.TEMPLATE_FILE_PATH)
-        if custom_template_dir is not None:
-            custom_template_file_path = custom_template_dir / template_file_path.name
-            if custom_template_file_path.exists():
-                template_file_path = custom_template_file_path
-        self._template_file_path = template_file_path
-
+        self._custom_template_dir: Optional[Path] = custom_template_dir
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
         self.custom_base_class = custom_base_class
@@ -288,9 +282,14 @@ class DataModel(TemplateBase, Nullable, ABC):
         self._additional_imports.append(base_class_import)
         self.base_classes = [BaseClassDataType.from_import(base_class_import)]
 
-    @property
+    @cached_property
     def template_file_path(self) -> Path:
-        return self._template_file_path
+        template_file_path = Path(self.TEMPLATE_FILE_PATH)
+        if self._custom_template_dir is not None:
+            custom_template_file_path = self._custom_template_dir / template_file_path
+            if custom_template_file_path.exists():
+                return custom_template_file_path
+        return template_file_path
 
     @property
     def imports(self) -> Tuple[Import, ...]:
