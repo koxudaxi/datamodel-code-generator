@@ -1747,6 +1747,7 @@ def test_main_invalid_enum_name():
                 str(output_file),
                 '--input-file-type',
                 'jsonschema',
+                '--snake-case-field',
             ]
         )
         assert return_code == Exit.OK
