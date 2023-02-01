@@ -21,7 +21,6 @@ from typing import (
 from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_OPTIONAL, Import

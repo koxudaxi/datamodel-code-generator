@@ -493,7 +493,8 @@ class Config(BaseModel):
     @root_validator()
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         values = cls._validate_use_annotated(values)
-        return cls._validate_use_union_operator(values)
+        values = cls._validate_use_union_operator(values)
+        return cls._validate_base_class(values)
 
     @classmethod
     def _validate_use_annotated(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -586,6 +587,7 @@ class Config(BaseModel):
         }
         set_args = self._validate_use_annotated(set_args)
         set_args = self._validate_use_union_operator(set_args)
+        set_args = self._validate_base_class(set_args)
         parsed_args = self.parse_obj(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))

@@ -1,17 +1,52 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, Optional, Set, Tuple
+from pathlib import Path
+from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.improts import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.pydantic.base_model import Constraints
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple
 
 
 class DataClass(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'dataclass.jinja2'
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_DATACLASS,)
+
+    def __init__(
+        self,
+        *,
+        reference: Reference,
+        fields: List[DataModelFieldBase],
+        decorators: Optional[List[str]] = None,
+        base_classes: Optional[List[Reference]] = None,
+        custom_base_class: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+        methods: Optional[List[str]] = None,
+        path: Optional[Path] = None,
+        description: Optional[str] = None,
+        default: Any = UNDEFINED,
+        nullable: bool = False,
+    ) -> None:
+        super().__init__(
+            reference=reference,
+            fields=fields,
+            decorators=decorators,
+            base_classes=base_classes,
+            custom_base_class=custom_base_class,
+            custom_template_dir=custom_template_dir,
+            extra_template_data=extra_template_data,
+            methods=methods,
+            path=path,
+            description=description,
+            default=default,
+            nullable=nullable,
+        )
+        self.fields.sort(key=lambda x: str(x), reverse=False)
 
     @property
     def imports(self) -> Tuple[Import, ...]:
@@ -21,8 +56,7 @@ class DataClass(DataModel):
 
 
 class DataModelField(DataModelFieldBase):
-    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
-        'default',
+    _FIELD_KEYS: ClassVar[Set[str]] = {
         'default_factory',
         'init',
         'repr',
@@ -38,32 +72,37 @@ class DataModelField(DataModelFieldBase):
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
 
+    @property
+    def field(self) -> Optional[str]:
+        """for backwards compatibility"""
+        result = str(self)
+        if result == "":
+            return None
+
+        return result
+
     def __str__(self) -> str:
         data: Dict[str, Any] = {
-            k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
+            k: v for k, v in self.extras.items() if k in self._FIELD_KEYS
         }
 
+        if self.default != UNDEFINED and self.default is not None:
+            data['default'] = self.default
+
         if self.required:
-            default_factory = None
-        else:
-            default_factory = data.pop('default_factory', None)
+            data = {
+                k: v
+                for k, v in data.items()
+                if k
+                not in (
+                    'default',
+                    'default_factory',
+                )
+            }
 
-        field_arguments = sorted(
-            f"{k}={repr(v)}" for k, v in data.items() if v is not None
-        )
+        if not data:
+            return ''
 
-        if not field_arguments and not default_factory:
-            if self.nullable and self.required:
-                return 'Field(...)'  # Field() is for mypy
-            return ""
-
-        if self.use_annotated:
-            pass
-        elif self.required:
-            field_arguments = ['...', *field_arguments]
-        elif default_factory:
-            field_arguments = [f'default_factory={default_factory}', *field_arguments]
-        else:
-            field_arguments = [f'{repr(self.default)}', *field_arguments]
-
-        return f'Field({", ".join(field_arguments)})'
+        if len(data) == 1 and 'default' in data:
+            return repr(data['default'])
+        return f'Field({", ".join(f"{k}={repr(v)}" for k, v in data.items())})'

@@ -368,6 +368,7 @@ def generate(
         data_model_type=data_model_types.data_model,
         data_model_root_type=data_model_types.root_model,
         data_model_field_type=data_model_types.field_model,
+        data_type_manager_type=data_model_types.data_type_manager,
         base_class=base_class,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,

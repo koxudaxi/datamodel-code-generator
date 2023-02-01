@@ -4770,3 +4770,27 @@ def test_main_openapi_default_object():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_dataclass():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_dataclass' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
