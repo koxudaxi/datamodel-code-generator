@@ -4770,3 +4770,40 @@ def test_main_openapi_default_object():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_enum_root_literal():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'enum_in_root' / 'enum_in_root.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--use-schema-description',
+                '--use-title-as-name',
+                '--field-constraints',
+                '--target-python-version',
+                '3.9',
+                '--allow-population-by-field-name',
+                '--strip-default-none',
+                '--use-default',
+                '--enum-field-as-literal',
+                'all',
+                '--snake-case-field',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_root_in_enum' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
