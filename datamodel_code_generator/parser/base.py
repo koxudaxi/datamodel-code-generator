@@ -56,8 +56,14 @@ escape_characters = str.maketrans(
 
 
 def to_hashable(item: Any) -> Any:
-    if isinstance(item, list):
-        return tuple(to_hashable(i) for i in item)
+    if isinstance(
+        item,
+        (
+            list,
+            tuple,
+        ),
+    ):
+        return tuple(sorted(to_hashable(i) for i in item))
     elif isinstance(item, dict):
         return tuple(
             sorted(
@@ -566,24 +572,18 @@ class Parser(ABC):
                 model_key = tuple(
                     to_hashable(v)
                     for v in (
-                        model.base_classes,
-                        model.extra_template_data,
-                        model.fields,
-                        model.description,
-                        model.default,
-                        model.decorators,
+                        model.render(class_name=model.duplicate_class_name),
+                        model.imports,
                     )
                 )
                 original_model = model_class_names[class_name]
                 original_model_key = tuple(
                     to_hashable(v)
                     for v in (
-                        original_model.base_classes,
-                        original_model.extra_template_data,
-                        original_model.fields,
-                        original_model.description,
-                        original_model.default,
-                        original_model.decorators,
+                        original_model.render(
+                            class_name=original_model.duplicate_class_name
+                        ),
+                        original_model.imports,
                     )
                 )
                 if model_key == original_model_key:
@@ -710,12 +710,7 @@ class Parser(ABC):
         duplicates = []
         for model in models[:]:
             model_key = tuple(
-                to_hashable(v)
-                for v in (
-                    model.base_classes,
-                    model.extra_template_data,
-                    model.fields,
-                )
+                to_hashable(v) for v in (model.render(class_name='M'), model.imports)
             )
             cached_model_reference = model_cache.get(model_key)
             if cached_model_reference:

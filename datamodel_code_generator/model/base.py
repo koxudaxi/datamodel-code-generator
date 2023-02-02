@@ -21,7 +21,6 @@ from typing import (
 from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_OPTIONAL, Import
@@ -362,9 +361,9 @@ class DataModel(TemplateBase, Nullable, ABC):
     def path(self) -> str:
         return self.reference.path
 
-    def render(self) -> str:
+    def render(self, *, class_name: Optional[str] = None) -> str:
         response = self._render(
-            class_name=self.class_name,
+            class_name=class_name or self.class_name,
             fields=self.fields,
             decorators=self.decorators,
             base_class=self.base_class,
