@@ -4789,7 +4789,7 @@ def test_main_dataclass():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_dataclass' / 'output.py').read_text()
-        )   
+        )
 
     with pytest.raises(SystemExit):
         main()
