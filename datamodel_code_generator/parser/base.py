@@ -587,8 +587,7 @@ class Parser(ABC):
         for model, duplicate_models in model_to_duplicate_models.items():
             for duplicate_model in duplicate_models:
                 for child in duplicate_model.reference.children[:]:
-                    if isinstance(child, DataType):
-                        child.replace_reference(model.reference)
+                    child.replace_reference(model.reference)
                 models.remove(duplicate_model)
 
     @classmethod
