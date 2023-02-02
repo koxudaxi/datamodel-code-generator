@@ -566,7 +566,7 @@ class Parser(ABC):
                 model_key = tuple(
                     to_hashable(v)
                     for v in (
-                        str(model),
+                        model.render(class_name=model.duplicate_class_name),
                         model.imports,
                     )
                 )
@@ -574,7 +574,9 @@ class Parser(ABC):
                 original_model_key = tuple(
                     to_hashable(v)
                     for v in (
-                        str(original_model),
+                        original_model.render(
+                            class_name=original_model.duplicate_class_name
+                        ),
                         original_model.imports,
                     )
                 )
@@ -585,7 +587,8 @@ class Parser(ABC):
         for model, duplicate_models in model_to_duplicate_models.items():
             for duplicate_model in duplicate_models:
                 for child in duplicate_model.reference.children[:]:
-                    child.replace_reference(model.reference)
+                    if isinstance(child, DataType):
+                        child.replace_reference(model.reference)
                 models.remove(duplicate_model)
 
     @classmethod
