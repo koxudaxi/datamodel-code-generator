@@ -46,7 +46,7 @@ class DataClass(DataModel):
             default=default,
             nullable=nullable,
         )
-        self.fields.sort(key=lambda x: str(x), reverse=False)
+        self.fields.sort(key=str, reverse=False)
 
     @property
     def imports(self) -> Tuple[Import, ...]:
