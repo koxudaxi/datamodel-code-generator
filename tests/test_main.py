@@ -4772,6 +4772,7 @@ def test_main_openapi_default_object():
         main()
 
 
+@freeze_time('2019-07-26')
 def test_main_dataclass():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
