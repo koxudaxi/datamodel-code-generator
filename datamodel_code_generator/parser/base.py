@@ -566,24 +566,16 @@ class Parser(ABC):
                 model_key = tuple(
                     to_hashable(v)
                     for v in (
-                        model.base_classes,
-                        model.extra_template_data,
-                        model.fields,
-                        model.description,
-                        model.default,
-                        model.decorators,
+                        str(model),
+                        model.imports,
                     )
                 )
                 original_model = model_class_names[class_name]
                 original_model_key = tuple(
                     to_hashable(v)
                     for v in (
-                        original_model.base_classes,
-                        original_model.extra_template_data,
-                        original_model.fields,
-                        original_model.description,
-                        original_model.default,
-                        original_model.decorators,
+                        str(original_model),
+                        original_model.imports,
                     )
                 )
                 if model_key == original_model_key:
