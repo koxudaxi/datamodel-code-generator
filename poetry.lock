@@ -1324,14 +1324,14 @@ files = [
 
 [[package]]
 name = "types-setuptools"
-version = "65.7.0.3"
+version = "65.7.0.4"
 description = "Typing stubs for setuptools"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "types-setuptools-65.7.0.3.tar.gz", hash = "sha256:c00f2dd1e6dcbb893faea4a57dbae80bb96d826b865d9ade8ae250a830cba10c"},
-    {file = "types_setuptools-65.7.0.3-py3-none-any.whl", hash = "sha256:b823969ea92a6d41d35933881d4c732248df834062e0d6f044c3eb36c446254e"},
+    {file = "types-setuptools-65.7.0.4.tar.gz", hash = "sha256:147809433301fe7e0f4ef5c0782f9a0453788960575e1efb6da5fe8cb2493c9f"},
+    {file = "types_setuptools-65.7.0.4-py3-none-any.whl", hash = "sha256:522067dfd8e1771f8d7e047e451de2740dc4e0c9f48a22302a6cc96e6c964a13"},
 ]
 
 [package.dependencies]
@@ -1400,4 +1400,4 @@ http = ["httpx"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "dd599915d42352b0f0b61dea80a5b15e373a08c0b174f07612f95fb757dfe97c"
+content-hash = "72375610f3f642490c6684d36a568317737e559d78df50016bb6a8cf99b218fd"
