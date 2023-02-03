@@ -5,6 +5,13 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+
+class GetPetsParametersQuery(BaseModel):
+    limit: Optional[int] = 0
+    HomeAddress: Optional[str] = 'Unknown'
+    kind: Optional[str] = 'dog'
+
+
 class UserGetResponse(BaseModel):
     timestamp: datetime
     name: str
