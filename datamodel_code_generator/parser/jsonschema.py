@@ -1558,8 +1558,8 @@ class JsonSchemaParser(Parser):
                         reference = self.model_resolver.get(reserved_path)
                         if not reference or reference.loaded:
                             continue
+                        object_paths = reserved_path.split('#/', 1)[-1].split('/')
                         path = reserved_path.split('/')
-                        _, *object_paths = path
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
                         self.parse_obj(
