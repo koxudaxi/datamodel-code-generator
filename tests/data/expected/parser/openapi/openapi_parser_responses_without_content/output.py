@@ -5,6 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+
 class UserGetResponse(BaseModel):
     timestamp: datetime
     name: str
