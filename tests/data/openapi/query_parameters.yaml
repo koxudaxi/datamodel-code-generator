@@ -29,7 +29,6 @@ paths:
           schema:
             default: 0
             type: integer
-            format: int32
         - name: HomeAddress
           in: query
           required: false
@@ -77,7 +76,6 @@ components:
       properties:
         id:
           type: integer
-          format: int64
         name:
           type: string
         tag:
