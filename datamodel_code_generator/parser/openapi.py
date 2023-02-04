@@ -378,16 +378,21 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(path_name.replace('/', '_'))
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
-    def parse_all_parameters(self, model_name, params, path):
+    def parse_all_parameters(
+        self, name: str, parameters: List[ParameterObject], path: List[str]
+    ) -> Dict[str, DataType]:
         data_types: DefaultDict[str, DataType] = defaultdict(dict)
-        for param in params:
-            if isinstance(param, ReferenceObject):
-                ref_parameter = self.get_ref_model(param.ref)
-                param = ParameterObject.parse_obj(ref_parameter)
-            if isinstance(param.schema_, JsonSchemaObject):
-                data_types[param.name] = self.parse_schema(
-                    model_name, param.schema_, [*path, "query", param.name]
+        for parameter in parameters:
+            if isinstance(parameter, ReferenceObject):
+                ref_parameter = self.get_ref_model(parameter.ref)
+                parameter = ParameterObject.parse_obj(ref_parameter)
+
+            object_schema = parameter.schema_
+            if isinstance(object_schema, JsonSchemaObject):
+                data_types[parameter.name] = self.parse_schema(
+                    name, object_schema, [*path, name]
                 )
+
         return data_types
 
     def parse_operation(
@@ -397,9 +402,10 @@ class OpenAPIParser(JsonSchemaParser):
     ) -> None:
         operation = Operation.parse_obj(raw_operation)
         path_name, method = path[-2:]
-        model_name = (self._get_model_name(path_name, method, suffix='Parameters'),)
         self.parse_all_parameters(
-            model_name, operation.parameters, [*path, 'parameters']
+            self._get_model_name(path_name, method, suffix='Parameters'),
+            operation.parameters,
+            [*path, 'parameters'],
         )
         if operation.requestBody:
             if isinstance(operation.requestBody, ReferenceObject):
