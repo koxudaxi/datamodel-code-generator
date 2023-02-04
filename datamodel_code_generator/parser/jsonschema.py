@@ -925,10 +925,7 @@ class JsonSchemaParser(Parser):
             )
         elif item.enum:
             if self.should_parse_enum_as_literal(item):
-                enum_literals = item.enum
-                if item.nullable:
-                    enum_literals = [i for i in item.enum if i is not None]
-                return self.data_type(literals=enum_literals)
+                return self.parse_enum_as_literal(item)
             return self.parse_enum(
                 name, item, get_special_path('enum', path), singular_name=singular_name
             )
@@ -1096,6 +1093,11 @@ class JsonSchemaParser(Parser):
                 data_type = data_types[0]
         elif obj.patternProperties:
             data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
+        elif obj.enum:
+            if self.should_parse_enum_as_literal(obj):
+                data_type = self.parse_enum_as_literal(obj)
+            else:  # pragma: no cover
+                data_type = self.parse_enum(name, obj, path)
         elif obj.type:
             data_type = self.get_data_type(obj)
         else:
@@ -1137,6 +1139,9 @@ class JsonSchemaParser(Parser):
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
+
+    def parse_enum_as_literal(self, obj: JsonSchemaObject) -> DataType:
+        return self.data_type(literals=[i for i in obj.enum if i is not None])
 
     def parse_enum(
         self,
@@ -1414,7 +1419,7 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         elif obj.type == 'object':
             self.parse_object(name, obj, path)
-        elif obj.enum:
+        elif obj.enum and not self.should_parse_enum_as_literal(obj):
             self.parse_enum(name, obj, path)
         else:
             self.parse_root_type(name, obj, path)
@@ -1553,8 +1558,8 @@ class JsonSchemaParser(Parser):
                         reference = self.model_resolver.get(reserved_path)
                         if not reference or reference.loaded:
                             continue
+                        object_paths = reserved_path.split('#/', 1)[-1].split('/')
                         path = reserved_path.split('/')
-                        _, *object_paths = path
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
                         self.parse_obj(

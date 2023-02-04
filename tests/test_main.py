@@ -569,6 +569,33 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
     assert not captured.err
 
 
+def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
+    """Test main function with custom template directory."""
+
+    input_filename = OPEN_API_DATA_PATH / 'api.yaml'
+    custom_template_dir = DATA_PATH / 'templates_old_style'
+    extra_template_data = OPEN_API_DATA_PATH / 'extra_data.json'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--custom-template-dir',
+                str(custom_template_dir),
+                '--extra-template-data',
+                str(extra_template_data),
+            ]
+        )
+
+    captured = capsys.readouterr()
+    assert (
+        captured.out
+        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+    )
+    assert not captured.err
+
+
 def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     """Test main function with custom template directory."""
 
@@ -4769,5 +4796,70 @@ def test_main_openapi_default_object():
             ).read_text()
             assert result == path.read_text()
 
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_enum_root_literal():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'enum_in_root' / 'enum_in_root.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--use-schema-description',
+                '--use-title-as-name',
+                '--field-constraints',
+                '--target-python-version',
+                '3.9',
+                '--allow-population-by-field-name',
+                '--strip-default-none',
+                '--use-default',
+                '--enum-field-as-literal',
+                'all',
+                '--snake-case-field',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_root_in_enum' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_reference_same_hierarchy_directory():
+    with TemporaryDirectory() as output_dir:
+        with chdir(JSON_SCHEMA_DATA_PATH / 'reference_same_hierarchy_directory'):
+            output_file: Path = Path(output_dir) / 'output.py'
+            return_code: Exit = main(
+                [
+                    '--input',
+                    './public/entities.yaml',
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH
+                    / 'main_jsonschema_reference_same_hierarchy_directory'
+                    / 'output.py'
+                ).read_text()
+            )
     with pytest.raises(SystemExit):
         main()

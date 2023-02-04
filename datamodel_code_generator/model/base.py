@@ -21,7 +21,6 @@ from typing import (
 from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
-from pydantic import BaseModel
 
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_OPTIONAL, Import
@@ -217,13 +216,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
 
-        template_file_path = Path(self.TEMPLATE_FILE_PATH)
-        if custom_template_dir is not None:
-            custom_template_file_path = custom_template_dir / template_file_path.name
-            if custom_template_file_path.exists():
-                template_file_path = custom_template_file_path
-        self._template_file_path = template_file_path
-
+        self._custom_template_dir: Optional[Path] = custom_template_dir
         self.decorators: List[str] = decorators or []
         self._additional_imports: List[Import] = []
         self.custom_base_class = custom_base_class
@@ -288,9 +281,14 @@ class DataModel(TemplateBase, Nullable, ABC):
         self._additional_imports.append(base_class_import)
         self.base_classes = [BaseClassDataType.from_import(base_class_import)]
 
-    @property
+    @cached_property
     def template_file_path(self) -> Path:
-        return self._template_file_path
+        template_file_path = Path(self.TEMPLATE_FILE_PATH)
+        if self._custom_template_dir is not None:
+            custom_template_file_path = self._custom_template_dir / template_file_path
+            if custom_template_file_path.exists():
+                return custom_template_file_path
+        return template_file_path
 
     @property
     def imports(self) -> Tuple[Import, ...]:
@@ -363,9 +361,9 @@ class DataModel(TemplateBase, Nullable, ABC):
     def path(self) -> str:
         return self.reference.path
 
-    def render(self) -> str:
+    def render(self, *, class_name: Optional[str] = None) -> str:
         response = self._render(
-            class_name=self.class_name,
+            class_name=class_name or self.class_name,
             fields=self.fields,
             decorators=self.decorators,
             base_class=self.base_class,
