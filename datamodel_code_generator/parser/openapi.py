@@ -277,8 +277,8 @@ class OpenAPIParser(JsonSchemaParser):
             data_model_type = self.parse_item(
                 parameters.name, parameters.schema_, [*path, 'schema']
             )
-            if OpenAPIScope.Parameters in self.open_api_scopes:
-                self.results.append(data_model_type)
+            # if OpenAPIScope.Parameters in self.open_api_scopes:
+            # self.results.append(data_model_type)
         for (
             media_type,
             media_obj,
@@ -379,9 +379,16 @@ class OpenAPIParser(JsonSchemaParser):
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
     def parse_all_parameters(
-        self, name: str, parameters: List[ParameterObject], path: List[str]
-    ) -> Dict[str, DataType]:
-        data_types: DefaultDict[str, DataType] = defaultdict(dict)
+        self,
+        name: str,
+        parameters: List[Union[ReferenceObject, ParameterObject]],
+        path: List[str],
+    ) -> None:
+        if OpenAPIScope.Parameters not in self.open_api_scopes:
+            return None
+        fields: List[DataModelFieldBase] = []
+        exclude_field_names: Set[str] = set()
+        reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter in parameters:
             if isinstance(parameter, ReferenceObject):
                 ref_parameter = self.get_ref_model(parameter.ref)
@@ -389,11 +396,36 @@ class OpenAPIParser(JsonSchemaParser):
 
             object_schema = parameter.schema_
             if isinstance(object_schema, JsonSchemaObject):
-                data_types[parameter.name] = self.parse_schema(
-                    name, object_schema, [*path, name]
+                if not parameter.name or parameter.in_ != ParameterLocation.query:
+                    continue
+                data_type = self.parse_schema(name, object_schema, [*path, name])
+                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                    field_name=parameter.name, excludes=exclude_field_names
                 )
-
-        return data_types
+                fields.append(
+                    self.data_model_field_type(
+                        name=field_name,
+                        default=object_schema.default,
+                        required=parameter.required,
+                        alias=alias,
+                        data_type=data_type,
+                        constraints=None,
+                        strip_default_none=self.strip_default_none,
+                        nullable=None,
+                        parent=None,
+                        extras={},
+                        use_annotated=self.use_annotated,
+                        has_default=object_schema.has_default,
+                        use_field_description=self.use_field_description,
+                        const=False,
+                        original_name=parameter.name,
+                        use_default_kwarg=self.use_default_kwarg,
+                    )
+                )
+        if not fields:
+            return None
+        self.results.append(self.data_model_type(fields=fields, reference=reference))
+        return None
 
     def parse_operation(
         self,
@@ -403,7 +435,7 @@ class OpenAPIParser(JsonSchemaParser):
         operation = Operation.parse_obj(raw_operation)
         path_name, method = path[-2:]
         self.parse_all_parameters(
-            self._get_model_name(path_name, method, suffix='Parameters'),
+            self._get_model_name(path_name, method, suffix='ParametersQuery'),
             operation.parameters,
             [*path, 'parameters'],
         )
