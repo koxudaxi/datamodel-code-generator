@@ -274,7 +274,9 @@ class OpenAPIParser(JsonSchemaParser):
 
     def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
         if parameters.name and parameters.schema_:  # pragma: no cover
-            self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
+            data_model_type = self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
+            if OpenAPIScope.Parameters in self.open_api_scopes:
+                self.results.append(data_model_type)
         for (
             media_type,
             media_obj,
@@ -374,18 +376,25 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(path_name.replace('/', '_'))
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
+    def parse_all_parameters(self, model_name, params, path):
+        data_types: DefaultDict[str, DataType] = defaultdict(dict)
+        for param in params:
+            if isinstance(param, ReferenceObject):
+                ref_parameter = self.get_ref_model(param.ref)
+                param = ParameterObject.parse_obj(ref_parameter)
+            if isinstance(param.schema_, JsonSchemaObject):
+                data_types[param.name] = self.parse_schema(model_name, param.schema_, [*path, "query", param.name])
+        return data_types
+
     def parse_operation(
         self,
         raw_operation: Dict[str, Any],
         path: List[str],
     ) -> None:
         operation = Operation.parse_obj(raw_operation)
-        for parameters in operation.parameters:
-            if isinstance(parameters, ReferenceObject):
-                ref_parameter = self.get_ref_model(parameters.ref)
-                parameters = ParameterObject.parse_obj(ref_parameter)
-            self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
         path_name, method = path[-2:]
+        model_name = self._get_model_name(path_name, method, suffix='Parameters'),
+        self.parse_all_parameters(model_name, operation.parameters, [*path, 'parameters'])
         if operation.requestBody:
             if isinstance(operation.requestBody, ReferenceObject):
                 ref_model = self.get_ref_model(operation.requestBody.ref)
