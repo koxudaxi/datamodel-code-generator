@@ -715,7 +715,11 @@ def test_openapi_parser_with_query_parameters():
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / 'query_parameters.yaml'),
-        openapi_scopes=[OpenAPIScope.Parameters, OpenAPIScope.Schemas, OpenAPIScope.Paths],
+        openapi_scopes=[
+            OpenAPIScope.Parameters,
+            OpenAPIScope.Schemas,
+            OpenAPIScope.Paths,
+        ],
     )
     assert (
         parser.parse()
