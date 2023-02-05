@@ -19,6 +19,7 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 from urllib.parse import ParseResult
@@ -63,6 +64,9 @@ class ParameterLocation(Enum):
     header = 'header'
     path = 'path'
     cookie = 'cookie'
+
+
+BaseModelT = TypeVar('BaseModelT', bound=BaseModel)
 
 
 class ReferenceObject(BaseModel):
@@ -272,21 +276,13 @@ class OpenAPIParser(JsonSchemaParser):
             ref_body = self.raw_obj
         return get_model_by_path(ref_body, ref_path.split('/')[1:])
 
-    def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
-        if parameters.name and parameters.schema_:  # pragma: no cover
-            data_model_type = self.parse_item(
-                parameters.name, parameters.schema_, [*path, 'schema']
-            )
-            # if OpenAPIScope.Parameters in self.open_api_scopes:
-            # self.results.append(data_model_type)
-        for (
-            media_type,
-            media_obj,
-        ) in parameters.content.items():  # type: str, MediaObject
-            if parameters.name and isinstance(  # pragma: no cover
-                media_obj.schema_, JsonSchemaObject
-            ):  # pragma: no cover
-                self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
+    def resolve_object(
+        self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]
+    ) -> BaseModelT:
+        if isinstance(obj, ReferenceObject):
+            ref_obj = self.get_ref_model(obj.ref)
+            return object_type.parse_obj(ref_obj)
+        return obj
 
     def parse_schema(
         self,
@@ -390,12 +386,8 @@ class OpenAPIParser(JsonSchemaParser):
         exclude_field_names: Set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter in parameters:
-            if isinstance(parameter, ReferenceObject):
-                ref_parameter = self.get_ref_model(parameter.ref)
-                parameter = ParameterObject.parse_obj(ref_parameter)
-
-            object_schema = parameter.schema_
-            if isinstance(object_schema, JsonSchemaObject):
+            object_schema = self.resolve_object(parameter.schema_, ParameterObject)
+            if object_schema:
                 if not parameter.name or parameter.in_ != ParameterLocation.query:
                     continue
                 data_type = self.parse_item(name, object_schema, [*path, name])
@@ -412,10 +404,22 @@ class OpenAPIParser(JsonSchemaParser):
                         alias=alias,
                     )
                 )
-        if not fields:
-            return None
-        self.results.append(self.data_model_type(fields=fields, reference=reference))
-        return None
+            else:
+                for (
+                    media_type,
+                    media_obj,
+                ) in parameter.content.items():
+                    if parameter.name and isinstance(  # pragma: no cover
+                        media_obj.schema_, JsonSchemaObject
+                    ):  # pragma: no cover
+                        self.parse_item(
+                            parameter.name, media_obj.schema_, [*path, media_type]
+                        )
+
+        if fields:
+            self.results.append(
+                self.data_model_type(fields=fields, reference=reference)
+            )
 
     def parse_operation(
         self,
