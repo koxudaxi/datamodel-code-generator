@@ -1014,6 +1014,7 @@ class JsonSchemaParser(Parser):
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
             original_name=None,
+            has_default=obj.has_default,
         )
 
     def parse_array(
@@ -1050,6 +1051,7 @@ class JsonSchemaParser(Parser):
                 use_annotated=self.use_annotated,
                 use_field_description=self.use_field_description,
                 original_name=None,
+                has_default=field.has_default,
             )
 
         data_model_root = self.data_model_root_type(
@@ -1130,6 +1132,7 @@ class JsonSchemaParser(Parser):
                     use_annotated=self.use_annotated,
                     use_field_description=self.use_field_description,
                     original_name=None,
+                    has_default=obj.has_default,
                 )
             ],
             custom_base_class=self.base_class,
