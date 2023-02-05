@@ -80,6 +80,11 @@ paths:
                       - xml
                       - json
                     default: json
+        - in: query
+          name: empty
+          content:
+            application/json:
+              {}
       responses:
         '200':
           description: A paged array of pets
