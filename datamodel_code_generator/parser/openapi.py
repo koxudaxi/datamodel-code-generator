@@ -398,28 +398,18 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(object_schema, JsonSchemaObject):
                 if not parameter.name or parameter.in_ != ParameterLocation.query:
                     continue
-                data_type = self.parse_schema(name, object_schema, [*path, name])
+                data_type = self.parse_item(name, object_schema, [*path, name])
                 field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                     field_name=parameter.name, excludes=exclude_field_names
                 )
                 fields.append(
-                    self.data_model_field_type(
-                        name=field_name,
-                        default=object_schema.default,
+                    self.get_object_field(
+                        field_name=field_name,
+                        field=object_schema,
+                        field_type=data_type,
+                        original_field_name=parameter.name,
                         required=parameter.required,
                         alias=alias,
-                        data_type=data_type,
-                        constraints=None,
-                        strip_default_none=self.strip_default_none,
-                        nullable=None,
-                        parent=None,
-                        extras={},
-                        use_annotated=self.use_annotated,
-                        has_default=object_schema.has_default,
-                        use_field_description=self.use_field_description,
-                        const=False,
-                        original_name=parameter.name,
-                        use_default_kwarg=self.use_default_kwarg,
                     )
                 )
         if not fields:
