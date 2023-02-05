@@ -483,6 +483,19 @@ class JsonSchemaParser(Parser):
             self.enum_field_as_literal == LiteralType.One and len(obj.enum) == 1
         )
 
+    def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
+        return obj.is_array or (
+            self.field_constraints
+            and not (
+                obj.ref
+                or obj.anyOf
+                or obj.oneOf
+                or obj.allOf
+                or obj.is_object
+                or obj.enum
+            )
+        )
+
     def get_object_field(
         self,
         *,
@@ -493,27 +506,13 @@ class JsonSchemaParser(Parser):
         alias: Optional[str],
         original_field_name: Optional[str],
     ) -> DataModelFieldBase:
-        if field.is_array or (
-            self.field_constraints
-            and not (
-                field.ref
-                or field.anyOf
-                or field.oneOf
-                or field.allOf
-                or field.is_object
-                or field.enum
-            )
-        ):
-            constraints: Optional[Mapping[str, Any]] = field.dict()
-        else:
-            constraints = None
         return self.data_model_field_type(
             name=field_name,
             default=field.default,
             data_type=field_type,
             required=required,
             alias=alias,
-            constraints=constraints,
+            constraints=field.dict() if self.is_constraints_field(field) else None,
             nullable=field.nullable
             if self.strict_nullable and (field.has_default or required)
             else None,

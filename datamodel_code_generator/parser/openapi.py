@@ -380,41 +380,84 @@ class OpenAPIParser(JsonSchemaParser):
         parameters: List[Union[ReferenceObject, ParameterObject]],
         path: List[str],
     ) -> None:
-        if OpenAPIScope.Parameters not in self.open_api_scopes:
-            return None
         fields: List[DataModelFieldBase] = []
         exclude_field_names: Set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter in parameters:
-            object_schema = self.resolve_object(parameter.schema_, ParameterObject)
-            if object_schema:
-                if not parameter.name or parameter.in_ != ParameterLocation.query:
-                    continue
-                data_type = self.parse_item(name, object_schema, [*path, name])
-                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                    field_name=parameter.name, excludes=exclude_field_names
-                )
+            parameter = self.resolve_object(parameter, ParameterObject)
+            if not parameter.name or parameter.in_ != ParameterLocation.query:
+                continue
+            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                field_name=parameter.name, excludes=exclude_field_names
+            )
+            if parameter.schema_:
+                if OpenAPIScope.Parameters not in self.open_api_scopes:
+                    return None
                 fields.append(
                     self.get_object_field(
                         field_name=field_name,
-                        field=object_schema,
-                        field_type=data_type,
+                        field=parameter.schema_,
+                        field_type=self.parse_item(
+                            name, parameter.schema_, [*path, name]
+                        ),
                         original_field_name=parameter.name,
                         required=parameter.required,
                         alias=alias,
                     )
                 )
             else:
+                data_types: List[DataType] = []
+                object_schema: Optional[JsonSchemaObject] = None
                 for (
                     media_type,
                     media_obj,
                 ) in parameter.content.items():
-                    if parameter.name and isinstance(  # pragma: no cover
+                    if not media_obj.schema_:
+                        continue
+                    object_schema = self.resolve_object(
                         media_obj.schema_, JsonSchemaObject
-                    ):  # pragma: no cover
+                    )
+                    data_types.append(
                         self.parse_item(
-                            parameter.name, media_obj.schema_, [*path, media_type]
+                            parameter.name,
+                            object_schema,
+                            [*path, name, media_type],
                         )
+                    )
+
+                if not data_types:
+                    continue
+                if len(data_types) == 1:
+                    data_type = data_types[0]
+                else:
+                    data_type = self.data_type(data_types=data_types)
+                    # multiple data_type parse as non-constraints field
+                    object_schema = None
+                fields.append(
+                    self.data_model_field_type(
+                        name=field_name,
+                        default=object_schema.default if object_schema else None,
+                        data_type=data_type,
+                        required=parameter.required,
+                        alias=alias,
+                        constraints=object_schema.dict()
+                        if object_schema and self.is_constraints_field(object_schema)
+                        else None,
+                        nullable=object_schema.nullable
+                        if object_schema
+                        and self.strict_nullable
+                        and (object_schema.has_default or parameter.required)
+                        else None,
+                        strip_default_none=self.strip_default_none,
+                        extras=self.get_field_extras(object_schema)
+                        if object_schema
+                        else {},
+                        use_annotated=self.use_annotated,
+                        use_field_description=self.use_field_description,
+                        use_default_kwarg=self.use_default_kwarg,
+                        original_name=parameter.name,
+                    )
+                )
 
         if fields:
             self.results.append(
