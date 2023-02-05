@@ -523,6 +523,7 @@ class JsonSchemaParser(Parser):
             use_field_description=self.use_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=original_field_name,
+            has_default=field.has_default,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
