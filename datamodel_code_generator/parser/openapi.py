@@ -385,10 +385,11 @@ class OpenAPIParser(JsonSchemaParser):
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter in parameters:
             parameter = self.resolve_object(parameter, ParameterObject)
-            if not parameter.name or parameter.in_ != ParameterLocation.query:
+            parameter_name = parameter.name
+            if not parameter_name or parameter.in_ != ParameterLocation.query:
                 continue
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name=parameter.name, excludes=exclude_field_names
+                field_name=parameter_name, excludes=exclude_field_names
             )
             if parameter.schema_:
                 if OpenAPIScope.Parameters not in self.open_api_scopes:
@@ -398,9 +399,9 @@ class OpenAPIParser(JsonSchemaParser):
                         field_name=field_name,
                         field=parameter.schema_,
                         field_type=self.parse_item(
-                            name, parameter.schema_, [*path, name]
+                            field_name, parameter.schema_, [*path, name, parameter_name]
                         ),
-                        original_field_name=parameter.name,
+                        original_field_name=parameter_name,
                         required=parameter.required,
                         alias=alias,
                     )
@@ -419,9 +420,9 @@ class OpenAPIParser(JsonSchemaParser):
                     )
                     data_types.append(
                         self.parse_item(
-                            parameter.name,
+                            field_name,
                             object_schema,
-                            [*path, name, media_type],
+                            [*path, name, parameter_name, media_type],
                         )
                     )
 
@@ -455,7 +456,10 @@ class OpenAPIParser(JsonSchemaParser):
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,
                         use_default_kwarg=self.use_default_kwarg,
-                        original_name=parameter.name,
+                        original_name=parameter_name,
+                        has_default=object_schema.has_default
+                        if object_schema
+                        else False,
                     )
                 )
 
