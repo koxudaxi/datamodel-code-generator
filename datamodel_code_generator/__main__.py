@@ -38,6 +38,7 @@ from pydantic import BaseModel, root_validator, validator
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
+    DataModelType,
     Error,
     InputFileType,
     InvalidClassNameError,
@@ -99,6 +100,11 @@ arg_parser.add_argument(
     '--input-file-type',
     help='Input file type (default: auto)',
     choices=[i.value for i in InputFileType],
+)
+arg_parser.add_argument(
+    '--output-model-type',
+    help='Output model type (default: pydantic.BaseModel)',
+    choices=[i.value for i in DataModelType],
 )
 arg_parser.add_argument(
     '--openapi-scopes',
@@ -487,7 +493,8 @@ class Config(BaseModel):
     @root_validator()
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         values = cls._validate_use_annotated(values)
-        return cls._validate_use_union_operator(values)
+        values = cls._validate_use_union_operator(values)
+        return cls._validate_base_class(values)
 
     @classmethod
     def _validate_use_annotated(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -510,8 +517,16 @@ class Config(BaseModel):
                 values['target_python_version'] = PythonVersion.PY_310
         return values
 
+    @classmethod
+    def _validate_base_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if 'base_class' not in values and 'output_model_type' in values:
+            if values['output_model_type'] != DataModelType.PydanticBaseModel.value:
+                values['base_class'] = ''
+        return values
+
     input: Optional[Union[Path, str]]
     input_file_type: InputFileType = InputFileType.Auto
+    output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path]
     debug: bool = False
     disable_warnings: bool = False
@@ -572,6 +587,7 @@ class Config(BaseModel):
         }
         set_args = self._validate_use_annotated(set_args)
         set_args = self._validate_use_union_operator(set_args)
+        set_args = self._validate_base_class(set_args)
         parsed_args = self.parse_obj(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
@@ -672,6 +688,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             input_=config.url or config.input or sys.stdin.read(),
             input_file_type=config.input_file_type,
             output=config.output,
+            output_model_type=config.output_model_type,
             target_python_version=config.target_python_version,
             base_class=config.base_class,
             custom_template_dir=config.custom_template_dir,
