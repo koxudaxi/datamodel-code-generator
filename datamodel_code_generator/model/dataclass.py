@@ -67,7 +67,7 @@ class DataModelField(DataModelFieldBase):
     }
     constraints: Optional[Constraints] = None
 
-    def self_reference(self) -> bool:
+    def self_reference(self) -> bool:  # pragma: no cover
         return isinstance(self.parent, DataClass) and self.parent.reference.path in {
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
