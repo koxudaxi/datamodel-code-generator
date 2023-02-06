@@ -1095,8 +1095,7 @@
 <div class="codehilite"><pre><span></span><code>usage:<span class="w"> </span>datamodel-codegen<span class="w"> </span><span class="o">[</span>-h<span class="o">]</span><span class="w"> </span><span class="o">[</span>--input<span class="w"> </span>INPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--url<span class="w"> </span>URL<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]]</span>
 <span class="w">                         </span><span class="o">[</span>--http-ignore-tls<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
-<span class="w">                         </span><span class="o">[</span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
+<span class="w">                         </span><span class="o">[</span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
 <span class="w">                         </span><span class="o">[</span>--output<span class="w"> </span>OUTPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--base-class<span class="w"> </span>BASE_CLASS<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--field-constraints<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-annotated<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--use-non-positive-negative-number-constrained-types<span class="o">]</span>
@@ -1146,7 +1145,7 @@ options:
 <span class="s1">                        certificate</span>
 <span class="s1">  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}</span>
 <span class="s1">                        Input file type (default: auto)</span>
-<span class="s1">  --openapi-scopes {schemas,paths,tags} [{schemas,paths,tags} ...]</span>
+<span class="s1">  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]</span>
 <span class="s1">                        Scopes of OpenAPI model generation (default: schemas)</span>
 <span class="s1">  --output OUTPUT       Output file (default: stdout)</span>
 <span class="s1">  --base-class BASE_CLASS</span>
