@@ -242,7 +242,7 @@ class EnumFieldNameResolver(FieldNameResolver):
     ) -> str:
         return super().get_valid_name(
             name='mro_' if name == 'mro' else name,
-            excludes=excludes,
+            excludes={'mro'} | (excludes or set()),
             ignore_snake_case_field=ignore_snake_case_field,
             upper_camel=upper_camel,
         )
