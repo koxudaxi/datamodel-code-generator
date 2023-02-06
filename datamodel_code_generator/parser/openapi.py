@@ -392,8 +392,6 @@ class OpenAPIParser(JsonSchemaParser):
                 field_name=parameter_name, excludes=exclude_field_names
             )
             if parameter.schema_:
-                if OpenAPIScope.Parameters not in self.open_api_scopes:
-                    return None
                 fields.append(
                     self.get_object_field(
                         field_name=field_name,
@@ -463,7 +461,7 @@ class OpenAPIParser(JsonSchemaParser):
                     )
                 )
 
-        if fields:
+        if OpenAPIScope.Parameters in self.open_api_scopes and fields:
             self.results.append(
                 self.data_model_type(fields=fields, reference=reference)
             )
