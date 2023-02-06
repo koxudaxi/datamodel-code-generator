@@ -187,10 +187,16 @@ RAW_DATA_TYPES: List[InputFileType] = [
 ]
 
 
+class DataModelType(Enum):
+    PydanticBaseModel = 'pydantic.BaseModel'
+    DataclassesDataclass = 'dataclasses.dataclass'
+
+
 class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
     Tags = 'tags'
+    Parameters = 'parameters'
 
 
 class Error(Exception):
@@ -224,6 +230,7 @@ def generate(
     input_filename: Optional[str] = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Optional[Path] = None,
+    output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_37,
     base_class: str = DEFAULT_BASE_CLASS,
     custom_template_dir: Optional[Path] = None,
@@ -353,13 +360,21 @@ def generate(
 
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
+
+    from datamodel_code_generator.model import get_data_model_types
+
+    data_model_types = get_data_model_types(output_model_type)
     parser = parser_class(
         source=input_text or input_,
+        data_model_type=data_model_types.data_model,
+        data_model_root_type=data_model_types.root_model,
+        data_model_field_type=data_model_types.field_model,
+        data_type_manager_type=data_model_types.data_type_manager,
         base_class=base_class,
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
         target_python_version=target_python_version,
-        dump_resolve_reference_action=dump_resolve_reference_action,
+        dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
         validation=validation,
         field_constraints=field_constraints,
         snake_case_field=snake_case_field,

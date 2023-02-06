@@ -19,6 +19,7 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 from urllib.parse import ParseResult
@@ -63,6 +64,9 @@ class ParameterLocation(Enum):
     header = 'header'
     path = 'path'
     cookie = 'cookie'
+
+
+BaseModelT = TypeVar('BaseModelT', bound=BaseModel)
 
 
 class ReferenceObject(BaseModel):
@@ -272,17 +276,13 @@ class OpenAPIParser(JsonSchemaParser):
             ref_body = self.raw_obj
         return get_model_by_path(ref_body, ref_path.split('/')[1:])
 
-    def parse_parameters(self, parameters: ParameterObject, path: List[str]) -> None:
-        if parameters.name and parameters.schema_:  # pragma: no cover
-            self.parse_item(parameters.name, parameters.schema_, [*path, 'schema'])
-        for (
-            media_type,
-            media_obj,
-        ) in parameters.content.items():  # type: str, MediaObject
-            if parameters.name and isinstance(  # pragma: no cover
-                media_obj.schema_, JsonSchemaObject
-            ):  # pragma: no cover
-                self.parse_item(parameters.name, media_obj.schema_, [*path, media_type])
+    def resolve_object(
+        self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]
+    ) -> BaseModelT:
+        if isinstance(obj, ReferenceObject):
+            ref_obj = self.get_ref_model(obj.ref)
+            return object_type.parse_obj(ref_obj)
+        return obj
 
     def parse_schema(
         self,
@@ -374,18 +374,110 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(path_name.replace('/', '_'))
         return f'{camel_path_name}{method.capitalize()}{suffix}'
 
+    def parse_all_parameters(
+        self,
+        name: str,
+        parameters: List[Union[ReferenceObject, ParameterObject]],
+        path: List[str],
+    ) -> None:
+        fields: List[DataModelFieldBase] = []
+        exclude_field_names: Set[str] = set()
+        reference = self.model_resolver.add(path, name, class_name=True, unique=True)
+        for parameter in parameters:
+            parameter = self.resolve_object(parameter, ParameterObject)
+            parameter_name = parameter.name
+            if not parameter_name or parameter.in_ != ParameterLocation.query:
+                continue
+            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                field_name=parameter_name, excludes=exclude_field_names
+            )
+            if parameter.schema_:
+                fields.append(
+                    self.get_object_field(
+                        field_name=field_name,
+                        field=parameter.schema_,
+                        field_type=self.parse_item(
+                            field_name, parameter.schema_, [*path, name, parameter_name]
+                        ),
+                        original_field_name=parameter_name,
+                        required=parameter.required,
+                        alias=alias,
+                    )
+                )
+            else:
+                data_types: List[DataType] = []
+                object_schema: Optional[JsonSchemaObject] = None
+                for (
+                    media_type,
+                    media_obj,
+                ) in parameter.content.items():
+                    if not media_obj.schema_:
+                        continue
+                    object_schema = self.resolve_object(
+                        media_obj.schema_, JsonSchemaObject
+                    )
+                    data_types.append(
+                        self.parse_item(
+                            field_name,
+                            object_schema,
+                            [*path, name, parameter_name, media_type],
+                        )
+                    )
+
+                if not data_types:
+                    continue
+                if len(data_types) == 1:
+                    data_type = data_types[0]
+                else:
+                    data_type = self.data_type(data_types=data_types)
+                    # multiple data_type parse as non-constraints field
+                    object_schema = None
+                fields.append(
+                    self.data_model_field_type(
+                        name=field_name,
+                        default=object_schema.default if object_schema else None,
+                        data_type=data_type,
+                        required=parameter.required,
+                        alias=alias,
+                        constraints=object_schema.dict()
+                        if object_schema and self.is_constraints_field(object_schema)
+                        else None,
+                        nullable=object_schema.nullable
+                        if object_schema
+                        and self.strict_nullable
+                        and (object_schema.has_default or parameter.required)
+                        else None,
+                        strip_default_none=self.strip_default_none,
+                        extras=self.get_field_extras(object_schema)
+                        if object_schema
+                        else {},
+                        use_annotated=self.use_annotated,
+                        use_field_description=self.use_field_description,
+                        use_default_kwarg=self.use_default_kwarg,
+                        original_name=parameter_name,
+                        has_default=object_schema.has_default
+                        if object_schema
+                        else False,
+                    )
+                )
+
+        if OpenAPIScope.Parameters in self.open_api_scopes and fields:
+            self.results.append(
+                self.data_model_type(fields=fields, reference=reference)
+            )
+
     def parse_operation(
         self,
         raw_operation: Dict[str, Any],
         path: List[str],
     ) -> None:
         operation = Operation.parse_obj(raw_operation)
-        for parameters in operation.parameters:
-            if isinstance(parameters, ReferenceObject):
-                ref_parameter = self.get_ref_model(parameters.ref)
-                parameters = ParameterObject.parse_obj(ref_parameter)
-            self.parse_parameters(parameters=parameters, path=[*path, 'parameters'])
         path_name, method = path[-2:]
+        self.parse_all_parameters(
+            self._get_model_name(path_name, method, suffix='ParametersQuery'),
+            operation.parameters,
+            [*path, 'parameters'],
+        )
         if operation.requestBody:
             if isinstance(operation.requestBody, ReferenceObject):
                 ref_model = self.get_ref_model(operation.requestBody.ref)
