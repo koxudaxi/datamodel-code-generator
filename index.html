@@ -281,8 +281,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-source-types" class="md-nav__link">
-    Supported source types
+  <a href="#supported-output-types" class="md-nav__link">
+    Supported output types
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-output-types_1" class="md-nav__link">
+    Supported output types
   </a>
   
 </li>
@@ -655,8 +662,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-source-types" class="md-nav__link">
-    Supported source types
+  <a href="#supported-output-types" class="md-nav__link">
+    Supported output types
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-output-types_1" class="md-nav__link">
+    Supported output types
   </a>
   
 </li>
@@ -816,7 +830,7 @@
 
 
 <h1 id="datamodel-code-generator">datamodel-code-generator</h1>
-<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic</a> model from an openapi file and others.</p>
+<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic</a> model and <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a> from an openapi file and others.</p>
 <p><a href="https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest"><img alt="Build Status" src="https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg" /></a>
 <a href="https://pypi.python.org/pypi/datamodel-code-generator"><img alt="PyPI version" src="https://badge.fury.io/py/datamodel-code-generator.svg" /></a>
 <a href="https://pepy.tech/project/datamodel-code-generator"><img alt="Downloads" src="https://pepy.tech/badge/datamodel-code-generator/month" /></a>
@@ -1062,12 +1076,17 @@
   - <em><a href="https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas">Building the models from the OSCAL schemas.</a></em>
 - <a href="https://github.com/SeldonIO/MLServer">SeldonIO/MLServer</a>
   - <em><a href="https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh">generate-types.sh</a></em></p>
-<h2 id="supported-source-types">Supported source types</h2>
+<h2 id="supported-output-types">Supported output types</h2>
 <ul>
 <li>OpenAPI 3 (YAML/JSON, <a href="https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types">OpenAPI Data Type</a>)</li>
 <li>JSON Schema (<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Core</a>/<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Validation</a>)</li>
 <li>JSON/YAML/CSV Data (it will be converted to JSON Schema)</li>
 <li>Python dictionary (it will be converted to JSON Schema)</li>
+</ul>
+<h2 id="supported-output-types_1">Supported output types</h2>
+<ul>
+<li><a href="https://docs.pydantic.dev/">pydantic</a>.BaseModel</li>
+<li><a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a></li>
 </ul>
 <h2 id="installation">Installation</h2>
 <p>To install <code>datamodel-code-generator</code>:</p>
@@ -1095,6 +1114,8 @@
 <div class="codehilite"><pre><span></span><code>usage:<span class="w"> </span>datamodel-codegen<span class="w"> </span><span class="o">[</span>-h<span class="o">]</span><span class="w"> </span><span class="o">[</span>--input<span class="w"> </span>INPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--url<span class="w"> </span>URL<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]]</span>
 <span class="w">                         </span><span class="o">[</span>--http-ignore-tls<span class="o">]</span>
+<span class="w">                         </span><span class="o">[</span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
+<span class="w">                         </span><span class="o">[</span>--output-model-type<span class="w"> </span><span class="o">{</span>pydantic.BaseModel,dataclasses.dataclass<span class="o">}]</span>
 <span class="w">                         </span><span class="o">[</span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
 <span class="w">                         </span><span class="o">[</span>--output<span class="w"> </span>OUTPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--base-class<span class="w"> </span>BASE_CLASS<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--field-constraints<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-annotated<span class="o">]</span>
@@ -1145,6 +1166,8 @@ options:
 <span class="s1">                        certificate</span>
 <span class="s1">  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}</span>
 <span class="s1">                        Input file type (default: auto)</span>
+<span class="s1">  --output-model-type {pydantic.BaseModel,dataclasses.dataclass}</span>
+<span class="s1">                        Output model type (default: pydantic.BaseModel)</span>
 <span class="s1">  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]</span>
 <span class="s1">                        Scopes of OpenAPI model generation (default: schemas)</span>
 <span class="s1">  --output OUTPUT       Output file (default: stdout)</span>
