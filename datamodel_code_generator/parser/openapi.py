@@ -543,7 +543,6 @@ class OpenAPIParser(JsonSchemaParser):
                     ]
                     paths_path = [*path_parts, '#/paths']
                     for path_name, methods in paths.items():
-
                         paths_parameters = parameters[:]
                         if 'parameters' in methods:
                             paths_parameters.extend(methods['parameters'])

@@ -158,7 +158,6 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
     else:
         prev_cwd = Path.cwd()
         try:
-
             os.chdir(path if path.is_dir() else path.parent)
             yield
         finally:
@@ -436,7 +435,6 @@ def generate(
     if not results:
         raise Error('Models not found in the input data')
     elif isinstance(results, str):
-
         modules = {output: (results, input_filename)}
     else:
         if output is None:

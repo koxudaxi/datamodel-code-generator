@@ -777,7 +777,6 @@ class Parser(ABC):
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.copy()
                     if isinstance(data_type.parent, self.data_model_field_type):
-
                         # for field
                         # override empty field by root-type field
                         model_field.extras = dict(
@@ -943,7 +942,6 @@ class Parser(ABC):
         format_: Optional[bool] = True,
         settings_path: Optional[Path] = None,
     ) -> Union[str, Dict[Tuple[str, ...], Result]]:
-
         self.parse_raw()
 
         if with_import:

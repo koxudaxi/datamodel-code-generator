@@ -202,7 +202,6 @@ class BaseModel(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
     ):
-
         methods: List[str] = [field.method for field in fields if field.method]
 
         super().__init__(

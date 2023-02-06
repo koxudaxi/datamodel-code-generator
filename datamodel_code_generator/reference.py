@@ -367,7 +367,6 @@ class ModelResolver:
 
     @contextmanager
     def base_url_context(self, base_url: str) -> Generator[None, None, None]:
-
         if self._base_url:
             with context_variable(self.set_base_url, self.base_url, base_url):
                 yield
@@ -612,7 +611,6 @@ class ModelResolver:
         singular_name: bool = False,
         singular_name_suffix: Optional[str] = None,
     ) -> ClassName:
-
         if '.' in name:
             split_name = name.split('.')
             prefix = '.'.join(
