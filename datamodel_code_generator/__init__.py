@@ -191,6 +191,7 @@ class OpenAPIScope(Enum):
     Schemas = 'schemas'
     Paths = 'paths'
     Tags = 'tags'
+    Parameters = 'parameters'
 
 
 class Error(Exception):

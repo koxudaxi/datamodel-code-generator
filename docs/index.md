@@ -292,8 +292,7 @@ The `datamodel-codegen` command:
 usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--http-headers HTTP_HEADER [HTTP_HEADER ...]]
                          [--http-ignore-tls]
-                         [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
-                         [--openapi-scopes {schemas,paths,tags} [{schemas,paths,tags} ...]]
+                         [--openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]]
                          [--output OUTPUT] [--base-class BASE_CLASS]
                          [--field-constraints] [--use-annotated]
                          [--use-non-positive-negative-number-constrained-types]
@@ -343,7 +342,7 @@ options:
                         certificate
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
-  --openapi-scopes {schemas,paths,tags} [{schemas,paths,tags} ...]
+  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
   --output OUTPUT       Output file (default: stdout)
   --base-class BASE_CLASS
