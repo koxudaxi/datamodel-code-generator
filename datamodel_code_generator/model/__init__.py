@@ -38,7 +38,9 @@ def get_data_model_types(data_model_type: DataModelType) -> DataModelSet:
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,
         )
-    raise ValueError(f'{data_model_type} is unsupported data model type')
+    raise ValueError(
+        f'{data_model_type} is unsupported data model type'
+    )  # pragma: no cover
 
 
 __all__ = ['ConstraintsBase', 'DataModel', 'DataModelFieldBase']
