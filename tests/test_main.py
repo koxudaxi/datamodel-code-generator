@@ -1786,6 +1786,34 @@ def test_main_invalid_enum_name():
 
 
 @freeze_time('2019-07-26')
+def test_main_invalid_enum_name_snake_case_field():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'invalid_enum_name.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--snake-case-field',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_invalid_enum_name_snake_case_field'
+                / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_json_reuse_model():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -4829,5 +4857,33 @@ def test_main_jsonschema_enum_root_literal():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_root_in_enum' / 'output.py'
             ).read_text()
         )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_reference_same_hierarchy_directory():
+    with TemporaryDirectory() as output_dir:
+        with chdir(JSON_SCHEMA_DATA_PATH / 'reference_same_hierarchy_directory'):
+            output_file: Path = Path(output_dir) / 'output.py'
+            return_code: Exit = main(
+                [
+                    '--input',
+                    './public/entities.yaml',
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                ]
+            )
+            assert return_code == Exit.OK
+            assert (
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH
+                    / 'main_jsonschema_reference_same_hierarchy_directory'
+                    / 'output.py'
+                ).read_text()
+            )
     with pytest.raises(SystemExit):
         main()
