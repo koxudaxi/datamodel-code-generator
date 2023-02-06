@@ -374,7 +374,7 @@ def generate(
         custom_template_dir=custom_template_dir,
         extra_template_data=extra_template_data,
         target_python_version=target_python_version,
-        dump_resolve_reference_action=dump_resolve_reference_action,
+        dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
         validation=validation,
         field_constraints=field_constraints,
         snake_case_field=snake_case_field,

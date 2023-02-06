@@ -105,4 +105,7 @@ class DataModelField(DataModelFieldBase):
 
         if len(data) == 1 and 'default' in data:
             return repr(data['default'])
-        return f'Field({", ".join(f"{k}={repr(v)}" for k, v in data.items())})'
+        kwargs = [
+            f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()
+        ]
+        return f'field({", ".join(kwargs)})'
