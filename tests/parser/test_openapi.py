@@ -709,3 +709,23 @@ def test_openapi_parser_responses_with_tag():
             EXPECTED_OPEN_API_PATH / 'openapi_parser_responses_with_tag' / 'output.py'
         ).read_text()
     )
+
+
+def test_openapi_parser_with_query_parameters():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'query_parameters.yaml'),
+        openapi_scopes=[
+            OpenAPIScope.Parameters,
+            OpenAPIScope.Schemas,
+            OpenAPIScope.Paths,
+        ],
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_with_query_parameters'
+            / 'output.py'
+        ).read_text()
+    )
