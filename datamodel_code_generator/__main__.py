@@ -29,7 +29,6 @@ from typing import (
     cast,
 )
 from urllib.parse import ParseResult, urlparse
-from warnings import warn
 
 import argcomplete
 import black
