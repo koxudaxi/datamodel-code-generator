@@ -37,13 +37,13 @@ if TYPE_CHECKING:
     runtime_checkable: Callable[..., Any]
 else:
     try:
-        pass
+        from typing import Protocol
     except ImportError:
-        pass
+        from typing_extensions import Protocol  # noqa
     try:
-        pass
+        from typing import runtime_checkable
     except ImportError:
-        pass
+        from typing_extensions import runtime_checkable  # noqa
     try:
         from yaml import CSafeLoader as SafeLoader
     except ImportError:  # pragma: no cover
