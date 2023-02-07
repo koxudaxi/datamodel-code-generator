@@ -385,13 +385,6 @@ class DataTypeManager(ABC):
                 " The version will be not supported in a future version"
             )
 
-        if (
-            use_union_operator and not python_version.has_union_operator
-        ):  # pragma: no cover
-            raise Exception(
-                "use_union_operator can not be used with target_python_version 3.9 or earlier.\n"
-                " The version will be not supported in a future version"
-            )
         if TYPE_CHECKING:
             self.data_type: Type[DataType]
         else:

@@ -493,28 +493,12 @@ class Config(BaseModel):
     @root_validator()
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         values = cls._validate_use_annotated(values)
-        values = cls._validate_use_union_operator(values)
         return cls._validate_base_class(values)
 
     @classmethod
     def _validate_use_annotated(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('use_annotated'):
             values['field_constraints'] = True
-        return values
-
-    @classmethod
-    def _validate_use_union_operator(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('use_union_operator'):
-            target_python_version: PythonVersion = PythonVersion(
-                values.get('target_python_version', PythonVersion.PY_37.value)
-            )
-            if not target_python_version.has_union_operator:
-                if not values.get('disable_warnings'):
-                    warn(
-                        f"`--use-union-operator` can not be used with `--target-python_version` {target_python_version.value}.\n"
-                        f"`--target-python_version` {PythonVersion.PY_310.value} will be used."
-                    )
-                values['target_python_version'] = PythonVersion.PY_310
         return values
 
     @classmethod
@@ -586,7 +570,6 @@ class Config(BaseModel):
             f: getattr(args, f) for f in self.__fields__ if getattr(args, f) is not None
         }
         set_args = self._validate_use_annotated(set_args)
-        set_args = self._validate_use_union_operator(set_args)
         set_args = self._validate_base_class(set_args)
         parsed_args = self.parse_obj(set_args)
         for field_name in set_args:
