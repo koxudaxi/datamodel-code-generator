@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from unittest.mock import call
 
 import pytest
 import yaml
 
-from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
@@ -69,14 +69,14 @@ def test_json_schema_object_ref_url_json(mocker):
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = json.dumps(
         {
-            "$id": "https://example.com/person.schema.json",
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "definitions": {
-                "User": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
+            '$id': 'https://example.com/person.schema.json',
+            '$schema': 'http://json-schema.org/draft-07/schema#',
+            'definitions': {
+                'User': {
+                    'type': 'object',
+                    'properties': {
+                        'name': {
+                            'type': 'string',
                         }
                     },
                 }
@@ -87,8 +87,8 @@ def test_json_schema_object_ref_url_json(mocker):
     parser.parse_ref(obj, ['Model'])
     assert (
         dump_templates(list(parser.results))
-        == '''class User(BaseModel):
-    name: Optional[str] = None'''
+        == """class User(BaseModel):
+    name: Optional[str] = None"""
     )
     parser.parse_ref(obj, ['Model'])
     mock_get.assert_has_calls(
@@ -111,13 +111,13 @@ def test_json_schema_object_ref_url_yaml(mocker):
     parser.parse_ref(obj, ['User'])
     assert (
         dump_templates(list(parser.results))
-        == '''class User(BaseModel):
+        == """class User(BaseModel):
     name: Optional[str] = Field(None, example='ken')
     pets: Optional[List[User]] = Field(default_factory=list)
 
 
 class Pet(BaseModel):
-    name: Optional[str] = Field(None, examples=['dog', 'cat'])'''
+    name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
     parser.parse_ref(obj, [])
     mock_get.assert_called_once_with(
@@ -145,13 +145,13 @@ def test_json_schema_object_cached_ref_url_yaml(mocker):
     parser.parse_ref(obj, [])
     assert (
         dump_templates(list(parser.results))
-        == '''class Pet(BaseModel):
+        == """class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])
 
 
 class User(BaseModel):
     name: Optional[str] = Field(None, example='ken')
-    pets: Optional[List[User]] = Field(default_factory=list)'''
+    pets: Optional[List[User]] = Field(default_factory=list)"""
     )
     mock_get.assert_called_once_with(
         'https://example.org/schema.yaml', headers=None, verify=True
@@ -161,9 +161,9 @@ class User(BaseModel):
 def test_json_schema_ref_url_json(mocker):
     parser = JsonSchemaParser('')
     obj = {
-        "type": "object",
-        "properties": {
-            "user": {'$ref': 'https://example.org/schema.json#/definitions/User'}
+        'type': 'object',
+        'properties': {
+            'user': {'$ref': 'https://example.org/schema.json#/definitions/User'}
         },
     }
     mock_get = mocker.patch('httpx.get')
@@ -172,7 +172,7 @@ def test_json_schema_ref_url_json(mocker):
     parser.parse_raw_obj('Model', obj, ['Model'])
     assert (
         dump_templates(list(parser.results))
-        == '''class Model(BaseModel):
+        == """class Model(BaseModel):
     user: Optional[User] = None
 
 
@@ -182,7 +182,7 @@ class User(BaseModel):
 
 
 class Pet(BaseModel):
-    name: Optional[str] = Field(None, examples=['dog', 'cat'])'''
+    name: Optional[str] = Field(None, examples=['dog', 'cat'])"""
     )
     mock_get.assert_called_once_with(
         'https://example.org/schema.json', headers=None, verify=True
@@ -194,23 +194,23 @@ class Pet(BaseModel):
     [
         (
             {
-                "$id": "https://example.com/person.schema.json",
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "title": "Person",
-                "type": "object",
-                "properties": {
-                    "firstName": {
-                        "type": "string",
-                        "description": "The person's first name.",
+                '$id': 'https://example.com/person.schema.json',
+                '$schema': 'http://json-schema.org/draft-07/schema#',
+                'title': 'Person',
+                'type': 'object',
+                'properties': {
+                    'firstName': {
+                        'type': 'string',
+                        'description': "The person's first name.",
                     },
-                    "lastName": {
-                        "type": "string",
-                        "description": "The person's last name.",
+                    'lastName': {
+                        'type': 'string',
+                        'description': "The person's last name.",
                     },
-                    "age": {
-                        "description": "Age in years which must be equal to or greater than zero.",
-                        "type": "integer",
-                        "minimum": 0,
+                    'age': {
+                        'description': 'Age in years which must be equal to or greater than zero.',
+                        'type': 'integer',
+                        'minimum': 0,
                     },
                 },
             },
@@ -221,29 +221,29 @@ class Pet(BaseModel):
         ),
         (
             {
-                "$id": "https://example.com/person.schema.json",
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "title": "person-object",
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "The person's name.",
+                '$id': 'https://example.com/person.schema.json',
+                '$schema': 'http://json-schema.org/draft-07/schema#',
+                'title': 'person-object',
+                'type': 'object',
+                'properties': {
+                    'name': {
+                        'type': 'string',
+                        'description': "The person's name.",
                     },
-                    "home-address": {
-                        "$ref": "#/definitions/home-address",
-                        "description": "The person's home address.",
+                    'home-address': {
+                        '$ref': '#/definitions/home-address',
+                        'description': "The person's home address.",
                     },
                 },
-                "definitions": {
-                    "home-address": {
-                        "type": "object",
-                        "properties": {
-                            "street-address": {"type": "string"},
-                            "city": {"type": "string"},
-                            "state": {"type": "string"},
+                'definitions': {
+                    'home-address': {
+                        'type': 'object',
+                        'properties': {
+                            'street-address': {'type': 'string'},
+                            'city': {'type': 'string'},
+                            'state': {'type': 'string'},
                         },
-                        "required": ["street_address", "city", "state"],
+                        'required': ['street_address', 'city', 'state'],
                     }
                 },
             },
@@ -267,11 +267,11 @@ def test_parse_object(source_obj, generated_classes):
     [
         (
             {
-                "$id": "https://example.com/person.schema.json",
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "title": "AnyJson",
-                "description": "This field accepts any object",
-                "discriminator": "type",
+                '$id': 'https://example.com/person.schema.json',
+                '$schema': 'http://json-schema.org/draft-07/schema#',
+                'title': 'AnyJson',
+                'description': 'This field accepts any object',
+                'discriminator': 'type',
             },
             """class AnyObject(BaseModel):
     __root__: Any = Field(..., description='This field accepts any object', discriminator='type', title='AnyJson')""",
@@ -304,29 +304,29 @@ def test_parse_one_of_object(source_obj, generated_classes):
     [
         (
             {
-                "$id": "https://example.com/person.schema.json",
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "title": "defaults",
-                "type": "object",
-                "properties": {
-                    "string": {
-                        "type": "string",
-                        "default": "default string",
+                '$id': 'https://example.com/person.schema.json',
+                '$schema': 'http://json-schema.org/draft-07/schema#',
+                'title': 'defaults',
+                'type': 'object',
+                'properties': {
+                    'string': {
+                        'type': 'string',
+                        'default': 'default string',
                     },
-                    "string_on_field": {
-                        "type": "string",
-                        "default": "default string",
-                        "description": "description",
+                    'string_on_field': {
+                        'type': 'string',
+                        'default': 'default string',
+                        'description': 'description',
                     },
-                    "number": {"type": "number", "default": 123},
-                    "number_on_field": {
-                        "type": "number",
-                        "default": 123,
-                        "description": "description",
+                    'number': {'type': 'number', 'default': 123},
+                    'number_on_field': {
+                        'type': 'number',
+                        'default': 123,
+                        'description': 'description',
                     },
-                    "number_array": {"type": "array", "default": [1, 2, 3]},
-                    "string_array": {"type": "array", "default": ["a", "b", "c"]},
-                    "object": {"type": "object", "default": {"key": "value"}},
+                    'number_array': {'type': 'array', 'default': [1, 2, 3]},
+                    'string_array': {'type': 'array', 'default': ['a', 'b', 'c']},
+                    'object': {'type': 'object', 'default': {'key': 'value'}},
                 },
             },
             """class Defaults(BaseModel):

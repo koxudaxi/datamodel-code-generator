@@ -69,12 +69,12 @@ class DataModelField(DataModelFieldBase):
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         result = str(self)
-        if self.use_default_kwarg and not result.startswith("Field(..."):
+        if self.use_default_kwarg and not result.startswith('Field(...'):
             # Use `default=` for fields that have a default value so that type
             # checkers using @dataclass_transform can infer the field as
             # optional in __init__.
-            result = result.replace("Field(", "Field(default=")
-        if result == "":
+            result = result.replace('Field(', 'Field(default=')
+        if result == '':
             return None
 
         return result
@@ -157,13 +157,13 @@ class DataModelField(DataModelFieldBase):
             default_factory = data.pop('default_factory', None)
 
         field_arguments = sorted(
-            f"{k}={repr(v)}" for k, v in data.items() if v is not None
+            f'{k}={repr(v)}' for k, v in data.items() if v is not None
         )
 
         if not field_arguments and not default_factory:
             if self.nullable and self.required:
                 return 'Field(...)'  # Field() is for mypy
-            return ""
+            return ''
 
         if self.use_annotated:
             pass

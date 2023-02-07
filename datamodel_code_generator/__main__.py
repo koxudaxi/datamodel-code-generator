@@ -280,7 +280,7 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--use-default-kwarg',
     action='store_true',
-    help="Use `default=` instead of a positional argument for Fields that have default values.",
+    help='Use `default=` instead of a positional argument for Fields that have default values.',
 )
 
 arg_parser.add_argument(
@@ -292,17 +292,17 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     '--keep-model-order',
-    help='Keep generated models\' order',
+    help="Keep generated models' order",
     action='store_true',
     default=None,
 )
 
 arg_parser.add_argument(
-    "--collapse-root-models",
+    '--collapse-root-models',
     action='store_true',
     default=None,
-    help="Models generated with a root-type field will be merged"
-    "into the models using that root-type model",
+    help='Models generated with a root-type field will be merged'
+    'into the models using that root-type model',
 )
 
 
@@ -311,7 +311,7 @@ arg_parser.add_argument(
     help='Parse enum field as literal. '
     'all: all enum field type are Literal. '
     'one: field type is Literal when an enum has only one possible value',
-    choices=[l.value for l in LiteralType],
+    choices=[lt.value for lt in LiteralType],
     default=None,
 )
 
@@ -338,13 +338,13 @@ arg_parser.add_argument(
 
 arg_parser.add_argument(
     '--special-field-name-prefix',
-    help='Set field name prefix when first character can\'t be used as Python field name (default:  `field`)',
+    help="Set field name prefix when first character can't be used as Python field name (default:  `field`)",
     default=None,
 )
 
 arg_parser.add_argument(
     '--remove-special-field-name-prefix',
-    help='Remove field name prefix when first character can\'t be used as Python field name',
+    help="Remove field name prefix when first character can't be used as Python field name",
     action='store_true',
     default=None,
 )
@@ -397,11 +397,11 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "--use-double-quotes",
+    '--use-double-quotes',
     action='store_true',
     default=None,
-    help="Model generated with double quotes. Single quotes or "
-    "your black config skip_string_normalization value will be used without this option.",
+    help='Model generated with double quotes. Single quotes or '
+    'your black config skip_string_normalization value will be used without this option.',
 )
 
 arg_parser.add_argument(
@@ -425,13 +425,13 @@ class Config(BaseModel):
         # Pydantic 1.5.1 doesn't support validate_assignment correctly
         arbitrary_types_allowed = (TextIOBase,)
 
-    @validator("aliases", "extra_template_data", pre=True)
+    @validator('aliases', 'extra_template_data', pre=True)
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
-        return cast(TextIOBase, Path(value).expanduser().resolve().open("rt"))
+        return cast(TextIOBase, Path(value).expanduser().resolve().open('rt'))
 
-    @validator("input", "output", "custom_template_dir", pre=True)
+    @validator('input', 'output', 'custom_template_dir', pre=True)
     def validate_path(cls, value: Any) -> Optional[Path]:
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
@@ -444,7 +444,7 @@ class Config(BaseModel):
         elif value is None:  # pragma: no cover
             return None
         raise Error(
-            f'This protocol doesn\'t support only http/https. --input={value}'
+            f"This protocol doesn't support only http/https. --input={value}"
         )  # pragma: no cover
 
     @root_validator
@@ -455,8 +455,8 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
-                    f"`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n"  # type: ignore
-                    " The version will be not supported in a future version"
+                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'  # type: ignore
+                    ' The version will be not supported in a future version'
                 )
         return values
 
@@ -467,7 +467,7 @@ class Config(BaseModel):
         if values.get('original_field_name_delimiter') is not None:
             if not values.get('snake_case_field'):
                 raise Error(
-                    "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
+                    '`--original-field-name-delimiter` can not be used without `--snake-case-field`.'
                 )
         return values
 
@@ -593,7 +593,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         exit(0)
 
     root = black_find_project_root((Path().resolve(),))
-    pyproject_toml_path = root / "pyproject.toml"
+    pyproject_toml_path = root / 'pyproject.toml'
     if pyproject_toml_path.is_file():
         pyproject_toml: Dict[str, Any] = {
             k.replace('-', '_'): v
@@ -644,7 +644,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                     data, object_hook=lambda d: defaultdict(dict, **d)
                 )
             except json.JSONDecodeError as e:
-                print(f"Unable to load extra template data: {e}", file=sys.stderr)
+                print(f'Unable to load extra template data: {e}', file=sys.stderr)
                 return Exit.ERROR
 
     if config.aliases is None:
@@ -654,7 +654,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             try:
                 aliases = json.load(data)
             except json.JSONDecodeError as e:
-                print(f"Unable to load alias mapping: {e}", file=sys.stderr)
+                print(f'Unable to load alias mapping: {e}', file=sys.stderr)
                 return Exit.ERROR
         if not isinstance(aliases, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()

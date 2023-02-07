@@ -42,7 +42,7 @@ class C(DataModel):
         pass
 
 
-template: str = '''{%- for decorator in decorators -%}
+template: str = """{%- for decorator in decorators -%}
 {{ decorator }}
 {%- endfor %}
 @dataclass
@@ -53,7 +53,7 @@ class {{ class_name }}:
     {%- else %}
     {{ field.name }}: {{ field.type_hint }} = {{field.default}}
     {%- endif %}
-{%- endfor -%}'''
+{%- endfor -%}"""
 
 
 def test_template_base():
@@ -69,7 +69,7 @@ def test_template_base():
 
 def test_data_model():
     field = DataModelFieldBase(
-        name='a', data_type=DataType(type='str'), default="" 'abc' "", required=True
+        name='a', data_type=DataType(type='str'), default='' 'abc' '', required=True
     )
 
     with NamedTemporaryFile('w', delete=False) as dummy_template:
@@ -98,7 +98,7 @@ def test_data_model():
 
 def test_data_model_exception():
     field = DataModelFieldBase(
-        name='a', data_type=DataType(type='str'), default="" 'abc' "", required=True
+        name='a', data_type=DataType(type='str'), default='' 'abc' '', required=True
     )
     with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
         C(

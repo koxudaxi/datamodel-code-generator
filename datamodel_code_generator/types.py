@@ -143,7 +143,7 @@ class DataType(_BaseModel):
     def replace_reference(self, reference: Optional[Reference]) -> None:
         if not self.reference:  # pragma: no cover
             raise Exception(
-                f'`{self.__class__.__name__}.replace_reference()` can\'t be called'
+                f"`{self.__class__.__name__}.replace_reference()` can't be called"
                 f' when `reference` field is empty.'
             )
         self_id = id(self)
@@ -381,8 +381,8 @@ class DataTypeManager(ABC):
             use_generic_container_types and python_version == PythonVersion.PY_36
         ):  # pragma: no cover
             raise Exception(
-                "use_generic_container_types can not be used with target_python_version 3.6.\n"
-                " The version will be not supported in a future version"
+                'use_generic_container_types can not be used with target_python_version 3.6.\n'
+                ' The version will be not supported in a future version'
             )
 
         if TYPE_CHECKING:

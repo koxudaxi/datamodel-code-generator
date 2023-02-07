@@ -268,7 +268,7 @@ class JsonSchemaObject(BaseModel):
 
     @cached_property
     def type_has_null(self) -> bool:
-        return isinstance(self.type, list) and "null" in self.type
+        return isinstance(self.type, list) and 'null' in self.type
 
 
 @lru_cache()
@@ -290,8 +290,8 @@ def _get_type(type_: str, format__: Optional[str] = None) -> Types:
         return data_formats
 
     warn(
-        "format of {!r} not understood for {!r} - using default"
-        "".format(format__, type_)
+        'format of {!r} not understood for {!r} - using default'
+        ''.format(format__, type_)
     )
     return json_schema_data_formats[type_]['default']
 

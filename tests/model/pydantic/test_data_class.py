@@ -50,9 +50,7 @@ def test_data_class_optional():
     assert data_class.fields == [field]
     assert data_class.decorators == []
     assert (
-        data_class.render() == '@dataclass\n'
-        'class test_model:\n'
-        '    a: str = \'abc\''
+        data_class.render() == '@dataclass\n' 'class test_model:\n' "    a: str = 'abc'"
     )
 
 

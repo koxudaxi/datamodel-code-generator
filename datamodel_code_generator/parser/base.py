@@ -44,7 +44,7 @@ from datamodel_code_generator.types import DataType, DataTypeManager, StrictType
 
 escape_characters = str.maketrans(
     {
-        "\\": r"\\",
+        '\\': r'\\',
         "'": r"\'",
         '\b': r'\b',
         '\f': r'\f',
@@ -171,7 +171,7 @@ def sort_data_models(
                 model.reference_classes - {model.path} - set(sorted_data_models)
             )
             base_models = [
-                getattr(s.reference, "path", None) for s in model.base_classes
+                getattr(s.reference, 'path', None) for s in model.base_classes
             ]
             update_action_parent = set(require_update_action_models).intersection(
                 base_models
@@ -187,7 +187,7 @@ def sort_data_models(
                 continue
             # unresolved
             unresolved_classes = ', '.join(
-                f"[class: {item.path} references: {item.reference_classes}]"
+                f'[class: {item.path} references: {item.reference_classes}]'
                 for item in unresolved_references
             )
             raise Exception(f'A Parser can not resolve classes: {unresolved_classes}.')
@@ -661,7 +661,7 @@ class Parser(ABC):
                     )
 
                 if init:
-                    from_ = "." + from_
+                    from_ = '.' + from_
                 imports.append(Import(from_=from_, import_=import_, alias=alias))
 
     @classmethod
@@ -916,7 +916,7 @@ class Parser(ABC):
 
         models.sort(key=lambda x: x.class_name)
 
-        imported = set(i for v in imports.values() for i in v)
+        imported = {i for v in imports.values() for i in v}
         model_class_name_baseclasses: Dict[DataModel, Tuple[str, Set[str]]] = {}
         for model in models:
             class_name = model.class_name

@@ -182,7 +182,7 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 def test_pyproject():
     with TemporaryDirectory() as output_dir:
         output_dir = Path(output_dir)
-        pyproject_toml = Path(DATA_PATH) / "project" / "pyproject.toml"
+        pyproject_toml = Path(DATA_PATH) / 'project' / 'pyproject.toml'
         shutil.copy(pyproject_toml, output_dir)
         output_file: Path = output_dir / 'output.py'
         return_code: Exit = main(
