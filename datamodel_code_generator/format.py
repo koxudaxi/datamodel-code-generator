@@ -75,11 +75,11 @@ class CodeFormatter:
             settings_path = Path().resolve()
 
         root = black_find_project_root((settings_path,))
-        path = root / "pyproject.toml"
+        path = root / 'pyproject.toml'
         if path.is_file():
             value = str(path)
             pyproject_toml = toml.load(value)
-            config = pyproject_toml.get("tool", {}).get("black", {})
+            config = pyproject_toml.get('tool', {}).get('black', {})
         else:
             config = {}
 
@@ -94,7 +94,7 @@ class CodeFormatter:
         if experimental_string_processing is not None:  # pragma: no cover
             if black.__version__.startswith('19.'):  # type: ignore
                 warn(
-                    f'black doesn\'t support `experimental-string-processing` option'  # type: ignore
+                    f"black doesn't support `experimental-string-processing` option"  # type: ignore
                     f' for wrapping string literal in {black.__version__}'
                 )
             else:
@@ -107,9 +107,9 @@ class CodeFormatter:
         else:
             self.black_mode = black.FileMode(
                 target_versions={BLACK_PYTHON_VERSION[python_version]},
-                line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
+                line_length=config.get('line-length', black.DEFAULT_LINE_LENGTH),
                 string_normalization=not skip_string_normalization
-                or not config.get("skip-string-normalization", True),
+                or not config.get('skip-string-normalization', True),
                 **black_kwargs,
             )
 

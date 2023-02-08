@@ -76,7 +76,7 @@ class DataModelField(DataModelFieldBase):
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         result = str(self)
-        if result == "":
+        if result == '':
             return None
 
         return result

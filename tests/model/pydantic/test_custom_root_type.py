@@ -26,7 +26,7 @@ def test_custom_root_type():
     ]
 
     assert custom_root_type.render() == (
-        'class test_model(BaseModel):\n' '    __root__: Optional[str] = \'abc\''
+        'class test_model(BaseModel):\n' "    __root__: Optional[str] = 'abc'"
     )
 
 

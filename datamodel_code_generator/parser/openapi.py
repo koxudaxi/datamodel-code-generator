@@ -48,14 +48,14 @@ from datamodel_code_generator.types import DataType, DataTypeManager, StrictType
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r'^application/.*json$')
 
 OPERATION_NAMES: List[str] = [
-    "get",
-    "put",
-    "post",
-    "delete",
-    "patch",
-    "head",
-    "options",
-    "trace",
+    'get',
+    'put',
+    'post',
+    'delete',
+    'patch',
+    'head',
+    'options',
+    'trace',
 ]
 
 
@@ -337,13 +337,13 @@ class OpenAPIParser(JsonSchemaParser):
                 ref_model = self.get_ref_model(detail.ref)
                 content = {
                     k: MediaObject.parse_obj(v)
-                    for k, v in ref_model.get("content", {}).items()
+                    for k, v in ref_model.get('content', {}).items()
                 }
             else:
                 content = detail.content
 
             if self.allow_responses_without_content and not content:
-                data_types[status_code]["application/json"] = DataType(type='None')
+                data_types[status_code]['application/json'] = DataType(type='None')
 
             for content_type, obj in content.items():
                 object_schema = obj.schema_

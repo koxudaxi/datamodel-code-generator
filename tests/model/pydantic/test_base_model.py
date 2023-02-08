@@ -35,7 +35,7 @@ def test_base_model_optional():
     assert base_model.decorators == []
     assert (
         base_model.render() == 'class test_model(BaseModel):\n'
-        '    a: Optional[str] = \'abc\''
+        "    a: Optional[str] = 'abc'"
     )
 
 
@@ -101,7 +101,7 @@ def test_base_model_decorator():
     assert (
         base_model.render() == '@validate\n'
         'class test_model(Base):\n'
-        '    a: Optional[str] = \'abc\''
+        "    a: Optional[str] = 'abc'"
     )
 
 

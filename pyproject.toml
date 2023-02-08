@@ -70,15 +70,24 @@ types-toml = "*"
 types-setuptools = "^67.1.0.0"
 pydantic =  [{version = ">=1.8.2,<2.0", python = "<3.10"}, {version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 httpx = "*"
-
+ruff = "*"
 
 [tool.poetry.extras]
 http = ["httpx"]
+
+[tool.ruff]
+line-length = 88
+extend-select = ['Q', 'RUF100', 'C4']
+flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
+target-version = 'py37'
+ignore = ['E501']
+extend-exclude = ['tests/data']
 
 [tool.black]
 line-length = 88
 skip-string-normalization = true
 exclude = '(tests/data|\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|.*\/models\.py.*|.*\/models\/.*)'
+target-version = ['py37']
 
 [tool.isort]
 multi_line_output = 3

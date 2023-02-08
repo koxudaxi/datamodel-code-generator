@@ -42,8 +42,8 @@ def get_expected_file(
     [
         (
             {'properties': {'name': {'type': 'string'}}},
-            '''class Pets(BaseModel):
-    name: Optional[str] = None''',
+            """class Pets(BaseModel):
+    name: Optional[str] = None""",
         ),
         (
             {
@@ -54,12 +54,12 @@ def get_expected_file(
                     }
                 }
             },
-            '''class Kind(BaseModel):
+            """class Kind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    kind: Optional[Kind] = None''',
+    kind: Optional[Kind] = None""",
         ),
         (
             {
@@ -70,12 +70,12 @@ class Pets(BaseModel):
                     }
                 }
             },
-            '''class Kind(BaseModel):
+            """class Kind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    Kind: Optional[Kind] = None''',
+    Kind: Optional[Kind] = None""",
         ),
         (
             {
@@ -86,12 +86,12 @@ class Pets(BaseModel):
                     }
                 }
             },
-            '''class PetKind(BaseModel):
+            """class PetKind(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    pet_kind: Optional[PetKind] = None''',
+    pet_kind: Optional[PetKind] = None""",
         ),
         (
             {
@@ -107,17 +107,17 @@ class Pets(BaseModel):
                     }
                 }
             },
-            '''class KindItem(BaseModel):
+            """class KindItem(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    kind: Optional[List[KindItem]] = None''',
+    kind: Optional[List[KindItem]] = None""",
         ),
         (
             {'properties': {'kind': {'type': 'array', 'items': []}}},
-            '''class Pets(BaseModel):
-    kind: Optional[List] = None''',
+            """class Pets(BaseModel):
+    kind: Optional[List] = None""",
         ),
     ],
 )
@@ -135,12 +135,12 @@ def test_parse_object(source_obj, generated_classes):
                 'type': 'array',
                 'items': {'type': 'object', 'properties': {'name': {'type': 'string'}}},
             },
-            '''class Pet(BaseModel):
+            """class Pet(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]''',
+    __root__: List[Pet]""",
         ),
         (
             {
@@ -149,20 +149,20 @@ class Pets(BaseModel):
                     {'type': 'object', 'properties': {'name': {'type': 'string'}}}
                 ],
             },
-            '''class Pet(BaseModel):
+            """class Pet(BaseModel):
     name: Optional[str] = None
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]''',
+    __root__: List[Pet]""",
         ),
         (
             {
                 'type': 'array',
                 'items': {},
             },
-            '''class Pets(BaseModel):
-    __root__: List''',
+            """class Pets(BaseModel):
+    __root__: List""",
         ),
     ],
 )
@@ -215,13 +215,13 @@ def test_openapi_parser_parse(with_import, format_, base_class):
     [
         (
             {'type': 'string', 'nullable': True},
-            '''class Name(BaseModel):
-    __root__: Optional[str] = None''',
+            """class Name(BaseModel):
+    __root__: Optional[str] = None""",
         ),
         (
             {'type': 'string', 'nullable': False},
-            '''class Name(BaseModel):
-    __root__: str''',
+            """class Name(BaseModel):
+    __root__: str""",
         ),
     ],
 )
@@ -265,7 +265,7 @@ def test_openapi_parser_parse_lazy_resolved_models():
     )
     assert (
         parser.parse()
-        == '''from __future__ import annotations
+        == """from __future__ import annotations
 
 from typing import List, Optional
 
@@ -299,7 +299,7 @@ class Events(BaseModel):
 class Results(BaseModel):
     envets: Optional[List[Events]] = None
     event: Optional[List[Event]] = None
-'''
+"""
     )
 
 
@@ -310,7 +310,7 @@ def test_openapi_parser_parse_x_enum_varnames():
     print(parser.parse())
     assert (
         parser.parse()
-        == '''from __future__ import annotations
+        == """from __future__ import annotations
 
 from enum import Enum
 
@@ -352,7 +352,7 @@ class UnknownTypeNumber(Enum):
     int_1 = 1
     int_2 = 2
     int_3 = 3
-'''
+"""
     )
 
 

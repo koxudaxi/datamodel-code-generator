@@ -664,7 +664,7 @@ def test_pyproject():
 
         with chdir(output_dir):
             output_file: Path = output_dir / 'output.py'
-            pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
+            pyproject_toml_path = Path(DATA_PATH) / 'project' / 'pyproject.toml'
             pyproject_toml = (
                 pyproject_toml_path.read_text()
                 .replace('INPUT_PATH', get_path(OPEN_API_DATA_PATH / 'api.yaml'))
@@ -1248,7 +1248,7 @@ def test_main_invalid_model_name_failed(capsys):
         assert return_code == Exit.ERROR
         assert (
             captured.err
-            == 'title=\'with\' is invalid class name. You have to set `--class-name` option\n'
+            == "title='with' is invalid class name. You have to set `--class-name` option\n"
         )
 
 
@@ -1270,7 +1270,7 @@ def test_main_invalid_model_name_converted(capsys):
         assert return_code == Exit.ERROR
         assert (
             captured.err
-            == 'title=\'1Xyz\' is invalid class name. You have to set `--class-name` option\n'
+            == "title='1Xyz' is invalid class name. You have to set `--class-name` option\n"
         )
 
 
@@ -4302,7 +4302,7 @@ def test_main_collapse_root_models():
                 str(OPEN_API_DATA_PATH / 'not_real_string.json'),
                 '--output',
                 str(output_file),
-                "--collapse-root-models",
+                '--collapse-root-models',
             ]
         )
         assert return_code == Exit.OK
@@ -4326,7 +4326,7 @@ def test_main_collapse_root_models_field_constraints():
                 str(OPEN_API_DATA_PATH / 'not_real_string.json'),
                 '--output',
                 str(output_file),
-                "--collapse-root-models",
+                '--collapse-root-models',
                 '--field-constraints',
             ]
         )
