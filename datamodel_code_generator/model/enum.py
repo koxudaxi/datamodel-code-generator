@@ -48,7 +48,6 @@ class Enum(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
     ):
-
         super().__init__(
             reference=reference,
             fields=fields,

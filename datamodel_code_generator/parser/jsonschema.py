@@ -616,7 +616,6 @@ class JsonSchemaParser(Parser):
         base_classes: List[Reference],
         required: List[str],
     ) -> DataType:
-
         if obj.properties:
             fields.extend(
                 self.parse_object_fields(obj, path, get_module_name(name, None))
@@ -1530,7 +1529,6 @@ class JsonSchemaParser(Parser):
                 path, obj_name, unique=False, class_name=True
             ).name
             with self.root_id_context(raw):
-
                 # parse $id before parsing $ref
                 root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)

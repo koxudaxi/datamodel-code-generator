@@ -4181,7 +4181,6 @@ def test_main_jsonschema_boolean_property():
 def test_main_jsonschema_modular_default_enum_member(
     tmpdir_factory: TempdirFactory,
 ) -> None:
-
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     input_filename = JSON_SCHEMA_DATA_PATH / 'modular_default_enum_member'
