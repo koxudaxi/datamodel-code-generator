@@ -4980,7 +4980,9 @@ def test_main_multiple_required_any_of():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py').read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_multiple_required_any_of' / 'output.py'
+            ).read_text()
         )
 
     with pytest.raises(SystemExit):
