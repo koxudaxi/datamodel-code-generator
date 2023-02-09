@@ -323,6 +323,10 @@ DataType.update_forward_refs()
 DataTypeT = TypeVar('DataTypeT', bound=DataType)
 
 
+class EmptyDataType(DataType):
+    pass
+
+
 class Types(Enum):
     integer = auto()
     int32 = auto()

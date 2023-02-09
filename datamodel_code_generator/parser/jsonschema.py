@@ -47,7 +47,13 @@ from datamodel_code_generator.parser.base import (
     title_to_class_name,
 )
 from datamodel_code_generator.reference import ModelType, Reference, is_url
-from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes, Types
+from datamodel_code_generator.types import (
+    DataType,
+    DataTypeManager,
+    EmptyDataType,
+    StrictTypes,
+    Types,
+)
 
 
 def get_model_by_path(
@@ -1090,6 +1096,8 @@ class JsonSchemaParser(Parser):
 
             if len(data_types) > 1:
                 data_type = self.data_type(data_types=data_types)
+            elif not data_types:
+                return EmptyDataType()
             else:  # pragma: no cover
                 data_type = data_types[0]
         elif obj.patternProperties:
@@ -1411,10 +1419,10 @@ class JsonSchemaParser(Parser):
             self.parse_array(name, obj, path)
         elif obj.allOf:
             self.parse_all_of(name, obj, path)
-        elif obj.oneOf:
-            self.parse_root_type(name, obj, path)
-        elif obj.anyOf:
-            self.parse_root_type(name, obj, path)
+        elif obj.oneOf or obj.anyOf:
+            data_type = self.parse_root_type(name, obj, path)
+            if isinstance(data_type, EmptyDataType) and obj.properties:
+                self.parse_object(name, obj, path)
         elif obj.properties:
             self.parse_object(name, obj, path)
         elif obj.patternProperties:
