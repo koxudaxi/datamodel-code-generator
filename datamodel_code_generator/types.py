@@ -318,13 +318,13 @@ class DataType(_BaseModel):
         return len(self.data_types) > 1
 
 
-class EmptyDataType(DataType):
-    pass
-
-
 DataType.update_forward_refs()
 
 DataTypeT = TypeVar('DataTypeT', bound=DataType)
+
+
+class EmptyDataType(DataType):
+    pass
 
 
 class Types(Enum):
