@@ -4962,3 +4962,26 @@ def test_main_jsonschema_reference_same_hierarchy_directory():
             )
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_multiple_required_any_of():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'multiple_required_any_of.yaml'),
+                '--output',
+                str(output_file),
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
