@@ -544,7 +544,7 @@ class OpenAPIParser(JsonSchemaParser):
                 if OpenAPIScope.Paths in self.open_api_scopes:
                     paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
                     parameters: List[Dict[str, Any]] = [
-                        self._get_ref_body(p['$ref']) if '$ref' in p else p  # type: ignore
+                        self._get_ref_body(p['$ref']) if '$ref' in p else p
                         for p in paths.get('parameters', [])
                         if isinstance(p, dict)
                     ]
