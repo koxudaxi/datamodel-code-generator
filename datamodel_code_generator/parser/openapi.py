@@ -43,7 +43,12 @@ from datamodel_code_generator.parser.jsonschema import (
     get_special_path,
 )
 from datamodel_code_generator.reference import snake_to_upper_camel
-from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
+from datamodel_code_generator.types import (
+    DataType,
+    DataTypeManager,
+    EmptyDataType,
+    StrictTypes,
+)
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r'^application/.*json$')
 
@@ -297,8 +302,10 @@ class OpenAPIParser(JsonSchemaParser):
             # TODO: The List model is not created by this method. Some scenarios may necessitate it.
         elif obj.allOf:  # pragma: no cover
             data_type = self.parse_all_of(name, obj, path)
-        elif obj.oneOf:  # pragma: no cover
+        elif obj.oneOf or obj.anyOf:  # pragma: no cover
             data_type = self.parse_root_type(name, obj, path)
+            if isinstance(data_type, EmptyDataType) and obj.properties:
+                self.parse_object(name, obj, path)
         elif obj.is_object:
             data_type = self.parse_object(name, obj, path)
         elif obj.enum:  # pragma: no cover
