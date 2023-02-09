@@ -69,10 +69,10 @@ jobs:
       if: runner.os != 'Windows'
       run: |
          poetry run pip install isort=="$ISORT"
-    - name: Install Pydantic 1.5.1
+    - name: Install Pydantic 1.5.1 and Mypy 0.920
       if: matrix.pydantic-version == '1.5.1'
       run: |
-         poetry run pip install pydantic=="1.5.1"
+         poetry run pip install pydantic=="1.5.1" mypy=="0.920"
     - name: Install Black 22.1.0
       if: matrix.black-version == '22.1.0'
       run: |
