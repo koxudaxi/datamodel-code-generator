@@ -67,7 +67,7 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-types-setuptools = "^67.4.0.1"
+types-setuptools = "^67.4.0.3"
 pydantic =  [{version = ">=1.8.2,<2.0", python = "<3.10"}, {version = ">=1.9.0,<2.0", python = ">=3.10"}, ]
 httpx = "*"
 ruff = "*"
