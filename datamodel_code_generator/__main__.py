@@ -416,6 +416,9 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--disable-warnings', help='disable warnings', action='store_true', default=None
 )
+arg_parser.add_argument(
+    '--custom-file-header', help='Custom file header', type=str, default=None
+)
 arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
@@ -563,6 +566,7 @@ class Config(BaseModel):
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
     keep_model_order: bool = False
+    custom_file_header: Optional[str] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
