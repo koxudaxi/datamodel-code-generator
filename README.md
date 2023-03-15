@@ -241,7 +241,7 @@ These OSS use datamodel-code-generator to generate many models. We can learn abo
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
   - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
 - [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
-  - *Not used. But, introduced [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official docuemnt*
+  - *Not used. But, introduced [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official document*
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
   - [Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
