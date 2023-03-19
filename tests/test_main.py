@@ -302,6 +302,30 @@ def test_main_jsonschema_nested_deep():
 
 
 @freeze_time('2019-07-26')
+def test_main_jsonschema_nested_skip():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'nested_skip.json'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        nested_skip_dir = EXPECTED_MAIN_PATH / 'main_jsonschema_nested_skip'
+        for path in nested_skip_dir.rglob('*.py'):
+            result = output_path.joinpath(path.relative_to(nested_skip_dir)).read_text()
+            assert result == path.read_text()
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_jsonschema_external_files():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

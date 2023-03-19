@@ -977,6 +977,7 @@ class Parser(ABC):
         unused_models: List[DataModel] = []
         model_to_models: Dict[DataModel, List[DataModel]] = {}
 
+        previous_module = ()  # type: Tuple[str, ...]
         for module, models in (
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
@@ -984,12 +985,21 @@ class Parser(ABC):
                 model_to_models[model] = models
             self.__delete_duplicate_models(models)
             self.__replace_duplicate_name_in_module(models)
+            if len(previous_module) - len(module) > 1:
+                for parts in range(len(previous_module) - 1, len(module), -1):
+                    module_models.append(
+                        (
+                            previous_module[:parts],
+                            [],
+                        )
+                    )
             module_models.append(
                 (
                     module,
                     models,
                 )
             )
+            previous_module = module
 
         class Processed(NamedTuple):
             module: Tuple[str, ...]
@@ -1052,7 +1062,9 @@ class Parser(ABC):
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            results[module] = Result(body=body, source=models[0].file_path)
+            results[module] = Result(
+                body=body, source=models[0].file_path if models else None
+            )
 
         # retain existing behaviour
         if [*results] == [('__init__.py',)]:
