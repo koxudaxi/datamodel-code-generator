@@ -24,14 +24,14 @@ trio = ["trio (>=0.16,<0.22)"]
 
 [[package]]
 name = "argcomplete"
-version = "3.0.0"
+version = "3.0.2"
 description = "Bash tab completion for argparse"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "argcomplete-3.0.0-py3-none-any.whl", hash = "sha256:306d687ca620ba2f505e2e5a3d12448b5735560d76e8b1ff11571168296c96be"},
-    {file = "argcomplete-3.0.0.tar.gz", hash = "sha256:69db74ba0c72897452f2666267bd76c9cd10829686e99889e6758fac99b23286"},
+    {file = "argcomplete-3.0.2-py3-none-any.whl", hash = "sha256:ba35518a5640ebbda5fb77d94e1db535233a7eac18ffb905216753749eaff8e1"},
+    {file = "argcomplete-3.0.2.tar.gz", hash = "sha256:fb929c2f609f195a2b11dc914924149b45c2b55b9f48283362e18b8d35f855c1"},
 ]
 
 [package.dependencies]
