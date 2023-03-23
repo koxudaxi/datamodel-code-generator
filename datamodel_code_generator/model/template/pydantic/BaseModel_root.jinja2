@@ -12,7 +12,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
 {% include 'Config.jinja2' %}
 {%- endfilter %}
 {%- endif %}
-{%- if not fields %}
+{%- if not fields and not description %}
     pass
 {%- else %}
     {%- set field = fields[0] %}

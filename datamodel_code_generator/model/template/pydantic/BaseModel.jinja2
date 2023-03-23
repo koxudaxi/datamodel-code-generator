@@ -7,7 +7,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ description | indent(4) }}
     """
 {%- endif %}
-{%- if not fields %}
+{%- if not fields and not description %}
     pass
 {%- endif %}
 {%- if config %}
