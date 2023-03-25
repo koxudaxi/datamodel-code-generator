@@ -69,7 +69,11 @@ class DataModelField(DataModelFieldBase):
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         result = str(self)
-        if self.use_default_kwarg and not result.startswith('Field(...'):
+        if (
+            self.use_default_kwarg
+            and not result.startswith('Field(...')
+            and not result.startswith('Field(default_factory=')
+        ):
             # Use `default=` for fields that have a default value so that type
             # checkers using @dataclass_transform can infer the field as
             # optional in __init__.

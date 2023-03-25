@@ -279,6 +279,7 @@ def generate(
     remove_special_field_name_prefix: bool = False,
     capitalise_enum_members: bool = False,
     keep_model_order: bool = False,
+    custom_file_header: Optional[str] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -468,7 +469,7 @@ def generate(
                 path.parent.mkdir(parents=True)
             file = path.open('wt', encoding=encoding)
 
-        print(header.format(filename), file=file)
+        print(custom_file_header or header.format(filename), file=file)
         if body:
             print('', file=file)
             print(body.rstrip(), file=file)

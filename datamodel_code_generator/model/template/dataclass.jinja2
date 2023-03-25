@@ -12,7 +12,7 @@ class {{ class_name }}:
     {{ description | indent(4) }}
     """
 {%- endif %}
-{%- if not fields %}
+{%- if not fields and not description %}
     pass
 {%- endif %}
 {%- for field in fields -%}
