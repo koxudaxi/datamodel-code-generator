@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from functools import lru_cache
-from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Union
+from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from pydantic import BaseModel
 
@@ -58,6 +58,20 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                     self[import_.from_].add(import_.import_)
                     if import_.alias:
                         self.alias[import_.from_][import_.import_] = import_.alias
+
+    def remove(self, from_: Optional[str], import_: str) -> None:
+        if '.' in import_:
+            self[None].remove(import_)
+        else:
+            self[from_].remove(import_)
+            if not self[from_]:
+                del self[from_]
+
+    @property
+    def from_imports(self) -> Set[Tuple[Optional[str], str]]:
+        return {
+            (from_, import_) for from_, imports_ in self.items() for import_ in imports_
+        }
 
 
 IMPORT_ANNOTATED = Import.from_full_path('typing.Annotated')

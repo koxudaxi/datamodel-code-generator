@@ -1041,6 +1041,14 @@ class Parser(ABC):
                 model_to_models[unused_model].remove(unused_model)
 
         for module, models, init, imports in processed_models:
+            # collect all from,import in module
+            module_from_imports: Set[Tuple[Optional[str], str]] = {
+                (i.from_, i.import_) for m in models for i in m.imports
+            }
+            for unused_from_import in imports.from_imports - module_from_imports:
+                # remove unused import from imports
+                imports.remove(*unused_from_import)
+
             result: List[str] = []
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
