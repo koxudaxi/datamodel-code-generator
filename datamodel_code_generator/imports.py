@@ -68,10 +68,10 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                 del self[from_]
 
     @property
-    def from_imports(self) -> Set[Tuple[Optional[str], str]]:
-        return {
+    def from_imports(self) -> Iterable[Tuple[Optional[str], str]]:
+        return (
             (from_, import_) for from_, imports_ in self.items() for import_ in imports_
-        }
+        )
 
 
 IMPORT_ANNOTATED = Import.from_full_path('typing.Annotated')

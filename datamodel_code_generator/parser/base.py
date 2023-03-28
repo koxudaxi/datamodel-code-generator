@@ -1045,7 +1045,12 @@ class Parser(ABC):
             module_from_imports: Set[Tuple[Optional[str], str]] = {
                 (i.from_, i.import_) for m in models for i in m.imports
             }
-            for unused_from_import in imports.from_imports - module_from_imports:
+            from_import_with_modules = {
+                from_import
+                for from_import in imports.from_imports
+                if (not (from_import[0] is not None and from_import[0][0] != '.'))
+            }
+            for unused_from_import in from_import_with_modules - module_from_imports:
                 # remove unused import from imports
                 imports.remove(*unused_from_import)
 
