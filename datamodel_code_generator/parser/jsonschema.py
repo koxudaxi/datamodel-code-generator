@@ -1287,14 +1287,7 @@ class JsonSchemaParser(Parser):
     def _get_ref_body(self, resolved_ref: str) -> Dict[Any, Any]:
         if is_url(resolved_ref):
             return self._get_ref_body_from_url(resolved_ref)
-        try:
-            return self._get_ref_body_from_remote(resolved_ref)
-        except FileNotFoundError:
-            if self.root_id and is_url(self.root_id):
-                return self._get_ref_body(
-                    f"{self.root_id.rsplit('/', 1)[0]}/{resolved_ref}"
-                )
-            raise  # pragma: no cover
+        return self._get_ref_body_from_remote(resolved_ref)
 
     def _get_ref_body_from_url(self, ref: str) -> Dict[Any, Any]:
         # URL Reference – $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
