@@ -12,7 +12,7 @@ repos:
         files: "^datamodel_code_generator|^tests"
         exclude: "^tests/data"
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.257'
+    rev: 'v0.0.259'
     hooks:
       - id: ruff
         files: "^datamodel_code_generator|^tests"
