@@ -15,7 +15,9 @@ def get_body(
     headers: Optional[Sequence[Tuple[str, str]]] = None,
     ignore_tls: bool = False,
 ) -> str:
-    return httpx.get(url, headers=headers, verify=not ignore_tls).text
+    return httpx.get(
+        url, headers=headers, verify=not ignore_tls, follow_redirects=True
+    ).text
 
 
 def join_url(url: str, ref: str = '.') -> str:
