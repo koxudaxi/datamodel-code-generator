@@ -436,22 +436,20 @@ class ModelResolver:
                 joined_path += f'#{object_part[0]}'
         if ID_PATTERN.match(joined_path):
             ref: str = self.ids['/'.join(self.current_root)][joined_path]
-        elif (
-            '#' not in joined_path
-            and self.root_id_base_path
-            and self.current_root != path
-        ):
-            if is_url(joined_path) or Path(self._base_path, joined_path).is_file():
-                ref = f'{joined_path}#'
-            else:
-                ref = f'{self.root_id_base_path}/{joined_path}#'
         else:
             if '#' not in joined_path:
                 joined_path += '#'
-            if joined_path[0] == '#':
+            elif joined_path[0] == '#':
                 joined_path = f'{"/".join(self.current_root)}{joined_path}'
+
             delimiter = joined_path.index('#')
+            file_path = ''.join(joined_path[:delimiter])
             ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
+            if self.root_id_base_path and not (
+                is_url(joined_path) or Path(self._base_path, file_path).is_file()
+            ):
+                ref = f'{self.root_id_base_path}/{ref}'
+
         if self.base_url:
             from .http import join_url
 

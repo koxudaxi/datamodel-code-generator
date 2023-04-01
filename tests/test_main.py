@@ -1382,7 +1382,12 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json', headers=None, verify=True),
+                call(
+                    'https://example.com/person.json',
+                    headers=None,
+                    verify=True,
+                    follow_redirects=True,
+                ),
             ]
         )
     with pytest.raises(SystemExit):
@@ -1444,7 +1449,12 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json', headers=None, verify=True),
+                call(
+                    'https://example.com/person.json',
+                    headers=None,
+                    verify=True,
+                    follow_redirects=True,
+                ),
             ]
         )
     with pytest.raises(SystemExit):
@@ -1481,7 +1491,12 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/person.json', headers=None, verify=True),
+                call(
+                    'https://example.com/person.json',
+                    headers=None,
+                    verify=True,
+                    follow_redirects=True,
+                ),
             ]
         )
     with pytest.raises(SystemExit):
@@ -2868,41 +2883,49 @@ def test_main_http_jsonschema(mocker):
                     'https://example.com/external_files_in_directory/person.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/pet.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/fur.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
             ]
         )
@@ -2978,41 +3001,49 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
                     'https://example.com/external_files_in_directory/person.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/pet.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/fur.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
+                    follow_redirects=True,
                 ),
             ]
         )
@@ -3053,11 +3084,17 @@ def test_main_http_openapi(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://example.com/refs.yaml', headers=None, verify=True),
+                call(
+                    'https://example.com/refs.yaml',
+                    headers=None,
+                    verify=True,
+                    follow_redirects=True,
+                ),
                 call(
                     'https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
             ]
         )
@@ -3103,6 +3140,7 @@ def test_main_http_json(mocker):
                     'https://example.com/pet.json',
                     headers=None,
                     verify=True,
+                    follow_redirects=True,
                 ),
             ]
         )
@@ -3742,7 +3780,12 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
         )
         httpx_get_mock.assert_has_calls(
             [
-                call('https://schema.example', headers=None, verify=True),
+                call(
+                    'https://schema.example',
+                    headers=None,
+                    verify=True,
+                    follow_redirects=True,
+                ),
             ]
         )
     with pytest.raises(SystemExit):
