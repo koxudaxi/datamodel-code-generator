@@ -10,20 +10,20 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/support-data-types/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/custom_template/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../jsondata/">
       
       
-        <link rel="next" href="../openapi/">
+        <link rel="next" href="../using_as_module/">
       
       <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.1.5">
     
     
       
-        <title>Support data types - datamodel-code-generator</title>
+        <title>Custom template - datamodel-code-generator</title>
       
     
     
@@ -71,7 +71,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#target-source-files" class="md-skip">
+        <a href="#custom-template" class="md-skip">
           Skip to content
         </a>
       
@@ -106,7 +106,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Support data types
+              Custom template
             
           </span>
         </div>
@@ -229,21 +229,11 @@
 
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../support-data-types/" class="md-nav__link">
         Support data types
       </a>
-      
     </li>
   
 
@@ -254,14 +244,16 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
       
       
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
       
       
       
@@ -270,7 +262,7 @@
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Usage
@@ -323,11 +315,82 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../custom_template/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Custom template
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Custom template
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#custom-template" class="md-nav__link">
+    Custom template
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    Example
+  </a>
+  
+    <nav class="md-nav" aria-label="Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom_templatespydanticbasemodeljinja2" class="md-nav__link">
+    custom_templates/pydantic/BaseModel.jinja2
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#personpy" class="md-nav__link">
+    person.py
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -427,8 +490,55 @@
   
   
   
-    
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#custom-template" class="md-nav__link">
+    Custom template
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    Example
+  </a>
+  
+    <nav class="md-nav" aria-label="Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom_templatespydanticbasemodeljinja2" class="md-nav__link">
+    custom_templates/pydantic/BaseModel.jinja2
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#personpy" class="md-nav__link">
+    person.py
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -446,48 +556,55 @@
   
 
 
-<h1 id="target-source-files">Target Source files</h1>
-<ul>
-<li>OpenAPI 3 (YAML/JSON, <a href="https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types">OpenAPI Data Type</a>)</li>
-<li>JSON Schema (<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Core</a> /<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Validation</a>)</li>
-<li>JSON/YAML Data (it will be converted to JSON Schema)</li>
-<li>Python dictionary (it will be converted to JSON Schema)</li>
-</ul>
-<h1 id="implemented-list">Implemented list</h1>
-<p>This codegen supports major data types to OpenAPI/JSON Schema</p>
-<h2 id="openapi-3-and-jsonschema">OpenAPI 3 and JsonSchema</h2>
-<h3 id="datatype">DataType</h3>
-<ul>
-<li>string (include patter/minLength/maxLenght)</li>
-<li>number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)</li>
-<li>integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)</li>
-<li>boolean</li>
-<li>array</li>
-<li>object</li>
-</ul>
-<h4 id="string-format">String Format</h4>
-<ul>
-<li>date</li>
-<li>datetime</li>
-<li>time</li>
-<li>password</li>
-<li>email</li>
-<li>idn-email</li>
-<li>uuid (uuid1/uuid2/uuid3/uuid4/uuid5)</li>
-<li>ipv4</li>
-<li>ipv6</li>
-<li>hostname</li>
-<li>decimal</li>
-</ul>
-<h3 id="other-schema">Other schema</h3>
-<ul>
-<li>enum (as enum.Enum or typing.Literal)</li>
-<li>allOf (as Multiple inheritance)</li>
-<li>anyOf (as typing.Union)</li>
-<li>oneOf (as typing.Union)</li>
-<li>$ref (<a href="../#http-extra-option">http extra</a> is required when resolving $ref for remote files.)</li>
-<li>$id (for <a href="https://json-schema.org/understanding-json-schema/structuring.html#the-id-property">JSONSchema</a>)</li>
-</ul>
+  <h1>Custom template</h1>
+
+<h2 id="custom-template">Custom template</h2>
+<p>One of the powerful features of the <code>datamodel-code-generator</code> is the ability to use custom templates with the <code>--custom-template-dir</code> option.
+This option allows you to provide a directory containing Jinja2 templates for customizing the generated code. In this document, we'll explore how to use this option and provide an example to help you understand its usage.</p>
+<h2 id="usage">Usage</h2>
+<p>To use the <code>--custom-template-dir</code> option, you'll need to pass the directory path containing your custom templates as an argument. The command will look like this:</p>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span><span class="o">{</span>your_input_file<span class="o">}</span><span class="w"> </span>--output<span class="w"> </span><span class="o">{</span>your_output_file<span class="o">}</span><span class="w"> </span>--custom-template-dir<span class="w"> </span><span class="o">{</span>your_custom_template_directory<span class="o">}</span>
+</code></pre></div>
+
+<p>Replace {your_input_file}, {your_output_file}, and {your_custom_template_directory} with the appropriate paths.</p>
+<h2 id="example">Example</h2>
+<p>Let's say you want to generate a custom Python data model from a JSON Schema file called person.json. You want the generated data model to include a custom comment at the top of the file. To achieve this, you can create a custom template using Jinja2.</p>
+<p>First, create a directory called <code>custom_templates</code> in your project directory. Inside this folder, create another folder called pydantic. Now, inside the <code>pydantic</code> folder, create a new file called <code>BaseModel.jinja2</code> with the following content:</p>
+<h4 id="custom_templatespydanticbasemodeljinja2">custom_templates/pydantic/BaseModel.jinja2</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># This is a custom comment generated with custom_template!!</span>
+
+<span class="k">class</span><span class="w"> </span><span class="p">{{</span><span class="w"> </span><span class="k">class_name</span><span class="w"> </span><span class="p">}}({{</span><span class="w"> </span><span class="n">base_class</span><span class="w"> </span><span class="p">}}):</span>
+<span class="p">{</span><span class="o">%-</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">field</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="w"> </span><span class="o">%</span><span class="p">}</span>
+<span class="w">    </span><span class="p">{{</span><span class="w"> </span><span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="p">}}:</span><span class="w"> </span><span class="p">{{</span><span class="w"> </span><span class="n">field</span><span class="o">.</span><span class="n">type_hint</span><span class="w"> </span><span class="p">}}</span>
+<span class="p">{</span><span class="o">%-</span><span class="w"> </span><span class="n">endfor</span><span class="w"> </span><span class="o">-%</span><span class="p">}</span>
+</code></pre></div>
+
+<p>This custom template includes the custom comment at the top and replicates the default rendering behavior of the BaseModel.jinja2 template from the Datamodel Code Generator.</p>
+<p>Now, you can use the --custom-template-dir option to generate the data model with your custom template:</p>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>person.json<span class="w"> </span>--output<span class="w"> </span>person.py<span class="w"> </span>--custom-template-dir<span class="w"> </span>custom_templates
+</code></pre></div>
+
+<p>The generated <code>person.py</code> file will now include your custom comment at the top:</p>
+<h4 id="personpy">person.py</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># generated by datamodel-codegen:</span>
+<span class="c1">#   filename:  person.json</span>
+<span class="c1">#   timestamp: 2023-04-09T05:36:24+00:00</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="c1"># This is a custom comment generated with custom_template!!</span>
+
+
+<span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">age</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+</code></pre></div>
+
+<p>In this example, we kept it simple, but you can create more complex custom templates by copying <a href="https://github.com/koxudaxi/datamodel-code-generator/tree/master/datamodel_code_generator/model/template">the default templates</a> Use <a href="https://github.com/koxudaxi/datamodel-code-generator/tree/master/datamodel_code_generator/model/template">the default templates</a> as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.</p>
 
 
 
