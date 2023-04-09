@@ -16,7 +16,7 @@ Replace {your_input_file}, {your_output_file}, and {your_custom_template_directo
 Let's say you want to generate a custom Python data model from a JSON Schema file called person.json. You want the generated data model to include a custom comment at the top of the file. To achieve this, you can create a custom template using Jinja2.
 
 First, create a directory called `custom_templates` in your project directory. Inside this folder, create another folder called pydantic. Now, inside the `pydantic` folder, create a new file called `BaseModel.jinja2` with the following content:
-#### custom_templates/pydanticBaseModel.jinja2
+#### custom_templates/pydantic/BaseModel.jinja2
 ```jinja2
 # This is a custom comment generated with custom_template!!
 
