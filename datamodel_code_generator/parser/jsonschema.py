@@ -261,7 +261,7 @@ class JsonSchemaObject(BaseModel):
 
     @cached_property
     def has_default(self) -> bool:
-        return 'default' in self.__fields_set__
+        return 'default' in self.__fields_set__ or 'default_factory' in self.extras
 
     @cached_property
     def has_constraint(self) -> bool:
