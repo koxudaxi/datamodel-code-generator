@@ -15,14 +15,14 @@ from datamodel_code_generator.model import (
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import SmartIntFloat, chain_as_tuple
+from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
-    gt: Optional[SmartIntFloat] = Field(None, alias='exclusiveMinimum')
-    ge: Optional[SmartIntFloat] = Field(None, alias='minimum')
-    lt: Optional[SmartIntFloat] = Field(None, alias='exclusiveMaximum')
-    le: Optional[SmartIntFloat] = Field(None, alias='maximum')
+    gt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMinimum')
+    ge: Optional[UnionIntFloat] = Field(None, alias='minimum')
+    lt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMaximum')
+    le: Optional[UnionIntFloat] = Field(None, alias='maximum')
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     min_items: Optional[int] = Field(None, alias='minItems')
     max_items: Optional[int] = Field(None, alias='maxItems')

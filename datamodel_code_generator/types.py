@@ -54,7 +54,7 @@ class StrictTypes(Enum):
     bool = 'bool'
 
 
-class SmartIntFloat:
+class UnionIntFloat:
     def __init__(self, value: Union[int, float]) -> None:
         self.value: Union[int, float] = value
 
@@ -69,7 +69,7 @@ class SmartIntFloat:
         yield cls.validate
 
     @classmethod
-    def validate(cls, v: Any) -> SmartIntFloat:
+    def validate(cls, v: Any) -> UnionIntFloat:
         if not isinstance(v, (int, float)):
             raise TypeError(f'{v} is not int or float')
         return cls(v)
