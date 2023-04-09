@@ -70,7 +70,7 @@ class UnionIntFloat:
 
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
-        if not isinstance(v, (int, float)):
+        if not isinstance(v, (int, float)):  # pragma: no cover
             raise TypeError(f'{v} is not int or float')
         return cls(v)
 
