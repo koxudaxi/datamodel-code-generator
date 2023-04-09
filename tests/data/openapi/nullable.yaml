@@ -93,3 +93,12 @@ components:
       nullable: true
     tag:
       type: string
+    notes:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+              type: string
+          default_factory: list
+          nullable: false
