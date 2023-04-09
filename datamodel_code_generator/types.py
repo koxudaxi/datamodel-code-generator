@@ -6,6 +6,7 @@ from itertools import chain
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     ClassVar,
     Dict,
     FrozenSet,
@@ -51,6 +52,27 @@ class StrictTypes(Enum):
     int = 'int'
     float = 'float'
     bool = 'bool'
+
+
+class SmartIntFloat:
+    def __init__(self, value: Union[int, float]) -> None:
+        self.value: Union[int, float] = value
+
+    def __int__(self) -> int:
+        return int(self.value)
+
+    def __float__(self) -> float:
+        return float(self.value)
+
+    @classmethod
+    def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: Any) -> SmartIntFloat:
+        if not isinstance(v, (int, float)):
+            raise TypeError(f'{v} is not int or float')
+        return cls(v)
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:

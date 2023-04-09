@@ -195,8 +195,8 @@ class JsonSchemaObject(BaseModel):
     pattern: Optional[str]
     minLength: Optional[int]
     maxLength: Optional[int]
-    minimum: Optional[float]
-    maximum: Optional[float]
+    minimum: Union[int, float, None]
+    maximum: Union[int, float, None]
     minItems: Optional[int]
     maxItems: Optional[int]
     multipleOf: Optional[float]
@@ -227,6 +227,7 @@ class JsonSchemaObject(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         keep_untouched = (cached_property,)
+        smart_casts = True
 
     if not TYPE_CHECKING:
 
@@ -384,7 +385,7 @@ class JsonSchemaParser(Parser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
-    ):
+    ) -> None:
         super().__init__(
             source=source,
             data_model_type=data_model_type,
