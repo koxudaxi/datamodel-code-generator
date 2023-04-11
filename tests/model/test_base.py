@@ -14,7 +14,7 @@ from datamodel_code_generator.types import DataType, Types
 
 
 class A(TemplateBase):
-    def __init__(self, path: Path):
+    def __init__(self, path: Path) -> None:
         self._path = path
 
     @property
@@ -30,7 +30,7 @@ class B(DataModel):
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
         pass
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     TEMPLATE_FILE_PATH = ''
@@ -135,7 +135,7 @@ def test_data_field():
     )
     assert field.type_hint == 'List'
     field = DataModelFieldBase(name='a', data_type=DataType(), required=False)
-    assert field.type_hint == 'Optional'
+    assert field.type_hint == 'None'
     field = DataModelFieldBase(
         name='a',
         data_type=DataType(is_list=True),
@@ -147,11 +147,11 @@ def test_data_field():
     field = DataModelFieldBase(
         name='a', data_type=DataType(), required=False, is_list=False, is_union=True
     )
-    assert field.type_hint == 'Optional'
+    assert field.type_hint == 'None'
     field = DataModelFieldBase(
         name='a', data_type=DataType(), required=False, is_list=False, is_union=False
     )
-    assert field.type_hint == 'Optional'
+    assert field.type_hint == 'None'
     field = DataModelFieldBase(
         name='a',
         data_type=DataType(is_list=True),

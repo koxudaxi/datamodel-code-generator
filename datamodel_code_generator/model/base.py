@@ -23,13 +23,24 @@ from warnings import warn
 from jinja2 import Environment, FileSystemLoader, Template
 
 from datamodel_code_generator import cached_property
-from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_OPTIONAL, Import
+from datamodel_code_generator.imports import (
+    IMPORT_ANNOTATED,
+    IMPORT_OPTIONAL,
+    IMPORT_UNION,
+    Import,
+)
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.types import DataType, Nullable, chain_as_tuple
+from datamodel_code_generator.types import (
+    ANY,
+    NONE,
+    UNION_PREFIX,
+    DataType,
+    Nullable,
+    chain_as_tuple,
+    get_optional_type,
+)
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
-
-OPTIONAL: str = 'Optional'
 
 ALL_MODEL: str = '#all#'
 
@@ -68,7 +79,7 @@ class DataModelFieldBase(_BaseModel):
 
     if not TYPE_CHECKING:
 
-        def __init__(self, **data: Any):
+        def __init__(self, **data: Any) -> None:
             super().__init__(**data)
             if self.data_type.reference or self.data_type.data_types:
                 self.data_type.parent = self
@@ -83,28 +94,29 @@ class DataModelFieldBase(_BaseModel):
         type_hint = self.data_type.type_hint
 
         if not type_hint:
-            return OPTIONAL
-        elif self.data_type.is_optional and self.data_type.type != 'Any':
+            return NONE
+        elif self.data_type.is_optional and self.data_type.type != ANY:
             return type_hint
         elif self.nullable is not None:
             if self.nullable:
-                if self.data_type.use_union_operator:
-                    return f'{type_hint} | None'
-                else:
-                    return f'{OPTIONAL}[{type_hint}]'
+                return get_optional_type(type_hint, self.data_type.use_union_operator)
             return type_hint
         elif self.required:
             return type_hint
-        if self.data_type.use_union_operator:
-            return f'{type_hint} | None'
-        else:
-            return f'{OPTIONAL}[{type_hint}]'
+        return get_optional_type(type_hint, self.data_type.use_union_operator)
 
     @property
     def imports(self) -> Tuple[Import, ...]:
+        type_hint = self.type_hint
+        has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
-            self.data_type.all_imports
+            (
+                i
+                for i in self.data_type.all_imports
+                if not (not has_union and i == IMPORT_UNION)
+            )
         ]
+
         if (
             self.nullable or (self.nullable is None and not self.required)
         ) and not self.data_type.use_union_operator:
