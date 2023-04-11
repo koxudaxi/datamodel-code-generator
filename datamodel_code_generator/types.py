@@ -139,7 +139,7 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
         return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
 
 
-@lru_cache
+@lru_cache()
 def get_optional_type(type_: str, use_union_operator: bool) -> str:
     type_ = _remove_none_from_union(type_, use_union_operator)
 
