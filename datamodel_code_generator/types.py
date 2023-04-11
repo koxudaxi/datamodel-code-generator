@@ -110,8 +110,13 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
             if part == NONE:
                 continue
             inner_count += part.count('[') - part.count(']')
+            if split_type:
+                split_type += UNION_OPERATOR_DELIMITER
             if inner_count == 0:
-                inner_types.append(split_type + part)
+                if split_type:
+                    inner_types.append(f'{split_type}{part}')
+                else:
+                    inner_types.append(part)
                 split_type = ''
                 continue
             else:

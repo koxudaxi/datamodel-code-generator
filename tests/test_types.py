@@ -13,6 +13,16 @@ from datamodel_code_generator.types import get_optional_type
         ('Union[str, int, float]', False, 'Optional[Union[str, int, float]]'),
         ('Union[str, int, None]', False, 'Optional[Union[str, int]]'),
         ('Union[str, int, None, None]', False, 'Optional[Union[str, int]]'),
+        (
+            'Union[str, int, List[str, int], None]',
+            False,
+            'Optional[Union[str, int, List[str, int]]]',
+        ),
+        (
+            'Union[str, int, List[str, Dict[int, str]], None]',
+            False,
+            'Optional[Union[str, int, List[str, Dict[int, str]]]]',
+        ),
         ('List[str]', True, 'List[str] | None'),
         ('List[str | int | float]', True, 'List[str | int | float] | None'),
         ('List[str | int | None]', True, 'List[str | int | None] | None'),
@@ -20,6 +30,11 @@ from datamodel_code_generator.types import get_optional_type
         ('str | int | float', True, 'str | int | float | None'),
         ('str | int | None', True, 'str | int | None'),
         ('str | int | None | None', True, 'str | int | None'),
+        (
+            'str | int | List[str | Dict[int | str]] | None',
+            True,
+            'str | int | List[str | Dict[int | str]] | None',
+        ),
     ],
 )
 def test_get_optional_type(input_: str, use_union_operator: bool, expected: str):
