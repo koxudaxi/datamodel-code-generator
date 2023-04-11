@@ -119,7 +119,7 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
 
         if len(inner_types) == 1:
             return inner_types[0]
-        return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
+        return UNION_OPERATOR_DELIMITER.join(inner_types)
 
     else:
         if not type_.startswith(UNION_PREFIX):
