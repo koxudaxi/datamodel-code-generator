@@ -16,6 +16,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Pattern,
     Sequence,
     Set,
     Tuple,
@@ -53,7 +54,9 @@ OPTIONAL_PREFIX = f'{OPTIONAL}['
 UNION = 'Union'
 UNION_PREFIX = f'{UNION}['
 UNION_DELIMITER = ', '
+UNION_PATTERN: Pattern[str] = re.compile(r'\s*,\s*')
 UNION_OPERATOR_DELIMITER = ' | '
+UNION_OPERATOR_PATTERN: Pattern[str] = re.compile(r'\s*\|\s*')
 NONE = 'None'
 ANY = 'Any'
 LITERAL = 'Literal'
@@ -99,44 +102,50 @@ def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
     return tuple(chain(*iterables))
 
 
+@lru_cache()
+def _remove_none_from_type(
+    type_: str, split_pattern: Pattern[str], delimiter: str
+) -> List[str]:
+    types: List[str] = []
+    split_type: str = ''
+    inner_count: int = 0
+    for part in re.split(split_pattern, type_):
+        if part == NONE:
+            continue
+        inner_count += part.count('[') - part.count(']')
+        if split_type:
+            split_type += delimiter
+        if inner_count == 0:
+            if split_type:
+                types.append(f'{split_type}{part}')
+            else:
+                types.append(part)
+            split_type = ''
+            continue
+        else:
+            split_type += part
+    return types
+
+
 def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
     if use_union_operator:
         if not re.match(r'^\w+ | ', type_):
             return type_
-        inner_types: List[str] = []
-        split_type: str = ''
-        inner_count: int = 0
-        for part in re.split(r'\s*\|\s*', type_):
-            if part == NONE:
-                continue
-            inner_count += part.count('[') - part.count(']')
-            if split_type:
-                split_type += UNION_OPERATOR_DELIMITER
-            if inner_count == 0:
-                if split_type:
-                    inner_types.append(f'{split_type}{part}')
-                else:
-                    inner_types.append(part)
-                split_type = ''
-                continue
-            else:
-                split_type += part
+        return UNION_OPERATOR_DELIMITER.join(
+            _remove_none_from_type(
+                type_, UNION_OPERATOR_PATTERN, UNION_OPERATOR_DELIMITER
+            )
+        )
 
-        if len(inner_types) == 1:
-            return inner_types[0]
-        return UNION_OPERATOR_DELIMITER.join(inner_types)
+    if not type_.startswith(UNION_PREFIX):
+        return type_
+    inner_types = _remove_none_from_type(
+        type_[len(UNION_PREFIX) :][:-1], UNION_PATTERN, UNION_DELIMITER
+    )
 
-    else:
-        if not type_.startswith(UNION_PREFIX):
-            return type_
-        inner_types = [
-            i
-            for i in type_[len(UNION_PREFIX) :][:-1].split(UNION_DELIMITER)
-            if i != NONE
-        ]
-        if len(inner_types) == 1:
-            return inner_types[0]
-        return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
+    if len(inner_types) == 1:
+        return inner_types[0]
+    return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
 
 
 @lru_cache()

@@ -14,14 +14,14 @@ from datamodel_code_generator.types import get_optional_type
         ('Union[str, int, None]', False, 'Optional[Union[str, int]]'),
         ('Union[str, int, None, None]', False, 'Optional[Union[str, int]]'),
         (
-            'Union[str, int, List[str, int], None]',
+            'Union[str, int, List[str, int, None], None]',
             False,
-            'Optional[Union[str, int, List[str, int]]]',
+            'Optional[Union[str, int, List[str, int, None]]]',
         ),
         (
-            'Union[str, int, List[str, Dict[int, str]], None]',
+            'Union[str, int, List[str, Dict[int, str | None]], None]',
             False,
-            'Optional[Union[str, int, List[str, Dict[int, str]]]]',
+            'Optional[Union[str, int, List[str, Dict[int, str | None]]]]',
         ),
         ('List[str]', True, 'List[str] | None'),
         ('List[str | int | float]', True, 'List[str | int | float] | None'),
@@ -31,9 +31,9 @@ from datamodel_code_generator.types import get_optional_type
         ('str | int | None', True, 'str | int | None'),
         ('str | int | None | None', True, 'str | int | None'),
         (
-            'str | int | List[str | Dict[int | str]] | None',
+            'str | int | List[str | Dict[int | Union[str | None]]] | None',
             True,
-            'str | int | List[str | Dict[int | str]] | None',
+            'str | int | List[str | Dict[int | Union[str | None]]] | None',
         ),
     ],
 )
