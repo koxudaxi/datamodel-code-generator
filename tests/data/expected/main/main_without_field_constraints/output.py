@@ -10,7 +10,7 @@ from pydantic import AnyUrl, BaseModel, Field, confloat, conint, constr
 
 
 class Pet(BaseModel):
-    id: conint(ge=0)
+    id: conint(ge=0, le=9223372036854775807)
     name: constr(max_length=256)
     tag: Optional[constr(max_length=64)] = None
 

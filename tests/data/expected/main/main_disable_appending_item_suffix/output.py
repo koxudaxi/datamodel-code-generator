@@ -10,7 +10,7 @@ from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: int = Field(..., ge=0)
+    id: int = Field(..., ge=0, le=9223372036854775807)
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
 

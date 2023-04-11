@@ -72,3 +72,7 @@ class Name(BaseModel):
 
 class Tag(BaseModel):
     __root__: str
+
+
+class Notes(BaseModel):
+    comments: Optional[List[str]] = Field(default_factory=list)

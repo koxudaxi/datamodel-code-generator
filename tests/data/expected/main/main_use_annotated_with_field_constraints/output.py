@@ -10,7 +10,7 @@ from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: Annotated[int, Field(ge=0)]
+    id: Annotated[int, Field(ge=0, le=9223372036854775807)]
     name: Annotated[str, Field(max_length=256)]
     tag: Annotated[Optional[str], Field(max_length=64)] = None
 

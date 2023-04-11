@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from pydantic import Field
 
@@ -15,14 +15,14 @@ from datamodel_code_generator.model import (
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple
+from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 
 
 class Constraints(ConstraintsBase):
-    gt: Optional[Union[float, int]] = Field(None, alias='exclusiveMinimum')
-    ge: Optional[Union[float, int]] = Field(None, alias='minimum')
-    lt: Optional[Union[float, int]] = Field(None, alias='exclusiveMaximum')
-    le: Optional[Union[float, int]] = Field(None, alias='maximum')
+    gt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMinimum')
+    ge: Optional[UnionIntFloat] = Field(None, alias='minimum')
+    lt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMaximum')
+    le: Optional[UnionIntFloat] = Field(None, alias='maximum')
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     min_items: Optional[int] = Field(None, alias='minItems')
     max_items: Optional[int] = Field(None, alias='maxItems')
@@ -91,14 +91,13 @@ class DataModelField(DataModelFieldBase):
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
-
-        for data_type in self.data_type.all_data_types:
-            if data_type.type == 'int':
-                value = int(value)
-            else:
-                value = float(value)
-                break
-        return value
+        if self.name and self.name.startswith('height'):
+            pass
+        if any(
+            data_type.type == 'float' for data_type in self.data_type.all_data_types
+        ):
+            return float(value)
+        return int(value)
 
     def _get_default_as_pydantic_model(self) -> Optional[str]:
         for data_type in self.data_type.data_types or (self.data_type,):
@@ -205,7 +204,7 @@ class BaseModel(DataModel):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
-    ):
+    ) -> None:
         methods: List[str] = [field.method for field in fields if field.method]
 
         super().__init__(
