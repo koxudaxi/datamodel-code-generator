@@ -359,7 +359,7 @@ class DataType(_BaseModel):
                 data_types: List[str] = []
                 for data_type in self.data_types:
                     data_type_type = data_type.type_hint
-                    if data_type_type in data_types:
+                    if data_type_type in data_types:  # pragma: no cover
                         continue
                     data_types.append(data_type_type)
                 if self.use_union_operator:
