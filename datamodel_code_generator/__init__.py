@@ -478,4 +478,12 @@ def generate(
             file.close()
 
 
-__all__ = ['DefaultPutDict', 'LiteralType', 'PythonVersion']
+__all__ = [
+    'DefaultPutDict',
+    'Error',
+    'InputFileType',
+    'InvalidClassNameError',
+    'LiteralType',
+    'PythonVersion',
+    'generate',
+]

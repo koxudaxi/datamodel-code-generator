@@ -5054,3 +5054,54 @@ def test_main_multiple_required_any_of():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_nullable_any_of():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'nullable_any_of.json'),
+                '--output',
+                str(output_file),
+                '--field-constraints',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_nullable_any_of' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_nullable_any_of_use_union_operator():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'nullable_any_of.json'),
+                '--output',
+                str(output_file),
+                '--field-constraints',
+                '--use-union-operator',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_nullable_any_of_use_union_operator'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()

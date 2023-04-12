@@ -23,6 +23,7 @@ nav:
       - Generate from OpenAPI: openapi.md
       - Generate from JSON Schema: jsonschema.md
       - Generate from JSON Data: jsondata.md
+      - Custom template: custom_template.md
       - Using as module: using_as_module.md
       - Formatting: formatting.md
       - Field Constraints: field-constraints.md
