@@ -664,6 +664,35 @@ class JsonSchemaParser(Parser):
 
         return self.data_type(reference=reference)
 
+    def _parse_all_of_item(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        fields: List[DataModelFieldBase],
+        base_classes: List[Reference],
+        required: List[str],
+    ) -> None:
+        for all_of_item in obj.allOf:
+            if all_of_item.ref:  # $ref
+                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
+            else:
+                module_name = get_module_name(name, None)
+                object_fields = self.parse_object_fields(
+                    all_of_item,
+                    path,
+                    module_name,
+                )
+
+                if object_fields:
+                    fields.extend(object_fields)
+                else:
+                    if all_of_item.required:
+                        required.extend(all_of_item.required)
+                self._parse_all_of_item(
+                    name, all_of_item, path, fields, base_classes, required
+                )
+
     def parse_all_of(
         self,
         name: str,
@@ -671,9 +700,6 @@ class JsonSchemaParser(Parser):
         path: List[str],
         ignore_duplicate_model: bool = False,
     ) -> DataType:
-        fields: List[DataModelFieldBase] = []
-        base_classes: List[Reference] = []
-        required: List[str] = []
         if len(obj.allOf) == 1 and not obj.properties:
             single_obj = obj.allOf[0]
             if single_obj.ref and single_obj.ref_type == JSONReference.LOCAL:
@@ -681,21 +707,10 @@ class JsonSchemaParser(Parser):
                     'enum'
                 ):
                     return self.get_ref_data_type(single_obj.ref)
-        for all_of_item in obj.allOf:
-            if all_of_item.ref:  # $ref
-                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
-            else:
-                object_fields = self.parse_object_fields(
-                    all_of_item,
-                    path,
-                    get_module_name(name, None),
-                )
-                if object_fields:
-                    fields.extend(object_fields)
-                else:
-                    if all_of_item.required:
-                        required.extend(all_of_item.required)
-
+        fields: List[DataModelFieldBase] = []
+        base_classes: List[Reference] = []
+        required: List[str] = []
+        self._parse_all_of_item(name, obj, path, fields, base_classes, required)
         return self._parse_object_common_part(
             name, obj, path, ignore_duplicate_model, fields, base_classes, required
         )
