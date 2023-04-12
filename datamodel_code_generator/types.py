@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from enum import Enum, auto
+from functools import lru_cache
 from itertools import chain
 from typing import (
     TYPE_CHECKING,
@@ -14,6 +16,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Pattern,
     Sequence,
     Set,
     Tuple,
@@ -44,6 +47,26 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.reference import Reference, _BaseModel
 
 T = TypeVar('T')
+
+OPTIONAL = 'Optional'
+OPTIONAL_PREFIX = f'{OPTIONAL}['
+
+UNION = 'Union'
+UNION_PREFIX = f'{UNION}['
+UNION_DELIMITER = ', '
+UNION_PATTERN: Pattern[str] = re.compile(r'\s*,\s*')
+UNION_OPERATOR_DELIMITER = ' | '
+UNION_OPERATOR_PATTERN: Pattern[str] = re.compile(r'\s*\|\s*')
+NONE = 'None'
+ANY = 'Any'
+LITERAL = 'Literal'
+SEQUENCE = 'Sequence'
+MAPPING = 'Mapping'
+DICT = 'Dict'
+LIST = 'List'
+STANDARD_DICT = 'dict'
+STANDARD_LIST = 'list'
+STR = 'str'
 
 
 class StrictTypes(Enum):
@@ -77,6 +100,63 @@ class UnionIntFloat:
 
 def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
     return tuple(chain(*iterables))
+
+
+@lru_cache()
+def _remove_none_from_type(
+    type_: str, split_pattern: Pattern[str], delimiter: str
+) -> List[str]:
+    types: List[str] = []
+    split_type: str = ''
+    inner_count: int = 0
+    for part in re.split(split_pattern, type_):
+        if part == NONE:
+            continue
+        inner_count += part.count('[') - part.count(']')
+        if split_type:
+            split_type += delimiter
+        if inner_count == 0:
+            if split_type:
+                types.append(f'{split_type}{part}')
+            else:
+                types.append(part)
+            split_type = ''
+            continue
+        else:
+            split_type += part
+    return types
+
+
+def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
+    if use_union_operator:
+        if not re.match(r'^\w+ | ', type_):
+            return type_
+        return UNION_OPERATOR_DELIMITER.join(
+            _remove_none_from_type(
+                type_, UNION_OPERATOR_PATTERN, UNION_OPERATOR_DELIMITER
+            )
+        )
+
+    if not type_.startswith(UNION_PREFIX):
+        return type_
+    inner_types = _remove_none_from_type(
+        type_[len(UNION_PREFIX) :][:-1], UNION_PATTERN, UNION_DELIMITER
+    )
+
+    if len(inner_types) == 1:
+        return inner_types[0]
+    return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
+
+
+@lru_cache()
+def get_optional_type(type_: str, use_union_operator: bool) -> str:
+    type_ = _remove_none_from_union(type_, use_union_operator)
+
+    if not type_ or type_ == NONE:
+        return NONE
+    if use_union_operator:
+        return f'{type_} | {NONE}'
+    return f'{OPTIONAL_PREFIX}{type_}]'
 
 
 @runtime_checkable
@@ -254,15 +334,13 @@ class DataType(_BaseModel):
             super().__init__(**values)
 
         for type_ in self.data_types:
-            if type_.type == 'Any' and type_.is_optional:
-                if any(
-                    t for t in self.data_types if t.type != 'Any'
-                ):  # pragma: no cover
+            if type_.type == ANY and type_.is_optional:
+                if any(t for t in self.data_types if t.type != ANY):  # pragma: no cover
                     self.is_optional = True
                     self.data_types = [
                         t
                         for t in self.data_types
-                        if not (t.type == 'Any' and t.is_optional)
+                        if not (t.type == ANY and t.is_optional)
                     ]
                 break
 
@@ -278,18 +356,20 @@ class DataType(_BaseModel):
         type_: Optional[str] = self.alias or self.type
         if not type_:
             if self.is_union:
+                data_types: List[str] = []
+                for data_type in self.data_types:
+                    data_type_type = data_type.type_hint
+                    if data_type_type in data_types:  # pragma: no cover
+                        continue
+                    data_types.append(data_type_type)
                 if self.use_union_operator:
-                    type_ = ' | '.join(
-                        data_type.type_hint for data_type in self.data_types
-                    )
+                    type_ = UNION_OPERATOR_DELIMITER.join(data_types)
                 else:
-                    type_ = f"Union[{', '.join(data_type.type_hint for data_type in self.data_types)}]"
+                    type_ = f'{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]'
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
             elif self.literals:
-                type_ = (
-                    f"Literal[{', '.join(repr(literal) for literal in self.literals)}]"
-                )
+                type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
             else:
                 if self.reference:
                     type_ = self.reference.short_name
@@ -305,29 +385,26 @@ class DataType(_BaseModel):
             type_ = f"'{type_}'"
         if self.is_list:
             if self.use_generic_container:
-                list_ = 'Sequence'
+                list_ = SEQUENCE
             elif self.use_standard_collections:
-                list_ = 'list'
+                list_ = STANDARD_LIST
             else:
-                list_ = 'List'
+                list_ = LIST
             type_ = f'{list_}[{type_}]' if type_ else list_
         elif self.is_dict:
             if self.use_generic_container:
-                dict_ = 'Mapping'
+                dict_ = MAPPING
             elif self.use_standard_collections:
-                dict_ = 'dict'
+                dict_ = STANDARD_DICT
             else:
-                dict_ = 'Dict'
+                dict_ = DICT
             if self.dict_key or type_:
-                key = self.dict_key.type_hint if self.dict_key else 'str'
-                type_ = f'{dict_}[{key}, {type_ or "Any"}]'
+                key = self.dict_key.type_hint if self.dict_key else STR
+                type_ = f'{dict_}[{key}, {type_ or ANY}]'
             else:  # pragma: no cover
                 type_ = dict_
-        if self.is_optional and type_ != 'Any':
-            if self.use_union_operator:  # pragma: no cover
-                type_ = f'{type_} | None'
-            else:
-                type_ = f'Optional[{type_}]'
+        if self.is_optional and type_ != ANY:
+            return get_optional_type(type_, self.use_union_operator)
         elif self.is_func:
             if self.kwargs:
                 kwargs: str = ', '.join(f'{k}={v}' for k, v in self.kwargs.items())
