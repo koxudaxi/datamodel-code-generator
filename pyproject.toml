@@ -85,11 +85,14 @@ http = ["httpx"]
 
 [tool.ruff]
 line-length = 88
-extend-select = ['Q', 'RUF100', 'C4']
+extend-select = ['Q', 'RUF100', 'C4', 'UP']
 flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
 target-version = 'py37'
 ignore = ['E501']
 extend-exclude = ['tests/data']
+
+[tool.ruff.pyupgrade]
+keep-runtime-typing = true
 
 [tool.black]
 line-length = 88
