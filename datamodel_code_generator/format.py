@@ -70,7 +70,7 @@ class CodeFormatter:
         settings_path: Optional[Path] = None,
         wrap_string_literal: Optional[bool] = None,
         skip_string_normalization: bool = True,
-    ):
+    ) -> None:
         if not settings_path:
             settings_path = Path().resolve()
 
@@ -133,14 +133,20 @@ class CodeFormatter:
             mode=self.black_mode,
         )
 
-    if isort.__version__.startswith('4.'):
+    if TYPE_CHECKING:
 
         def apply_isort(self, code: str) -> str:
-            return isort.SortImports(
-                file_contents=code, settings_path=self.settings_path
-            ).output
+            ...
 
     else:
+        if isort.__version__.startswith('4.'):
 
-        def apply_isort(self, code: str) -> str:
-            return isort.code(code, config=self.isort_config)
+            def apply_isort(self, code: str) -> str:
+                return isort.SortImports(
+                    file_contents=code, settings_path=self.settings_path
+                ).output
+
+        else:
+
+            def apply_isort(self, code: str) -> str:
+                return isort.code(code, config=self.isort_config)

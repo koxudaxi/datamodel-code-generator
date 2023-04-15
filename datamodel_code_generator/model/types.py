@@ -2,9 +2,8 @@ from typing import Any, Dict, Optional, Sequence, Type
 
 from datamodel_code_generator import PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.types import StrictTypes, Types
 
 
 def type_map_factory(
