@@ -44,9 +44,8 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_UUID4,
     IMPORT_UUID5,
 )
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.types import StrictTypes, Types
 
 
 def type_map_factory(

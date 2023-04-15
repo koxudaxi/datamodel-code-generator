@@ -69,7 +69,6 @@ pytest-benchmark = "*"
 pytest-cov = ">=2.12.1"
 pytest-mock = "*"
 mypy = "~1.0.1"
-isort = "^5.11.0"
 black = "^23.3.0"
 freezegun = "*"
 types-Jinja2 = "*"
@@ -85,7 +84,7 @@ http = ["httpx"]
 
 [tool.ruff]
 line-length = 88
-extend-select = ['Q', 'RUF100', 'C4', 'UP']
+extend-select = ['Q', 'RUF100', 'C4', 'UP', 'I']
 flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
 target-version = 'py37'
 ignore = ['E501']
@@ -101,13 +100,13 @@ skip-string-normalization = true
 exclude = '(tests/data|\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|.*\/models\.py.*|.*\/models\/.*)'
 target-version = ['py37']
 
-[tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-line_length = 88
-skip = "tests/data"
+[tool.ruff.isort]
+#multi-line-output = 3
+#include-trailing-comma = true
+#force-grid-wrap = 0
+#use-parentheses = true
+#line-length = 88
+#skip = "tests/data"
 
 [tool.mypy]
 plugins = "pydantic.mypy"
