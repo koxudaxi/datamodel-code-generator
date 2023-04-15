@@ -168,6 +168,20 @@ def is_openapi(text: str) -> bool:
     return 'openapi' in load_yaml(text)
 
 
+def is_schema(text: str) -> bool:
+    data = load_yaml(text)
+    schema = data.get('$schema')
+    if isinstance(schema, str) and schema.startswith('http://json-schema.org/'):
+        return True
+    if isinstance(data.get('type'), str):
+        return True
+    if isinstance(data.get('allOf'), list) or isinstance(data.get('oneOf'), list):
+        return True
+    if isinstance(data.get('properties'), dict):
+        return True
+    return False
+
+
 class InputFileType(Enum):
     Auto = 'auto'
     OpenAPI = 'openapi'
@@ -304,11 +318,8 @@ def generate(
                 if isinstance(input_, Path)
                 else input_text
             )
-            input_file_type = (
-                InputFileType.OpenAPI
-                if is_openapi(input_text_)  # type: ignore
-                else InputFileType.JsonSchema
-            )
+            assert isinstance(input_text_, str)
+            input_file_type = infer_input_type(input_text_)
             print(
                 f'The input file type was determined to be: {input_file_type.value}',
                 file=sys.stderr,
@@ -481,6 +492,14 @@ def generate(
 
         if file is not None:
             file.close()
+
+
+def infer_input_type(text: str) -> InputFileType:
+    if is_openapi(text):
+        return InputFileType.OpenAPI
+    elif is_schema(text):
+        return InputFileType.JsonSchema
+    return InputFileType.Json
 
 
 __all__ = [

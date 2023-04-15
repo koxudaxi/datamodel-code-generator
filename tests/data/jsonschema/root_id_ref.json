@@ -1,5 +1,5 @@
 {
-  "$schema ": "http://json-schema.org/draft-07/schema#",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
     "Person": {
       "$ref": "root_id.json#/definitions/Person"
