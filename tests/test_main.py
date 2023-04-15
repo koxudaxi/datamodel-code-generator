@@ -588,7 +588,7 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     assert (
         captured.out == (EXPECTED_MAIN_PATH / 'main_no_file' / 'output.py').read_text()
     )
-    assert not captured.err
+    assert captured.err == 'The input file type was determined to be: openapi\n'
 
 
 def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
@@ -614,7 +614,7 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
             EXPECTED_MAIN_PATH / 'main_extra_template_data_config' / 'output.py'
         ).read_text()
     )
-    assert not captured.err
+    assert captured.err == 'The input file type was determined to be: openapi\n'
 
 
 def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
@@ -641,7 +641,7 @@ def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
         captured.out
         == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
     )
-    assert not captured.err
+    assert captured.err == 'The input file type was determined to be: openapi\n'
 
 
 def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
@@ -668,7 +668,7 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
         captured.out
         == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
     )
-    assert not captured.err
+    assert captured.err == 'The input file type was determined to be: openapi\n'
 
 
 @freeze_time('2019-07-26')
