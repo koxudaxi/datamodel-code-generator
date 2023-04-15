@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import sys
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -307,6 +308,10 @@ def generate(
                 InputFileType.OpenAPI
                 if is_openapi(input_text_)  # type: ignore
                 else InputFileType.JsonSchema
+            )
+            print(
+                f'The input file type was determined to be: {input_file_type.value}',
+                file=sys.stderr,
             )
         except:  # noqa
             raise Error('Invalid file format')
