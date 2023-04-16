@@ -177,7 +177,9 @@ JSON_SCHEMA_URLS: Tuple[str, ...] = (
 def is_schema(text: str) -> bool:
     data = load_yaml(text)
     schema = data.get('$schema')
-    if isinstance(schema, str) and any(schema.startswith(u) for u in JSON_SCHEMA_URLS):
+    if isinstance(schema, str) and any(
+        schema.startswith(u) for u in JSON_SCHEMA_URLS
+    ):  # pragma: no cover
         return True
     if isinstance(data.get('type'), str):
         return True
