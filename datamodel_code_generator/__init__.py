@@ -321,7 +321,7 @@ def generate(
             assert isinstance(input_text_, str)
             input_file_type = infer_input_type(input_text_)
             print(
-                f'The input file type was determined to be: {input_file_type.value}',
+                inferred_message.format(input_file_type.value),
                 file=sys.stderr,
             )
         except:  # noqa
@@ -501,6 +501,11 @@ def infer_input_type(text: str) -> InputFileType:
         return InputFileType.JsonSchema
     return InputFileType.Json
 
+
+inferred_message = (
+    'The input file type was determined to be: {}\nThis can be specificied explicitly with the '
+    '`--input-file-type` option.'
+)
 
 __all__ = [
     'DefaultPutDict',
