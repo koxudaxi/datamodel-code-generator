@@ -33,11 +33,14 @@ def test_infer_input_type():
                 'list.json',
                 'not.json',
                 'empty_data.json',
-                'invalid.yaml',
                 'root_model.yaml',
                 'json_pointer.yaml',
                 'const.json',
             )
         ):
+            continue
+
+        if str(file).endswith('invalid.yaml'):
+            assert_infer_input_type(file, InputFileType.Json)
             continue
         assert_infer_input_type(file, InputFileType.OpenAPI)
