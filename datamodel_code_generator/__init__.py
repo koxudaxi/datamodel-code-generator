@@ -310,7 +310,7 @@ def generate(
                 else InputFileType.JsonSchema
             )
             print(
-                f'The input file type was determined to be: {input_file_type.value}',
+                inferred_message.format(input_file_type.value),
                 file=sys.stderr,
             )
         except:  # noqa
@@ -482,6 +482,11 @@ def generate(
         if file is not None:
             file.close()
 
+
+inferred_message = (
+    'The input file type was determined to be: {}\nThis can be specificied explicitly with the '
+    '`--input-file-type` option.'
+)
 
 __all__ = [
     'DefaultPutDict',
