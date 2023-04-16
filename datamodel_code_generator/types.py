@@ -217,7 +217,7 @@ class DataType(_BaseModel):
         is_custom_type: bool = False,
         strict: bool = False,
         kwargs: Optional[Dict[str, Any]] = None,
-    ) -> 'DataTypeT':
+    ) -> DataTypeT:
         return cls(
             type=import_.import_,
             import_=import_,

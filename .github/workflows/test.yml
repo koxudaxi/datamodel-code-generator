@@ -44,13 +44,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: 1.2.2
+        version: 1.4.2
         virtualenvs-path: .venv
         virtualenvs-create: true
         virtualenvs-in-project: true
