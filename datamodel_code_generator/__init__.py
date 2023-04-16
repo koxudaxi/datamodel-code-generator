@@ -168,6 +168,37 @@ def is_openapi(text: str) -> bool:
     return 'openapi' in load_yaml(text)
 
 
+JSON_SCHEMA_URLS: Tuple[str, ...] = (
+    'http://json-schema.org/',
+    'https://json-schema.org/',
+)
+
+
+def is_schema(text: str) -> bool:
+    data = load_yaml(text)
+    if not isinstance(data, dict):
+        return False
+    schema = data.get('$schema')
+    if isinstance(schema, str) and any(
+        schema.startswith(u) for u in JSON_SCHEMA_URLS
+    ):  # pragma: no cover
+        return True
+    if isinstance(data.get('type'), str):
+        return True
+    if any(
+        isinstance(data.get(o), list)
+        for o in (
+            'allOf',
+            'anyOf',
+            'oneOf',
+        )
+    ):
+        return True
+    if isinstance(data.get('properties'), dict):
+        return True
+    return False
+
+
 class InputFileType(Enum):
     Auto = 'auto'
     OpenAPI = 'openapi'
@@ -304,11 +335,8 @@ def generate(
                 if isinstance(input_, Path)
                 else input_text
             )
-            input_file_type = (
-                InputFileType.OpenAPI
-                if is_openapi(input_text_)  # type: ignore
-                else InputFileType.JsonSchema
-            )
+            assert isinstance(input_text_, str)
+            input_file_type = infer_input_type(input_text_)
             print(
                 inferred_message.format(input_file_type.value),
                 file=sys.stderr,
@@ -481,6 +509,14 @@ def generate(
 
         if file is not None:
             file.close()
+
+
+def infer_input_type(text: str) -> InputFileType:
+    if is_openapi(text):
+        return InputFileType.OpenAPI
+    elif is_schema(text):
+        return InputFileType.JsonSchema
+    return InputFileType.Json
 
 
 inferred_message = (
