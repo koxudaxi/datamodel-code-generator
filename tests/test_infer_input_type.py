@@ -32,7 +32,6 @@ def test_infer_input_type():
                 'extra_data.json',
                 'invalid.yaml',
                 'list.json',
-                'not.json',
                 'empty_data.json',
                 'root_model.yaml',
                 'json_pointer.yaml',
