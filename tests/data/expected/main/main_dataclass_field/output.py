@@ -13,7 +13,7 @@ Model = Any
 @dataclass
 class User:
     name: Optional[str] = None
-    pets: Optional[List[User]] = field(default_factory=list)
+    pets: List[User] = field(default_factory=list)
 
 
 @dataclass

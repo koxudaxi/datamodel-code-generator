@@ -107,7 +107,6 @@ class DataModelField(DataModelFieldBase):
                 continue
             elif data_type.is_list and len(data_type.data_types) == 1:
                 data_type = data_type.data_types[0]
-                data_type.alias
                 if (
                     data_type.reference
                     and isinstance(data_type.reference.source, BaseModel)
