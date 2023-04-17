@@ -318,7 +318,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--use-field-description] [--use-default-kwarg]
                          [--reuse-model] [--keep-model-order]
                          [--collapse-root-models]
-                         [--enum-field-as-literal {all,one}]
+                         [--enum-field-as-literal {all,one}] [--use-one-literal-as-default]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
                          [--capitalise-enum-members]
@@ -412,6 +412,8 @@ options:
                         Parse enum field as literal. all: all enum field type
                         are Literal. one: field type is Literal when an enum
                         has only one possible value
+  --use-one-literal-as-default
+                        Use one literal as default value for one literal field
   --set-default-enum-member
                         Set enum members as default values for enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
