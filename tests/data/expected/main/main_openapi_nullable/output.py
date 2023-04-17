@@ -75,4 +75,4 @@ class Tag(BaseModel):
 
 
 class Notes(BaseModel):
-    comments: Optional[List[str]] = Field(default_factory=list)
+    comments: List[str] = Field(default_factory=list)
