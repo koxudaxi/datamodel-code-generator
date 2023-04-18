@@ -117,7 +117,9 @@ class NestedVersion(BaseModel):
 
 class NestedNullableEnum(BaseModel):
     nested_version: Optional[NestedVersion] = Field(
-        'RC1', description='nullable enum', example='RC2'
+        default_factory=lambda: NestedVersion.parse_obj('RC1'),
+        description='nullable enum',
+        example='RC2',
     )
 
 

@@ -316,6 +316,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-one-literal-as-default',
+    help='Use one literal as default value for one literal field',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--set-default-enum-member',
     help='Set enum members as default values for enum field',
     action='store_true',
@@ -539,6 +546,7 @@ class Config(BaseModel):
     reuse_model: bool = False
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None
+    use_one_literal_as_default: bool = False
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
     strict_nullable: bool = False
@@ -698,6 +706,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             reuse_model=config.reuse_model,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
+            use_one_literal_as_default=config.use_one_literal_as_default,
             set_default_enum_member=config.set_default_enum_member,
             use_subclass_enum=config.use_subclass_enum,
             strict_nullable=config.strict_nullable,
