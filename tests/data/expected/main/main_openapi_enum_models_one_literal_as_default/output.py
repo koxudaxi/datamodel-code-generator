@@ -21,8 +21,8 @@ class Pet(BaseModel):
     tag: Optional[str] = None
     kind: Optional[Kind] = None
     type: Optional[Literal['animal']] = None
-    number: Literal[1]
-    boolean: Literal[True]
+    number: Literal[1] = 1
+    boolean: Literal[True] = True
 
 
 class Pets(BaseModel):
@@ -77,7 +77,7 @@ class MultipleTypeEnum(Enum):
 
 
 class SingleEnum(BaseModel):
-    __root__: Literal['pet']
+    __root__: Literal['pet'] = 'pet'
 
 
 class ArrayEnum(BaseModel):
