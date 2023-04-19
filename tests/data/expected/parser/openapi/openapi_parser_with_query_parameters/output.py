@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -53,9 +53,7 @@ class PetsGetParametersQuery(BaseModel):
 
 
 class PetsGetResponse(BaseModel):
-    id: int
-    name: str
-    tag: Optional[str] = None
+    __root__: List[Pet]
 
 
 class PetsPostRequest(BaseModel):
