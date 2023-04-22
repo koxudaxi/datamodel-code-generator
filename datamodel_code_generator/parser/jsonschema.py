@@ -197,7 +197,7 @@ class JsonSchemaObject(BaseModel):
     minLength: Optional[int]
     maxLength: Optional[int]
     minimum: Optional[UnionIntFloat]
-    maximum: Union[UnionIntFloat, None]
+    maximum: Optional[UnionIntFloat]
     minItems: Optional[int]
     maxItems: Optional[int]
     multipleOf: Optional[float]
