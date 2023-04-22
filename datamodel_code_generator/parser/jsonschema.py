@@ -53,6 +53,7 @@ from datamodel_code_generator.types import (
     EmptyDataType,
     StrictTypes,
     Types,
+    UnionIntFloat,
 )
 
 
@@ -195,8 +196,8 @@ class JsonSchemaObject(BaseModel):
     pattern: Optional[str]
     minLength: Optional[int]
     maxLength: Optional[int]
-    minimum: Union[int, float, None]
-    maximum: Union[int, float, None]
+    minimum: Optional[UnionIntFloat]
+    maximum: Optional[UnionIntFloat]
     minItems: Optional[int]
     maxItems: Optional[int]
     multipleOf: Optional[float]

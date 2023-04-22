@@ -91,8 +91,7 @@ class DataModelField(DataModelFieldBase):
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
-        if self.name and self.name.startswith('height'):
-            pass
+
         if any(
             data_type.type == 'float' for data_type in self.data_type.all_data_types
         ):
