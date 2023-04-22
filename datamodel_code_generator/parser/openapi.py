@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from datamodel_code_generator import (
     DefaultPutDict,
+    Error,
     LiteralType,
     OpenAPIScope,
     PythonVersion,
@@ -198,6 +199,7 @@ class OpenAPIParser(JsonSchemaParser):
         openapi_scopes: Optional[List[OpenAPIScope]] = None,
         wrap_string_literal: Optional[bool] = False,
         use_title_as_name: bool = False,
+        use_operation_id_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
@@ -257,6 +259,7 @@ class OpenAPIParser(JsonSchemaParser):
             field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
+            use_operation_id_as_name=use_operation_id_as_name,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
@@ -482,6 +485,14 @@ class OpenAPIParser(JsonSchemaParser):
     ) -> None:
         operation = Operation.parse_obj(raw_operation)
         path_name, method = path[-2:]
+        if self.use_operation_id_as_name:
+            if not operation.operationId:
+                raise Error(
+                    f'All operations must have an operationId when --use_operation_id_as_name is set.'
+                    f'The following path was missing an operationId: {path_name}'
+                )
+            path_name = operation.operationId
+            method = ''
         self.parse_all_parameters(
             self._get_model_name(path_name, method, suffix='ParametersQuery'),
             operation.parameters,

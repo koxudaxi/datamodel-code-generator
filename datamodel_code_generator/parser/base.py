@@ -352,6 +352,7 @@ class Parser(ABC):
         field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
+        use_operation_id_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
@@ -420,6 +421,7 @@ class Parser(ABC):
         )
         self.current_source_path: Optional[Path] = None
         self.use_title_as_name: bool = use_title_as_name
+        self.use_operation_id_as_name: bool = use_operation_id_as_name
 
         if base_path:
             self.base_path = base_path
