@@ -5216,3 +5216,31 @@ def test_main_use_operation_id_as_name():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_use_operation_id_as_name_not_found_operation_id(capsys):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'body_and_parameters.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--use-operation-id-as-name',
+                '--openapi-scopes',
+                'paths',
+                'schemas',
+                'parameters',
+            ]
+        )
+        captured = capsys.readouterr()
+        assert return_code == Exit.ERROR
+        assert (
+            captured.err
+            == 'All operations must have an operationId when --use_operation_id_as_name is set.'
+            'The following path was missing an operationId: pets\n'
+        )

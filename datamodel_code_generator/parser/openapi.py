@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from datamodel_code_generator import (
     DefaultPutDict,
+    Error,
     LiteralType,
     OpenAPIScope,
     PythonVersion,
@@ -486,7 +487,7 @@ class OpenAPIParser(JsonSchemaParser):
         path_name, method = path[-2:]
         if self.use_operation_id_as_name:
             if not operation.operationId:
-                raise Exception(
+                raise Error(
                     f'All operations must have an operationId when --use_operation_id_as_name is set.'
                     f'The following path was missing an operationId: {path_name}'
                 )
