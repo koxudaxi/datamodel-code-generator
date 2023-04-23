@@ -53,6 +53,7 @@ from datamodel_code_generator.types import (
     EmptyDataType,
     StrictTypes,
     Types,
+    UnionIntFloat,
 )
 
 
@@ -195,8 +196,8 @@ class JsonSchemaObject(BaseModel):
     pattern: Optional[str]
     minLength: Optional[int]
     maxLength: Optional[int]
-    minimum: Union[int, float, None]
-    maximum: Union[int, float, None]
+    minimum: Optional[UnionIntFloat]
+    maximum: Optional[UnionIntFloat]
     minItems: Optional[int]
     maxItems: Optional[int]
     multipleOf: Optional[float]
@@ -373,6 +374,7 @@ class JsonSchemaParser(Parser):
         field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
+        use_operation_id_as_name: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
@@ -432,6 +434,7 @@ class JsonSchemaParser(Parser):
             field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
+            use_operation_id_as_name=use_operation_id_as_name,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
