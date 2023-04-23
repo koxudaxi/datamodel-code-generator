@@ -522,7 +522,7 @@ class OpenAPIParser(JsonSchemaParser):
             )
 
     def parse_raw(self) -> None:
-        for source in self.iter_source:
+        for source, path_parts in self._get_context_source_path_parts():
             if self.validation:
                 from prance import BaseParser
 
@@ -539,52 +539,47 @@ class OpenAPIParser(JsonSchemaParser):
             security: Optional[List[Dict[str, List[str]]]] = specification.get(
                 'security'
             )
-            if isinstance(self.source, ParseResult):
-                path_parts: List[str] = self.get_url_path_parts(self.source)
-            else:
-                path_parts = list(source.path.parts)
-            with self.model_resolver.current_root_context(path_parts):
-                if OpenAPIScope.Schemas in self.open_api_scopes:
-                    for (
+            if OpenAPIScope.Schemas in self.open_api_scopes:
+                for (
+                    obj_name,
+                    raw_obj,
+                ) in schemas.items():  # type: str, Dict[Any, Any]
+                    self.parse_raw_obj(
                         obj_name,
                         raw_obj,
-                    ) in schemas.items():  # type: str, Dict[Any, Any]
-                        self.parse_raw_obj(
-                            obj_name,
-                            raw_obj,
-                            [*path_parts, '#/components', 'schemas', obj_name],
+                        [*path_parts, '#/components', 'schemas', obj_name],
+                    )
+            if OpenAPIScope.Paths in self.open_api_scopes:
+                paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
+                parameters: List[Dict[str, Any]] = [
+                    self._get_ref_body(p['$ref']) if '$ref' in p else p
+                    for p in paths.get('parameters', [])
+                    if isinstance(p, dict)
+                ]
+                paths_path = [*path_parts, '#/paths']
+                for path_name, methods in paths.items():
+                    paths_parameters = parameters[:]
+                    if 'parameters' in methods:
+                        paths_parameters.extend(methods['parameters'])
+                    relative_path_name = path_name[1:]
+                    if relative_path_name:
+                        path = [*paths_path, relative_path_name]
+                    else:  # pragma: no cover
+                        path = get_special_path('root', paths_path)
+                    for operation_name, raw_operation in methods.items():
+                        if operation_name not in OPERATION_NAMES:
+                            continue
+                        if paths_parameters:
+                            if 'parameters' in raw_operation:  # pragma: no cover
+                                raw_operation['parameters'].extend(paths_parameters)
+                            else:
+                                raw_operation['parameters'] = paths_parameters
+                        if security is not None and 'security' not in raw_operation:
+                            raw_operation['security'] = security
+                        self.parse_operation(
+                            raw_operation,
+                            [*path, operation_name],
                         )
-                if OpenAPIScope.Paths in self.open_api_scopes:
-                    paths: Dict[str, Dict[str, Any]] = specification.get('paths', {})
-                    parameters: List[Dict[str, Any]] = [
-                        self._get_ref_body(p['$ref']) if '$ref' in p else p
-                        for p in paths.get('parameters', [])
-                        if isinstance(p, dict)
-                    ]
-                    paths_path = [*path_parts, '#/paths']
-                    for path_name, methods in paths.items():
-                        paths_parameters = parameters[:]
-                        if 'parameters' in methods:
-                            paths_parameters.extend(methods['parameters'])
-                        relative_path_name = path_name[1:]
-                        if relative_path_name:
-                            path = [*paths_path, relative_path_name]
-                        else:  # pragma: no cover
-                            path = get_special_path('root', paths_path)
-                        for operation_name, raw_operation in methods.items():
-                            if operation_name not in OPERATION_NAMES:
-                                continue
-                            if paths_parameters:
-                                if 'parameters' in raw_operation:  # pragma: no cover
-                                    raw_operation['parameters'].extend(paths_parameters)
-                                else:
-                                    raw_operation['parameters'] = paths_parameters
-                            if security is not None and 'security' not in raw_operation:
-                                raw_operation['security'] = security
-                            self.parse_operation(
-                                raw_operation,
-                                [*path, operation_name],
-                            )
 
         if OpenAPIScope.Schemas not in self.open_api_scopes:
             exclude_path_prefixes: Optional[List[str]] = ['components/schemas/']

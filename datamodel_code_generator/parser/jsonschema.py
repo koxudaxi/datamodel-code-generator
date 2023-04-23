@@ -14,6 +14,7 @@ from typing import (
     Dict,
     Generator,
     Iterable,
+    Iterator,
     List,
     Mapping,
     Optional,
@@ -43,6 +44,7 @@ from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
     Parser,
+    Source,
     escape_characters,
     title_to_class_name,
 )
@@ -1458,7 +1460,7 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         self.parse_ref(obj, path)
 
-    def parse_raw(self) -> None:
+    def _get_context_source_path_parts(self) -> Iterator[Tuple[Source, List[str]]]:
         if isinstance(self.source, list) or (
             isinstance(self.source, Path) and self.source.is_dir()
         ):
@@ -1478,20 +1480,24 @@ class JsonSchemaParser(Parser):
             with self.model_resolver.current_base_path_context(
                 source.path.parent
             ), self.model_resolver.current_root_context(path_parts):
-                self.raw_obj = load_yaml(source.text)
-                if self.custom_class_name_generator:
-                    obj_name = self.raw_obj.get('title', 'Model')
+                yield source, path_parts
+
+    def parse_raw(self) -> None:
+        for source, path_parts in self._get_context_source_path_parts():
+            self.raw_obj = load_yaml(source.text)
+            if self.custom_class_name_generator:
+                obj_name = self.raw_obj.get('title', 'Model')
+            else:
+                if self.class_name:
+                    obj_name = self.class_name
                 else:
-                    if self.class_name:
-                        obj_name = self.class_name
-                    else:
-                        # backward compatible
-                        obj_name = self.raw_obj.get('title', 'Model')
-                        if not self.model_resolver.validate_name(obj_name):
-                            obj_name = title_to_class_name(obj_name)
+                    # backward compatible
+                    obj_name = self.raw_obj.get('title', 'Model')
                     if not self.model_resolver.validate_name(obj_name):
-                        raise InvalidClassNameError(obj_name)
-                self._parse_file(self.raw_obj, obj_name, path_parts)
+                        obj_name = title_to_class_name(obj_name)
+                if not self.model_resolver.validate_name(obj_name):
+                    raise InvalidClassNameError(obj_name)
+            self._parse_file(self.raw_obj, obj_name, path_parts)
 
         self._resolve_unparsed_json_pointer()
 
