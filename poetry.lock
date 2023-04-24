@@ -24,22 +24,21 @@ trio = ["trio (>=0.16,<0.22)"]
 
 [[package]]
 name = "argcomplete"
-version = "3.0.4"
+version = "3.0.8"
 description = "Bash tab completion for argparse"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "argcomplete-3.0.4-py3-none-any.whl", hash = "sha256:6884517851f1204cfef34d79a1ceb872562721931a007019312911ec23f88ed8"},
-    {file = "argcomplete-3.0.4.tar.gz", hash = "sha256:0424af827a5b1ee0177972e0d938b017448c79f3c82f4bee4219d412af77598c"},
+    {file = "argcomplete-3.0.8-py3-none-any.whl", hash = "sha256:e36fd646839933cbec7941c662ecb65338248667358dd3d968405a4506a60d9b"},
+    {file = "argcomplete-3.0.8.tar.gz", hash = "sha256:b9ca96448e14fa459d7450a4ab5a22bbf9cee4ba7adddf03e65c398b5daeea28"},
 ]
 
 [package.dependencies]
-importlib-metadata = {version = ">=0.23,<6", markers = "python_version == \"3.7\""}
+importlib-metadata = {version = ">=0.23,<7", markers = "python_version == \"3.7\""}
 
 [package.extras]
-lint = ["flake8", "mypy"]
-test = ["coverage", "flake8", "mypy", "pexpect", "wheel"]
+test = ["coverage", "mypy", "pexpect", "ruff", "wheel"]
 
 [[package]]
 name = "attrs"
