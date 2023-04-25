@@ -377,10 +377,12 @@ def test_parse_nested_array():
     [
         ('integer', 'int32', 'int', None, None),
         ('integer', 'int64', 'int', None, None),
+        ('integer', 'date-time', 'datetime', 'datetime', 'datetime'),
         ('integer', 'unix-time', 'int', None, None),
         ('number', 'float', 'float', None, None),
         ('number', 'double', 'float', None, None),
         ('number', 'time', 'time', 'datetime', 'time'),
+        ('number', 'date-time', 'datetime', 'datetime', 'datetime'),
         ('string', None, 'str', None, None),
         ('string', 'byte', 'str', None, None),
         ('string', 'binary', 'bytes', None, None),
