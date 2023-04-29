@@ -25,6 +25,7 @@ from jinja2 import Environment, FileSystemLoader, Template
 from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
+    IMPORT_ANNOTATED_BACKPORT,
     IMPORT_OPTIONAL,
     IMPORT_UNION,
     Import,
@@ -125,7 +126,12 @@ class DataModelFieldBase(_BaseModel):
         ) and not self.data_type.use_union_operator:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated:
-            imports.append((IMPORT_ANNOTATED,))
+            import_annotated = (
+                IMPORT_ANNOTATED
+                if self.data_type.python_version.has_annotated_type
+                else IMPORT_ANNOTATED_BACKPORT
+            )
+            imports.append((import_annotated,))
         return chain_as_tuple(*imports)
 
     @property
