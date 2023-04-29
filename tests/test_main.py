@@ -4168,8 +4168,10 @@ def test_main_use_annotated_with_field_constraints():
                 str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
                 '--output',
                 str(output_file),
-                # '--field-constraints',
+                '--field-constraints',
                 '--use-annotated',
+                '--target-python-version',
+                '3.9',
             ]
         )
         assert return_code == Exit.OK
