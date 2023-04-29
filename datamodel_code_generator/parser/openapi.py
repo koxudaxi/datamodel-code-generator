@@ -301,10 +301,7 @@ class OpenAPIParser(JsonSchemaParser):
         path: List[str],
     ) -> DataType:
         if obj.is_array:
-            data_type: DataType = self.parse_array_fields(
-                name, obj, [*path, name], False
-            ).data_type
-            # TODO: The List model is not created by this method. Some scenarios may necessitate it.
+            data_type = self.parse_array(name, obj, [*path, name])
         elif obj.allOf:  # pragma: no cover
             data_type = self.parse_all_of(name, obj, path)
         elif obj.oneOf or obj.anyOf:  # pragma: no cover
@@ -581,8 +578,4 @@ class OpenAPIParser(JsonSchemaParser):
                             [*path, operation_name],
                         )
 
-        if OpenAPIScope.Schemas not in self.open_api_scopes:
-            exclude_path_prefixes: Optional[List[str]] = ['components/schemas/']
-        else:
-            exclude_path_prefixes = None
-        self._resolve_unparsed_json_pointer(exclude_path_prefixes)
+        self._resolve_unparsed_json_pointer()

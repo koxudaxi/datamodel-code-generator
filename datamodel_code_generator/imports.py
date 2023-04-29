@@ -61,6 +61,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
 
 IMPORT_ANNOTATED = Import.from_full_path('typing.Annotated')
+IMPORT_ANNOTATED_BACKPORT = Import.from_full_path('typing_extensions.Annotated')
 IMPORT_ANY = Import.from_full_path('typing.Any')
 IMPORT_LIST = Import.from_full_path('typing.List')
 IMPORT_UNION = Import.from_full_path('typing.Union')
