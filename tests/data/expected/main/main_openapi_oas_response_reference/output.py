@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -18,3 +18,7 @@ class Pet(BaseModel):
 class Error(BaseModel):
     code: int
     message: str
+
+
+class PetsGetResponse(BaseModel):
+    __root__: List[Pet]
