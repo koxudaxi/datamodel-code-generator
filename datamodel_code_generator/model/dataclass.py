@@ -12,6 +12,13 @@ from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple
 
 
+def _has_field_assignment(field: DataModelFieldBase) -> bool:
+    return bool(field.field) or not (
+        field.required
+        or (field.represented_default == 'None' and field.strip_default_none)
+    )
+
+
 class DataClass(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'dataclass.jinja2'
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_DATACLASS,)
@@ -34,7 +41,7 @@ class DataClass(DataModel):
     ) -> None:
         super().__init__(
             reference=reference,
-            fields=fields,
+            fields=sorted(fields, key=_has_field_assignment, reverse=False),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -46,7 +53,6 @@ class DataClass(DataModel):
             default=default,
             nullable=nullable,
         )
-        self.fields.sort(key=str, reverse=False)
 
     @property
     def imports(self) -> Tuple[Import, ...]:

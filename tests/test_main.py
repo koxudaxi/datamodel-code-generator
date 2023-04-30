@@ -5275,3 +5275,29 @@ def test_main_use_operation_id_as_name_not_found_operation_id(capsys):
             == 'All operations must have an operationId when --use_operation_id_as_name is set.'
             'The following path was missing an operationId: pets\n'
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_unsorted_optional_fields():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'unsorted_optional_fields.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'unsorted_optional_fields' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
