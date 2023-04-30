@@ -61,7 +61,7 @@ jobs:
       if: matrix.os != 'windows-latest'
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-v1-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.pydantic-version }}-v1-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction -E http
