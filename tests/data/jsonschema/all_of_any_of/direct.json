@@ -1,0 +1,44 @@
+{
+  "definitions": {
+    "Target": {
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "first": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "first"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "second": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "second"
+              ]
+            }
+          ]
+        },
+        {
+          "properties": {
+            "third": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "third"
+          ]
+        }
+      ]
+    }
+  }
+}

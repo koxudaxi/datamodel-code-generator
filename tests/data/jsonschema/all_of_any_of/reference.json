@@ -1,0 +1,48 @@
+{
+  "definitions": {
+    "First": {
+      "properties": {
+        "first": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "first"
+      ]
+    },
+    "Second": {
+      "properties": {
+        "second": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "second"
+      ]
+    },
+    "Target": {
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/First"
+            },
+            {
+              "$ref": "#/definitions/Second"
+            }
+          ]
+        },
+        {
+          "properties": {
+            "third": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "third"
+          ]
+        }
+      ]
+    }
+  }
+}

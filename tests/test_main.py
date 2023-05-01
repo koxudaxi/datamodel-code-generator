@@ -5301,3 +5301,29 @@ def test_main_unsorted_optional_fields():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_all_of_any_of():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'all_of_any_of'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        all_of_any_of_dir = EXPECTED_MAIN_PATH / 'main_all_of_any_of'
+        for path in all_of_any_of_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(all_of_any_of_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+    with pytest.raises(SystemExit):
+        main()

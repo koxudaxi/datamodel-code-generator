@@ -681,6 +681,7 @@ class JsonSchemaParser(Parser):
         fields: List[DataModelFieldBase],
         base_classes: List[Reference],
         required: List[str],
+        union_models: List[Reference],
     ) -> None:
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
@@ -699,8 +700,26 @@ class JsonSchemaParser(Parser):
                     if all_of_item.required:
                         required.extend(all_of_item.required)
                 self._parse_all_of_item(
-                    name, all_of_item, path, fields, base_classes, required
+                    name,
+                    all_of_item,
+                    path,
+                    fields,
+                    base_classes,
+                    required,
+                    union_models,
                 )
+                if all_of_item.anyOf:
+                    union_models.extend(
+                        d.reference
+                        for d in self.parse_any_of(name, all_of_item, path)
+                        if d.reference
+                    )
+                if all_of_item.oneOf:
+                    union_models.extend(
+                        d.reference
+                        for d in self.parse_one_of(name, all_of_item, path)
+                        if d.reference
+                    )
 
     def parse_all_of(
         self,
@@ -719,9 +738,28 @@ class JsonSchemaParser(Parser):
         fields: List[DataModelFieldBase] = []
         base_classes: List[Reference] = []
         required: List[str] = []
-        self._parse_all_of_item(name, obj, path, fields, base_classes, required)
-        return self._parse_object_common_part(
+        union_models: List[Reference] = []
+        self._parse_all_of_item(
+            name, obj, path, fields, base_classes, required, union_models
+        )
+        data_type = self._parse_object_common_part(
             name, obj, path, ignore_duplicate_model, fields, base_classes, required
+        )
+        if not union_models or not data_type.reference:  # pragma: no cover
+            return data_type
+        return self.data_type(
+            data_types=[
+                self._parse_object_common_part(
+                    name,
+                    obj,
+                    get_special_path(f'union_model-{index}', path),
+                    ignore_duplicate_model,
+                    [],
+                    [union_model, data_type.reference],
+                    [],
+                )
+                for index, union_model in enumerate(union_models)
+            ]
         )
 
     def parse_object_fields(
