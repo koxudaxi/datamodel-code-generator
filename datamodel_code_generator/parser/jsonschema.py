@@ -764,7 +764,7 @@ class JsonSchemaParser(Parser):
                     get_special_path(f'union_model-{index}', path),
                     ignore_duplicate_model,
                     [],
-                    [union_model, all_of_data_type.reference],  # pragma: no cover
+                    [union_model, all_of_data_type.reference],  # type: ignore
                     [],
                 )
                 for index, union_model in enumerate(union_models)
