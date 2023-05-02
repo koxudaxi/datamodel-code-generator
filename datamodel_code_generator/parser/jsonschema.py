@@ -747,7 +747,7 @@ class JsonSchemaParser(Parser):
                 name, obj, path, ignore_duplicate_model, fields, base_classes, required
             )
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
-        data_type = self._parse_object_common_part(
+        all_of_data_type = self._parse_object_common_part(
             name,
             obj,
             get_special_path('allOf', path),
@@ -756,8 +756,6 @@ class JsonSchemaParser(Parser):
             base_classes,
             required,
         )
-        if not union_models:  # pragma: no cover
-            return data_type
         data_type = self.data_type(
             data_types=[
                 self._parse_object_common_part(
@@ -766,7 +764,7 @@ class JsonSchemaParser(Parser):
                     get_special_path(f'union_model-{index}', path),
                     ignore_duplicate_model,
                     [],
-                    [union_model, data_type.reference],
+                    [union_model, all_of_data_type.reference],  # pragma: no cover
                     [],
                 )
                 for index, union_model in enumerate(union_models)
