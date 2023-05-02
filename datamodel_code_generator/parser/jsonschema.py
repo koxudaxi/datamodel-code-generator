@@ -742,12 +742,23 @@ class JsonSchemaParser(Parser):
         self._parse_all_of_item(
             name, obj, path, fields, base_classes, required, union_models
         )
+        if not union_models:
+            return self._parse_object_common_part(
+                name, obj, path, ignore_duplicate_model, fields, base_classes, required
+            )
+        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         data_type = self._parse_object_common_part(
-            name, obj, path, ignore_duplicate_model, fields, base_classes, required
+            name,
+            obj,
+            get_special_path('allOf', path),
+            ignore_duplicate_model,
+            fields,
+            base_classes,
+            required,
         )
-        if not union_models or not data_type.reference:  # pragma: no cover
+        if not union_models:  # pragma: no cover
             return data_type
-        return self.data_type(
+        data_type = self.data_type(
             data_types=[
                 self._parse_object_common_part(
                     name,
@@ -761,6 +772,26 @@ class JsonSchemaParser(Parser):
                 for index, union_model in enumerate(union_models)
             ]
         )
+        field = self.get_object_field(
+            field_name=None,
+            field=obj,
+            required=True,
+            field_type=data_type,
+            alias=None,
+            original_field_name=None,
+        )
+        data_model_root = self.data_model_root_type(
+            reference=reference,
+            fields=[field],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
+            nullable=obj.type_has_null,
+        )
+        self.results.append(data_model_root)
+        return self.data_type(reference=reference)
 
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str], module_name: Optional[str] = None
