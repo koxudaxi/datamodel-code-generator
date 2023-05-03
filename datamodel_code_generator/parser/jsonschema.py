@@ -681,6 +681,7 @@ class JsonSchemaParser(Parser):
         fields: List[DataModelFieldBase],
         base_classes: List[Reference],
         required: List[str],
+        union_models: List[Reference],
     ) -> None:
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
@@ -699,8 +700,26 @@ class JsonSchemaParser(Parser):
                     if all_of_item.required:
                         required.extend(all_of_item.required)
                 self._parse_all_of_item(
-                    name, all_of_item, path, fields, base_classes, required
+                    name,
+                    all_of_item,
+                    path,
+                    fields,
+                    base_classes,
+                    required,
+                    union_models,
                 )
+                if all_of_item.anyOf:
+                    union_models.extend(
+                        d.reference
+                        for d in self.parse_any_of(name, all_of_item, path)
+                        if d.reference
+                    )
+                if all_of_item.oneOf:
+                    union_models.extend(
+                        d.reference
+                        for d in self.parse_one_of(name, all_of_item, path)
+                        if d.reference
+                    )
 
     def parse_all_of(
         self,
@@ -719,10 +738,58 @@ class JsonSchemaParser(Parser):
         fields: List[DataModelFieldBase] = []
         base_classes: List[Reference] = []
         required: List[str] = []
-        self._parse_all_of_item(name, obj, path, fields, base_classes, required)
-        return self._parse_object_common_part(
-            name, obj, path, ignore_duplicate_model, fields, base_classes, required
+        union_models: List[Reference] = []
+        self._parse_all_of_item(
+            name, obj, path, fields, base_classes, required, union_models
         )
+        if not union_models:
+            return self._parse_object_common_part(
+                name, obj, path, ignore_duplicate_model, fields, base_classes, required
+            )
+        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+        all_of_data_type = self._parse_object_common_part(
+            name,
+            obj,
+            get_special_path('allOf', path),
+            ignore_duplicate_model,
+            fields,
+            base_classes,
+            required,
+        )
+        data_type = self.data_type(
+            data_types=[
+                self._parse_object_common_part(
+                    name,
+                    obj,
+                    get_special_path(f'union_model-{index}', path),
+                    ignore_duplicate_model,
+                    [],
+                    [union_model, all_of_data_type.reference],  # type: ignore
+                    [],
+                )
+                for index, union_model in enumerate(union_models)
+            ]
+        )
+        field = self.get_object_field(
+            field_name=None,
+            field=obj,
+            required=True,
+            field_type=data_type,
+            alias=None,
+            original_field_name=None,
+        )
+        data_model_root = self.data_model_root_type(
+            reference=reference,
+            fields=[field],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
+            nullable=obj.type_has_null,
+        )
+        self.results.append(data_model_root)
+        return self.data_type(reference=reference)
 
     def parse_object_fields(
         self, obj: JsonSchemaObject, path: List[str], module_name: Optional[str] = None
