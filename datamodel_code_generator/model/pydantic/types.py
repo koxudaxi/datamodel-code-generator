@@ -93,7 +93,7 @@ def type_map_factory(
         Types.ipv6_network: data_type.from_import(IMPORT_IPV6NETWORKS),
         Types.boolean: data_type(type='bool'),
         Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
-        Types.null: data_type.from_import(IMPORT_ANY, is_optional=True),
+        Types.null: data_type(type='None'),
         Types.array: data_type.from_import(IMPORT_ANY, is_list=True),
         Types.any: data_type.from_import(IMPORT_ANY),
     }
