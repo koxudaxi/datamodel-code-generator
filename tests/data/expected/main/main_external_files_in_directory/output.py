@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Extra, Field, conint
 
@@ -62,7 +62,7 @@ class Person(BaseModel):
     pets: Optional[List[Pet]] = None
     friends: Optional[Friends] = None
     robot: Optional[Robot] = None
-    comment: Optional[Any] = None
+    comment: None = None
     drink: Optional[List[Union[Coffee, Tea]]] = None
     food: Optional[List[Union[Noodle, Soup]]] = None
 

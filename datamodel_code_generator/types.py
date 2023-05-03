@@ -364,10 +364,16 @@ class DataType(_BaseModel):
                     if data_type_type in data_types:  # pragma: no cover
                         continue
                     data_types.append(data_type_type)
-                if self.use_union_operator:
-                    type_ = UNION_OPERATOR_DELIMITER.join(data_types)
+                if NONE in data_types:
+                    data_types = [d for d in data_types if d != NONE]
+                    self.is_optional = True
+                if len(data_types) == 1:
+                    type_ = data_types[0]
                 else:
-                    type_ = f'{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]'
+                    if self.use_union_operator:
+                        type_ = UNION_OPERATOR_DELIMITER.join(data_types)
+                    else:
+                        type_ = f'{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]'
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
             elif self.literals:
