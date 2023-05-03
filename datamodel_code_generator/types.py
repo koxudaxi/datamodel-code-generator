@@ -344,7 +344,7 @@ class DataType(_BaseModel):
                         for t in self.data_types
                         if not (t.type == ANY and t.is_optional)
                     ]
-                break
+                break  # pragma: no cover
 
         for data_type in self.data_types:
             if data_type.reference or data_type.data_types:
