@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
@@ -20,7 +20,7 @@ class Person(BaseModel):
     pets: Optional[List[pet.Pet]] = None
     friends: Optional[friends.Friends] = None
     robot: Optional[robot.Robot] = None
-    comment: Optional[Any] = None
+    comment: None = None
     drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
     food: Optional[List[Union[food.Noodle, food.Soup]]] = None
 
