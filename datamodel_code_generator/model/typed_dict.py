@@ -26,6 +26,8 @@ from datamodel_code_generator.types import chain_as_tuple
 
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
     name = field.original_name or field.name
+    if name is None:  # pragma: no cover
+        return False
     return name.isidentifier() and not keyword.iskeyword(name)
 
 
@@ -82,6 +84,8 @@ class TypedDict(DataModel):
     @property
     def all_keys(self) -> Iterator[DataModelFieldBase]:
         for base_class in self.base_classes:
+            if base_class.reference is None:  # pragma: no cover
+                continue
             data_model = base_class.reference.source
             if not isinstance(data_model, DataModel):
                 continue
