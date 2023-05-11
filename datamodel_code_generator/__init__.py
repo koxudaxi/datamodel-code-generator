@@ -220,6 +220,7 @@ RAW_DATA_TYPES: List[InputFileType] = [
 class DataModelType(Enum):
     PydanticBaseModel = 'pydantic.BaseModel'
     DataclassesDataclass = 'dataclasses.dataclass'
+    TypingTypedDict = 'typing.TypedDict'
 
 
 class OpenAPIScope(Enum):

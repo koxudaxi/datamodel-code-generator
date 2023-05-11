@@ -16,7 +16,10 @@ from typing import (
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.improts import IMPORT_DATACLASS, IMPORT_FIELD
+from datamodel_code_generator.model.improts import (
+    IMPORT_FIELD,
+    IMPORT_TYPED_DICT,
+)
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple
 
@@ -28,7 +31,8 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 
 class TypedDict(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'TypedDict.jinja2'
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_DATACLASS,)
+    BASE_CLASS: ClassVar[str] = 'typing.TypedDict'
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
 
     def __init__(
         self,

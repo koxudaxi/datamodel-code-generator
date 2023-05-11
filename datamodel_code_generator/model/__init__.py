@@ -19,7 +19,7 @@ class DataModelSet(NamedTuple):
 
 def get_data_model_types(data_model_type: DataModelType) -> DataModelSet:
     from .. import DataModelType
-    from . import dataclass, pydantic, rootmodel
+    from . import dataclass, pydantic, rootmodel, typed_dict
     from .types import DataTypeManager
 
     if data_model_type == DataModelType.PydanticBaseModel:
@@ -35,6 +35,14 @@ def get_data_model_types(data_model_type: DataModelType) -> DataModelSet:
             data_model=dataclass.DataClass,
             root_model=rootmodel.RootModel,
             field_model=dataclass.DataModelField,
+            data_type_manager=DataTypeManager,
+            dump_resolve_reference_action=None,
+        )
+    elif data_model_type == DataModelType.TypingTypedDict:
+        return DataModelSet(
+            data_model=typed_dict.TypedDict,
+            root_model=rootmodel.RootModel,
+            field_model=typed_dict.DataModelField,
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,
         )
