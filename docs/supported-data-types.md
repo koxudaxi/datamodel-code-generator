@@ -1,14 +1,16 @@
-# Supported Source Data Formats
+# Supported Input Formats
+
+This code generator supports the following input formats:
+
 - OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
 - JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) /[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
 - JSON/YAML Data (it will be converted to JSON Schema)
 - Python dictionary (it will be converted to JSON Schema)
 
-# Implemented list
+## Implemented data types and features
 
-This code generator supports major data types from OpenAPI/JSON Schema. 
+Below are the data types and features recognized by datamodel-code-generator for OpenAPI 3 and JSON Schema.
 
-## OpenAPI 3 and JSON Schema
 ### Data Types
 - string (supported keywords: pattern/minLength/maxLength)
 - number (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)
@@ -17,7 +19,7 @@ This code generator supports major data types from OpenAPI/JSON Schema.
 - array
 - object
 
-#### String Formats 
+### String Formats 
 - date
 - datetime
 - time
