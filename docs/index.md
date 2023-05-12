@@ -4,6 +4,7 @@ This code generator creates [pydantic](https://docs.pydantic.dev/) model and [da
 
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
+[![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/project/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
@@ -257,7 +258,6 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 - [pydantic](https://docs.pydantic.dev/).BaseModel
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
 
-
 ## Installation
 
 To install `datamodel-code-generator`:
@@ -316,7 +316,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--use-field-description] [--use-default-kwarg]
                          [--reuse-model] [--keep-model-order]
                          [--collapse-root-models]
-                         [--enum-field-as-literal {all,one}]
+                         [--enum-field-as-literal {all,one}] [--use-one-literal-as-default]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
                          [--capitalise-enum-members]
@@ -330,7 +330,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}]
                          [--wrap-string-literal] [--validation]
                          [--use-double-quotes] [--encoding ENCODING] [--debug]
-                          [--disable-warnings] [--version]
+                         [--disable-warnings] [--version]
 
 options:
   -h, --help            show this help message and exit
@@ -410,6 +410,8 @@ options:
                         Parse enum field as literal. all: all enum field type
                         are Literal. one: field type is Literal when an enum
                         has only one possible value
+  --use-one-literal-as-default
+                        Use one literal as default value for one literal field
   --set-default-enum-member
                         Set enum members as default values for enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
