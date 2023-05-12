@@ -235,7 +235,7 @@ class Apis(BaseModel):
 </details>
 
 ## Projects that use datamodel-code-generator
-These OSS projects use datamodel-code-generator to generate many models. See the following linked repositories for real world examples and inspiration.
+These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
 - [Netflix/consoleme](https://github.com/Netflix/consoleme)
   - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
