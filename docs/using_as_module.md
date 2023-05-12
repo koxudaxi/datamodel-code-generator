@@ -1,6 +1,6 @@
-# Using as module
+# Using the code generator as a module
 
-datamodel-code-generator is a CLI. But, it has another side as a python module.
+datamodel-code-generator is a CLI tool, but can also be used as a module.
 
 You can call this code-generator in your python code.
 
