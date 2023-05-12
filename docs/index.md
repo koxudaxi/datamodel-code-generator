@@ -285,7 +285,7 @@ You can genearte models from a URL.
 ```bash
 $ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
-This method needs  [http extra option](#http-extra-option)
+This method needs the [http extra option](#http-extra-option)
 
 
 ## All Command Options

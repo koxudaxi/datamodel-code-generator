@@ -1,6 +1,6 @@
-# Generate from JsonData
+# Generate from Json Data
 
-The codegen generate pydantic models from JSON Data
+This code generator can create pydantic models from JSON Data. Under the hood, the generator uses [GenSON](https://pypi.org/project/genson/) to create JSON Schema from your input. The generated schema is then processed the in the same manner as [JSON Schema input data](./jsonschema.md).
 
 ## Example
 

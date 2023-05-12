@@ -1,6 +1,6 @@
 # Generate from OpenAPI
 
-The codegen generate pydantic models from OpenAPI
+The code generator can create pydantic models from OpenAPI schema definitions, particularly using the data from the `schema` field.
 
 ## Example
 

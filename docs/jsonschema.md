@@ -1,6 +1,6 @@
 # Generate from JSON Schema
 
-The codegen generate pydantic models from JSON Schema
+The code generator can create pydantic models from JSON Schema. See more information about supported JSON Schema data types and features [here](./supported-data-types.md#openapi-3-and-json-schema).
 
 ## Example
 
