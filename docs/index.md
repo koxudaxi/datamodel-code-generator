@@ -24,7 +24,7 @@ To install `datamodel-code-generator`:
 $ pip install datamodel-code-generator
 ```
 
-## Simple usage
+## Simple Usage
 You can generate models from a local file.
 ```bash
 $ datamodel-codegen --input api.yaml --output model.py
@@ -234,8 +234,8 @@ class Apis(BaseModel):
 ```
 </details>
 
-## Which project uses it?
-These OSS use datamodel-code-generator to generate many models. We can learn about use-cases from these projects.
+## Projects that use datamodel-code-generator
+These OSS projects use datamodel-code-generator to generate many models. See the following linked repositories for real world examples and inspiration.
 - [Netflix/consoleme](https://github.com/Netflix/consoleme)
   - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
