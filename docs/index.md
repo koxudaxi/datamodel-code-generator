@@ -11,9 +11,6 @@ This code generator creates [pydantic](https://docs.pydantic.dev/) model and [da
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
-## Help
-See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
-
 ## Sponsors
 [![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
 
@@ -451,40 +448,7 @@ options:
   --version             show version
 ```
 
-
-## Implemented list
-### OpenAPI 3 and JsonSchema
-#### DataType
--  string (include patter/minLength/maxLenght)
--  number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  boolean
--  array
--  object
-
-##### String Format
--  date
--  datetime
--  time
--  password
--  email
--  idn-email
--  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
--  ipv4
--  ipv6
--  ipv4-network
--  ipv6-network
--  hostname
--  decimal
-
-#### Other schema
--  enum (as enum.Enum or typing.Literal)
--  allOf (as Multiple inheritance)
--  anyOf (as typing.Union)
--  oneOf (as typing.Union)
--  $ref ([http extra](#http-extra-option) is required when resolving $ref for remote files.)
--  $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
-
+<a href="./supported-data-types.md" style="font-size: 2em; ">Click here to see supported input formats</a>
 
 ## Related projects
 ### fastapi-code-generator
