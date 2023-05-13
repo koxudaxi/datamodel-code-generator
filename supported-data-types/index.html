@@ -10,16 +10,20 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/custom_templates/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/supported-data-types/">
       
       
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../openapi/">
       
       <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.1.6">
     
     
       
-        <title>Using as module - datamodel-code-generator</title>
+        <title>Support data types - datamodel-code-generator</title>
       
     
     
@@ -67,7 +71,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#using-as-module" class="md-skip">
+        <a href="#supported-input-formats" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +106,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Using as module
+              Support data types
             
           </span>
         </div>
@@ -225,11 +229,79 @@
 
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../support-data-types/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Support data types
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Support data types
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#implemented-data-types-and-features" class="md-nav__link">
+    Implemented data types and features
+  </a>
+  
+    <nav class="md-nav" aria-label="Implemented data types and features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-types" class="md-nav__link">
+    Data Types
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#string-formats" class="md-nav__link">
+    String Formats
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-schema" class="md-nav__link">
+    Other schema
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -423,50 +495,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    Usage
+  <a href="#implemented-data-types-and-features" class="md-nav__link">
+    Implemented data types and features
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-to-use-it-as-module" class="md-nav__link">
-    How to use it as module
-  </a>
-  
-    <nav class="md-nav" aria-label="How to use it as module">
+    <nav class="md-nav" aria-label="Implemented data types and features">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    Installation
+  <a href="#data-types" class="md-nav__link">
+    Data Types
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    Example
+  <a href="#string-formats" class="md-nav__link">
+    String Formats
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-schema" class="md-nav__link">
+    Other schema
   </a>
   
 </li>
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-doesnt-the-function-return-str" class="md-nav__link">
-    Why doesn't the function return str?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related-projects" class="md-nav__link">
-    Related projects
-  </a>
   
 </li>
       
@@ -488,81 +546,48 @@
   
 
 
-<h1 id="using-as-module">Using as module</h1>
-<p>One of the powerful features of the <code>datamodel-code-generator</code> is the ability to use custom templates with the <code>--custom-template-dir</code> option.</p>
-<p>This option allows you to provide a directory containing Jinja2 templates for customizing the generated code. In this document, we'll explore how to use this option and provide an example to help you understand its usage.</p>
-<h2 id="usage">Usage</h2>
-<p>To use the <code>--custom-template-dir</code> option, you'll need to pass the directory path containing your custom templates as an argument. The command will look like this:</p>
-<p>datamodel-code-generator is a CLI. But, it has another side as a python module.</p>
-<p>You can call this code-generator in your python code.</p>
-<h2 id="how-to-use-it-as-module">How to use it as module</h2>
-<p>You can generate models with <code>datamodel_code_generator.generate</code> into a temporary directory.</p>
-<p>And, you can read files from the directory.</p>
-<h3 id="installation">Installation</h3>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;datamodel-code-generator[http]&quot;</span>
-</code></pre></div>
-
-<h3 id="example">Example</h3>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">TemporaryDirectory</span>
-<span class="kn">from</span> <span class="nn">datamodel_code_generator</span> <span class="kn">import</span> <span class="n">InputFileType</span><span class="p">,</span> <span class="n">generate</span>
-
-<span class="n">json_schema</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;{</span>
-<span class="s2">    &quot;type&quot;: &quot;object&quot;,</span>
-<span class="s2">    &quot;properties&quot;: {</span>
-<span class="s2">        &quot;number&quot;: {&quot;type&quot;: &quot;number&quot;},</span>
-<span class="s2">        &quot;street_name&quot;: {&quot;type&quot;: &quot;string&quot;},</span>
-<span class="s2">        &quot;street_type&quot;: {&quot;type&quot;: &quot;string&quot;,</span>
-<span class="s2">                        &quot;enum&quot;: [&quot;Street&quot;, &quot;Avenue&quot;, &quot;Boulevard&quot;]</span>
-<span class="s2">                        }</span>
-<span class="s2">    }</span>
-<span class="s2">}&quot;&quot;&quot;</span>
-
-<span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">temporary_directory_name</span><span class="p">:</span>
-    <span class="n">temporary_directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temporary_directory_name</span><span class="p">)</span>
-    <span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temporary_directory</span> <span class="o">/</span> <span class="s1">&#39;model.py&#39;</span><span class="p">)</span>
-    <span class="n">generate</span><span class="p">(</span>
-        <span class="n">json_schema</span><span class="p">,</span>
-        <span class="n">input_file_type</span><span class="o">=</span><span class="n">InputFileType</span><span class="o">.</span><span class="n">JsonSchema</span><span class="p">,</span>
-        <span class="n">input_filename</span><span class="o">=</span><span class="s2">&quot;example.json&quot;</span><span class="p">,</span>
-        <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The result of print(model)</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># generated by datamodel-codegen:</span>
-<span class="c1">#   filename:  example.json</span>
-<span class="c1">#   timestamp: 2020-12-21T08:01:06+00:00</span>
-
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
-
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
-
-<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
-
-
-<span class="k">class</span> <span class="nc">StreetType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
-    <span class="n">Street</span> <span class="o">=</span> <span class="s1">&#39;Street&#39;</span>
-    <span class="n">Avenue</span> <span class="o">=</span> <span class="s1">&#39;Avenue&#39;</span>
-    <span class="n">Boulevard</span> <span class="o">=</span> <span class="s1">&#39;Boulevard&#39;</span>
-
-
-<span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">number</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">street_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">street_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StreetType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</code></pre></div>
-
-<h2 id="why-doesnt-the-function-return-str">Why doesn't the function return str?</h2>
-<p>If generated code are modular files then, str can't reproduce the structure of modules.</p>
-<p>Also, <code>TemporaryDirectory</code> and <code>Path</code> provide an easy way to read files.</p>
-<p>There is an example when a generated model file is only one.</p>
-<p>Otherwise, You should walk in a directory to find modular files.</p>
-<h2 id="related-projects">Related projects</h2>
-<p><a href="https://github.com/koxudaxi/fastapi-code-generator">fastapi-code-generator</a> uses <code>datamodel-code-generator</code> as module to create models from OpenAPI.</p>
+<h1 id="supported-input-formats">Supported Input Formats</h1>
+<p>This code generator supports the following input formats:</p>
+<ul>
+<li>OpenAPI 3 (YAML/JSON, <a href="https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types">OpenAPI Data Type</a>)</li>
+<li>JSON Schema (<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Core</a> /<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Validation</a>)</li>
+<li>JSON/YAML Data (it will be converted to JSON Schema)</li>
+<li>Python dictionary (it will be converted to JSON Schema)</li>
+</ul>
+<h2 id="implemented-data-types-and-features">Implemented data types and features</h2>
+<p>Below are the data types and features recognized by datamodel-code-generator for OpenAPI 3 and JSON Schema.</p>
+<h3 id="data-types">Data Types</h3>
+<ul>
+<li>string (supported keywords: pattern/minLength/maxLength)</li>
+<li>number (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)</li>
+<li>integer (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)</li>
+<li>boolean</li>
+<li>array</li>
+<li>object</li>
+</ul>
+<h3 id="string-formats">String Formats</h3>
+<ul>
+<li>date</li>
+<li>datetime</li>
+<li>time</li>
+<li>password</li>
+<li>email</li>
+<li>idn-email</li>
+<li>uuid (uuid1/uuid2/uuid3/uuid4/uuid5)</li>
+<li>ipv4</li>
+<li>ipv6</li>
+<li>hostname</li>
+<li>decimal</li>
+</ul>
+<h3 id="other-schema">Other schema</h3>
+<ul>
+<li>enum (as enum.Enum or typing.Literal)</li>
+<li>allOf (as Multiple inheritance)</li>
+<li>anyOf (as typing.Union)</li>
+<li>oneOf (as typing.Union)</li>
+<li>$ref (<a href="../#http-extra-option">http extra</a> is required when resolving $ref for remote files.)</li>
+<li>$id (for <a href="https://json-schema.org/understanding-json-schema/structuring.html#id">JSONSchema</a></li>
+</ul>
 
 
 
