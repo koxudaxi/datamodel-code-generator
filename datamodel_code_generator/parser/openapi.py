@@ -555,6 +555,9 @@ class OpenAPIParser(JsonSchemaParser):
                 ]
                 paths_path = [*path_parts, '#/paths']
                 for path_name, methods in paths.items():
+                    # Resolve path items if applicable
+                    if '$ref' in methods:
+                        methods = self._get_ref_body(methods['$ref'])
                     paths_parameters = parameters[:]
                     if 'parameters' in methods:
                         paths_parameters.extend(methods['parameters'])
