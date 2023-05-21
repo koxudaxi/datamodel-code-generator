@@ -18,7 +18,7 @@ site_url: https://koxudaxi.github.io/datamodel-code-generator
 
 nav:
     - Overview: index.md
-    - Support data types: support-data-types.md
+    - Support data types: supported-data-types.md
     - Usage:
       - Generate from OpenAPI: openapi.md
       - Generate from JSON Schema: jsonschema.md

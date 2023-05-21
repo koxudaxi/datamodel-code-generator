@@ -4,15 +4,13 @@ This code generator creates [pydantic](https://docs.pydantic.dev/) model and [da
 
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
+[![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/project/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-
-## Help
-See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
 
 ## Sponsors
 [![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
@@ -24,7 +22,7 @@ To install `datamodel-code-generator`:
 $ pip install datamodel-code-generator
 ```
 
-## Simple usage
+## Simple Usage
 You can generate models from a local file.
 ```bash
 $ datamodel-codegen --input api.yaml --output model.py
@@ -234,14 +232,14 @@ class Apis(BaseModel):
 ```
 </details>
 
-## Which project uses it?
-These OSS use datamodel-code-generator to generate many models. We can learn about use-cases from these projects.
+## Projects that use datamodel-code-generator
+These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
 - [Netflix/consoleme](https://github.com/Netflix/consoleme)
   - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
   - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
 - [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
-  - *Not used. But, introduced [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official document*
+  - *Recommended for [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official documentation*
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
   - [Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
@@ -259,7 +257,6 @@ These OSS use datamodel-code-generator to generate many models. We can learn abo
 ## Supported output types
 - [pydantic](https://docs.pydantic.dev/).BaseModel
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
-
 
 ## Installation
 
@@ -285,7 +282,7 @@ You can genearte models from a URL.
 ```bash
 $ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
-This method needs  [http extra option](#http-extra-option)
+This method needs the [http extra option](#http-extra-option)
 
 
 ## All Command Options
@@ -319,7 +316,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--use-field-description] [--use-default-kwarg]
                          [--reuse-model] [--keep-model-order]
                          [--collapse-root-models]
-                         [--enum-field-as-literal {all,one}]
+                         [--enum-field-as-literal {all,one}] [--use-one-literal-as-default]
                          [--set-default-enum-member]
                          [--empty-enum-field-name EMPTY_ENUM_FIELD_NAME]
                          [--capitalise-enum-members]
@@ -333,7 +330,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}]
                          [--wrap-string-literal] [--validation]
                          [--use-double-quotes] [--encoding ENCODING] [--debug]
-                          [--disable-warnings] [--version]
+                         [--disable-warnings] [--version]
 
 options:
   -h, --help            show this help message and exit
@@ -413,6 +410,8 @@ options:
                         Parse enum field as literal. all: all enum field type
                         are Literal. one: field type is Literal when an enum
                         has only one possible value
+  --use-one-literal-as-default
+                        Use one literal as default value for one literal field
   --set-default-enum-member
                         Set enum members as default values for enum field
   --empty-enum-field-name EMPTY_ENUM_FIELD_NAME
@@ -451,40 +450,7 @@ options:
   --version             show version
 ```
 
-
-## Implemented list
-### OpenAPI 3 and JsonSchema
-#### DataType
--  string (include patter/minLength/maxLenght)
--  number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  boolean
--  array
--  object
-
-##### String Format
--  date
--  datetime
--  time
--  password
--  email
--  idn-email
--  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
--  ipv4
--  ipv6
--  ipv4-network
--  ipv6-network
--  hostname
--  decimal
-
-#### Other schema
--  enum (as enum.Enum or typing.Literal)
--  allOf (as Multiple inheritance)
--  anyOf (as typing.Union)
--  oneOf (as typing.Union)
--  $ref ([http extra](#http-extra-option) is required when resolving $ref for remote files.)
--  $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
-
+<a href="./supported-data-types.md" style="font-size: 2em; ">Click here to see supported input formats</a>
 
 ## Related projects
 ### fastapi-code-generator
