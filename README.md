@@ -25,7 +25,7 @@ To install `datamodel-code-generator`:
 $ pip install datamodel-code-generator
 ```
 
-## Simple usage
+## Simple Usage
 You can generate models from a local file.
 ```bash
 $ datamodel-codegen --input api.yaml --output model.py
@@ -235,14 +235,14 @@ class Apis(BaseModel):
 ```
 </details>
 
-## Which project uses it?
-These OSS use datamodel-code-generator to generate many models. We can learn about use-cases from these projects.
+## Projects that use datamodel-code-generator
+These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
 - [Netflix/consoleme](https://github.com/Netflix/consoleme)
   - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
   - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
 - [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
-  - *Not used. But, introduced [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official document*
+  - *Recommended for [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official documentation*
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
   - [Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
@@ -285,7 +285,7 @@ You can genearte models from a URL.
 ```bash
 $ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
-This method needs  [http extra option](#http-extra-option)
+This method needs the [http extra option](#http-extra-option)
 
 
 ## All Command Options
@@ -452,41 +452,6 @@ options:
   --disable-warnings    disable warnings
   --version             show version
 ```
-
-
-## Implemented list
-### OpenAPI 3 and JsonSchema
-#### DataType
--  string (include patter/minLength/maxLenght)
--  number (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  integer (include maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf/le/ge)
--  boolean
--  array
--  object
-
-##### String Format
--  date
--  datetime
--  time
--  password
--  email
--  idn-email
--  uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
--  ipv4
--  ipv6
--  ipv4-network
--  ipv6-network
--  hostname
--  decimal
-
-#### Other schema
--  enum (as enum.Enum or typing.Literal)
--  allOf (as Multiple inheritance)
--  anyOf (as typing.Union)
--  oneOf (as typing.Union)
--  $ref ([http extra](#http-extra-option) is required when resolving $ref for remote files.)
--  $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#the-id-property))
-
 
 ## Related projects
 ### fastapi-code-generator
