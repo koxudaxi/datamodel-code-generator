@@ -98,6 +98,19 @@ class TypedDict(DataModel):
         for field in self.fields:
             yield field
 
+    def render(self, *, class_name: Optional[str] = None) -> str:
+        response = self._render(
+            class_name=class_name or self.class_name,
+            fields=self.fields,
+            decorators=self.decorators,
+            base_class=self.base_class,
+            methods=self.methods,
+            description=self.description,
+            is_functional_syntax=self.is_functional_syntax,
+            **self.extra_template_data,
+        )
+        return response
+
 
 class DataModelField(DataModelFieldBase):
     @property

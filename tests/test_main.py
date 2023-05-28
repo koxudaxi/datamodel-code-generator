@@ -5400,3 +5400,31 @@ def test_main_typed_dict():
 
     with pytest.raises(SystemExit):
         main()
+
+
+@freeze_time('2019-07-26')
+def test_main_typed_dict_space_and_special_characters():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_DATA_PATH / 'space_and_special_characters.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_space_and_special_characters'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
