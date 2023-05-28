@@ -5428,3 +5428,28 @@ def test_main_typed_dict_space_and_special_characters():
 
     with pytest.raises(SystemExit):
         main()
+
+
+def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
+    """Test main function on modular file."""
+
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--output-model-type',
+                'typing.TypedDict',
+            ]
+        )
+    main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular_typed_dict'
+    for path in main_modular_dir.rglob('*.py'):
+        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
+        assert result == path.read_text()
