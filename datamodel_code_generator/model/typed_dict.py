@@ -71,10 +71,6 @@ class TypedDict(DataModel):
         return any(not _is_valid_field_name(f) for f in self.fields)
 
     @property
-    def has_non_required_field(self) -> bool:
-        return any(not f.required for f in self.fields)
-
-    @property
     def all_keys(self) -> Iterator[DataModelFieldBase]:
         for base_class in self.base_classes:
             if base_class.reference is None:  # pragma: no cover
@@ -113,3 +109,11 @@ class DataModelField(DataModelFieldBase):
 
     def __str__(self) -> str:
         return ''
+
+    # TODO: Support NotRequired
+    # @property
+    # def type_hint(self) -> str:
+    #     type_hint = super().type_hint
+    #     if self.required:
+    #         return type_hint
+    #     return f'{NOT_REQUIRED_PREFIX}{type_hint}]'
