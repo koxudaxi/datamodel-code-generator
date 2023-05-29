@@ -17,11 +17,9 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.improts import (
-    IMPORT_FIELD,
     IMPORT_TYPED_DICT,
 )
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple
 
 
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
@@ -34,6 +32,7 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 class TypedDict(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'TypedDict.jinja2'
     BASE_CLASS: ClassVar[str] = 'typing.TypedDict'
+    # TODO: Support typing_extensions.TypedDict for Python 3.7
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
 
     def __init__(
@@ -66,12 +65,6 @@ class TypedDict(DataModel):
             default=default,
             nullable=nullable,
         )
-
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        if any(f for f in self.fields if f.field):
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
 
     @property
     def is_functional_syntax(self) -> bool:

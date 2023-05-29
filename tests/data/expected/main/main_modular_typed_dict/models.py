@@ -4,14 +4,11 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import Any, Dict, List, Optional, TypedDict, Union
 
+from typing_extensions import Literal
 
-class Species(Enum):
-    dog = 'dog'
-    cat = 'cat'
-    snake = 'snake'
+Species = Literal['dog', 'cat', 'snake']
 
 
 class Pet(TypedDict):

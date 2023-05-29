@@ -4,8 +4,9 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import List, Optional, TypedDict
+
+from typing_extensions import Literal
 
 from . import models
 
@@ -18,19 +19,12 @@ Users = List[models.User]
 Rules = List[str]
 
 
-class Stage(Enum):
-    test = 'test'
-    dev = 'dev'
-    stg = 'stg'
-    prod = 'prod'
-
-
 class Api(TypedDict):
     apiKey: Optional[str]
     apiVersionNumber: Optional[str]
     apiUrl: Optional[str]
     apiDocumentationUrl: Optional[str]
-    stage: Optional[Stage]
+    stage: Optional[Literal['test', 'dev', 'stg', 'prod']]
 
 
 Apis = List[Api]

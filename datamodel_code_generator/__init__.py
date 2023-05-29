@@ -428,7 +428,9 @@ def generate(
         use_field_description=use_field_description,
         use_default_kwarg=use_default_kwarg,
         reuse_model=reuse_model,
-        enum_field_as_literal=enum_field_as_literal,
+        enum_field_as_literal=LiteralType.All
+        if output_model_type == DataModelType.TypingTypedDict
+        else enum_field_as_literal,
         use_one_literal_as_default=use_one_literal_as_default,
         set_default_enum_member=set_default_enum_member,
         use_subclass_enum=use_subclass_enum,
