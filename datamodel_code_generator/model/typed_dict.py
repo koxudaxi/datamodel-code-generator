@@ -33,6 +33,7 @@ escape_characters = str.maketrans(
     }
 )
 
+
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
     name = field.original_name or field.name
     if name is None:  # pragma: no cover

@@ -5462,7 +5462,10 @@ def test_main_typed_dictspecial_field_name_with_inheritance_model():
         return_code: Exit = main(
             [
                 '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'special_field_name_with_inheritance_model.json'),
+                str(
+                    JSON_SCHEMA_DATA_PATH
+                    / 'special_field_name_with_inheritance_model.json'
+                ),
                 '--output',
                 str(output_file),
                 '--output-model-type',
@@ -5481,4 +5484,3 @@ def test_main_typed_dictspecial_field_name_with_inheritance_model():
 
     with pytest.raises(SystemExit):
         main()
-
