@@ -1,7 +1,6 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic](https://docs.pydantic.dev/) model and [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html) from an openapi file and others.
-
+This code generator creates [pydantic](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html) and [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) from an openapi file and others.
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Downloads](https://pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/project/datamodel-code-generator)
@@ -259,6 +258,7 @@ These OSS use datamodel-code-generator to generate many models. We can learn abo
 ## Supported output types
 - [pydantic](https://docs.pydantic.dev/).BaseModel
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
+- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
 
 
 ## Installation
@@ -296,7 +296,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--http-headers HTTP_HEADER [HTTP_HEADER ...]]
                          [--http-ignore-tls]
                          [--input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}]
-                         [--output-model-type {pydantic.BaseModel,dataclasses.dataclass}]
+                         [--output-model-type {pydantic.BaseModel,dataclasses.dataclass,typing.TypedDict}]
                          [--openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]]
                          [--output OUTPUT] [--base-class BASE_CLASS]
                          [--field-constraints] [--use-annotated]
@@ -347,7 +347,7 @@ options:
                         certificate
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
-  --output-model-type {pydantic.BaseModel,dataclasses.dataclass}
+  --output-model-type {pydantic.BaseModel,dataclasses.dataclass,typing.TypedDict}
                         Output model type (default: pydantic.BaseModel)
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
