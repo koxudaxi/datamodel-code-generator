@@ -5456,7 +5456,7 @@ def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
 
 
 @freeze_time('2019-07-26')
-def test_main_typed_dictspecial_field_name_with_inheritance_model():
+def test_main_typed_dict_special_field_name_with_inheritance_model():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -5477,7 +5477,7 @@ def test_main_typed_dictspecial_field_name_with_inheritance_model():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH
-                / 'main_typed_dict_space_and_special_characters'
+                / 'main_typed_dict_special_field_name_with_inheritance_model'
                 / 'output.py'
             ).read_text()
         )

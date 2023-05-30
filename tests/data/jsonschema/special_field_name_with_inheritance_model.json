@@ -22,13 +22,27 @@
       "type": "string"
     }
   },
-  "allOf": [ {
-    "$ref": "#/definitions/base"
-  }],
+  "allOf": [
+    {
+      "$ref": "#/definitions/base"
+    }
+  ],
   "definitions": {
     "base": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/nestedBase"
+        }
+      ],
       "properties": {
         "name": {
+          "type": "string"
+        }
+      }
+    },
+    "nestedBase": {
+      "properties": {
+        "age": {
           "type": "string"
         }
       }
