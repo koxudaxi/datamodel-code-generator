@@ -5453,3 +5453,32 @@ def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
     for path in main_modular_dir.rglob('*.py'):
         result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
         assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_typed_dictspecial_field_name_with_inheritance_model():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'special_field_name_with_inheritance_model.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_space_and_special_characters'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+

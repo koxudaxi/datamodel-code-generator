@@ -21,6 +21,17 @@ from datamodel_code_generator.model.improts import (
 )
 from datamodel_code_generator.reference import Reference
 
+escape_characters = str.maketrans(
+    {
+        '\\': r'\\',
+        "'": r"\'",
+        '\b': r'\b',
+        '\f': r'\f',
+        '\n': r'\n',
+        '\r': r'\r',
+        '\t': r'\t',
+    }
+)
 
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
     name = field.original_name or field.name
@@ -71,7 +82,7 @@ class TypedDict(DataModel):
         return any(not _is_valid_field_name(f) for f in self.fields)
 
     @property
-    def all_keys(self) -> Iterator[DataModelFieldBase]:
+    def all_fields(self) -> Iterator[DataModelFieldBase]:
         for base_class in self.base_classes:
             if base_class.reference is None:  # pragma: no cover
                 continue
@@ -80,7 +91,7 @@ class TypedDict(DataModel):
                 continue
 
             if isinstance(data_model, TypedDict):
-                yield from data_model.all_keys
+                yield from data_model.all_fields
             else:
                 for field in data_model.fields:
                     yield field
@@ -96,6 +107,7 @@ class TypedDict(DataModel):
             methods=self.methods,
             description=self.description,
             is_functional_syntax=self.is_functional_syntax,
+            all_fields=self.all_fields,
             **self.extra_template_data,
         )
         return response
@@ -109,6 +121,10 @@ class DataModelField(DataModelFieldBase):
 
     def __str__(self) -> str:
         return ''
+
+    @property
+    def key(self):
+        return (self.original_name or self.name).translate(escape_characters)
 
     # TODO: Support NotRequired
     # @property
