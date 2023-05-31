@@ -41,7 +41,7 @@ class PythonVersion(Enum):
         return self._is_py_38_or_later
 
     @property
-    def has_union_operator(self) -> bool:
+    def has_union_operator(self) -> bool:  # pragma: no cover
         return self._is_py_310_or_later
 
     @property

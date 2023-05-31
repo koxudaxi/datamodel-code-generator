@@ -91,16 +91,13 @@ class TypedDict(DataModel):
             if base_class.reference is None:  # pragma: no cover
                 continue
             data_model = base_class.reference.source
-            if not isinstance(data_model, DataModel):
+            if not isinstance(data_model, DataModel):  # pragma: no cover
                 continue
 
-            if isinstance(data_model, TypedDict):
+            if isinstance(data_model, TypedDict):  # pragma: no cover
                 yield from data_model.all_fields
-            else:
-                for field in data_model.fields:
-                    yield field
-        for field in self.fields:
-            yield field
+
+        yield from self.fields
 
     def render(self, *, class_name: Optional[str] = None) -> str:
         response = self._render(
@@ -124,14 +121,6 @@ class TypedDictBackport(TypedDict):
 
 class DataModelField(DataModelFieldBase):
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
-
-    @property
-    def field(self) -> Optional[str]:
-        """for backwards compatibility"""
-        return None
-
-    def __str__(self) -> str:
-        return ''
 
     @property
     def key(self) -> str:
