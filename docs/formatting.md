@@ -8,7 +8,9 @@ skip-string-normalization with using datamodel-codegen option `--use-double-quot
 it will override your black config skip-string-normalization value.
 Using --use-double-quotes may be useful if you can't use black config. 
 
-Example `pyproject.toml`:
+## Example
+
+**pyproject.toml**
 ```toml
 [tool.black]
 skip-string-normalization = true
@@ -23,4 +25,4 @@ line_length = 100
 known_first_party = "kelvin"
 ```
 
-See the [Black Project](https://black.readthedocs.io/en/stable/pyproject_toml.html) for more information.
+See the [Black Project](https://pypi.org/project/black/) for more information.
