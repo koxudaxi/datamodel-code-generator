@@ -725,8 +725,8 @@
 
 
 <h1 id="datamodel-code-generator">datamodel-code-generator</h1>
-<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic</a> model and <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a> from an openapi file and others.</p>
-<p><a href="https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest"><img alt="Build Status" src="https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg" /></a>
+<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic</a> model, <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a> and <a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a> from an openapi file and others.
+<a href="https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest"><img alt="Build Status" src="https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg" /></a>
 <a href="https://pypi.python.org/pypi/datamodel-code-generator"><img alt="PyPI version" src="https://badge.fury.io/py/datamodel-code-generator.svg" /></a>
 <a href="https://anaconda.org/conda-forge/datamodel-code-generator"><img alt="Conda-forge" src="https://img.shields.io/conda/v/conda-forge/datamodel-code-generator" /></a>
 <a href="https://pepy.tech/project/datamodel-code-generator"><img alt="Downloads" src="https://pepy.tech/badge/datamodel-code-generator/month" /></a>
@@ -981,6 +981,7 @@
 <ul>
 <li><a href="https://docs.pydantic.dev/">pydantic</a>.BaseModel</li>
 <li><a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a></li>
+<li><a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a></li>
 </ul>
 <h2 id="installation">Installation</h2>
 <p>To install <code>datamodel-code-generator</code>:</p>
@@ -1009,7 +1010,7 @@
 <span class="w">                         </span><span class="o">[</span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]]</span>
 <span class="w">                         </span><span class="o">[</span>--http-ignore-tls<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
-<span class="w">                         </span><span class="o">[</span>--output-model-type<span class="w"> </span><span class="o">{</span>pydantic.BaseModel,dataclasses.dataclass<span class="o">}]</span>
+<span class="w">                         </span><span class="o">[</span>--output-model-type<span class="w"> </span><span class="o">{</span>pydantic.BaseModel,dataclasses.dataclass,typing.TypedDict<span class="o">}]</span>
 <span class="w">                         </span><span class="o">[</span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
 <span class="w">                         </span><span class="o">[</span>--output<span class="w"> </span>OUTPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--base-class<span class="w"> </span>BASE_CLASS<span class="o">]</span>
 <span class="w">                         </span><span class="o">[</span>--field-constraints<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-annotated<span class="o">]</span>
@@ -1060,7 +1061,7 @@ options:
 <span class="s1">                        certificate</span>
 <span class="s1">  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}</span>
 <span class="s1">                        Input file type (default: auto)</span>
-<span class="s1">  --output-model-type {pydantic.BaseModel,dataclasses.dataclass}</span>
+<span class="s1">  --output-model-type {pydantic.BaseModel,dataclasses.dataclass,typing.TypedDict}</span>
 <span class="s1">                        Output model type (default: pydantic.BaseModel)</span>
 <span class="s1">  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]</span>
 <span class="s1">                        Scopes of OpenAPI model generation (default: schemas)</span>
