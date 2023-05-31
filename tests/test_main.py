@@ -5428,6 +5428,10 @@ def test_main_typed_dict_py_38():
         main()
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
 @freeze_time('2019-07-26')
 def test_main_typed_dict_space_and_special_characters():
     with TemporaryDirectory() as output_dir:
@@ -5458,6 +5462,10 @@ def test_main_typed_dict_space_and_special_characters():
         main()
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
 def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
     """Test main function on modular file."""
 
@@ -5485,6 +5493,10 @@ def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
 @freeze_time('2019-07-26')
 def test_main_typed_dict_special_field_name_with_inheritance_model():
     with TemporaryDirectory() as output_dir:
@@ -5518,6 +5530,10 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
         main()
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
 @freeze_time('2019-07-26')
 def test_main_typed_dict_nullable():
     with TemporaryDirectory() as output_dir:
@@ -5546,6 +5562,10 @@ def test_main_typed_dict_nullable():
         main()
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
 @freeze_time('2019-07-26')
 def test_main_typed_dict_nullable_strict_nullable():
     with TemporaryDirectory() as output_dir:
