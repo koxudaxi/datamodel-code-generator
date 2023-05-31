@@ -134,8 +134,10 @@ class DataModelField(DataModelFieldBase):
         return ''
 
     @property
-    def key(self):
-        return (self.original_name or self.name).translate(escape_characters)
+    def key(self) -> str:
+        return (self.original_name or self.name or '').translate(  # pragma: no cover
+            escape_characters
+        )
 
     @property
     def type_hint(self) -> str:
@@ -150,7 +152,10 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def imports(self) -> Tuple[Import, ...]:
-        return *super().imports, *(self.DEFAULT_IMPORTS if self._not_required else ())
+        return (
+            *super().imports,
+            *(self.DEFAULT_IMPORTS if self._not_required else ()),
+        )
 
 
 class DataModelFieldBackport(DataModelField):
