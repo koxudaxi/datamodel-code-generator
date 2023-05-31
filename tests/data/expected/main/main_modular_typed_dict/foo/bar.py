@@ -4,20 +4,20 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, NotRequired, Optional, TypedDict
 
 
 class Thing(TypedDict):
-    attributes: Optional[Dict[str, Any]]
+    attributes: NotRequired[Optional[Dict[str, Any]]]
 
 
 class Thang(TypedDict):
-    attributes: Optional[List[Dict[str, Any]]]
+    attributes: NotRequired[Optional[List[Dict[str, Any]]]]
 
 
 class Others(TypedDict):
-    name: Optional[str]
+    name: NotRequired[Optional[str]]
 
 
 class Clone(Thing):
-    others: Optional[Others]
+    others: NotRequired[Optional[Others]]

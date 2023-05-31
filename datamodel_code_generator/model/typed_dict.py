@@ -17,9 +17,13 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.improts import (
+    IMPORT_NOT_REQUIRED,
+    IMPORT_NOT_REQUIRED_BACKPORT,
     IMPORT_TYPED_DICT,
+    IMPORT_TYPED_DICT_BACKPORT,
 )
 from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
 
 escape_characters = str.maketrans(
     {
@@ -44,7 +48,6 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 class TypedDict(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'TypedDict.jinja2'
     BASE_CLASS: ClassVar[str] = 'typing.TypedDict'
-    # TODO: Support typing_extensions.TypedDict for Python 3.7
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
 
     def __init__(
@@ -114,7 +117,14 @@ class TypedDict(DataModel):
         return response
 
 
+class TypedDictBackport(TypedDict):
+    BASE_CLASS: ClassVar[str] = 'typing_extensions.TypedDict'
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT_BACKPORT,)
+
+
 class DataModelField(DataModelFieldBase):
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
+
     @property
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
@@ -127,10 +137,21 @@ class DataModelField(DataModelFieldBase):
     def key(self):
         return (self.original_name or self.name).translate(escape_characters)
 
-    # TODO: Support NotRequired
-    # @property
-    # def type_hint(self) -> str:
-    #     type_hint = super().type_hint
-    #     if self.required:
-    #         return type_hint
-    #     return f'{NOT_REQUIRED_PREFIX}{type_hint}]'
+    @property
+    def type_hint(self) -> str:
+        type_hint = super().type_hint
+        if self._not_required:
+            return f'{NOT_REQUIRED_PREFIX}{type_hint}]'
+        return type_hint
+
+    @property
+    def _not_required(self) -> bool:
+        return not self.required and isinstance(self.parent, TypedDict)
+
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        return *super().imports, *(self.DEFAULT_IMPORTS if self._not_required else ())
+
+
+class DataModelFieldBackport(DataModelField):
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)

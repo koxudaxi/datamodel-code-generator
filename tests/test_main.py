@@ -5403,6 +5403,32 @@ def test_main_typed_dict():
 
 
 @freeze_time('2019-07-26')
+def test_main_typed_dict_py_38():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_typed_dict_py_38' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_typed_dict_space_and_special_characters():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5414,6 +5440,8 @@ def test_main_typed_dict_space_and_special_characters():
                 str(output_file),
                 '--output-model-type',
                 'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
             ]
         )
         assert return_code == Exit.OK
@@ -5447,6 +5475,8 @@ def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
                 str(output_path),
                 '--output-model-type',
                 'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
             ]
         )
     main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular_typed_dict'
@@ -5470,6 +5500,8 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
                 str(output_file),
                 '--output-model-type',
                 'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
             ]
         )
         assert return_code == Exit.OK
@@ -5478,6 +5510,65 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
             == (
                 EXPECTED_MAIN_PATH
                 / 'main_typed_dict_special_field_name_with_inheritance_model'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_typed_dict_nullable():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_typed_dict_nullable' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_typed_dict_nullable_strict_nullable():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+                '--strict-nullable',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_nullable_strict_nullable'
                 / 'output.py'
             ).read_text()
         )

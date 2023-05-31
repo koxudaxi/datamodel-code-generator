@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional, TypedDict
+from typing import NotRequired, Optional, TypedDict
 
 from .. import Source, bar, foo
 
 
 class Chocolate(TypedDict):
-    flavour: Optional[str]
-    source: Optional[Source]
-    cocoa: Optional[foo.Cocoa]
-    field: Optional[bar.Field]
+    flavour: NotRequired[Optional[str]]
+    source: NotRequired[Optional[Source]]
+    cocoa: NotRequired[Optional[foo.Cocoa]]
+    field: NotRequired[Optional[bar.Field]]

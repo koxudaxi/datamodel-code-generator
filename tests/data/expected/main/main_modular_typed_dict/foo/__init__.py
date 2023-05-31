@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Optional, TypedDict
+from typing import NotRequired, Optional, TypedDict
 
 from .. import Id
 
 
 class Tea(TypedDict):
-    flavour: Optional[str]
-    id: Optional[Id]
+    flavour: NotRequired[Optional[str]]
+    id: NotRequired[Optional[Id]]
 
 
 class Cocoa(TypedDict):
-    quality: Optional[int]
+    quality: NotRequired[Optional[int]]

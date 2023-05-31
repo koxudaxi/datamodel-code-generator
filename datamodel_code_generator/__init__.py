@@ -398,7 +398,7 @@ def generate(
 
     from datamodel_code_generator.model import get_data_model_types
 
-    data_model_types = get_data_model_types(output_model_type)
+    data_model_types = get_data_model_types(output_model_type, target_python_version)
     parser = parser_class(
         source=input_text or input_,
         data_model_type=data_model_types.data_model,

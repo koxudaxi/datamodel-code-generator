@@ -4,27 +4,27 @@
 
 from __future__ import annotations
 
-from typing import Optional, TypedDict
+from typing import NotRequired, Optional, TypedDict
 
 
 class NestedBase(TypedDict):
-    age: Optional[str]
+    age: NotRequired[Optional[str]]
 
 
 class Base(NestedBase):
-    name: Optional[str]
+    name: NotRequired[Optional[str]]
 
 
 SpecialField = TypedDict(
     'SpecialField',
     {
-        'age': Optional[str],
-        'name': Optional[str],
-        'global': Optional[str],
-        'with': Optional[str],
-        'class': Optional[int],
-        'class\'s': Optional[int],
-        'class-s': Optional[str],
-        '#': Optional[str],
+        'age': NotRequired[Optional[str]],
+        'name': NotRequired[Optional[str]],
+        'global': NotRequired[Optional[str]],
+        'with': NotRequired[Optional[str]],
+        'class': NotRequired[Optional[int]],
+        'class\'s': NotRequired[Optional[int]],
+        'class-s': NotRequired[Optional[str]],
+        '#': NotRequired[Optional[str]],
     },
 )
