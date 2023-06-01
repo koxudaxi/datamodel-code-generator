@@ -48,7 +48,7 @@ pydantic =  [
 ]
 argcomplete = ">=1.10,<4.0"
 prance = ">=0.18.2,<1.0"
-openapi-spec-validator = ">=0.2.8,<=0.5.1"
+openapi-spec-validator = ">=0.2.8,<=0.5.2"
 jinja2 = ">=2.10.1,<4.0"
 inflect = ">=4.1.0,<6.0"
 black = ">=19.10b0"
