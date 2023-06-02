@@ -508,6 +508,10 @@ def generate(
                 path.parent.mkdir(parents=True)
             file = path.open('wt', encoding=encoding)
 
+        if custom_file_header and os.path.exists(custom_file_header):
+            with open(custom_file_header, "r") as header_file:
+                custom_file_header = "".join(header_file.readlines())
+
         print(custom_file_header or header.format(filename), file=file)
         if body:
             print('', file=file)
