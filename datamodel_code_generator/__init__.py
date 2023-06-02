@@ -500,8 +500,7 @@ def generate(
         header += f'\n#   version:   {get_version()}'
 
     file: Optional[IO[Any]]
-    for path, body_and_filename in modules.items():
-        body, filename = body_and_filename
+    for path, (body, filename) in modules.items():
         if path is None:
             file = None
         else:

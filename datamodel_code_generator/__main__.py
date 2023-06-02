@@ -742,6 +742,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             remove_special_field_name_prefix=config.remove_special_field_name_prefix,
             capitalise_enum_members=config.capitalise_enum_members,
             keep_model_order=config.keep_model_order,
+            custom_file_header=config.custom_file_header,
         )
         return Exit.OK
     except InvalidClassNameError as e:
