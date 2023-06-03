@@ -485,6 +485,7 @@ class Parser(ABC):
             yield Source(path=Path(), text=self.source)
         elif isinstance(self.source, Path):  # pragma: no cover
             if self.source.is_dir():
+                raise Exception(f'debug file order {list(self.source.rglob("*"))}')
                 paths = (
                     sorted(self.source.rglob('*'))
                     if self.keep_model_order
