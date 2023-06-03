@@ -68,6 +68,9 @@ STANDARD_DICT = 'dict'
 STANDARD_LIST = 'list'
 STR = 'str'
 
+NOT_REQUIRED = 'NotRequired'
+NOT_REQUIRED_PREFIX = f'{NOT_REQUIRED}['
+
 
 class StrictTypes(Enum):
     str = 'str'

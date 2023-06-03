@@ -1623,6 +1623,8 @@ class JsonSchemaParser(Parser):
                 path, obj_name, unique=False, class_name=True
             ).name
             with self.root_id_context(raw):
+                # Some jsonschema docs include attribute self to have include version details
+                raw.pop('self', None)
                 # parse $id before parsing $ref
                 root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
