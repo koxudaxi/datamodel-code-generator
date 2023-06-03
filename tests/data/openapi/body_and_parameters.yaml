@@ -15,7 +15,7 @@ security:
   - BearerAuth: []
 paths:
   /pets:
-    $ref: '#/components/pathItems/pets'
+    $ref: '#/components/pathItems/Pets'
   /pets/{petId}:
     get:
       summary: Info for a specific pet
