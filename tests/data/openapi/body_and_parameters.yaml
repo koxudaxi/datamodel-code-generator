@@ -15,72 +15,7 @@ security:
   - BearerAuth: []
 paths:
   /pets:
-    get:
-      summary: List all pets
-      operationId: listPets
-      tags:
-        - pets
-      security: []
-      parameters:
-        - name: limit
-          in: query
-          description: How many items to return at one time (max 100)
-          required: false
-          schema:
-            default: 0
-            type: integer
-            format: int32
-        - name: HomeAddress
-          in: query
-          required: false
-          schema:
-            default: 'Unknown'
-            type: string
-        - name: kind
-          in: query
-          required: false
-          schema:
-            default: dog
-            type: string
-      responses:
-        '200':
-          description: A paged array of pets
-          headers:
-            x-next:
-              description: A link to the next page of responses
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                 - $ref: "#/components/schemas/Pet"
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    post:
-      summary: Create a pet
-      tags:
-        - pets
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PetForm'
-      responses:
-        '201':
-          description: Null response
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+    $ref: '#/components/pathItems/Pets'
   /pets/{petId}:
     get:
       summary: Info for a specific pet
@@ -359,3 +294,71 @@ components:
           type: string
         age:
           type: integer
+  pathItems:
+    Pets:
+      get:
+        summary: List all pets
+        operationId: listPets
+        tags:
+          - pets
+        security: []
+        parameters:
+          - name: limit
+            in: query
+            description: How many items to return at one time (max 100)
+            required: false
+            schema:
+              default: 0
+              type: integer
+              format: int32
+          - name: HomeAddress
+            in: query
+            required: false
+            schema:
+              default: 'Unknown'
+              type: string
+          - name: kind
+            in: query
+            required: false
+            schema:
+              default: dog
+              type: string
+        responses:
+          '200':
+            description: A paged array of pets
+            headers:
+              x-next:
+                description: A link to the next page of responses
+                schema:
+                  type: string
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                  - $ref: "#/components/schemas/Pet"
+          default:
+            description: unexpected error
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/Error"
+      post:
+        summary: Create a pet
+        tags:
+          - pets
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetForm'
+        responses:
+          '201':
+            description: Null response
+          default:
+            description: unexpected error
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/Error"
