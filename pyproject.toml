@@ -48,7 +48,7 @@ pydantic =  [
 ]
 argcomplete = ">=1.10,<4.0"
 prance = ">=0.18.2,<1.0"
-openapi-spec-validator = ">=0.2.8,<=0.5.1"
+openapi-spec-validator = ">=0.2.8,<=0.5.2"
 jinja2 = ">=2.10.1,<4.0"
 inflect = ">=4.1.0,<6.0"
 black = ">=19.10b0"
@@ -64,7 +64,7 @@ pytest = ">6.0"
 pytest-benchmark = "*"
 pytest-cov = ">=2.12.1"
 pytest-mock = "*"
-mypy = "~1.0.1"
+mypy = ">=1.0.1,<1.4.0"
 black = "^23.3.0"
 freezegun = "*"
 types-Jinja2 = "*"
@@ -83,11 +83,9 @@ line-length = 88
 extend-select = ['Q', 'RUF100', 'C4', 'UP', 'I']
 flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
 target-version = 'py37'
-ignore = ['E501']
+ignore = ['E501', 'UP006', 'UP007']
 extend-exclude = ['tests/data']
 
-[tool.ruff.pyupgrade]
-keep-runtime-typing = true
 
 [tool.black]
 line-length = 88
