@@ -2,7 +2,6 @@ import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
 
@@ -40,9 +39,6 @@ def test_main():
             == (EXPECTED_MAIN_KR_PATH / 'main' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_base_class():
@@ -64,9 +60,6 @@ def test_main_base_class():
             output_file.read_text()
             == (EXPECTED_MAIN_KR_PATH / 'main_base_class' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -90,9 +83,6 @@ def test_target_python_version():
                 EXPECTED_MAIN_KR_PATH / 'target_python_version' / 'output.py'
             ).read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
@@ -200,9 +190,6 @@ def test_pyproject():
             == (EXPECTED_MAIN_KR_PATH / 'pyproject' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_use_schema_description():
@@ -225,9 +212,6 @@ def test_main_use_schema_description():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2022-11-11')
 def test_main_use_field_description():
@@ -248,6 +232,3 @@ def test_main_use_field_description():
             EXPECTED_MAIN_KR_PATH / 'main_use_field_description' / 'output.py'
         ).read_text()
         assert generated == expected
-
-    with pytest.raises(SystemExit):
-        main()

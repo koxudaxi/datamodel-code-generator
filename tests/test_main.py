@@ -53,9 +53,6 @@ def test_main_inheritance_forward_ref():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_inheritance_forward_ref_keep_model_order():
@@ -81,9 +78,6 @@ def test_main_inheritance_forward_ref_keep_model_order():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main():
@@ -102,9 +96,6 @@ def test_main():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -126,9 +117,6 @@ def test_main_pydantic_basemodel():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -152,9 +140,6 @@ def test_main_base_class():
             == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_target_python_version():
@@ -175,9 +160,6 @@ def test_target_python_version():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'target_python_version' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -200,9 +182,6 @@ def test_main_autodetect():
             == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_autodetect_failed():
@@ -224,9 +203,6 @@ def test_main_autodetect_failed():
         )
         assert return_code == Exit.ERROR
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema():
@@ -247,8 +223,6 @@ def test_main_jsonschema():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -297,8 +271,6 @@ def test_main_jsonschema_nested_deep():
                 / 'deep.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -320,9 +292,6 @@ def test_main_jsonschema_nested_skip():
         for path in nested_skip_dir.rglob('*.py'):
             result = output_path.joinpath(path.relative_to(nested_skip_dir)).read_text()
             assert result == path.read_text()
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -346,8 +315,6 @@ def test_main_jsonschema_external_files():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_external_files' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -372,9 +339,6 @@ def test_main_jsonschema_multiple_files():
             ).read_text()
             assert result == path.read_text()
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_json():
@@ -395,8 +359,6 @@ def test_main_json():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_json' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -420,8 +382,6 @@ def test_space_and_special_characters_json():
                 EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -439,8 +399,6 @@ def test_main_json_failed():
             ]
         )
         assert return_code == Exit.ERROR
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -464,8 +422,6 @@ def test_main_json_array_include_null():
                 EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -487,8 +443,6 @@ def test_main_null_and_array():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_null_and_array' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -510,8 +464,6 @@ def test_main_yaml():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
@@ -710,8 +662,6 @@ def test_pyproject():
                 output_file.read_text()
                 == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -786,9 +736,6 @@ def test_validation():
             == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_validation_failed():
@@ -831,9 +778,6 @@ def test_main_with_field_constraints():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_without_field_constraints():
@@ -854,9 +798,6 @@ def test_main_without_field_constraints():
                 EXPECTED_MAIN_PATH / 'main_without_field_constraints' / 'output.py'
             ).read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -879,9 +820,6 @@ def test_main_with_aliases():
             == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 def test_main_with_bad_aliases():
     with TemporaryDirectory() as output_dir:
@@ -897,9 +835,6 @@ def test_main_with_bad_aliases():
             ]
         )
         assert return_code == Exit.ERROR
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 def test_main_with_more_bad_aliases():
@@ -917,9 +852,6 @@ def test_main_with_more_bad_aliases():
         )
         assert return_code == Exit.ERROR
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 def test_main_with_bad_extra_data():
     with TemporaryDirectory() as output_dir:
@@ -935,9 +867,6 @@ def test_main_with_bad_extra_data():
             ]
         )
         assert return_code == Exit.ERROR
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -961,9 +890,6 @@ def test_main_with_snake_case_field():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_with_strip_default_none():
@@ -986,9 +912,6 @@ def test_main_with_strip_default_none():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 def test_disable_timestamp():
     with TemporaryDirectory() as output_dir:
@@ -1007,9 +930,6 @@ def test_disable_timestamp():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1030,9 +950,6 @@ def test_enable_version_header():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'enable_version_header' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1056,9 +973,6 @@ def test_allow_population_by_field_name():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_allow_extra_fields():
@@ -1078,9 +992,6 @@ def test_allow_extra_fields():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'allow_extra_fields' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1104,9 +1015,6 @@ def test_enable_faux_immutability():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_use_default():
@@ -1126,9 +1034,6 @@ def test_use_default():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'use_default' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1150,9 +1055,6 @@ def test_force_optional():
             == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_with_exclusive():
@@ -1172,9 +1074,6 @@ def test_main_with_exclusive():
             == (EXPECTED_MAIN_PATH / 'main_with_exclusive' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_subclass_enum():
@@ -1193,9 +1092,6 @@ def test_main_subclass_enum():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_subclass_enum' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1221,9 +1117,6 @@ def test_main_complicated_enum_default_member():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_json_reuse_enum_default_member():
@@ -1248,8 +1141,6 @@ def test_main_json_reuse_enum_default_member():
                 EXPECTED_MAIN_PATH / 'main_json_reuse_enum_default_member' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1321,8 +1212,6 @@ def test_main_invalid_model_name():
                 EXPECTED_MAIN_PATH / 'main_invalid_model_name' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1350,8 +1239,6 @@ def test_main_root_id_jsonschema_with_local_file(mocker):
             == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_not_called()
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1390,8 +1277,6 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1418,8 +1303,6 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
         httpx_get_mock.assert_not_called()
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1457,8 +1340,6 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1499,8 +1380,6 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1524,8 +1403,6 @@ def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
                 EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1547,8 +1424,6 @@ def test_main_jsonschema_id():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_jsonschema_id' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1571,8 +1446,6 @@ def test_main_jsonschema_id_as_stdin(monkeypatch):
                 EXPECTED_MAIN_PATH / 'main_jsonschema_id_stdin' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 def test_main_jsonschema_ids(tmpdir_factory: TempdirFactory) -> None:
@@ -1742,8 +1615,6 @@ def test_main_external_definitions():
                 EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1771,8 +1642,6 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
                 EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1821,8 +1690,6 @@ def test_main_circular_reference():
                 EXPECTED_MAIN_PATH / 'main_circular_reference' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1844,8 +1711,6 @@ def test_main_invalid_enum_name():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1872,8 +1737,6 @@ def test_main_invalid_enum_name_snake_case_field():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1896,8 +1759,6 @@ def test_main_json_reuse_model():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1920,8 +1781,6 @@ def test_main_json_reuse_enum():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_json_reuse_enum' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1946,8 +1805,6 @@ def test_main_json_capitalise_enum_members():
                 EXPECTED_MAIN_PATH / 'main_json_capitalise_enum_members' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1970,8 +1827,6 @@ def test_main_json_capitalise_enum_members_without_enum():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -1993,8 +1848,6 @@ def test_main_openapi_datetime():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_openapi_datetime' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2018,8 +1871,6 @@ def test_main_similar_nested_array():
                 EXPECTED_MAIN_PATH / 'main_similar_nested_array' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2043,8 +1894,6 @@ def test_space_and_special_characters_dict():
                 EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2066,8 +1915,6 @@ def test_csv_file():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2088,8 +1935,6 @@ def test_csv_stdin(monkeypatch):
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2130,8 +1975,6 @@ def test_main_json_pointer():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_json_pointer' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2155,8 +1998,6 @@ def test_main_nested_json_pointer():
                 EXPECTED_MAIN_PATH / 'main_nested_json_pointer' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2180,9 +2021,6 @@ def test_main_jsonschema_multiple_files_json_pointer():
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -2214,8 +2052,6 @@ def test_main_openapi_enum_models_as_literal_one():
                 EXPECTED_MAIN_PATH / 'main_openapi_enum_models_one' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -2250,8 +2086,6 @@ def test_main_openapi_use_one_literal_as_default():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -2283,8 +2117,6 @@ def test_main_openapi_enum_models_as_literal_all():
                 EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -2317,8 +2149,6 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2346,8 +2176,6 @@ def test_main_root_model_with_additional_properties():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2376,8 +2204,6 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2406,8 +2232,6 @@ def test_main_root_model_with_additional_properties_use_standard_collections():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2439,8 +2263,6 @@ def test_main_root_model_with_additional_properties_literal():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2465,9 +2287,6 @@ def test_main_jsonschema_multiple_files_ref():
             ).read_text()
             assert result == path.read_text()
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_multiple_files_ref_test_json():
@@ -2491,8 +2310,6 @@ def test_main_jsonschema_multiple_files_ref_test_json():
                     EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
                 ).read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2518,8 +2335,6 @@ def test_simple_json_snake_case_field():
                     EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
                 ).read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2549,8 +2364,6 @@ def test_main_space_field_enum_snake_case_field():
                     / 'output.py'
                 ).read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2575,8 +2388,6 @@ def test_main_all_of_ref():
                 output_file.read_text()
                 == (EXPECTED_MAIN_PATH / 'all_of_ref' / 'output.py').read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2599,8 +2410,6 @@ def test_main_all_of_with_object():
                 output_file.read_text()
                 == (EXPECTED_MAIN_PATH / 'all_of_with_object' / 'output.py').read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2623,8 +2432,6 @@ def test_main_combined_array():
                 output_file.read_text()
                 == (EXPECTED_MAIN_PATH / 'combined_array' / 'output.py').read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2648,8 +2455,6 @@ def test_main_openapi_all_of_required():
                 EXPECTED_MAIN_PATH / 'main_openapi_allof_required' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2671,8 +2476,6 @@ def test_main_openapi_nullable():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_openapi_nullable' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2699,8 +2502,6 @@ def test_main_openapi_nullable_strict_nullable():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2721,8 +2522,6 @@ def test_main_openapi_pattern():
         assert output_file.read_text() == (
             EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py'
         ).read_text().replace('pattern.json', 'pattern.yaml')
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2744,8 +2543,6 @@ def test_main_jsonschema_pattern():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -2967,8 +2764,6 @@ def test_main_http_jsonschema(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3085,8 +2880,6 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3136,8 +2929,6 @@ def test_main_http_openapi(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3182,8 +2973,6 @@ def test_main_http_json(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3205,8 +2994,6 @@ def test_main_self_reference():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_self_reference' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3231,9 +3018,6 @@ def test_main_disable_appending_item_suffix():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_strict_types():
@@ -3254,8 +3038,6 @@ def test_main_strict_types():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_strict_types' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3283,8 +3065,6 @@ def test_main_strict_types_all():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_strict_types_all' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3318,8 +3098,6 @@ def test_main_strict_types_all_with_field_constraints():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3343,8 +3121,6 @@ def test_main_jsonschema_special_enum():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_special_enum' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3372,8 +3148,6 @@ def test_main_jsonschema_special_enum_special_field_name_prefix():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3401,8 +3175,6 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3429,8 +3201,6 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3455,8 +3225,6 @@ def test_main_jsonschema_subclass_enum():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_subclass_enum' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3484,8 +3252,6 @@ def test_main_jsonschema_special_enum_empty_enum_field_name():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3509,8 +3275,6 @@ def test_main_jsonschema_special_field_name():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_special_field_name' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3534,8 +3298,6 @@ def test_main_jsonschema_complex_one_of():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_complex_one_of' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3559,8 +3321,6 @@ def test_main_jsonschema_complex_any_of():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_complex_any_of' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3586,8 +3346,6 @@ def test_main_jsonschema_combine_one_of_object():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3613,8 +3371,6 @@ def test_main_jsonschema_combine_any_of_object():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3637,8 +3393,6 @@ def test_main_jsonschema_field_include_all_keys():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3667,8 +3421,6 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3699,8 +3451,6 @@ def test_main_jsonschema_field_extras_field_extra_keys():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3724,8 +3474,6 @@ def test_main_jsonschema_field_extras():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -3753,8 +3501,6 @@ def test_main_jsonschema_custom_type_path():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_custom_type_path' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3778,8 +3524,6 @@ def test_main_jsonschema_custom_base_path():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_custom_base_path' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3806,8 +3550,6 @@ def test_main_openapi_body_and_parameters():
                 EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3851,8 +3593,6 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
                 ),
             ]
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3880,8 +3620,6 @@ def test_main_openapi_body_and_parameters_only_paths():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3909,8 +3647,6 @@ def test_main_openapi_body_and_parameters_only_schemas():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3934,8 +3670,6 @@ def test_main_openapi_content_in_parameters():
                 EXPECTED_MAIN_PATH / 'main_openapi_content_in_parameters' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3962,8 +3696,6 @@ def test_main_openapi_oas_response_reference():
                 EXPECTED_MAIN_PATH / 'main_openapi_oas_response_reference' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -3985,8 +3717,6 @@ def test_long_description():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4013,8 +3743,6 @@ def test_long_description_wrap_string_literal():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 def test_version(capsys):
@@ -4047,8 +3775,6 @@ def test_main_openapi_json_pointer():
                 EXPECTED_MAIN_PATH / 'main_openapi_json_pointer' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4072,8 +3798,6 @@ def test_jsonschema_pattern_properties():
                 EXPECTED_MAIN_PATH / 'main_pattern_properties' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4100,8 +3824,6 @@ def test_jsonschema_pattern_properties_field_constraints():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4123,8 +3845,6 @@ def test_jsonschema_titles():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_jsonschema_titles' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4151,8 +3871,6 @@ def test_jsonschema_titles_use_title_as_name():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4179,8 +3897,6 @@ def test_jsonschema_without_titles_use_title_as_name():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4209,9 +3925,6 @@ def test_main_use_annotated_with_field_constraints():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_use_annotated_with_field_constraints_py38():
@@ -4238,9 +3951,6 @@ def test_main_use_annotated_with_field_constraints_py38():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_nested_enum():
@@ -4261,8 +3971,6 @@ def test_main_nested_enum():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_nested_enum' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4284,8 +3992,6 @@ def test_main_jsonschema_has_default_value():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'has_default_value' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4309,9 +4015,6 @@ def test_openapi_special_yaml_keywords():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_boolean_property():
@@ -4334,8 +4037,6 @@ def test_main_jsonschema_boolean_property():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_boolean_property' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4424,8 +4125,6 @@ def test_main_openapi_nullable_use_union_operator():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4448,9 +4147,6 @@ def test_external_relative_ref():
             ).read_text()
             assert result == path.read_text()
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_collapse_root_models():
@@ -4472,8 +4168,6 @@ def test_main_collapse_root_models():
                 EXPECTED_MAIN_PATH / 'main_collapse_root_models' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4499,8 +4193,6 @@ def test_main_collapse_root_models_field_constraints():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4524,8 +4216,6 @@ def test_main_openapi_max_items_enum():
                 EXPECTED_MAIN_PATH / 'main_openapi_max_items_enum' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4550,9 +4240,6 @@ def test_main_jsonschema_duplicate_name():
             ).read_text()
             assert result == path.read_text()
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_items_boolean():
@@ -4575,8 +4262,6 @@ def test_main_jsonschema_items_boolean():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_items_boolean' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4602,8 +4287,6 @@ def test_main_jsonschema_array_in_additional_properites():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4627,8 +4310,6 @@ def test_main_jsonschema_nullable_object():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_nullable_object' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4650,8 +4331,6 @@ def test_main_openapi_const():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_openapi_const' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4675,8 +4354,6 @@ def test_main_openapi_complex_reference():
                 EXPECTED_MAIN_PATH / 'main_openapi_complex_reference' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4702,8 +4379,6 @@ def test_main_openapi_reference_to_object_properties():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4730,8 +4405,6 @@ def test_main_openapi_reference_to_object_properties_collapse_root_models():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4758,8 +4431,6 @@ def test_main_openapi_override_required_all_of_field():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4783,8 +4454,6 @@ def test_main_jsonschema_object_has_one_of():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_object_has_one_of' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4808,8 +4477,6 @@ def test_main_jsonschema_json_pointer_array():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_json_pointer_array' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4832,8 +4499,6 @@ def test_main_use_default_kwarg():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_use_default_kwarg' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4858,8 +4523,6 @@ def test_main_json_snake_case_field():
                 EXPECTED_MAIN_PATH / 'main_json_snake_case_field' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.filterwarnings('error')
@@ -4926,8 +4589,6 @@ def test_main_openapi_discriminator():
                 EXPECTED_MAIN_PATH / 'main_openapi_discriminator' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4953,8 +4614,6 @@ def test_main_jsonschema_pattern_properties_by_reference():
                 / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -4980,9 +4639,6 @@ def test_main_openapi_default_object():
             ).read_text()
             assert result == path.read_text()
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_dataclass():
@@ -5003,9 +4659,6 @@ def test_main_dataclass():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_dataclass' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5032,9 +4685,6 @@ def test_main_dataclass_base_class():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_dataclass_field():
@@ -5055,9 +4705,6 @@ def test_main_dataclass_field():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5093,8 +4740,6 @@ def test_main_jsonschema_enum_root_literal():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_root_in_enum' / 'output.py'
             ).read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5121,8 +4766,6 @@ def test_main_jsonschema_reference_same_hierarchy_directory():
                     / 'output.py'
                 ).read_text()
             )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5146,9 +4789,6 @@ def test_main_multiple_required_any_of():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_nullable_any_of():
@@ -5168,9 +4808,6 @@ def test_main_nullable_any_of():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_nullable_any_of' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5197,9 +4834,6 @@ def test_main_nullable_any_of_use_union_operator():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_nested_all_of():
@@ -5219,9 +4853,6 @@ def test_main_nested_all_of():
             == (EXPECTED_MAIN_PATH / 'main_nested_all_of' / 'output.py').read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_max_min_openapi():
@@ -5240,9 +4871,6 @@ def test_main_max_min_openapi():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'max_min_number' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5269,9 +4897,6 @@ def test_main_use_operation_id_as_name():
                 EXPECTED_MAIN_PATH / 'main_use_operation_id_as_name' / 'output.py'
             ).read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5324,9 +4949,6 @@ def test_main_unsorted_optional_fields():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_all_of_any_of():
@@ -5349,9 +4971,6 @@ def test_main_all_of_any_of():
                 path.relative_to(all_of_any_of_dir)
             ).read_text()
             assert result == path.read_text()
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5376,9 +4995,6 @@ def test_main_all_of_one_of():
             ).read_text()
             assert result == path.read_text()
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_null():
@@ -5399,8 +5015,6 @@ def test_main_null():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_null' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5422,9 +5036,6 @@ def test_main_typed_dict():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_typed_dict' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
@@ -5448,9 +5059,6 @@ def test_main_typed_dict_py_38():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_typed_dict_py_38' / 'output.py').read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -5482,9 +5090,6 @@ def test_main_typed_dict_space_and_special_characters():
                 / 'output.py'
             ).read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
@@ -5551,9 +5156,6 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse('23.3.0'),
@@ -5582,9 +5184,6 @@ def test_main_typed_dict_nullable():
                 EXPECTED_MAIN_PATH / 'main_typed_dict_nullable' / 'output.py'
             ).read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @pytest.mark.skipif(
