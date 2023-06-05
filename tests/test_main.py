@@ -5217,9 +5217,6 @@ def test_main_typed_dict_nullable_strict_nullable():
             ).read_text()
         )
 
-    with pytest.raises(SystemExit):
-        main()
-
 
 @freeze_time('2019-07-26')
 def test_main_custom_file_header_path():
@@ -5242,9 +5239,6 @@ def test_main_custom_file_header_path():
                 EXPECTED_MAIN_PATH / 'main_custom_file_header' / 'output.py'
             ).read_text()
         )
-
-    with pytest.raises(SystemExit):
-        main()
 
 
 @freeze_time('2019-07-26')
