@@ -3758,6 +3758,31 @@ def test_main_jsonschema_custom_type_path():
 
 
 @freeze_time('2019-07-26')
+def test_main_jsonschema_custom_base_path():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'custom_base_path.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_custom_base_path' / 'output.py'
+            ).read_text()
+        )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
 def test_main_openapi_body_and_parameters():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5374,5 +5399,224 @@ def test_main_null():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_null' / 'output.py').read_text()
         )
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_typed_dict():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_typed_dict' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@freeze_time('2019-07-26')
+def test_main_typed_dict_py_38():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_typed_dict_py_38' / 'output.py').read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+@freeze_time('2019-07-26')
+def test_main_typed_dict_space_and_special_characters():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_DATA_PATH / 'space_and_special_characters.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_space_and_special_characters'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
+    """Test main function on modular file."""
+
+    output_directory = Path(tmpdir_factory.mktemp('output'))
+
+    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
+    output_path = output_directory / 'model'
+
+    with freeze_time(TIMESTAMP):
+        main(
+            [
+                '--input',
+                str(input_filename),
+                '--output',
+                str(output_path),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+    main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular_typed_dict'
+    for path in main_modular_dir.rglob('*.py'):
+        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
+        assert result == path.read_text()
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+@freeze_time('2019-07-26')
+def test_main_typed_dict_special_field_name_with_inheritance_model():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH
+                    / 'special_field_name_with_inheritance_model.json'
+                ),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_special_field_name_with_inheritance_model'
+                / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+@freeze_time('2019-07-26')
+def test_main_typed_dict_nullable():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_typed_dict_nullable' / 'output.py'
+            ).read_text()
+        )
+
+    with pytest.raises(SystemExit):
+        main()
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+@freeze_time('2019-07-26')
+def test_main_typed_dict_nullable_strict_nullable():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+                '--strict-nullable',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_nullable_strict_nullable'
+                / 'output.py'
+            ).read_text()
+        )
+
     with pytest.raises(SystemExit):
         main()
