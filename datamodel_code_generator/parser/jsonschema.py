@@ -226,6 +226,7 @@ class JsonSchemaObject(BaseModel):
     default: Any
     id: Optional[str] = Field(default=None, alias='$id')
     custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
+    custom_base_path: Optional[str] = Field(default=None, alias='customBasePath')
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Union[Discriminator, str, None]
 
@@ -663,7 +664,7 @@ class JsonSchemaParser(Parser):
             reference=reference,
             fields=fields,
             base_classes=base_classes,
-            custom_base_class=self.base_class,
+            custom_base_class=obj.custom_base_path or self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -781,7 +782,7 @@ class JsonSchemaParser(Parser):
         data_model_root = self.data_model_root_type(
             reference=reference,
             fields=[field],
-            custom_base_class=self.base_class,
+            custom_base_class=obj.custom_base_path or self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -903,7 +904,7 @@ class JsonSchemaParser(Parser):
         data_model_type = data_model_type_class(
             reference=reference,
             fields=fields,
-            custom_base_class=self.base_class,
+            custom_base_class=obj.custom_base_path or self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -1153,7 +1154,7 @@ class JsonSchemaParser(Parser):
         data_model_root = self.data_model_root_type(
             reference=reference,
             fields=[field],
-            custom_base_class=self.base_class,
+            custom_base_class=obj.custom_base_path or self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -1233,7 +1234,7 @@ class JsonSchemaParser(Parser):
                     has_default=obj.has_default,
                 )
             ],
-            custom_base_class=self.base_class,
+            custom_base_class=obj.custom_base_path or self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -1366,7 +1367,7 @@ class JsonSchemaParser(Parser):
                     original_name=None,
                 )
             ],
-            custom_base_class=self.base_class,
+            custom_base_class=obj.custom_base_path or self.base_class,
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
