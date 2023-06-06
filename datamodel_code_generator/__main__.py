@@ -433,6 +433,15 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     '--custom-file-header', help='Custom file header', type=str, default=None
 )
+
+arg_parser.add_argument(
+    '--custom-file-header-path',
+    help='Custom file header file path',
+    default=None,
+    type=str,
+)
+
+
 arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
@@ -448,7 +457,9 @@ class Config(BaseModel):
             return value
         return cast(TextIOBase, Path(value).expanduser().resolve().open('rt'))
 
-    @validator('input', 'output', 'custom_template_dir', pre=True)
+    @validator(
+        'input', 'output', 'custom_template_dir', 'custom_file_header_path', pre=True
+    )
     def validate_path(cls, value: Any) -> Optional[Path]:
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
@@ -486,6 +497,14 @@ class Config(BaseModel):
                 raise Error(
                     '`--original-field-name-delimiter` can not be used without `--snake-case-field`.'
                 )
+        return values
+
+    @root_validator
+    def validate_custom_file_header(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('custom_file_header') and values.get('custom_file_header_path'):
+            raise Error(
+                '`--custom_file_header_path` can not be used with `--custom_file_header`.'
+            )  # pragma: no cover
         return values
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
@@ -583,6 +602,7 @@ class Config(BaseModel):
     capitalise_enum_members: bool = False
     keep_model_order: bool = False
     custom_file_header: Optional[str] = None
+    custom_file_header_path: Optional[Path] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -742,6 +762,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             remove_special_field_name_prefix=config.remove_special_field_name_prefix,
             capitalise_enum_members=config.capitalise_enum_members,
             keep_model_order=config.keep_model_order,
+            custom_file_header=config.custom_file_header,
+            custom_file_header_path=config.custom_file_header_path,
         )
         return Exit.OK
     except InvalidClassNameError as e:
