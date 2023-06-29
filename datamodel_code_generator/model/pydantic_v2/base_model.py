@@ -185,7 +185,7 @@ class DataModelField(DataModelFieldBase):
 
 
 class BaseModel(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic/BaseModel.jinja2'
+    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic_v2/BaseModel.jinja2'
     BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
 
     def __init__(

@@ -35,10 +35,10 @@ def get_data_model_types(
     elif data_model_type == DataModelType.PydanticV2BaseModel:
         return DataModelSet(
             data_model=pydantic_v2.BaseModel,
-            root_model=pydantic_v2.CustomRootType,
+            root_model=pydantic_v2.RootModel,
             field_model=pydantic_v2.DataModelField,
             data_type_manager=pydantic_v2.DataTypeManager,
-            dump_resolve_reference_action=pydantic_v2.dump_resolve_reference_action,
+            dump_resolve_reference_action=pydantic.dump_resolve_reference_action,
         )
     elif data_model_type == DataModelType.DataclassesDataclass:
         return DataModelSet(
