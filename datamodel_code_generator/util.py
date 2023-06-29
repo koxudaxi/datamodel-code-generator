@@ -70,7 +70,7 @@ def model_validator(
         else:
             from pydantic import root_validator
 
-            return root_validator(method)  # type: ignore
+            return root_validator(method, pre=mode == 'before')  # type: ignore
 
     return inner
 
