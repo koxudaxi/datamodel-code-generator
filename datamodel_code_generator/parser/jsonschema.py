@@ -31,8 +31,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    field_validator,
-    model_validator,
 )
 
 from datamodel_code_generator import (
@@ -62,7 +60,12 @@ from datamodel_code_generator.types import (
     Types,
     UnionIntFloat,
 )
-from datamodel_code_generator.util import PYDANTIC_V2, cached_property
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    cached_property,
+    field_validator,
+    model_validator,
+)
 
 
 def get_model_by_path(

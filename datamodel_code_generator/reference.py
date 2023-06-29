@@ -34,9 +34,12 @@ from urllib.parse import ParseResult, urlparse
 import inflect
 import pydantic
 from packaging import version
-from pydantic import BaseModel, ConfigDict, validator
+from pydantic import BaseModel, validator
 
 from datamodel_code_generator.util import PYDANTIC_V2, cached_property
+
+if PYDANTIC_V2:
+    from pydantic import ConfigDict
 
 if TYPE_CHECKING:
     from pydantic.typing import DictStrAny

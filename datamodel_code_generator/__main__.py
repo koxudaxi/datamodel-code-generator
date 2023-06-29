@@ -18,16 +18,13 @@ from io import TextIOBase
 from pathlib import Path
 from typing import (
     Any,
-    Callable,
     DefaultDict,
     Dict,
     List,
-    Literal,
     Optional,
     Sequence,
     Set,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -56,7 +53,7 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
-from datamodel_code_generator.util import PYDANTIC_V2
+from datamodel_code_generator.util import PYDANTIC_V2, Model, model_validator
 
 
 class Exit(IntEnum):
@@ -447,24 +444,6 @@ arg_parser.add_argument(
 
 
 arg_parser.add_argument('--version', help='show version', action='store_true')
-
-Model = TypeVar('Model', bound='BaseModel')
-
-
-def model_validator(
-    mode: Literal['before', 'after'],
-) -> Callable[[Callable[[Model, Any], Any]], Callable[[Model, Any], Any]]:
-    def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
-        if PYDANTIC_V2:
-            from pydantic import model_validator as model_validator_v2
-
-            return model_validator_v2(mode=mode)(method)  # type: ignore
-        else:
-            from pydantic import root_validator
-
-            return root_validator(method)  # type: ignore
-
-    return inner
 
 
 class Config(BaseModel):

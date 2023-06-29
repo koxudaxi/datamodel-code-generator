@@ -28,16 +28,11 @@ from typing import (
 import pydantic
 from packaging import version
 from pydantic import (
-    ConfigDict,
-    GetCoreSchemaHandler,
-    GetJsonSchemaHandler,
     StrictBool,
     StrictInt,
     StrictStr,
     create_model,
 )
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -55,6 +50,11 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import PYDANTIC_V2, Protocol, runtime_checkable
+
+if PYDANTIC_V2:
+    from pydantic import ConfigDict, GetCoreSchemaHandler, GetJsonSchemaHandler
+    from pydantic.json_schema import JsonSchemaValue
+    from pydantic_core import core_schema
 
 T = TypeVar('T')
 
