@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 import pydantic
 from packaging import version
+from pydantic import BaseModel
 
 PYDANTIC_VERSION = version.parse(
     pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION)
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
 
     Protocol = object
     runtime_checkable: Callable[..., Any]
-    from pydantic import BaseModel
     from yaml import SafeLoader
 else:
     try:
