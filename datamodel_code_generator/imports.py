@@ -4,7 +4,7 @@ from collections import defaultdict
 from functools import lru_cache
 from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Union
 
-from pydantic import BaseModel
+from datamodel_code_generator.util import BaseModel
 
 
 class Import(BaseModel):

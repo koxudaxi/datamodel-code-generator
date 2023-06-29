@@ -49,10 +49,15 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.util import PYDANTIC_V2, Protocol, runtime_checkable
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Protocol,
+    runtime_checkable,
+)
 
 if PYDANTIC_V2:
-    from pydantic import ConfigDict, GetCoreSchemaHandler, GetJsonSchemaHandler
+    from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
     from pydantic.json_schema import JsonSchemaValue
     from pydantic_core import core_schema
 

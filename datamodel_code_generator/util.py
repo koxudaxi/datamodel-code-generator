@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 import pydantic
 from packaging import version
-from pydantic import BaseModel
+from pydantic import BaseModel as _BaseModel
 
 PYDANTIC_VERSION = version.parse(
     pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION)
@@ -56,7 +56,7 @@ SafeLoader.yaml_constructors[
 ] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
 
 
-Model = TypeVar('Model', bound=BaseModel)
+Model = TypeVar('Model', bound=_BaseModel)
 
 
 def model_validator(
@@ -77,16 +77,28 @@ def model_validator(
 
 def field_validator(
     field_name: str,
+    *fields: str,
     mode: Literal['before', 'after'] = 'after',
 ) -> Callable[[Callable[[Model, Any], Any]], Callable[[Model, Any], Any]]:
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
         if PYDANTIC_V2:
             from pydantic import field_validator as field_validator_v2
 
-            return field_validator_v2(field_name, mode=mode)(method)  # type: ignore
+            return field_validator_v2(field_name, *fields, mode=mode)(method)  # type: ignore
         else:
             from pydantic import validator
 
-            return validator(field_name, pre=mode == 'before')(method)  # type: ignore
+            return validator(field_name, *fields, pre=mode == 'before')(method)  # type: ignore
 
     return inner
+
+
+if PYDANTIC_V2:
+    from pydantic import ConfigDict
+else:
+    ConfigDict = dict
+
+
+class BaseModel(_BaseModel):
+    if PYDANTIC_V2:
+        model_config = ConfigDict(strict=False)

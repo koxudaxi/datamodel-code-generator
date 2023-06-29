@@ -28,8 +28,6 @@ from urllib.parse import ParseResult
 from warnings import warn
 
 from pydantic import (
-    BaseModel,
-    ConfigDict,
     Field,
 )
 
@@ -62,10 +60,14 @@ from datamodel_code_generator.types import (
 )
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
+    BaseModel,
     cached_property,
     field_validator,
     model_validator,
 )
+
+if PYDANTIC_V2:
+    from pydantic import ConfigDict
 
 
 def get_model_by_path(

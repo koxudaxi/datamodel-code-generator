@@ -34,12 +34,14 @@ from urllib.parse import ParseResult, urlparse
 import inflect
 import pydantic
 from packaging import version
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
-from datamodel_code_generator.util import PYDANTIC_V2, cached_property
-
-if PYDANTIC_V2:
-    from pydantic import ConfigDict
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    ConfigDict,
+    cached_property,
+    field_validator,
+)
 
 if TYPE_CHECKING:
     from pydantic.typing import DictStrAny
@@ -94,7 +96,7 @@ class Reference(_BaseModel):
     children: List[Any] = []
     _exclude_fields: ClassVar[Set[str]] = {'children'}
 
-    @validator('original_name')
+    @field_validator('original_name')
     def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:
         """
         If original_name is empty then, `original_name` is assigned `name`

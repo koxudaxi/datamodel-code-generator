@@ -24,7 +24,7 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from datamodel_code_generator import (
     DefaultPutDict,
@@ -50,6 +50,7 @@ from datamodel_code_generator.types import (
     EmptyDataType,
     StrictTypes,
 )
+from datamodel_code_generator.util import BaseModel
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r'^application/.*json$')
 
@@ -87,7 +88,6 @@ class ExampleObject(BaseModel):
 
 
 class MediaObject(BaseModel):
-    model_config = ConfigDict(strict=False)
     schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(
         None, alias='schema'
     )
@@ -118,22 +118,18 @@ class HeaderObject(BaseModel):
 
 
 class RequestBodyObject(BaseModel):
-    model_config = ConfigDict(strict=False)
     description: Optional[str] = None
     content: Dict[str, MediaObject] = {}
     required: bool = False
 
 
 class ResponseObject(BaseModel):
-    model_config = ConfigDict(strict=False)
-
     description: Optional[str] = None
     headers: Dict[str, ParameterObject] = {}
     content: Dict[Union[str, int], MediaObject] = {}
 
 
 class Operation(BaseModel):
-    model_config = ConfigDict(strict=False)
     tags: List[str] = []
     summary: Optional[str] = None
     description: Optional[str] = None

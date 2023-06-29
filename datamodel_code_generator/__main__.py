@@ -33,7 +33,7 @@ from urllib.parse import ParseResult, urlparse
 import argcomplete
 import black
 import toml
-from pydantic import BaseModel, ConfigDict, validator
+from pydantic import BaseModel
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -53,7 +53,13 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
-from datamodel_code_generator.util import PYDANTIC_V2, Model, model_validator
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Model,
+    field_validator,
+    model_validator,
+)
 
 
 class Exit(IntEnum):
@@ -474,21 +480,25 @@ class Config(BaseModel):
             # Pydantic 1.5.1 doesn't support validate_assignment correctly
             arbitrary_types_allowed = (TextIOBase,)
 
-    @validator('aliases', 'extra_template_data', pre=True)
+    @field_validator('aliases', 'extra_template_data', mode='before')
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
         return cast(TextIOBase, Path(value).expanduser().resolve().open('rt'))
 
-    @validator(
-        'input', 'output', 'custom_template_dir', 'custom_file_header_path', pre=True
+    @field_validator(
+        'input',
+        'output',
+        'custom_template_dir',
+        'custom_file_header_path',
+        mode='before',
     )
     def validate_path(cls, value: Any) -> Optional[Path]:
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
-    @validator('url', pre=True)
+    @field_validator('url', mode='before')
     def validate_url(cls, value: Any) -> Optional[ParseResult]:
         if isinstance(value, str) and is_url(value):  # pragma: no cover
             return urlparse(value)
@@ -531,7 +541,7 @@ class Config(BaseModel):
         return values
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
-    @validator('http_headers', pre=True)
+    @field_validator('http_headers', mode='before')
     def validate_http_headers(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
