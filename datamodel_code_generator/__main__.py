@@ -447,17 +447,27 @@ arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
 class Config(BaseModel):
-    def get(self, item):
-        return getattr(self, item)
-
-    def __getitem__(self, item):
-        return self.get(item)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
     if PYDANTIC_V2:
         model_config = ConfigDict(arbitrary_types_allowed=(TextIOBase,))
+
+        def get(self, item):
+            return getattr(self, item)
+
+        def __getitem__(self, item):
+            return self.get(item)
+
+        def __setitem__(self, key, value):
+            setattr(self, key, value)
+
+        @classmethod
+        def parse_obj(cls, obj: Any) -> Config:
+            return cls.model_validate(obj)
+
+        @classmethod
+        @property
+        def __fields__(cls) -> Dict[str, Any]:
+            return cls.model_fields
+
     else:
 
         class Config:

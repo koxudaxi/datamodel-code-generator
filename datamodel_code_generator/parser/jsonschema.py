@@ -239,7 +239,6 @@ class JsonSchemaObject(BaseModel):
         model_config = ConfigDict(
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
-            smart_casts=True,
         )
     else:
 

@@ -64,7 +64,7 @@ class _BaseModel(BaseModel):
             AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
         ] = None,
         by_alias: bool = False,
-        skip_defaults: Optional[bool] = None,
+        # skip_defaults: Optional[bool] = None,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
