@@ -60,32 +60,57 @@ class _BaseModel(BaseModel):
                     setattr(self, pass_field_name, values[pass_field_name])
 
     if not TYPE_CHECKING:
+        if PYDANTIC_V2:
 
-        def dict(
-            self,
-            *,
-            include: Union[
-                AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
-            ] = None,
-            exclude: Union[
-                AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
-            ] = None,
-            by_alias: bool = False,
-            # skip_defaults: Optional[bool] = None,
-            exclude_unset: bool = False,
-            exclude_defaults: bool = False,
-            exclude_none: bool = False,
-        ) -> DictStrAny:
-            return super().dict(
-                include=include,
-                exclude=set(exclude or ()) | self._exclude_fields,
-                by_alias=by_alias,
-                # exclude_defaults=skip_defaultsm,
-                # skip_defaults=skip_defaults,
-                exclude_unset=exclude_unset,
-                exclude_defaults=exclude_defaults,
-                exclude_none=exclude_none,
-            )
+            def dict(
+                self,
+                *,
+                include: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                exclude: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                by_alias: bool = False,
+                exclude_unset: bool = False,
+                exclude_defaults: bool = False,
+                exclude_none: bool = False,
+            ) -> DictStrAny:
+                return self.model_dump(
+                    include=include,
+                    exclude=set(exclude or ()) | self._exclude_fields,
+                    by_alias=by_alias,
+                    exclude_unset=exclude_unset,
+                    exclude_defaults=exclude_defaults,
+                    exclude_none=exclude_none,
+                )
+
+        else:
+
+            def dict(
+                self,
+                *,
+                include: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                exclude: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                by_alias: bool = False,
+                skip_defaults: Optional[bool] = None,
+                exclude_unset: bool = False,
+                exclude_defaults: bool = False,
+                exclude_none: bool = False,
+            ) -> DictStrAny:
+                return super().dict(
+                    include=include,
+                    exclude=set(exclude or ()) | self._exclude_fields,
+                    by_alias=by_alias,
+                    skip_defaults=skip_defaults,
+                    exclude_unset=exclude_unset,
+                    exclude_defaults=exclude_defaults,
+                    exclude_none=exclude_none,
+                )
 
 
 class Reference(_BaseModel):
