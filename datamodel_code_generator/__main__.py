@@ -17,6 +17,7 @@ from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     DefaultDict,
     Dict,
@@ -453,7 +454,7 @@ arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
 class Config(BaseModel):
-    if PYDANTIC_V2:
+    if PYDANTIC_V2 and not TYPE_CHECKING:
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
         def get(self, item: str) -> Any:
@@ -516,7 +517,7 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'  # type: ignore
+                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
                     ' The version will be not supported in a future version'
                 )
         return values

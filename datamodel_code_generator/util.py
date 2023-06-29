@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import pydantic
 from packaging import version
@@ -13,18 +13,18 @@ PYDANTIC_VERSION = version.parse(
 PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 
 if TYPE_CHECKING:
-    from typing import Any, Callable
-
     cached_property = property
+    from yaml import SafeLoader
 
     Protocol = object
     runtime_checkable: Callable[..., Any]
-    from yaml import SafeLoader
+
+    from typing_extensions import Literal
 else:
     try:
-        from typing import TYPE_CHECKING, Any, Callable, Protocol
+        from typing import Protocol
     except ImportError:
-        from typing_extensions import Protocol, Literal  # noqa
+        from typing_extensions import Protocol  # noqa
     try:
         from typing import runtime_checkable
     except ImportError:
@@ -60,7 +60,7 @@ Model = TypeVar('Model', bound=_BaseModel)
 
 
 def model_validator(
-    mode: Literal['before', 'after'],
+    mode: Literal['before', 'after'] = 'after',
 ) -> Callable[[Callable[[Model, Any], Any]], Callable[[Model, Any], Any]]:
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
         if PYDANTIC_V2:
@@ -79,7 +79,7 @@ def field_validator(
     field_name: str,
     *fields: str,
     mode: Literal['before', 'after'] = 'after',
-) -> Callable[[Callable[[Model, Any], Any]], Callable[[Model, Any], Any]]:
+) -> Callable[[Any], Callable[[Model, Any], Any]]:
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
         if PYDANTIC_V2:
             from pydantic import field_validator as field_validator_v2
@@ -94,9 +94,9 @@ def field_validator(
 
 
 if PYDANTIC_V2:
-    from pydantic import ConfigDict
+    from pydantic import ConfigDict as ConfigDict
 else:
-    ConfigDict = dict
+    ConfigDict = object()  # type: ignore
 
 
 class BaseModel(_BaseModel):
