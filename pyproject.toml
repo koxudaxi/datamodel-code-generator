@@ -22,7 +22,7 @@ classifiers = [
         "Programming Language :: Python :: Implementation :: CPython"]
 
 [build-system]
-requires = ["poetry_core>=1.0.0", "poetry-dynamic-versioning"]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry-dynamic-versioning]
@@ -70,7 +70,7 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-types-setuptools = "^67.6.0.5"
+types-setuptools = ">=67.6.0.5,<69.0.0.0"
 pydantic= "^1.10.7"
 httpx = "*"
 ruff = "*"
