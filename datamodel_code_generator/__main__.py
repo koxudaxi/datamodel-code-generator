@@ -33,7 +33,7 @@ from urllib.parse import ParseResult, urlparse
 import argcomplete
 import black
 import toml
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, validator
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -454,6 +454,7 @@ class Config(BaseModel):
 
     def __setitem__(self, key, value):
         setattr(self, key, value)
+
     class Config:
         # validate_assignment = True
         # Pydantic 1.5.1 doesn't support validate_assignment correctly
@@ -484,12 +485,13 @@ class Config(BaseModel):
         )  # pragma: no cover
 
     from pydantic import model_validator
+
     @model_validator(mode='after')
     def validate_use_generic_container_types(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
         if values.use_generic_container_types:
-        # if values.get('use_generic_container_types'):
+            # if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(

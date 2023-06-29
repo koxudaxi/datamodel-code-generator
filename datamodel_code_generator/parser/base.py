@@ -25,9 +25,9 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.util import Protocol, runtime_checkable
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
+
 # from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -41,6 +41,7 @@ from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
+from datamodel_code_generator.util import Protocol, runtime_checkable
 
 escape_characters = str.maketrans(
     {
@@ -305,6 +306,7 @@ class Source(BaseModel):
 
 class Parser(ABC):
     from datamodel_code_generator.model import pydantic as pydantic_model
+
     def __init__(
         self,
         source: Union[str, Path, List[Path], ParseResult],

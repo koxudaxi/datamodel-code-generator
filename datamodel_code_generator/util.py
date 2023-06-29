@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, TYPE_CHECKING, Callable, Any
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
     cached_property = property
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     runtime_checkable: Callable[..., Any]
 else:
     try:
-        from typing import Protocol, TYPE_CHECKING, Callable, Any
+        from typing import TYPE_CHECKING, Any, Callable, Protocol
     except ImportError:
         from typing_extensions import Protocol  # noqa
     try:
@@ -20,7 +20,7 @@ else:
     try:
         from yaml import CSafeLoader as SafeLoader
     except ImportError:  # pragma: no cover
-        from yaml import SafeLoader
+        pass
 
     try:
         from functools import cached_property

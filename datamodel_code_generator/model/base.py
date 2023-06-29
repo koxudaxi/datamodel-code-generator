@@ -22,7 +22,6 @@ from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
 
-from datamodel_code_generator.util import cached_property
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANNOTATED_BACKPORT,
@@ -40,6 +39,7 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
+from datamodel_code_generator.util import cached_property
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 

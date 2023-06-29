@@ -24,7 +24,7 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from datamodel_code_generator import (
     DefaultPutDict,

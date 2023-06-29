@@ -27,11 +27,15 @@ from typing import (
 from urllib.parse import ParseResult
 from warnings import warn
 
-from pydantic import BaseModel, Field, root_validator, validator, model_validator, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from datamodel_code_generator import (
     InvalidClassNameError,
-
     load_yaml,
     load_yaml_from_path,
     snooper_to_methods,

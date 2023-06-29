@@ -27,11 +27,17 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import StrictBool, StrictInt, StrictStr, create_model, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic import (
+    GetCoreSchemaHandler,
+    GetJsonSchemaHandler,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    create_model,
+)
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
-from datamodel_code_generator.util import Protocol, runtime_checkable
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
@@ -47,6 +53,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
+from datamodel_code_generator.util import Protocol, runtime_checkable
 
 T = TypeVar('T')
 
@@ -96,20 +103,21 @@ class UnionIntFloat:
     def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
         yield cls.validate
 
-
     @classmethod
     def __get_pydantic_core_schema__(
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         from_int_schema = core_schema.chain_schema(
             [
-                core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]),
+                core_schema.union_schema(
+                    [core_schema.int_schema(), core_schema.float_schema()]
+                ),
                 core_schema.no_info_plain_validator_function(cls.validate),
             ]
         )
 
         return core_schema.json_or_python_schema(
-            json_schema= core_schema.no_info_plain_validator_function(cls.validate),
+            json_schema=core_schema.no_info_plain_validator_function(cls.validate),
             python_schema=core_schema.union_schema(
                 [
                     # check if it's an instance first before doing any further work
@@ -122,13 +130,16 @@ class UnionIntFloat:
             ),
         )
 
-
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
     ) -> JsonSchemaValue:
         # Use the same schema that would be used for `int`
-        return handler(core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]))
+        return handler(
+            core_schema.union_schema(
+                [core_schema.int_schema(), core_schema.float_schema()]
+            )
+        )
 
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
