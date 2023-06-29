@@ -29,22 +29,18 @@ from urllib.parse import ParseResult
 
 import pysnooper
 import yaml
-from yaml import SafeLoader
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
 from datamodel_code_generator.types import StrictTypes
+from datamodel_code_generator.util import SafeLoader
 
 T = TypeVar('T')
 
 pysnooper.tracer.DISABLED = True
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
-
-SafeLoader.yaml_constructors[
-    'tag:yaml.org,2002:timestamp'
-] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
 
 
 def load_yaml(stream: Union[str, TextIO]) -> Any:

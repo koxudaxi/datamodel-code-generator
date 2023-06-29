@@ -33,7 +33,7 @@ from urllib.parse import ParseResult, urlparse
 import argcomplete
 import black
 import toml
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ConfigDict, validator
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -53,6 +53,7 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
+from datamodel_code_generator.util import PYDANTIC_V2
 
 
 class Exit(IntEnum):
@@ -455,10 +456,14 @@ class Config(BaseModel):
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
-    class Config:
-        # validate_assignment = True
-        # Pydantic 1.5.1 doesn't support validate_assignment correctly
-        arbitrary_types_allowed = (TextIOBase,)
+    if PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=(TextIOBase,))
+    else:
+
+        class Config:
+            # validate_assignment = True
+            # Pydantic 1.5.1 doesn't support validate_assignment correctly
+            arbitrary_types_allowed = (TextIOBase,)
 
     @validator('aliases', 'extra_template_data', pre=True)
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:

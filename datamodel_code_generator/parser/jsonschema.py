@@ -29,6 +29,7 @@ from warnings import warn
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     field_validator,
     model_validator,
@@ -61,7 +62,7 @@ from datamodel_code_generator.types import (
     Types,
     UnionIntFloat,
 )
-from datamodel_code_generator.util import cached_property
+from datamodel_code_generator.util import PYDANTIC_V2, cached_property
 
 
 def get_model_by_path(
@@ -150,7 +151,7 @@ class JSONReference(_enum.Enum):
 
 class Discriminator(BaseModel):
     propertyName: str
-    mapping: Optional[Dict[str, str]]
+    mapping: Optional[Dict[str, str]] = None
 
 
 class JsonSchemaObject(BaseModel):
@@ -234,11 +235,17 @@ class JsonSchemaObject(BaseModel):
     custom_base_path: Optional[str] = Field(default=None, alias='customBasePath')
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Union[Discriminator, str, None] = None
+    if PYDANTIC_V2:
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            ignored_types=(cached_property,),
+            smart_casts=True,
+        )
+    else:
 
-    class Config:
-        arbitrary_types_allowed = True
-        keep_untouched = (cached_property,)
-        smart_casts = True
+        class Config:
+            arbitrary_types_allowed = True
+            keep_untouched = (cached_property,)
 
     if not TYPE_CHECKING:
 

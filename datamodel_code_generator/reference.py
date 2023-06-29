@@ -34,9 +34,9 @@ from urllib.parse import ParseResult, urlparse
 import inflect
 import pydantic
 from packaging import version
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ConfigDict, validator
 
-from datamodel_code_generator.util import cached_property
+from datamodel_code_generator.util import PYDANTIC_V2, cached_property
 
 if TYPE_CHECKING:
     from pydantic.typing import DictStrAny
@@ -100,14 +100,23 @@ class Reference(_BaseModel):
             return v
         return values.get('name', v)  # pragma: no cover
 
-    class Config:
-        arbitrary_types_allowed = True
-        keep_untouched = (cached_property,)
-        copy_on_model_validation = (
-            False
-            if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-            else 'none'
+    if PYDANTIC_V2:
+        # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
+        # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            ignored_types=(cached_property,),
+            copy_on_model_validation=(
+                False
+                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+                else 'none'
+            ),
         )
+    else:
+
+        class Config:
+            arbitrary_types_allowed = True
+            keep_untouched = (cached_property,)
 
     @property
     def short_name(self) -> str:

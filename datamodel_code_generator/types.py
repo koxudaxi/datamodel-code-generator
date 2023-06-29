@@ -28,6 +28,7 @@ from typing import (
 import pydantic
 from packaging import version
 from pydantic import (
+    ConfigDict,
     GetCoreSchemaHandler,
     GetJsonSchemaHandler,
     StrictBool,
@@ -53,7 +54,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.util import Protocol, runtime_checkable
+from datamodel_code_generator.util import PYDANTIC_V2, Protocol, runtime_checkable
 
 T = TypeVar('T')
 
@@ -226,13 +227,26 @@ class Nullable(Protocol):
 
 
 class DataType(_BaseModel):
-    class Config:
-        extra = 'forbid'
-        copy_on_model_validation = (
-            False
-            if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-            else 'none'
+    if PYDANTIC_V2:
+        # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
+        # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
+        model_config = ConfigDict(
+            extra='forbid',
+            copy_on_model_validation=(
+                False
+                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+                else 'none'
+            ),
         )
+    else:
+
+        class Config:
+            extra = 'forbid'
+            copy_on_model_validation = (
+                False
+                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+                else 'none'
+            )
 
     type: Optional[str] = None
     reference: Optional[Reference] = None

@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from typing import TYPE_CHECKING
+
+import pydantic
+from packaging import version
+
+PYDANTIC_VERSION = version.parse(pydantic.VERSION)
+
+PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 
 if TYPE_CHECKING:
     cached_property = property
-    from yaml import SafeLoader
 
     Protocol = object
     runtime_checkable: Callable[..., Any]
@@ -37,3 +43,8 @@ else:
                 if value is _NOT_FOUND:  # pragma: no cover
                     value = instance.__dict__[self.func.__name__] = self.func(instance)
                 return value
+
+
+SafeLoader.yaml_constructors[
+    'tag:yaml.org,2002:timestamp'
+] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
