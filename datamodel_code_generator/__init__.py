@@ -34,7 +34,7 @@ from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
 from datamodel_code_generator.types import StrictTypes
-from datamodel_code_generator.util import SafeLoader
+from datamodel_code_generator.util import SafeLoader  # type: ignore
 
 T = TypeVar('T')
 

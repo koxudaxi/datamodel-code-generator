@@ -22,7 +22,7 @@ from datamodel_code_generator.types import DataType, Types
 @pytest.mark.parametrize(
     'types,use_non_positive_negative_number_constrained_types,params,data_type',
     [
-        (Types.integer, False, {}, DataType(type='int')),
+        (Types.integer, False, {}, {'type': 'int'}),
         (
             Types.integer,
             False,

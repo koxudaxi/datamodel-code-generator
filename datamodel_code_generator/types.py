@@ -232,11 +232,7 @@ class DataType(_BaseModel):
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
         model_config = ConfigDict(
             extra='forbid',
-            copy_on_model_validation=(
-                False
-                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-                else 'none'
-            ),
+            revalidate_instances='never',
         )
     else:
 

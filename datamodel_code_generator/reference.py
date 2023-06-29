@@ -106,17 +106,18 @@ class Reference(_BaseModel):
         model_config = ConfigDict(
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
-            copy_on_model_validation=(
-                False
-                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-                else 'none'
-            ),
+            revalidate_instances='never',
         )
     else:
 
         class Config:
             arbitrary_types_allowed = True
             keep_untouched = (cached_property,)
+            copy_on_model_validation = (
+                False
+                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+                else 'none'
+            )
 
     @property
     def short_name(self) -> str:

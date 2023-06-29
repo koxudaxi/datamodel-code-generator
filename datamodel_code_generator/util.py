@@ -29,7 +29,7 @@ else:
     try:
         from yaml import CSafeLoader as SafeLoader
     except ImportError:  # pragma: no cover
-        pass
+        from yaml import SafeLoader
 
     try:
         from functools import cached_property

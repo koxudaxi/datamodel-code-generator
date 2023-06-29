@@ -120,7 +120,7 @@ class HeaderObject(BaseModel):
 class RequestBodyObject(BaseModel):
     model_config = ConfigDict(strict=False)
     description: Optional[str] = None
-    content: Dict[Union[str, int], MediaObject] = {}
+    content: Dict[str, MediaObject] = {}
     required: bool = False
 
 
@@ -340,10 +340,12 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_responses(
         self,
         name: str,
-        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
+        responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]],
         path: List[str],
-    ) -> Dict[str, Dict[str, DataType]]:
-        data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
+    ) -> Dict[Union[str, int], Dict[str, DataType]]:
+        data_types: DefaultDict[Union[str, int], Dict[str, DataType]] = defaultdict(
+            dict
+        )
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
@@ -365,7 +367,7 @@ class OpenAPIParser(JsonSchemaParser):
                     continue
                 if isinstance(object_schema, JsonSchemaObject):
                     data_types[status_code][content_type] = self.parse_schema(
-                        name, object_schema, [*path, status_code, content_type]
+                        name, object_schema, [*path, str(status_code), content_type]
                     )
                 else:
                     data_types[status_code][content_type] = self.get_ref_data_type(

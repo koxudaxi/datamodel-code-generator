@@ -155,6 +155,12 @@ class Discriminator(BaseModel):
 
 
 class JsonSchemaObject(BaseModel):
+    if PYDANTIC_V2:
+
+        @property
+        def __fields__(self) -> Dict[str, Any]:
+            return self.model_fields
+
     __constraint_fields__: Set[str] = {
         'exclusiveMinimum',
         'minimum',
@@ -335,7 +341,7 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'default_factory',
 }
 
-EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
+EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {  # type: ignore
     '$id',
     '$ref',
     JsonSchemaObject.__extra_key__,

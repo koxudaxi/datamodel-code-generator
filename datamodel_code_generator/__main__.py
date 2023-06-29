@@ -18,13 +18,16 @@ from io import TextIOBase
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     DefaultDict,
     Dict,
     List,
+    Literal,
     Optional,
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -445,28 +448,45 @@ arg_parser.add_argument(
 
 arg_parser.add_argument('--version', help='show version', action='store_true')
 
+Model = TypeVar('Model', bound='BaseModel')
+
+
+def model_validator(
+    mode: Literal['before', 'after'],
+) -> Callable[[Callable[[Model, Any], Any]], Callable[[Model, Any], Any]]:
+    def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
+        if PYDANTIC_V2:
+            from pydantic import model_validator as model_validator_v2
+
+            return model_validator_v2(mode=mode)(method)  # type: ignore
+        else:
+            from pydantic import root_validator
+
+            return root_validator(method)  # type: ignore
+
+    return inner
+
 
 class Config(BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(arbitrary_types_allowed=(TextIOBase,))
+        model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        def get(self, item):
+        def get(self, item: str) -> Any:
             return getattr(self, item)
 
-        def __getitem__(self, item):
+        def __getitem__(self, item: str) -> Any:
             return self.get(item)
 
-        def __setitem__(self, key, value):
+        def __setitem__(self, key: str, value: Any) -> None:
             setattr(self, key, value)
 
         @classmethod
-        def parse_obj(cls, obj: Any) -> Config:
+        def parse_obj(cls: type[Model], obj: Any) -> Model:
             return cls.model_validate(obj)
 
-        @classmethod
         @property
-        def __fields__(cls) -> Dict[str, Any]:
-            return cls.model_fields
+        def __fields__(self) -> Dict[str, Any]:
+            return self.model_fields
 
     else:
 
@@ -499,14 +519,11 @@ class Config(BaseModel):
             f"This protocol doesn't support only http/https. --input={value}"
         )  # pragma: no cover
 
-    from pydantic import model_validator
-
     @model_validator(mode='after')
     def validate_use_generic_container_types(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
-        if values.use_generic_container_types:
-            # if values.get('use_generic_container_types'):
+        if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
