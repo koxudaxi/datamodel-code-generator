@@ -10,10 +10,13 @@ PYDANTIC_VERSION = version.parse(pydantic.VERSION)
 PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 
 if TYPE_CHECKING:
+    from typing import Any, Callable
+
     cached_property = property
 
     Protocol = object
     runtime_checkable: Callable[..., Any]
+    from yaml import SafeLoader
 else:
     try:
         from typing import TYPE_CHECKING, Any, Callable, Protocol
