@@ -446,6 +446,14 @@ arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
 class Config(BaseModel):
+    def get(self, item):
+        return getattr(self, item)
+
+    def __getitem__(self, item):
+        return self.get(item)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
     class Config:
         # validate_assignment = True
         # Pydantic 1.5.1 doesn't support validate_assignment correctly
@@ -475,11 +483,13 @@ class Config(BaseModel):
             f"This protocol doesn't support only http/https. --input={value}"
         )  # pragma: no cover
 
-    @root_validator
+    from pydantic import model_validator
+    @model_validator(mode='after')
     def validate_use_generic_container_types(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
-        if values.get('use_generic_container_types'):
+        if values.use_generic_container_types:
+        # if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
@@ -488,7 +498,7 @@ class Config(BaseModel):
                 )
         return values
 
-    @root_validator
+    @model_validator(mode='after')
     def validate_original_field_name_delimiter(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -499,7 +509,7 @@ class Config(BaseModel):
                 )
         return values
 
-    @root_validator
+    @model_validator(mode='after')
     def validate_custom_file_header(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('custom_file_header') and values.get('custom_file_header_path'):
             raise Error(
@@ -525,7 +535,7 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
-    @root_validator()
+    @model_validator(mode='after')
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         values = cls._validate_use_annotated(values)
         return cls._validate_base_class(values)
@@ -543,21 +553,21 @@ class Config(BaseModel):
                 values['base_class'] = ''
         return values
 
-    input: Optional[Union[Path, str]]
+    input: Optional[Union[Path, str]] = None
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
-    output: Optional[Path]
+    output: Optional[Path] = None
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
     base_class: str = DEFAULT_BASE_CLASS
-    custom_template_dir: Optional[Path]
-    extra_template_data: Optional[TextIOBase]
+    custom_template_dir: Optional[Path] = None
+    extra_template_data: Optional[TextIOBase] = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: Optional[TextIOBase]
+    aliases: Optional[TextIOBase] = None
     disable_timestamp: bool = False
     enable_version_header: bool = False
     allow_population_by_field_name: bool = False

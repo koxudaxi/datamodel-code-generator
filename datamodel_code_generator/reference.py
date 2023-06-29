@@ -36,7 +36,7 @@ import pydantic
 from packaging import version
 from pydantic import BaseModel, validator
 
-from datamodel_code_generator import cached_property
+from datamodel_code_generator.util import cached_property
 
 if TYPE_CHECKING:
     from pydantic.typing import DictStrAny
@@ -73,7 +73,8 @@ class _BaseModel(BaseModel):
             include=include,
             exclude=set(exclude or ()) | self._exclude_fields,
             by_alias=by_alias,
-            skip_defaults=skip_defaults,
+            # exclude_defaults=skip_defaultsm,
+            # skip_defaults=skip_defaults,
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
@@ -84,7 +85,7 @@ class Reference(_BaseModel):
     path: str
     original_name: str = ''
     name: str
-    duplicate_name: Optional[str]
+    duplicate_name: Optional[str] = None
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []

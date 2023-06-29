@@ -27,9 +27,11 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from pydantic import StrictBool, StrictInt, StrictStr, create_model, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import core_schema
 
-from datamodel_code_generator import Protocol, runtime_checkable
+from datamodel_code_generator.util import Protocol, runtime_checkable
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
@@ -93,6 +95,40 @@ class UnionIntFloat:
     @classmethod
     def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
         yield cls.validate
+
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        from_int_schema = core_schema.chain_schema(
+            [
+                core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]),
+                core_schema.no_info_plain_validator_function(cls.validate),
+            ]
+        )
+
+        return core_schema.json_or_python_schema(
+            json_schema= core_schema.no_info_plain_validator_function(cls.validate),
+            python_schema=core_schema.union_schema(
+                [
+                    # check if it's an instance first before doing any further work
+                    core_schema.is_instance_schema(UnionIntFloat),
+                    from_int_schema,
+                ]
+            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda instance: instance.value
+            ),
+        )
+
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        # Use the same schema that would be used for `int`
+        return handler(core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]))
 
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
@@ -187,11 +223,11 @@ class DataType(_BaseModel):
             else 'none'
         )
 
-    type: Optional[str]
-    reference: Optional[Reference]
+    type: Optional[str] = None
+    reference: Optional[Reference] = None
     data_types: List[DataType] = []
     is_func: bool = False
-    kwargs: Optional[Dict[str, Any]]
+    kwargs: Optional[Dict[str, Any]] = None
     import_: Optional[Import] = None
     python_version: PythonVersion = PythonVersion.PY_37
     is_optional: bool = False
@@ -504,10 +540,10 @@ class DataTypeManager(ABC):
         else:
             self.data_type: Type[DataType] = create_model(
                 'ContextDataType',
-                python_version=python_version,
-                use_standard_collections=use_standard_collections,
-                use_generic_container=use_generic_container_types,
-                use_union_operator=use_union_operator,
+                python_version=(PythonVersion, python_version),
+                use_standard_collections=(bool, use_standard_collections),
+                use_generic_container=(bool, use_generic_container_types),
+                use_union_operator=(bool, use_union_operator),
                 __base__=DataType,
             )
 

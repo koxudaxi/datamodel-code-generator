@@ -5,7 +5,7 @@ from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from pydantic import Field
 
-from datamodel_code_generator import cached_property
+from datamodel_code_generator.util import cached_property
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
     ConstraintsBase,

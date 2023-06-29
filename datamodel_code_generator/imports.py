@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class Import(BaseModel):
     from_: Optional[str] = None
     import_: str
-    alias: Optional[str]
+    alias: Optional[str] = None
 
     @classmethod
     @lru_cache()

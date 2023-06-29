@@ -24,7 +24,7 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from datamodel_code_generator import (
     DefaultPutDict,
@@ -80,62 +80,67 @@ class ReferenceObject(BaseModel):
 
 
 class ExampleObject(BaseModel):
-    summary: Optional[str]
-    description: Optional[str]
-    value: Any
-    externalValue: Optional[str]
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    value: Any = None
+    externalValue: Optional[str] = None
 
 
 class MediaObject(BaseModel):
+    model_config = ConfigDict(strict=False)
     schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(
         None, alias='schema'
     )
-    example: Any
-    examples: Union[str, ReferenceObject, ExampleObject, None]
+    example: Any = None
+    examples: Union[str, ReferenceObject, ExampleObject, None] = None
 
 
 class ParameterObject(BaseModel):
-    name: Optional[str]
+    name: Optional[str] = None
     in_: Optional[ParameterLocation] = Field(None, alias='in')
-    description: Optional[str]
+    description: Optional[str] = None
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias='schema')
-    example: Any
-    examples: Union[str, ReferenceObject, ExampleObject, None]
+    example: Any = None
+    examples: Union[str, ReferenceObject, ExampleObject, None] = None
     content: Dict[str, MediaObject] = {}
 
 
 class HeaderObject(BaseModel):
-    description: Optional[str]
+    description: Optional[str] = None
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias='schema')
-    example: Any
-    examples: Union[str, ReferenceObject, ExampleObject, None]
+    example: Any = None
+    examples: Union[str, ReferenceObject, ExampleObject, None] = None
     content: Dict[str, MediaObject] = {}
 
 
 class RequestBodyObject(BaseModel):
-    description: Optional[str]
-    content: Dict[str, MediaObject] = {}
+    model_config = ConfigDict(strict=False)
+    description: Optional[str] = None
+    content: Dict[Union[str, int], MediaObject] = {}
     required: bool = False
 
 
 class ResponseObject(BaseModel):
-    description: Optional[str]
+    model_config = ConfigDict(strict=False)
+
+    description: Optional[str] = None
     headers: Dict[str, ParameterObject] = {}
-    content: Dict[str, MediaObject] = {}
+    content: Dict[Union[str, int], MediaObject] = {}
 
 
 class Operation(BaseModel):
+    model_config = ConfigDict(strict=False)
     tags: List[str] = []
-    summary: Optional[str]
-    description: Optional[str]
-    operationId: Optional[str]
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    operationId: Optional[str] = None
     parameters: List[Union[ReferenceObject, ParameterObject]] = []
-    requestBody: Union[ReferenceObject, RequestBodyObject, None]
-    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
+    requestBody: Union[ReferenceObject, RequestBodyObject, None] = None
+    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}
     deprecated: bool = False
 
 

@@ -9,7 +9,7 @@ import black
 import isort
 import toml
 
-from datamodel_code_generator import cached_property
+from datamodel_code_generator.util import cached_property
 
 
 class PythonVersion(Enum):

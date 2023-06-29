@@ -22,7 +22,7 @@ from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
 
-from datamodel_code_generator import cached_property
+from datamodel_code_generator.util import cached_property
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANNOTATED_BACKPORT,
@@ -59,10 +59,10 @@ class ConstraintsBase(_BaseModel):
 
 
 class DataModelFieldBase(_BaseModel):
-    name: Optional[str]
-    default: Optional[Any]
+    name: Optional[str] = None
+    default: Optional[Any] = None
     required: bool = False
-    alias: Optional[str]
+    alias: Optional[str] = None
     data_type: DataType
     constraints: Any = None
     strip_default_none: bool = False
