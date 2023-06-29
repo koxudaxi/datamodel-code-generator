@@ -71,7 +71,7 @@ types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
 types-setuptools = ">=67.6.0.5,<69.0.0.0"
-pydantic= "^1.10.9"
+pydantic= "^2.0b3"
 httpx = "*"
 ruff = "*"
 
