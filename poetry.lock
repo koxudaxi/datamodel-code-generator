@@ -1543,4 +1543,4 @@ http = ["httpx"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "1d2d2675fad404ef9c7fa1cef3ff757826b0ad7bc86c1999b8fd46e0cda4e69b"
+content-hash = "a49240bbe77afff0605d040f3f358e0cd6ec98e6e386d3a45e49e0b34d4dcc81"
