@@ -96,7 +96,7 @@ def field_validator(
 if PYDANTIC_V2:
     from pydantic import ConfigDict as ConfigDict
 else:
-    ConfigDict = object()  # type: ignore
+    ConfigDict = dict  # type: ignore
 
 
 class BaseModel(_BaseModel):

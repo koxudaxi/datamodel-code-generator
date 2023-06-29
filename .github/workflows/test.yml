@@ -78,7 +78,7 @@ jobs:
       run: |
          poetry run pip install black=="22.1.0"
     - name: Lint
-      if: matrix.pydantic-version != '1.5.1'
+      if: matrix.pydantic-version == '2.0b3'
       run: |
         source $VENV
         ./scripts/lint.sh

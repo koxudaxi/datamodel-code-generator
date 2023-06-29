@@ -454,7 +454,7 @@ arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
 class Config(BaseModel):
-    if PYDANTIC_V2 and not TYPE_CHECKING:
+    if PYDANTIC_V2:
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
         def get(self, item: str) -> Any:
@@ -466,13 +466,15 @@ class Config(BaseModel):
         def __setitem__(self, key: str, value: Any) -> None:
             setattr(self, key, value)
 
-        @classmethod
-        def parse_obj(cls: type[Model], obj: Any) -> Model:
-            return cls.model_validate(obj)
+        if not TYPE_CHECKING:
 
-        @property
-        def __fields__(self) -> Dict[str, Any]:
-            return self.model_fields
+            @classmethod
+            def parse_obj(cls: type[Model], obj: Any) -> Model:
+                return cls.model_validate(obj)
+
+            @property
+            def __fields__(self) -> Dict[str, Any]:
+                return self.model_fields
 
     else:
 
@@ -516,11 +518,10 @@ class Config(BaseModel):
         if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
-                if not TYPE_CHECKING:
-                    raise Error(
-                        f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
-                        ' The version will be not supported in a future version'
-                    )
+                raise Error(
+                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
+                    ' The version will be not supported in a future version'
+                )
         return values
 
     @model_validator(mode='after')
