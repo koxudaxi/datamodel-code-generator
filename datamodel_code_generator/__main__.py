@@ -516,10 +516,11 @@ class Config(BaseModel):
         if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
-                raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
-                    ' The version will be not supported in a future version'
-                )
+                if not TYPE_CHECKING:
+                    raise Error(
+                        f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
+                        ' The version will be not supported in a future version'
+                    )
         return values
 
     @model_validator(mode='after')
