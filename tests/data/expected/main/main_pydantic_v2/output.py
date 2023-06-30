@@ -29,7 +29,7 @@ class Users(RootModel):
     root: List[User]
 
 
-class Id(BaseModel):
+class Id(RootModel):
     root: str
 
 
