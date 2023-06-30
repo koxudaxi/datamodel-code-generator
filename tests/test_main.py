@@ -5272,3 +5272,23 @@ def test_main_custom_file_header_duplicate_options(capsys):
             captured.err
             == '`--custom_file_header_path` can not be used with `--custom_file_header`.\n'
         )
+
+@freeze_time('2019-07-26')
+def test_main_pydantic_v2():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydanticV2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+        )
