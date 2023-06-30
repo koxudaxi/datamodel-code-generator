@@ -466,15 +466,21 @@ class Config(BaseModel):
         def __setitem__(self, key: str, value: Any) -> None:
             setattr(self, key, value)
 
-        if not TYPE_CHECKING:
+        if TYPE_CHECKING:
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                ...
+
+        else:
 
             @classmethod
             def parse_obj(cls: type[Model], obj: Any) -> Model:
                 return cls.model_validate(obj)
 
-            @property
-            def __fields__(self) -> Dict[str, Any]:
-                return self.model_fields
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                return cls.model_fields
 
     else:
 
@@ -482,6 +488,12 @@ class Config(BaseModel):
             # validate_assignment = True
             # Pydantic 1.5.1 doesn't support validate_assignment correctly
             arbitrary_types_allowed = (TextIOBase,)
+
+        if not TYPE_CHECKING:
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                return cls.__fields__
 
     @field_validator('aliases', 'extra_template_data', mode='before')
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
@@ -642,7 +654,9 @@ class Config(BaseModel):
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
-            f: getattr(args, f) for f in self.__fields__ if getattr(args, f) is not None
+            f: getattr(args, f)
+            for f in self.get_fields()
+            if getattr(args, f) is not None
         }
         set_args = self._validate_use_annotated(set_args)
         set_args = self._validate_base_class(set_args)

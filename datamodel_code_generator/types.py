@@ -57,8 +57,7 @@ from datamodel_code_generator.util import (
 )
 
 if PYDANTIC_V2:
-    from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
-    from pydantic.json_schema import JsonSchemaValue
+    from pydantic import GetCoreSchemaHandler
     from pydantic_core import core_schema
 
 T = TypeVar('T')
@@ -134,17 +133,6 @@ class UnionIntFloat:
             serialization=core_schema.plain_serializer_function_ser_schema(
                 lambda instance: instance.value
             ),
-        )
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> JsonSchemaValue:
-        # Use the same schema that would be used for `int`
-        return handler(
-            core_schema.union_schema(
-                [core_schema.int_schema(), core_schema.float_schema()]
-            )
         )
 
     @classmethod
