@@ -204,12 +204,12 @@ class ConfigAttribute(NamedTuple):
 class BaseModel(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic_v2/BaseModel.jinja2'
     BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
-    CONFIG_ATTRIBUTES: ClassVar[Tuple[ConfigAttribute]] = (
-        ('allow_population_by_field_name', 'populate_by_name', False),
-        ('populate_by_name', 'populate_by_name', False),
-        ('allow_mutation', 'frozen', True),
-        ('frozen', 'frozen', False),
-    )
+    CONFIG_ATTRIBUTES: ClassVar[List[ConfigAttribute]] = [
+        ConfigAttribute('allow_population_by_field_name', 'populate_by_name', False),
+        ConfigAttribute('populate_by_name', 'populate_by_name', False),
+        ConfigAttribute('allow_mutation', 'frozen', True),
+        ConfigAttribute('frozen', 'frozen', False),
+    ]
 
     def __init__(
         self,
