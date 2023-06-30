@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 
-# from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
@@ -305,7 +305,6 @@ class Source(BaseModel):
 
 
 class Parser(ABC):
-    from datamodel_code_generator.model import pydantic as pydantic_model
 
     def __init__(
         self,
