@@ -5285,11 +5285,11 @@ def test_main_pydantic_v2():
                 '--output',
                 str(output_file),
                 '--output-model-type',
-                'pydanticV2.BaseModel',
+                'pydantic_v2.BaseModel',
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
         )

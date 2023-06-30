@@ -179,7 +179,7 @@ RAW_DATA_TYPES: List[InputFileType] = [
 
 class DataModelType(Enum):
     PydanticBaseModel = 'pydantic.BaseModel'
-    PydanticV2BaseModel = 'pydanticV2.BaseModel'
+    PydanticV2BaseModel = 'pydantic_v2.BaseModel'
     DataclassesDataclass = 'dataclasses.dataclass'
     TypingTypedDict = 'typing.TypedDict'
 
