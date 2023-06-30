@@ -34,9 +34,14 @@ from urllib.parse import ParseResult, urlparse
 import inflect
 import pydantic
 from packaging import version
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
-from datamodel_code_generator import cached_property
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    ConfigDict,
+    cached_property,
+    field_validator,
+)
 
 if TYPE_CHECKING:
     from pydantic.typing import DictStrAny
@@ -54,43 +59,71 @@ class _BaseModel(BaseModel):
                 if pass_field_name in values:
                     setattr(self, pass_field_name, values[pass_field_name])
 
-    def dict(
-        self,
-        *,
-        include: Union[
-            AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
-        ] = None,
-        exclude: Union[
-            AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
-        ] = None,
-        by_alias: bool = False,
-        skip_defaults: Optional[bool] = None,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-    ) -> DictStrAny:
-        return super().dict(
-            include=include,
-            exclude=set(exclude or ()) | self._exclude_fields,
-            by_alias=by_alias,
-            skip_defaults=skip_defaults,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-        )
+    if not TYPE_CHECKING:
+        if PYDANTIC_V2:
+
+            def dict(
+                self,
+                *,
+                include: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                exclude: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                by_alias: bool = False,
+                exclude_unset: bool = False,
+                exclude_defaults: bool = False,
+                exclude_none: bool = False,
+            ) -> DictStrAny:
+                return self.model_dump(
+                    include=include,
+                    exclude=set(exclude or ()) | self._exclude_fields,
+                    by_alias=by_alias,
+                    exclude_unset=exclude_unset,
+                    exclude_defaults=exclude_defaults,
+                    exclude_none=exclude_none,
+                )
+
+        else:
+
+            def dict(
+                self,
+                *,
+                include: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                exclude: Union[
+                    AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None
+                ] = None,
+                by_alias: bool = False,
+                skip_defaults: Optional[bool] = None,
+                exclude_unset: bool = False,
+                exclude_defaults: bool = False,
+                exclude_none: bool = False,
+            ) -> DictStrAny:
+                return super().dict(
+                    include=include,
+                    exclude=set(exclude or ()) | self._exclude_fields,
+                    by_alias=by_alias,
+                    skip_defaults=skip_defaults,
+                    exclude_unset=exclude_unset,
+                    exclude_defaults=exclude_defaults,
+                    exclude_none=exclude_none,
+                )
 
 
 class Reference(_BaseModel):
     path: str
     original_name: str = ''
     name: str
-    duplicate_name: Optional[str]
+    duplicate_name: Optional[str] = None
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
     _exclude_fields: ClassVar[Set[str]] = {'children'}
 
-    @validator('original_name')
+    @field_validator('original_name')
     def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:
         """
         If original_name is empty then, `original_name` is assigned `name`
@@ -99,14 +132,24 @@ class Reference(_BaseModel):
             return v
         return values.get('name', v)  # pragma: no cover
 
-    class Config:
-        arbitrary_types_allowed = True
-        keep_untouched = (cached_property,)
-        copy_on_model_validation = (
-            False
-            if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-            else 'none'
+    if PYDANTIC_V2:
+        # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
+        # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            ignored_types=(cached_property,),
+            revalidate_instances='never',
         )
+    else:
+
+        class Config:
+            arbitrary_types_allowed = True
+            keep_untouched = (cached_property,)
+            copy_on_model_validation = (
+                False
+                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+                else 'none'
+            )
 
     @property
     def short_name(self) -> str:
