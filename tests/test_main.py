@@ -5273,6 +5273,7 @@ def test_main_custom_file_header_duplicate_options(capsys):
             == '`--custom_file_header_path` can not be used with `--custom_file_header`.\n'
         )
 
+
 @freeze_time('2019-07-26')
 def test_main_pydantic_v2():
     with TemporaryDirectory() as output_dir:
