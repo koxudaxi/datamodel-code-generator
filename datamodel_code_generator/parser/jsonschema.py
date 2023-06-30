@@ -268,10 +268,7 @@ class JsonSchemaObject(BaseModel):
     if not TYPE_CHECKING:
 
         def __init__(self, **data: Any) -> None:
-            try:
-                super().__init__(**data)
-            except TypeError:
-                raise
+            super().__init__(**data)
             self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
 
     @cached_property
