@@ -27,9 +27,13 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from pydantic import (
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    create_model,
+)
 
-from datamodel_code_generator import Protocol, runtime_checkable
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
@@ -45,6 +49,16 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Protocol,
+    runtime_checkable,
+)
+
+if PYDANTIC_V2:
+    from pydantic import GetCoreSchemaHandler
+    from pydantic_core import core_schema
 
 T = TypeVar('T')
 
@@ -93,6 +107,33 @@ class UnionIntFloat:
     @classmethod
     def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
         yield cls.validate
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        from_int_schema = core_schema.chain_schema(
+            [
+                core_schema.union_schema(
+                    [core_schema.int_schema(), core_schema.float_schema()]
+                ),
+                core_schema.no_info_plain_validator_function(cls.validate),
+            ]
+        )
+
+        return core_schema.json_or_python_schema(
+            json_schema=core_schema.no_info_plain_validator_function(cls.validate),
+            python_schema=core_schema.union_schema(
+                [
+                    # check if it's an instance first before doing any further work
+                    core_schema.is_instance_schema(UnionIntFloat),
+                    from_int_schema,
+                ]
+            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda instance: instance.value
+            ),
+        )
 
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
@@ -179,19 +220,28 @@ class Nullable(Protocol):
 
 
 class DataType(_BaseModel):
-    class Config:
-        extra = 'forbid'
-        copy_on_model_validation = (
-            False
-            if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-            else 'none'
+    if PYDANTIC_V2:
+        # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
+        # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
+        model_config = ConfigDict(
+            extra='forbid',
+            revalidate_instances='never',
         )
+    else:
 
-    type: Optional[str]
-    reference: Optional[Reference]
+        class Config:
+            extra = 'forbid'
+            copy_on_model_validation = (
+                False
+                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
+                else 'none'
+            )
+
+    type: Optional[str] = None
+    reference: Optional[Reference] = None
     data_types: List[DataType] = []
     is_func: bool = False
-    kwargs: Optional[Dict[str, Any]]
+    kwargs: Optional[Dict[str, Any]] = None
     import_: Optional[Import] = None
     python_version: PythonVersion = PythonVersion.PY_37
     is_optional: bool = False
@@ -504,10 +554,10 @@ class DataTypeManager(ABC):
         else:
             self.data_type: Type[DataType] = create_model(
                 'ContextDataType',
-                python_version=python_version,
-                use_standard_collections=use_standard_collections,
-                use_generic_container=use_generic_container_types,
-                use_union_operator=use_union_operator,
+                python_version=(PythonVersion, python_version),
+                use_standard_collections=(bool, use_standard_collections),
+                use_generic_container=(bool, use_generic_container_types),
+                use_union_operator=(bool, use_union_operator),
                 __base__=DataType,
             )
 

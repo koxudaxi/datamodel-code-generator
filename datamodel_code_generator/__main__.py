@@ -17,6 +17,7 @@ from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     DefaultDict,
     Dict,
@@ -33,7 +34,7 @@ from urllib.parse import ParseResult, urlparse
 import argcomplete
 import black
 import toml
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel
 
 from datamodel_code_generator import (
     DEFAULT_BASE_CLASS,
@@ -53,6 +54,13 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Model,
+    field_validator,
+    model_validator,
+)
 
 
 class Exit(IntEnum):
@@ -446,26 +454,66 @@ arg_parser.add_argument('--version', help='show version', action='store_true')
 
 
 class Config(BaseModel):
-    class Config:
-        # validate_assignment = True
-        # Pydantic 1.5.1 doesn't support validate_assignment correctly
-        arbitrary_types_allowed = (TextIOBase,)
+    if PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @validator('aliases', 'extra_template_data', pre=True)
+        def get(self, item: str) -> Any:
+            return getattr(self, item)
+
+        def __getitem__(self, item: str) -> Any:
+            return self.get(item)
+
+        def __setitem__(self, key: str, value: Any) -> None:
+            setattr(self, key, value)
+
+        if TYPE_CHECKING:
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                ...
+
+        else:
+
+            @classmethod
+            def parse_obj(cls: type[Model], obj: Any) -> Model:
+                return cls.model_validate(obj)
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                return cls.model_fields
+
+    else:
+
+        class Config:
+            # validate_assignment = True
+            # Pydantic 1.5.1 doesn't support validate_assignment correctly
+            arbitrary_types_allowed = (TextIOBase,)
+
+        if not TYPE_CHECKING:
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                return cls.__fields__
+
+    @field_validator('aliases', 'extra_template_data', mode='before')
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
         return cast(TextIOBase, Path(value).expanduser().resolve().open('rt'))
 
-    @validator(
-        'input', 'output', 'custom_template_dir', 'custom_file_header_path', pre=True
+    @field_validator(
+        'input',
+        'output',
+        'custom_template_dir',
+        'custom_file_header_path',
+        mode='before',
     )
     def validate_path(cls, value: Any) -> Optional[Path]:
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
-    @validator('url', pre=True)
+    @field_validator('url', mode='before')
     def validate_url(cls, value: Any) -> Optional[ParseResult]:
         if isinstance(value, str) and is_url(value):  # pragma: no cover
             return urlparse(value)
@@ -475,7 +523,7 @@ class Config(BaseModel):
             f"This protocol doesn't support only http/https. --input={value}"
         )  # pragma: no cover
 
-    @root_validator
+    @model_validator(mode='after')
     def validate_use_generic_container_types(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -483,12 +531,12 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'  # type: ignore
+                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
                     ' The version will be not supported in a future version'
                 )
         return values
 
-    @root_validator
+    @model_validator(mode='after')
     def validate_original_field_name_delimiter(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -499,7 +547,7 @@ class Config(BaseModel):
                 )
         return values
 
-    @root_validator
+    @model_validator(mode='after')
     def validate_custom_file_header(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('custom_file_header') and values.get('custom_file_header_path'):
             raise Error(
@@ -508,7 +556,7 @@ class Config(BaseModel):
         return values
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
-    @validator('http_headers', pre=True)
+    @field_validator('http_headers', mode='before')
     def validate_http_headers(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
@@ -525,7 +573,7 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
-    @root_validator()
+    @model_validator(mode='after')
     def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         values = cls._validate_use_annotated(values)
         return cls._validate_base_class(values)
@@ -543,21 +591,21 @@ class Config(BaseModel):
                 values['base_class'] = ''
         return values
 
-    input: Optional[Union[Path, str]]
+    input: Optional[Union[Path, str]] = None
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
-    output: Optional[Path]
+    output: Optional[Path] = None
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
     base_class: str = DEFAULT_BASE_CLASS
-    custom_template_dir: Optional[Path]
-    extra_template_data: Optional[TextIOBase]
+    custom_template_dir: Optional[Path] = None
+    extra_template_data: Optional[TextIOBase] = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: Optional[TextIOBase]
+    aliases: Optional[TextIOBase] = None
     disable_timestamp: bool = False
     enable_version_header: bool = False
     allow_population_by_field_name: bool = False
@@ -606,7 +654,9 @@ class Config(BaseModel):
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
-            f: getattr(args, f) for f in self.__fields__ if getattr(args, f) is not None
+            f: getattr(args, f)
+            for f in self.get_fields()
+            if getattr(args, f) is not None
         }
         set_args = self._validate_use_annotated(set_args)
         set_args = self._validate_base_class(set_args)

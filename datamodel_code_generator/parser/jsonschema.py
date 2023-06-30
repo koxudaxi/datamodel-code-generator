@@ -27,11 +27,12 @@ from typing import (
 from urllib.parse import ParseResult
 from warnings import warn
 
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import (
+    Field,
+)
 
 from datamodel_code_generator import (
     InvalidClassNameError,
-    cached_property,
     load_yaml,
     load_yaml_from_path,
     snooper_to_methods,
@@ -57,6 +58,16 @@ from datamodel_code_generator.types import (
     Types,
     UnionIntFloat,
 )
+from datamodel_code_generator.util import (
+    PYDANTIC_V2,
+    BaseModel,
+    cached_property,
+    field_validator,
+    model_validator,
+)
+
+if PYDANTIC_V2:
+    from pydantic import ConfigDict
 
 
 def get_model_by_path(
@@ -145,10 +156,23 @@ class JSONReference(_enum.Enum):
 
 class Discriminator(BaseModel):
     propertyName: str
-    mapping: Optional[Dict[str, str]]
+    mapping: Optional[Dict[str, str]] = None
 
 
 class JsonSchemaObject(BaseModel):
+    if not TYPE_CHECKING:
+        if PYDANTIC_V2:
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                return cls.model_fields
+
+        else:
+
+            @classmethod
+            def get_fields(cls) -> Dict[str, Any]:
+                return cls.__fields__
+
     __constraint_fields__: Set[str] = {
         'exclusiveMinimum',
         'minimum',
@@ -164,7 +188,7 @@ class JsonSchemaObject(BaseModel):
     }
     __extra_key__: str = SPECIAL_PATH_FORMAT.format('extras')
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def validate_exclusive_maximum_and_exclusive_minimum(
         cls, values: Dict[str, Any]
     ) -> Any:
@@ -183,7 +207,7 @@ class JsonSchemaObject(BaseModel):
             del values['exclusiveMinimum']
         return values
 
-    @validator('ref')
+    @field_validator('ref')
     def validate_ref(cls, value: Any) -> Any:
         if isinstance(value, str) and '#' in value:
             if value.endswith('#/'):
@@ -193,47 +217,53 @@ class JsonSchemaObject(BaseModel):
             return value.replace('#', '#/')
         return value
 
-    items: Union[List[JsonSchemaObject], JsonSchemaObject, bool, None]
-    uniqueItems: Optional[bool]
-    type: Union[str, List[str], None]
-    format: Optional[str]
-    pattern: Optional[str]
-    minLength: Optional[int]
-    maxLength: Optional[int]
-    minimum: Optional[UnionIntFloat]
-    maximum: Optional[UnionIntFloat]
-    minItems: Optional[int]
-    maxItems: Optional[int]
-    multipleOf: Optional[float]
-    exclusiveMaximum: Union[float, bool, None]
-    exclusiveMinimum: Union[float, bool, None]
-    additionalProperties: Union[JsonSchemaObject, bool, None]
-    patternProperties: Optional[Dict[str, JsonSchemaObject]]
+    items: Union[List[JsonSchemaObject], JsonSchemaObject, bool, None] = None
+    uniqueItems: Optional[bool] = None
+    type: Union[str, List[str], None] = None
+    format: Optional[str] = None
+    pattern: Optional[str] = None
+    minLength: Optional[int] = None
+    maxLength: Optional[int] = None
+    minimum: Optional[UnionIntFloat] = None
+    maximum: Optional[UnionIntFloat] = None
+    minItems: Optional[int] = None
+    maxItems: Optional[int] = None
+    multipleOf: Optional[float] = None
+    exclusiveMaximum: Union[float, bool, None] = None
+    exclusiveMinimum: Union[float, bool, None] = None
+    additionalProperties: Union[JsonSchemaObject, bool, None] = None
+    patternProperties: Optional[Dict[str, JsonSchemaObject]] = None
     oneOf: List[JsonSchemaObject] = []
     anyOf: List[JsonSchemaObject] = []
     allOf: List[JsonSchemaObject] = []
     enum: List[Any] = []
-    writeOnly: Optional[bool]
-    properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]]
+    writeOnly: Optional[bool] = None
+    properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]] = None
     required: List[str] = []
     ref: Optional[str] = Field(default=None, alias='$ref')
     nullable: Optional[bool] = False
     x_enum_varnames: List[str] = Field(default=[], alias='x-enum-varnames')
-    description: Optional[str]
-    title: Optional[str]
-    example: Any
-    examples: Any
-    default: Any
+    description: Optional[str] = None
+    title: Optional[str] = None
+    example: Any = None
+    examples: Any = None
+    default: Any = None
     id: Optional[str] = Field(default=None, alias='$id')
     custom_type_path: Optional[str] = Field(default=None, alias='customTypePath')
     custom_base_path: Optional[str] = Field(default=None, alias='customBasePath')
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
-    discriminator: Union[Discriminator, str, None]
+    discriminator: Union[Discriminator, str, None] = None
+    if PYDANTIC_V2:
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            ignored_types=(cached_property,),
+        )
+    else:
 
-    class Config:
-        arbitrary_types_allowed = True
-        keep_untouched = (cached_property,)
-        smart_casts = True
+        class Config:
+            arbitrary_types_allowed = True
+            keep_untouched = (cached_property,)
+            smart_casts = True
 
     if not TYPE_CHECKING:
 
@@ -260,7 +290,7 @@ class JsonSchemaObject(BaseModel):
     def ref_object_name(self) -> str:  # pragma: no cover
         return self.ref.rsplit('/', 1)[-1]  # type: ignore
 
-    @validator('items', pre=True)
+    @field_validator('items', mode='before')
     def validate_items(cls, values: Any) -> Any:
         # this condition expects empty dict
         return values or None
@@ -321,7 +351,7 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'default_factory',
 }
 
-EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.__fields__) - DEFAULT_FIELD_KEYS) | {
+EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS) | {
     '$id',
     '$ref',
     JsonSchemaObject.__extra_key__,

@@ -14,7 +14,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
         black-version: [22.1.0, default]
-        pydantic-version: [1.5.1, default]
+        pydantic-version: [1.5.1,  1.10.9, default]
         exclude:
           - os: windows-latest
             black-version: 22.1.0
@@ -69,16 +69,16 @@ jobs:
       if: runner.os != 'Windows'
       run: |
          poetry run pip install isort=="$ISORT"
-    - name: Install Pydantic 1.5.1
-      if: matrix.pydantic-version == '1.5.1'
+    - name: Install Pydantic ${{ matrix.pydantic-version }}
+      if: matrix.pydantic-version != 'default'
       run: |
-        poetry run pip install pydantic=="1.5.1"
+        poetry run pip install pydantic=="${{ matrix.pydantic-version }}"
     - name: Install Black 22.1.0
       if: matrix.black-version == '22.1.0'
       run: |
          poetry run pip install black=="22.1.0"
     - name: Lint
-      if: matrix.pydantic-version != '1.5.1'
+      if: matrix.pydantic-version == 'default'
       run: |
         source $VENV
         ./scripts/lint.sh
@@ -87,7 +87,7 @@ jobs:
          source $VENV
          ./scripts/test.sh
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.pydantic-version == 'default' 
+      if: matrix.os == 'ubuntu-latest' && matrix.pydantic-version != '1.5.1'
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}

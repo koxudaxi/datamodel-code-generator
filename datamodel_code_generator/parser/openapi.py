@@ -24,7 +24,7 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from datamodel_code_generator import (
     DefaultPutDict,
@@ -50,6 +50,7 @@ from datamodel_code_generator.types import (
     EmptyDataType,
     StrictTypes,
 )
+from datamodel_code_generator.util import BaseModel
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r'^application/.*json$')
 
@@ -80,62 +81,62 @@ class ReferenceObject(BaseModel):
 
 
 class ExampleObject(BaseModel):
-    summary: Optional[str]
-    description: Optional[str]
-    value: Any
-    externalValue: Optional[str]
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    value: Any = None
+    externalValue: Optional[str] = None
 
 
 class MediaObject(BaseModel):
     schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(
         None, alias='schema'
     )
-    example: Any
-    examples: Union[str, ReferenceObject, ExampleObject, None]
+    example: Any = None
+    examples: Union[str, ReferenceObject, ExampleObject, None] = None
 
 
 class ParameterObject(BaseModel):
-    name: Optional[str]
+    name: Optional[str] = None
     in_: Optional[ParameterLocation] = Field(None, alias='in')
-    description: Optional[str]
+    description: Optional[str] = None
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias='schema')
-    example: Any
-    examples: Union[str, ReferenceObject, ExampleObject, None]
+    example: Any = None
+    examples: Union[str, ReferenceObject, ExampleObject, None] = None
     content: Dict[str, MediaObject] = {}
 
 
 class HeaderObject(BaseModel):
-    description: Optional[str]
+    description: Optional[str] = None
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias='schema')
-    example: Any
-    examples: Union[str, ReferenceObject, ExampleObject, None]
+    example: Any = None
+    examples: Union[str, ReferenceObject, ExampleObject, None] = None
     content: Dict[str, MediaObject] = {}
 
 
 class RequestBodyObject(BaseModel):
-    description: Optional[str]
+    description: Optional[str] = None
     content: Dict[str, MediaObject] = {}
     required: bool = False
 
 
 class ResponseObject(BaseModel):
-    description: Optional[str]
+    description: Optional[str] = None
     headers: Dict[str, ParameterObject] = {}
-    content: Dict[str, MediaObject] = {}
+    content: Dict[Union[str, int], MediaObject] = {}
 
 
 class Operation(BaseModel):
     tags: List[str] = []
-    summary: Optional[str]
-    description: Optional[str]
-    operationId: Optional[str]
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    operationId: Optional[str] = None
     parameters: List[Union[ReferenceObject, ParameterObject]] = []
-    requestBody: Union[ReferenceObject, RequestBodyObject, None]
-    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
+    requestBody: Union[ReferenceObject, RequestBodyObject, None] = None
+    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}
     deprecated: bool = False
 
 
@@ -335,10 +336,12 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_responses(
         self,
         name: str,
-        responses: Dict[str, Union[ReferenceObject, ResponseObject]],
+        responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]],
         path: List[str],
-    ) -> Dict[str, Dict[str, DataType]]:
-        data_types: DefaultDict[str, Dict[str, DataType]] = defaultdict(dict)
+    ) -> Dict[Union[str, int], Dict[str, DataType]]:
+        data_types: DefaultDict[Union[str, int], Dict[str, DataType]] = defaultdict(
+            dict
+        )
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
@@ -360,7 +363,7 @@ class OpenAPIParser(JsonSchemaParser):
                     continue
                 if isinstance(object_schema, JsonSchemaObject):
                     data_types[status_code][content_type] = self.parse_schema(
-                        name, object_schema, [*path, status_code, content_type]
+                        name, object_schema, [*path, str(status_code), content_type]
                     )
                 else:
                     data_types[status_code][content_type] = self.get_ref_data_type(

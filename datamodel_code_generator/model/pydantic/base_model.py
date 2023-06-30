@@ -5,7 +5,6 @@ from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from pydantic import Field
 
-from datamodel_code_generator import cached_property
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
     ConstraintsBase,
@@ -16,6 +15,7 @@ from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.util import cached_property
 
 
 class Constraints(ConstraintsBase):
