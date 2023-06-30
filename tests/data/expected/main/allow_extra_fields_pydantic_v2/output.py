@@ -6,43 +6,67 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field, RootModel
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
 class Pet(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     id: int
     name: str
     tag: Optional[str] = None
 
 
 class Pets(RootModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     root: List[Pet]
 
 
 class User(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     id: int
     name: str
     tag: Optional[str] = None
 
 
 class Users(RootModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     root: List[User]
 
 
 class Id(RootModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     root: str
 
 
 class Rules(RootModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     root: List[str]
 
 
 class Error(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     code: int
     message: str
 
 
 class Api(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     apiKey: Optional[str] = Field(
         None, description='To be used as a dataset parameter value'
     )
@@ -58,12 +82,21 @@ class Api(BaseModel):
 
 
 class Apis(RootModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     root: List[Api]
 
 
 class Event(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     name: Optional[str] = None
 
 
 class Result(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
     event: Optional[Event] = None

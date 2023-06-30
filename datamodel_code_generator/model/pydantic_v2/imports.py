@@ -33,3 +33,5 @@ IMPORT_STRICT_STR = Import.from_full_path('pydantic.StrictStr')
 IMPORT_STRICT_BOOL = Import.from_full_path('pydantic.StrictBool')
 IMPORT_STRICT_BYTES = Import.from_full_path('pydantic.StrictBytes')
 IMPORT_DATACLASS = Import.from_full_path('pydantic.dataclasses.dataclass')
+
+IMPORT_CONFIG_DICT = Import.from_full_path('pydantic.ConfigDict')

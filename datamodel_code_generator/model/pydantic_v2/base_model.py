@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
+from typing import (
+    Any,
+    ClassVar,
+    DefaultDict,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+)
 
 from pydantic import Field
 
@@ -12,7 +22,8 @@ from datamodel_code_generator.model import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
+from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 from datamodel_code_generator.util import cached_property
@@ -184,9 +195,21 @@ class DataModelField(DataModelFieldBase):
         return f'Annotated[{self.type_hint}, {str(self)}]'
 
 
+class ConfigAttribute(NamedTuple):
+    from_: str
+    to: str
+    invert: bool
+
+
 class BaseModel(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic_v2/BaseModel.jinja2'
     BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
+    CONFIG_ATTRIBUTES: ClassVar[Tuple[ConfigAttribute]] = (
+        ('allow_population_by_field_name', 'populate_by_name', False),
+        ('populate_by_name', 'populate_by_name', False),
+        ('allow_mutation', 'frozen', True),
+        ('frozen', 'frozen', False),
+    )
 
     def __init__(
         self,
@@ -226,17 +249,16 @@ class BaseModel(DataModel):
         allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
         if additionalProperties is not None or allow_extra_fields:
             config_parameters['extra'] = (
-                'Extra.allow'
-                if additionalProperties or allow_extra_fields
-                else 'Extra.forbid'
+                "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
             )
-            self._additional_imports.append(IMPORT_EXTRA)
 
-        for config_attribute in 'allow_population_by_field_name', 'allow_mutation':
-            if config_attribute in self.extra_template_data:
-                config_parameters[config_attribute] = self.extra_template_data[
-                    config_attribute
-                ]
+        for from_, to, invert in self.CONFIG_ATTRIBUTES:
+            if from_ in self.extra_template_data:
+                config_parameters[to] = (
+                    not self.extra_template_data[from_]
+                    if invert
+                    else self.extra_template_data[from_]
+                )
         for data_type in self.all_data_types:
             if data_type.is_custom_type:
                 config_parameters['arbitrary_types_allowed'] = True
@@ -247,9 +269,10 @@ class BaseModel(DataModel):
                 config_parameters[key] = value
 
         if config_parameters:
-            from datamodel_code_generator.model.pydantic import Config
+            from datamodel_code_generator.model.pydantic_v2 import ConfigDict
 
-            self.extra_template_data['config'] = Config.parse_obj(config_parameters)
+            self.extra_template_data['config'] = ConfigDict.parse_obj(config_parameters)
+            self._additional_imports.append(IMPORT_CONFIG_DICT)
 
     @property
     def imports(self) -> Tuple[Import, ...]:

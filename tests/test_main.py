@@ -960,8 +960,21 @@ def test_enable_version_header():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'allow_population_by_field_name',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'allow_population_by_field_name_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_allow_population_by_field_name():
+def test_allow_population_by_field_name(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -971,19 +984,32 @@ def test_allow_population_by_field_name():
                 '--output',
                 str(output_file),
                 '--allow-population-by-field-name',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'allow_population_by_field_name' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'allow_extra_fields',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'allow_extra_fields_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_allow_extra_fields():
+def test_allow_extra_fields(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -993,17 +1019,32 @@ def test_allow_extra_fields():
                 '--output',
                 str(output_file),
                 '--allow-extra-fields',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'allow_extra_fields' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'enable_faux_immutability',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'enable_faux_immutability_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_enable_faux_immutability():
+def test_enable_faux_immutability(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1013,14 +1054,14 @@ def test_enable_faux_immutability():
                 '--output',
                 str(output_file),
                 '--enable-faux-immutability',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'enable_faux_immutability' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 

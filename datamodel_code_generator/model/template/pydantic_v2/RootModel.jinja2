@@ -9,7 +9,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
 {%- endif %}
 {%- if config %}
 {%- filter indent(4) %}
-{% include 'Config.jinja2' %}
+{% include 'ConfigDict.jinja2' %}
 {%- endfilter %}
 {%- endif %}
 {%- if not fields and not description %}
