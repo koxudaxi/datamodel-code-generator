@@ -59,8 +59,6 @@ class DataModelField(DataModelFieldBase):
         'lt',
         'le',
         'multiple_of',
-        'min_items',
-        'max_items',
         'min_length',
         'max_length',
         'regex',
