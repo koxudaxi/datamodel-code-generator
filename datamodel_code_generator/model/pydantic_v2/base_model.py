@@ -37,7 +37,7 @@ class Constraints(ConstraintsBase):
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
     min_length: Optional[int] = Field(None, alias='minLength')
     max_length: Optional[int] = Field(None, alias='maxLength')
-    regex: Optional[str] = Field(None, alias='pattern')
+    pattern: Optional[str] = Field(None, alias='pattern')
     unique_items: Optional[bool] = Field(None, alias='uniqueItems')
 
     @model_validator(mode='before')
@@ -61,7 +61,7 @@ class DataModelField(DataModelFieldBase):
         'multiple_of',
         'min_length',
         'max_length',
-        'regex',
+        'pattern',
     }
     _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le'}
     constraints: Optional[Constraints] = None

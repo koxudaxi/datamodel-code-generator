@@ -83,7 +83,7 @@ def type_map_factory(
             strict=StrictTypes.str in strict_types,
             # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
             kwargs={
-                'regex': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
+                'pattern': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
                 **({'strict': True} if StrictTypes.str in strict_types else {}),
             },
         ),
@@ -119,7 +119,7 @@ kwargs_schema_to_model: Dict[str, str] = {
     'maxItems': 'max_length',
     'minLength': 'min_length',
     'maxLength': 'max_length',
-    'pattern': 'regex',
+    'pattern': 'pattern',
 }
 
 number_kwargs: Set[str] = {
@@ -258,10 +258,10 @@ class DataTypeManager(_DataTypeManager):
         if data_type_kwargs:
             if strict:
                 data_type_kwargs['strict'] = True
-            if 'regex' in data_type_kwargs:
-                escaped_regex = data_type_kwargs['regex'].translate(escape_characters)
+            if 'pattern' in data_type_kwargs:
+                escaped_regex = data_type_kwargs['pattern'].translate(escape_characters)
                 # TODO: remove unneeded escaped characters
-                data_type_kwargs['regex'] = f"r'{escaped_regex}'"
+                data_type_kwargs['pattern'] = f"r'{escaped_regex}'"
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         if strict:
             return self.strict_type_map[StrictTypes.str]
