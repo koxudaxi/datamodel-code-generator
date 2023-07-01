@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union, Set
+from typing import List, Optional, Union
 
-from pydantic import AnyUrl, BaseModel, Field, confloat, conint, constr, RootModel
+from pydantic import AnyUrl, BaseModel, Field, confloat, conint, constr
 
 
 class Pet(BaseModel):
@@ -15,16 +15,16 @@ class Pet(BaseModel):
     tag: Optional[constr(max_length=64)] = None
 
 
-class Pets(RootModel):
-    root: Set[Pet] = Field(..., max_items=10, min_items=1)
+class Pets(BaseModel):
+    __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
 
 
-class UID(RootModel):
-    root: conint(ge=0)
+class UID(BaseModel):
+    __root__: conint(ge=0)
 
 
-class Phone(RootModel):
-    root: constr(min_length=3)
+class Phone(BaseModel):
+    __root__: constr(min_length=3)
 
 
 class User(BaseModel):
@@ -40,16 +40,16 @@ class User(BaseModel):
     rating: Optional[confloat(le=5.0, gt=0.0)] = None
 
 
-class Users(RootModel):
-    root: List[User]
+class Users(BaseModel):
+    __root__: List[User]
 
 
-class Id(RootModel):
-    root: str
+class Id(BaseModel):
+    __root__: str
 
 
-class Rules(RootModel):
-    root: List[str]
+class Rules(BaseModel):
+    __root__: List[str]
 
 
 class Error(BaseModel):
@@ -72,8 +72,8 @@ class Api(BaseModel):
     )
 
 
-class Apis(RootModel):
-    root: List[Api]
+class Apis(BaseModel):
+    __root__: List[Api]
 
 
 class Event(BaseModel):
