@@ -26,7 +26,7 @@ from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
-from datamodel_code_generator.util import cached_property
+from datamodel_code_generator.util import cached_property, model_validator
 
 
 class Constraints(ConstraintsBase):
@@ -35,12 +35,18 @@ class Constraints(ConstraintsBase):
     lt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMaximum')
     le: Optional[UnionIntFloat] = Field(None, alias='maximum')
     multiple_of: Optional[float] = Field(None, alias='multipleOf')
-    min_items: Optional[int] = Field(None, alias='minItems')
-    max_items: Optional[int] = Field(None, alias='maxItems')
     min_length: Optional[int] = Field(None, alias='minLength')
     max_length: Optional[int] = Field(None, alias='maxLength')
     regex: Optional[str] = Field(None, alias='pattern')
     unique_items: Optional[bool] = Field(None, alias='uniqueItems')
+
+    @model_validator(mode='before')
+    def validate_min_max_items(cls, values) -> None:
+        if 'minItems' in values:
+            values['minLength'] = values.pop('minItems')
+        if 'maxItems' in values:
+            values['maxLength'] = values.pop('maxItems')
+        return values
 
 
 class DataModelField(DataModelFieldBase):
