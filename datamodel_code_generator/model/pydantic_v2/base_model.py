@@ -53,7 +53,6 @@ class DataModelField(DataModelFieldBase):
     _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
         'alias',
         'default',
-        'const',
         'gt',
         'ge',
         'lt',
@@ -156,7 +155,7 @@ class DataModelField(DataModelFieldBase):
             data.pop('description', None)  # Description is part of field docstring
 
         if self.const:
-            data['const'] = True
+            data.pop('const')
 
         discriminator = data.pop('discriminator', None)
         if discriminator:
