@@ -1,6 +1,6 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html) and [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) from an openapi file and others.
+This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html) and [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) from an openapi file and others.
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
