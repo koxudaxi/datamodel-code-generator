@@ -766,20 +766,26 @@ def test_validation_failed():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    'output_model,expected_output, args',
     [
+        ('pydantic.BaseModel', 'main_with_field_constraints', []),
+        ('pydantic_v2.BaseModel', 'main_with_field_constraints_pydantic_v2', []),
         (
-            'pydantic.BaseModel',
-            'main_with_field_constraints',
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_generic_container_types',
+            ['--use-generic-container-types'],
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_with_field_constraints_pydantic_v2',
+            'main_with_field_constraints_pydantic_v2_use_standard_collections',
+            [
+                '--use-standard-collections',
+            ],
         ),
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_with_field_constraints(output_model, expected_output):
+def test_main_with_field_constraints(output_model, expected_output, args):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -791,6 +797,7 @@ def test_main_with_field_constraints(output_model, expected_output):
                 '--field-constraints',
                 '--output-model-type',
                 output_model,
+                *args,
             ]
         )
         assert return_code == Exit.OK
