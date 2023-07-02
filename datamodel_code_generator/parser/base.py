@@ -702,6 +702,7 @@ class Parser(ABC):
                 if set_data_type:
                     data_type.data_types[index] = set_data_type
             return data_type
+        return None
 
     @classmethod
     def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:

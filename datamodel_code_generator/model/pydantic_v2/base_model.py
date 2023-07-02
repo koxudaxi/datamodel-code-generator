@@ -41,7 +41,7 @@ class Constraints(ConstraintsBase):
     unique_items: Optional[bool] = Field(None, alias='uniqueItems')
 
     @model_validator(mode='before')
-    def validate_min_max_items(cls, values) -> None:
+    def validate_min_max_items(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         min_items = values.pop('minItems', None)
         if min_items is not None:
             values['minLength'] = min_items
