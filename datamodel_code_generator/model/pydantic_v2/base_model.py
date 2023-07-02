@@ -155,7 +155,11 @@ class DataModelField(DataModelFieldBase):
             data.pop('description', None)  # Description is part of field docstring
 
         if self.const:
+            # const is removed in pydantic 2.0
             data.pop('const')
+
+        # uniqueItems is not supported in pydantic 2.0
+        data.pop('uniqueItems', None)
 
         discriminator = data.pop('discriminator', None)
         if discriminator:
