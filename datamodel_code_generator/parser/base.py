@@ -38,6 +38,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.pydantic_v2.base_model import Constraints
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -712,7 +713,7 @@ class Parser(ABC):
                     continue
 
                 if (
-                    not model_field.constraints
+                    not isinstance(model_field.constraints, Constraints)
                     or not model_field.constraints.unique_items
                 ):
                     continue

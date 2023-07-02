@@ -14,32 +14,25 @@ from typing import (
 
 from pydantic import Field
 
-from datamodel_code_generator.model import (
-    ConstraintsBase,
-)
-from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.model.base import UNDEFINED, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
+)
+from datamodel_code_generator.model.pydantic.base_model import (
+    Constraints as _Constraints,
 )
 from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import UnionIntFloat
 from datamodel_code_generator.util import model_validator
 
 
-class Constraints(ConstraintsBase):
-    gt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMinimum')
-    ge: Optional[UnionIntFloat] = Field(None, alias='minimum')
-    lt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMaximum')
-    le: Optional[UnionIntFloat] = Field(None, alias='maximum')
-    multiple_of: Optional[float] = Field(None, alias='multipleOf')
-    min_length: Optional[int] = Field(None, alias='minLength')
-    max_length: Optional[int] = Field(None, alias='maxLength')
+class Constraints(_Constraints):
+    # To override existing pattern alias
+    regex: Optional[str] = Field(None, alias='regex')
     pattern: Optional[str] = Field(None, alias='pattern')
-    unique_items: Optional[bool] = Field(None, alias='uniqueItems')
 
     @model_validator(mode='before')
     def validate_min_max_items(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -65,7 +58,6 @@ class DataModelField(DataModelFieldV1):
         'max_length',
         'pattern',
     }
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le'}
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
 
@@ -98,7 +90,7 @@ class BaseModel(BaseModelBase):
         self,
         *,
         reference: Reference,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,

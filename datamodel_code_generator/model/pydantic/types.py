@@ -164,7 +164,7 @@ class DataTypeManager(_DataTypeManager):
             self.data_type,
         )
 
-        self.kwargs_schema_to_model: ClassVar[Dict[str, str]] = {
+        self.kwargs_schema_to_model: Dict[str, str] = {
             'exclusiveMinimum': 'gt',
             'minimum': 'ge',
             'exclusiveMaximum': 'lt',

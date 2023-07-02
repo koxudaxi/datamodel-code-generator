@@ -120,7 +120,7 @@ class DataModelField(DataModelFieldBase):
                 return f'lambda :{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}({repr(self.default)})'
         return None
 
-    def _process_data_in_str(self, data: Dict[str, Any]) -> str:
+    def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
             data['const'] = True
 
@@ -194,7 +194,7 @@ class BaseModelBase(DataModel, ABC):
         self,
         *,
         reference: Reference,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
@@ -208,7 +208,7 @@ class BaseModelBase(DataModel, ABC):
         methods: List[str] = [field.method for field in fields if field.method]
 
         super().__init__(
-            fields=fields,  # type: ignore
+            fields=fields,
             reference=reference,
             decorators=decorators,
             base_classes=base_classes,
@@ -250,7 +250,7 @@ class BaseModel(BaseModelBase):
         self,
         *,
         reference: Reference,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
