@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union, Set
+from typing import List, Optional, Set, Union
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel
 
@@ -36,7 +36,7 @@ class User(BaseModel):
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
     uid: UID
-    phones: Optional[List[Phone]] = Field(None, max_items=10)
+    phones: Optional[List[Phone]] = Field(None, max_length=10)
     fax: Optional[List[FaxItem]] = None
     height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
     weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)

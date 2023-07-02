@@ -42,10 +42,12 @@ class Constraints(ConstraintsBase):
 
     @model_validator(mode='before')
     def validate_min_max_items(cls, values) -> None:
-        if 'minItems' in values:
-            values['minLength'] = values.pop('minItems')
-        if 'maxItems' in values:
-            values['maxLength'] = values.pop('maxItems')
+        min_items = values.pop('minItems', None)
+        if min_items is not None:
+            values['minLength'] = min_items
+        max_items = values.pop('maxItems', None)
+        if max_items is not None:
+            values['maxLength'] = max_items
         return values
 
 
@@ -158,8 +160,8 @@ class DataModelField(DataModelFieldBase):
             # const is removed in pydantic 2.0
             data.pop('const')
 
-        # uniqueItems is not supported in pydantic 2.0
-        data.pop('uniqueItems', None)
+        # unique_items is not supported in pydantic 2.0
+        data.pop('unique_items', None)
 
         discriminator = data.pop('discriminator', None)
         if discriminator:
@@ -200,12 +202,6 @@ class DataModelField(DataModelFieldBase):
         if not self.use_annotated or not str(self):
             return None
         return f'Annotated[{self.type_hint}, {str(self)}]'
-
-    def _get_type_hint(self) -> str:
-        if 'uniqueItems' not in self.extras:
-            return super()._get_type_hint()
-        # TODO
-        return ''
 
 
 class ConfigAttribute(NamedTuple):

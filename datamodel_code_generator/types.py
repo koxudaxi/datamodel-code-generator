@@ -40,6 +40,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ABC_SEQUENCE,
     IMPORT_ABC_SET,
     IMPORT_DICT,
+    IMPORT_FROZEN_SET,
     IMPORT_LIST,
     IMPORT_LITERAL,
     IMPORT_LITERAL_BACKPORT,
@@ -378,7 +379,8 @@ class DataType(_BaseModel):
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_SEQUENCE),
-                    (self.is_set, IMPORT_SET)(self.is_dict, IMPORT_MAPPING),
+                    (self.is_set, IMPORT_FROZEN_SET),
+                    (self.is_dict, IMPORT_MAPPING),
                 )
         elif not self.use_standard_collections:
             imports = (

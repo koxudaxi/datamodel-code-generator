@@ -712,7 +712,6 @@ class Parser(ABC):
 
     @classmethod
     def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:
-        return
         for model in models:
             for model_field in model.fields:
                 if not isinstance(model_field, pydantic_v2_model.DataModelField):
@@ -1078,9 +1077,9 @@ class Parser(ABC):
             imports = Imports()
             scoped_model_resolver = ModelResolver()
 
+            self.__replace_unique_list_to_set(models)
             self.__change_from_import(models, imports, scoped_model_resolver, init)
             self.__extract_inherited_enum(models)
-            self.__replace_unique_list_to_set(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models)
