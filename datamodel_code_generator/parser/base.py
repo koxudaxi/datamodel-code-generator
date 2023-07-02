@@ -28,6 +28,7 @@ from pydantic import BaseModel
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model import pydantic_v2 as pydantic_v2_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
@@ -687,6 +688,48 @@ class Parser(ABC):
                 models.remove(model)
 
     @classmethod
+    def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
+        if data_type.is_list:
+            new_data_type = data_type.copy()
+            new_data_type.is_list = False
+            new_data_type.is_set = True
+            for data_type_ in new_data_type.data_types:
+                data_type_.parent = new_data_type
+            return new_data_type
+        elif data_type.data_types:
+            for index, nested_data_type in enumerate(data_type.data_types[:]):
+                set_data_type = cls._create_set_from_list(nested_data_type)
+                if set_data_type:
+                    data_type.data_types[index] = set_data_type
+            return data_type
+
+
+        # elif data_type.reference:
+        #     if not isinstance(data_type.reference.source, DataType):
+        #        return None
+        #     set_data_type = cls._create_set_from_list(data_type.reference.source)
+        #     if set_data_type:
+        #         data_type.reference.
+
+
+
+    @classmethod
+    def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:
+        return
+        for model in models:
+            for model_field in model.fields:
+                if not isinstance(model_field, pydantic_v2_model.DataModelField):
+                    continue
+
+                if not model_field.constraints or not model_field.constraints.unique_items:
+                    continue
+                set_data_type = cls._create_set_from_list(model_field.data_type)
+                if set_data_type:
+                    model_field.data_type = set_data_type
+                    set_data_type.parent = model_field
+
+
+    @classmethod
     def __set_reference_default_value_to_field(cls, models: List[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
@@ -1038,6 +1081,7 @@ class Parser(ABC):
 
             self.__change_from_import(models, imports, scoped_model_resolver, init)
             self.__extract_inherited_enum(models)
+            self.__replace_unique_list_to_set(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models)
