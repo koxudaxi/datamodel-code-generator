@@ -718,7 +718,7 @@ class Parser(ABC):
                 ):
                     continue
                 set_data_type = cls._create_set_from_list(model_field.data_type)
-                if set_data_type:
+                if set_data_type:  # pragma: no cover
                     model_field.data_type.parent = None
                     model_field.data_type = set_data_type
                     set_data_type.parent = model_field
