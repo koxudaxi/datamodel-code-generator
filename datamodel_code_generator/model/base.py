@@ -96,9 +96,12 @@ class DataModelFieldBase(_BaseModel):
                 self.required = False
                 self.nullable = False
 
+    def _get_type_hint(self) -> str:
+        return self.data_type.type_hint
+
     @property
     def type_hint(self) -> str:
-        type_hint = self.data_type.type_hint
+        type_hint = self._get_type_hint()
 
         if not type_hint:
             return NONE

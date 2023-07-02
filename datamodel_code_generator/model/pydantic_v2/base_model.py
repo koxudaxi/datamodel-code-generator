@@ -201,6 +201,12 @@ class DataModelField(DataModelFieldBase):
             return None
         return f'Annotated[{self.type_hint}, {str(self)}]'
 
+    def _get_type_hint(self) -> str:
+        if 'uniqueItems' not in self.extras:
+            return super()._get_type_hint()
+        # TODO
+        return ''
+
 
 class ConfigAttribute(NamedTuple):
     from_: str
