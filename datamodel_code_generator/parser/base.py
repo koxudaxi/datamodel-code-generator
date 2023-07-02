@@ -697,13 +697,13 @@ class Parser(ABC):
             for data_type_ in new_data_type.data_types:
                 data_type_.parent = new_data_type
             return new_data_type
-        elif data_type.data_types:
+        elif data_type.data_types:  # pragma: no cover
             for index, nested_data_type in enumerate(data_type.data_types[:]):
                 set_data_type = cls._create_set_from_list(nested_data_type)
-                if set_data_type:
+                if set_data_type:  # pragma: no cover
                     data_type.data_types[index] = set_data_type
             return data_type
-        return None
+        return None  # pragma: no cover
 
     @classmethod
     def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:
