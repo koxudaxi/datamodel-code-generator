@@ -703,13 +703,6 @@ class Parser(ABC):
                     data_type.data_types[index] = set_data_type
             return data_type
 
-        # elif data_type.reference:
-        #     if not isinstance(data_type.reference.source, DataType):
-        #        return None
-        #     set_data_type = cls._create_set_from_list(data_type.reference.source)
-        #     if set_data_type:
-        #         data_type.reference.
-
     @classmethod
     def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:
         for model in models:
@@ -724,6 +717,7 @@ class Parser(ABC):
                     continue
                 set_data_type = cls._create_set_from_list(model_field.data_type)
                 if set_data_type:
+                    model_field.data_type.parent = None
                     model_field.data_type = set_data_type
                     set_data_type.parent = model_field
 
