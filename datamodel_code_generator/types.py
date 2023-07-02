@@ -38,6 +38,7 @@ from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
+    IMPORT_ABC_SET,
     IMPORT_DICT,
     IMPORT_LIST,
     IMPORT_LITERAL,
@@ -45,8 +46,9 @@ from datamodel_code_generator.imports import (
     IMPORT_MAPPING,
     IMPORT_OPTIONAL,
     IMPORT_SEQUENCE,
+    IMPORT_SET,
     IMPORT_UNION,
-    Import, IMPORT_ABC_SET, IMPORT_SET,
+    Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import (
@@ -376,8 +378,7 @@ class DataType(_BaseModel):
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_SEQUENCE),
-                    (self.is_set, IMPORT_SET)
-                    (self.is_dict, IMPORT_MAPPING),
+                    (self.is_set, IMPORT_SET)(self.is_dict, IMPORT_MAPPING),
                 )
         elif not self.use_standard_collections:
             imports = (

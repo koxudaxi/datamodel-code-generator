@@ -703,15 +703,12 @@ class Parser(ABC):
                     data_type.data_types[index] = set_data_type
             return data_type
 
-
         # elif data_type.reference:
         #     if not isinstance(data_type.reference.source, DataType):
         #        return None
         #     set_data_type = cls._create_set_from_list(data_type.reference.source)
         #     if set_data_type:
         #         data_type.reference.
-
-
 
     @classmethod
     def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:
@@ -721,13 +718,15 @@ class Parser(ABC):
                 if not isinstance(model_field, pydantic_v2_model.DataModelField):
                     continue
 
-                if not model_field.constraints or not model_field.constraints.unique_items:
+                if (
+                    not model_field.constraints
+                    or not model_field.constraints.unique_items
+                ):
                     continue
                 set_data_type = cls._create_set_from_list(model_field.data_type)
                 if set_data_type:
                     model_field.data_type = set_data_type
                     set_data_type.parent = model_field
-
 
     @classmethod
     def __set_reference_default_value_to_field(cls, models: List[DataModel]) -> None:
