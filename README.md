@@ -328,7 +328,8 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX]
                          [--remove-special-field-name-prefix]
                          [--use-subclass-enum] [--class-name CLASS_NAME]
-                         [--use-title-as-name]
+                         [--use-title-as-name] [--use-operation-id-as-name]
+                         [--use-unique-items-as-set]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
@@ -434,6 +435,9 @@ options:
   --class-name CLASS_NAME
                         Set class name of root model
   --use-title-as-name   use titles as class names of models
+  --use-unique-items-as-set
+                        define field type as `set` when the field attribute
+                        has `uniqueItems`
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
   --extra-template-data EXTRA_TEMPLATE_DATA

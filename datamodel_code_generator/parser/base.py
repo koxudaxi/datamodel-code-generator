@@ -38,7 +38,6 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
-from datamodel_code_generator.model.pydantic_v2.base_model import Constraints
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -355,6 +354,7 @@ class Parser(ABC):
         wrap_string_literal: Optional[bool] = None,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
+        use_unique_items_as_set: bool = False,
         http_headers: Optional[Sequence[Tuple[str, str]]] = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
@@ -424,6 +424,7 @@ class Parser(ABC):
         self.current_source_path: Optional[Path] = None
         self.use_title_as_name: bool = use_title_as_name
         self.use_operation_id_as_name: bool = use_operation_id_as_name
+        self.use_unique_items_as_set: bool = use_unique_items_as_set
 
         if base_path:
             self.base_path = base_path
@@ -705,19 +706,20 @@ class Parser(ABC):
             return data_type
         return None  # pragma: no cover
 
-    @classmethod
-    def __replace_unique_list_to_set(cls, models: List[DataModel]) -> None:
+    def __replace_unique_list_to_set(self, models: List[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
-                if not isinstance(model_field, pydantic_v2_model.DataModelField):
-                    continue
-
-                if (
-                    not isinstance(model_field.constraints, Constraints)
-                    or not model_field.constraints.unique_items
+                if not (
+                    isinstance(model_field, pydantic_v2_model.DataModelField)
+                    or self.use_unique_items_as_set
                 ):
                     continue
-                set_data_type = cls._create_set_from_list(model_field.data_type)
+
+                if not (
+                    model_field.constraints and model_field.constraints.unique_items
+                ):
+                    continue
+                set_data_type = self._create_set_from_list(model_field.data_type)
                 if set_data_type:  # pragma: no cover
                     model_field.data_type.parent = None
                     model_field.data_type = set_data_type
