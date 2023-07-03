@@ -21,6 +21,7 @@ from typing import (
 from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
+from pydantic import Field
 
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
@@ -47,6 +48,7 @@ ALL_MODEL: str = '#all#'
 
 
 class ConstraintsBase(_BaseModel):
+    unique_items: Optional[bool] = Field(None, alias='uniqueItems')
     _exclude_fields: ClassVar[Set[str]] = {'has_constraints'}
     if PYDANTIC_V2:
         model_config = ConfigDict(

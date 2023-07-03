@@ -783,6 +783,11 @@ def test_validation_failed():
     'output_model,expected_output, args',
     [
         ('pydantic.BaseModel', 'main_with_field_constraints', []),
+        (
+            'pydantic.BaseModel',
+            'main_with_field_constraints_use_unique_items_as_set',
+            ['--use-unique-items-as-set'],
+        ),
         ('pydantic_v2.BaseModel', 'main_with_field_constraints_pydantic_v2', []),
         (
             'pydantic_v2.BaseModel',

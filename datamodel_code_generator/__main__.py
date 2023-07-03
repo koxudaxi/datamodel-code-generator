@@ -392,6 +392,13 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    '--use-unique-items-as-set',
+    help='define field type as `set` when the field attribute has `uniqueItems`',
+    action='store_true',
+    default=None,
+)
+
+arg_parser.add_argument(
     '--custom-template-dir', help='Custom template directory', type=str
 )
 arg_parser.add_argument(
@@ -638,6 +645,7 @@ class Config(BaseModel):
     wrap_string_literal: Optional[bool] = None
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
+    use_unique_items_as_set: bool = False
     http_headers: Optional[Sequence[Tuple[str, str]]] = None
     http_ignore_tls: bool = False
     use_annotated: bool = False
@@ -800,6 +808,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             wrap_string_literal=config.wrap_string_literal,
             use_title_as_name=config.use_title_as_name,
             use_operation_id_as_name=config.use_operation_id_as_name,
+            use_unique_items_as_set=config.use_unique_items_as_set,
             http_headers=config.http_headers,
             http_ignore_tls=config.http_ignore_tls,
             use_annotated=config.use_annotated,

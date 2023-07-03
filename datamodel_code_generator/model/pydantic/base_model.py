@@ -30,7 +30,6 @@ class Constraints(ConstraintsBase):
     min_length: Optional[int] = Field(None, alias='minLength')
     max_length: Optional[int] = Field(None, alias='maxLength')
     regex: Optional[str] = Field(None, alias='pattern')
-    unique_items: Optional[bool] = Field(None, alias='uniqueItems')
 
 
 class DataModelField(DataModelFieldBase):
