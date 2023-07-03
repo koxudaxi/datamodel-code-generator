@@ -10,20 +10,20 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/jsonschema/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/what_is_the_difference_between_v1_and_v2/">
       
       
-        <link rel="prev" href="../openapi/">
+        <link rel="prev" href="../supported-data-types/">
       
       
-        <link rel="next" href="../jsondata/">
+        <link rel="next" href="../openapi/">
       
       <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.17">
     
     
       
-        <title>Generate from JSON Schema - datamodel-code-generator</title>
+        <title>What is the difference between pydantic v1 and v2 output model - datamodel-code-generator</title>
       
     
     
@@ -71,7 +71,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#generate-from-json-schema" class="md-skip">
+        <a href="#what-is-the-difference-between-pydantic-v1-and-v2-output-model" class="md-skip">
           Skip to content
         </a>
       
@@ -106,7 +106,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Generate from JSON Schema
+              What is the difference between pydantic v1 and v2 output model
             
           </span>
         </div>
@@ -275,11 +275,86 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../what_is_the_difference_between_v1_and_v2/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          What is the difference between pydantic v1 and v2 output model
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         What is the difference between pydantic v1 and v2 output model
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    Summary
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-changes-in-v2-output" class="md-nav__link">
+    What's changes in v2 output?
+  </a>
+  
+    <nav class="md-nav" aria-label="What's changes in v2 output?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__root__-field-aka-custom-root-types" class="md-nav__link">
+    __root__ field (a.k.a Custom Root Types)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pydanticfield" class="md-nav__link">
+    pydantic.Field
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-config" class="md-nav__link">
+    Model Config
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -303,52 +378,11 @@
               
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          Generate from JSON Schema
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../jsonschema/" class="md-nav__link">
         Generate from JSON Schema
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    Example
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -486,9 +520,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    Example
+  <a href="#summary" class="md-nav__link">
+    Summary
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-changes-in-v2-output" class="md-nav__link">
+    What's changes in v2 output?
+  </a>
+  
+    <nav class="md-nav" aria-label="What's changes in v2 output?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__root__-field-aka-custom-root-types" class="md-nav__link">
+    __root__ field (a.k.a Custom Root Types)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pydanticfield" class="md-nav__link">
+    pydantic.Field
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-config" class="md-nav__link">
+    Model Config
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -510,62 +578,31 @@
   
 
 
-<h1 id="generate-from-json-schema">Generate from JSON Schema</h1>
-<p>The code generator can create pydantic models from JSON Schema. See more information about supported JSON Schema data types and features <a href="../supported-data-types/#openapi-3-and-json-schema">here</a>.</p>
-<h2 id="example">Example</h2>
-<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w">  </span>--input<span class="w"> </span>person.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output<span class="w"> </span>model.py
-</code></pre></div>
-
-<p><strong>person.json</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Person&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;firstName&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The person&#39;s first name.&quot;</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;lastName&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The person&#39;s last name.&quot;</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;age&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Age in years which must be equal to or greater than zero.&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integer&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;minimum&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;friends&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;array&quot;</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;null&quot;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p><strong>model.py</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># generated by datamodel-codegen:</span>
-<span class="c1">#   filename:  person.json</span>
-<span class="c1">#   timestamp: 2020-04-27T16:12:27+00:00</span>
-
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
-
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
-
-<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">conint</span>
-
-
-<span class="k">class</span> <span class="nc">Person</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">firstName</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The person&#39;s first name.&quot;</span><span class="p">)</span>
-    <span class="n">lastName</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The person&#39;s last name.&quot;</span><span class="p">)</span>
-    <span class="n">age</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">conint</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Age in years which must be equal to or greater than zero.&#39;</span>
-    <span class="p">)</span>
-    <span class="n">friends</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">comment</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</code></pre></div>
+<h1 id="what-is-the-difference-between-pydantic-v1-and-v2-output-model">What is the difference between pydantic v1 and v2 output model?</h1>
+<h2 id="summary">Summary</h2>
+<p>datamodel-code-generator supports Pydantic v1 and v2 as output model type.</p>
+<p>Pydantic v2 is a major release with many breaking changes. See the migration guide for more information:
+https://docs.pydantic.dev/2.0/migration/</p>
+<h2 id="whats-changes-in-v2-output">What's changes in v2 output?</h2>
+<h3 id="__root__-field-aka-custom-root-types"><code>__root__</code> field (a.k.a <a href="https://docs.pydantic.dev/1.10/usage/models/#custom-root-types">Custom Root Types</a>)</h3>
+<p><code>__root__</code> field (a.k.a <a href="https://docs.pydantic.dev/1.10/usage/models/#custom-root-types">Custom Root Types</a>) is removed in pydantic v2.
+The model is changed to <a href="https://docs.pydantic.dev/latest/usage/models/#rootmodel-and-custom-root-types">RootModel</a></p>
+<h3 id="pydanticfield">pydantic.Field</h3>
+<p>https://docs.pydantic.dev/2.0/migration/#changes-to-pydanticfield</p>
+<ul>
+<li>const -&gt; removed</li>
+<li>min_items (use min_length instead)</li>
+<li>max_items (use max_length instead)</li>
+<li>unique_items -&gt; removed and the list type will be replaced by <code>typing.Set</code>. this feature is discussed in https://github.com/pydantic/pydantic-core/issues/296</li>
+<li>allow_mutation (use frozen instead)</li>
+<li>regex (use pattern instead)</li>
+</ul>
+<h3 id="model-config">Model Config</h3>
+<ul>
+<li><code>pydantic.Config</code> -&gt; <code>pydantic.ConfigDict</code> </li>
+<li>allow_mutation —&gt; frozen (inverse value for getting same behavior).</li>
+<li>allow_population_by_field_name → populate_by_name</li>
+</ul>
 
 
 
