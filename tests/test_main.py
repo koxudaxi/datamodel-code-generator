@@ -551,7 +551,22 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_extra_template_data_config',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_extra_template_data_config_pydantic_v2',
+        ),
+    ],
+)
+def test_main_extra_template_data_config(
+    capsys: CaptureFixture, output_model, expected_output
+) -> None:
     """Test main function with custom config data in extra template."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
@@ -564,15 +579,14 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
                 str(input_filename),
                 '--extra-template-data',
                 str(extra_template_data),
+                '--output-model',
+                output_model,
             ]
         )
 
     captured = capsys.readouterr()
     assert (
-        captured.out
-        == (
-            EXPECTED_MAIN_PATH / 'main_extra_template_data_config' / 'output.py'
-        ).read_text()
+        captured.out == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -765,8 +779,27 @@ def test_validation_failed():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output, args',
+    [
+        ('pydantic.BaseModel', 'main_with_field_constraints', []),
+        ('pydantic_v2.BaseModel', 'main_with_field_constraints_pydantic_v2', []),
+        (
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_generic_container_types',
+            ['--use-generic-container-types'],
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_standard_collections',
+            [
+                '--use-standard-collections',
+            ],
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_with_field_constraints():
+def test_main_with_field_constraints(output_model, expected_output, args):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -776,19 +809,33 @@ def test_main_with_field_constraints():
                 '--output',
                 str(output_file),
                 '--field-constraints',
+                '--output-model-type',
+                output_model,
+                *args,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_with_field_constraints' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_without_field_constraints',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_without_field_constraints_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_without_field_constraints():
+def test_main_without_field_constraints(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -797,14 +844,14 @@ def test_main_without_field_constraints():
                 str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
                 '--output',
                 str(output_file),
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_without_field_constraints' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -960,8 +1007,21 @@ def test_enable_version_header():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'allow_population_by_field_name',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'allow_population_by_field_name_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_allow_population_by_field_name():
+def test_allow_population_by_field_name(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -971,19 +1031,32 @@ def test_allow_population_by_field_name():
                 '--output',
                 str(output_file),
                 '--allow-population-by-field-name',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'allow_population_by_field_name' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'allow_extra_fields',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'allow_extra_fields_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_allow_extra_fields():
+def test_allow_extra_fields(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -993,17 +1066,32 @@ def test_allow_extra_fields():
                 '--output',
                 str(output_file),
                 '--allow-extra-fields',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'allow_extra_fields' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'enable_faux_immutability',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'enable_faux_immutability_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_enable_faux_immutability():
+def test_enable_faux_immutability(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1013,14 +1101,14 @@ def test_enable_faux_immutability():
                 '--output',
                 str(output_file),
                 '--enable-faux-immutability',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'enable_faux_immutability' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -2512,8 +2600,21 @@ def test_main_openapi_nullable_strict_nullable():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_pattern',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_pattern_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_pattern():
+def test_main_openapi_pattern(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2524,11 +2625,13 @@ def test_main_openapi_pattern():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--output-model-type',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-            EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py'
+            EXPECTED_MAIN_PATH / expected_output / 'output.py'
         ).read_text().replace('pattern.json', 'pattern.yaml')
 
 
@@ -3488,8 +3591,21 @@ def test_main_jsonschema_field_extras():
     not isort.__version__.startswith('4.'),
     reason="isort 5.x don't sort pydantic modules",
 )
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_custom_type_path',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_custom_type_path_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_custom_type_path():
+def test_main_jsonschema_custom_type_path(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3500,14 +3616,14 @@ def test_main_jsonschema_custom_type_path():
                 str(output_file),
                 '--input-file-type',
                 'jsonschema',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema_custom_type_path' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4320,8 +4436,21 @@ def test_main_jsonschema_nullable_object():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_const',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_openapi_const_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_const():
+def test_main_openapi_const(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -4332,12 +4461,14 @@ def test_main_openapi_const():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_openapi_const' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -5271,4 +5402,25 @@ def test_main_custom_file_header_duplicate_options(capsys):
         assert (
             captured.err
             == '`--custom_file_header_path` can not be used with `--custom_file_header`.\n'
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_pydantic_v2():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
         )

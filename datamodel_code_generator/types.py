@@ -38,13 +38,16 @@ from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
+    IMPORT_ABC_SET,
     IMPORT_DICT,
+    IMPORT_FROZEN_SET,
     IMPORT_LIST,
     IMPORT_LITERAL,
     IMPORT_LITERAL_BACKPORT,
     IMPORT_MAPPING,
     IMPORT_OPTIONAL,
     IMPORT_SEQUENCE,
+    IMPORT_SET,
     IMPORT_UNION,
     Import,
 )
@@ -75,11 +78,14 @@ NONE = 'None'
 ANY = 'Any'
 LITERAL = 'Literal'
 SEQUENCE = 'Sequence'
+FROZEN_SET = 'FrozenSet'
 MAPPING = 'Mapping'
 DICT = 'Dict'
+SET = 'Set'
 LIST = 'List'
 STANDARD_DICT = 'dict'
 STANDARD_LIST = 'list'
+STANDARD_SET = 'set'
 STR = 'str'
 
 NOT_REQUIRED = 'NotRequired'
@@ -247,6 +253,7 @@ class DataType(_BaseModel):
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
+    is_set: bool = False
     is_custom_type: bool = False
     literals: List[Union[StrictBool, StrictInt, StrictStr]] = []
     use_standard_collections: bool = False
@@ -269,6 +276,7 @@ class DataType(_BaseModel):
         is_optional: bool = False,
         is_dict: bool = False,
         is_list: bool = False,
+        is_set: bool = False,
         is_custom_type: bool = False,
         strict: bool = False,
         kwargs: Optional[Dict[str, Any]] = None,
@@ -279,6 +287,7 @@ class DataType(_BaseModel):
             is_optional=is_optional,
             is_dict=is_dict,
             is_list=is_list,
+            is_set=is_set,
             is_func=True if kwargs else False,
             is_custom_type=is_custom_type,
             strict=strict,
@@ -363,18 +372,21 @@ class DataType(_BaseModel):
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_ABC_SEQUENCE),
+                    (self.is_set, IMPORT_ABC_SET),
                     (self.is_dict, IMPORT_ABC_MAPPING),
                 )
             else:
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_SEQUENCE),
+                    (self.is_set, IMPORT_FROZEN_SET),
                     (self.is_dict, IMPORT_MAPPING),
                 )
         elif not self.use_standard_collections:
             imports = (
                 *imports,
                 (self.is_list, IMPORT_LIST),
+                (self.is_set, IMPORT_SET),
                 (self.is_dict, IMPORT_DICT),
             )
         for field, import_ in imports:
@@ -452,6 +464,14 @@ class DataType(_BaseModel):
             else:
                 list_ = LIST
             type_ = f'{list_}[{type_}]' if type_ else list_
+        elif self.is_set:
+            if self.use_generic_container:
+                set_ = FROZEN_SET
+            elif self.use_standard_collections:
+                set_ = STANDARD_SET
+            else:
+                set_ = SET
+            type_ = f'{set_}[{type_}]' if type_ else set_
         elif self.is_dict:
             if self.use_generic_container:
                 dict_ = MAPPING

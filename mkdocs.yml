@@ -20,6 +20,7 @@ nav:
     - Overview: index.md
     - Support data types: supported-data-types.md
     - Usage:
+      - What is the difference between pydantic v1 and v2 output model: what_is_the_difference_between_v1_and_v2.md
       - Generate from OpenAPI: openapi.md
       - Generate from JSON Schema: jsonschema.md
       - Generate from JSON Data: jsondata.md

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
@@ -50,6 +51,7 @@ class DataModelField(DataModelFieldBase):
     }
     _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le'}
     constraints: Optional[Constraints] = None
+    _PARSE_METHOD: ClassVar[str] = 'parse_obj'
 
     @property
     def method(self) -> Optional[str]:
@@ -111,12 +113,16 @@ class DataModelField(DataModelFieldBase):
                     and isinstance(data_type.reference.source, BaseModel)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
-                    return f'lambda :[{data_type.alias or data_type.reference.source.class_name}.parse_obj(v) for v in {repr(self.default)}]'
+                    return f'lambda :[{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}(v) for v in {repr(self.default)}]'
             elif data_type.reference and isinstance(
                 data_type.reference.source, BaseModel
             ):  # pragma: no cover
-                return f'lambda :{data_type.alias or data_type.reference.source.class_name}.parse_obj({repr(self.default)})'
+                return f'lambda :{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}({repr(self.default)})'
         return None
+
+    def _process_data_in_str(self, data: Dict[str, Any]) -> None:
+        if self.const:
+            data['const'] = True
 
     def __str__(self) -> str:
         data: Dict[str, Any] = {
@@ -140,8 +146,7 @@ class DataModelField(DataModelFieldBase):
         if self.use_field_description:
             data.pop('description', None)  # Description is part of field docstring
 
-        if self.const:
-            data['const'] = True
+        self._process_data_in_str(data)
 
         discriminator = data.pop('discriminator', None)
         if discriminator:
@@ -184,15 +189,12 @@ class DataModelField(DataModelFieldBase):
         return f'Annotated[{self.type_hint}, {str(self)}]'
 
 
-class BaseModel(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic/BaseModel.jinja2'
-    BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
-
+class BaseModelBase(DataModel, ABC):
     def __init__(
         self,
         *,
         reference: Reference,
-        fields: List[DataModelField],
+        fields: List[DataModelFieldBase],
         decorators: Optional[List[str]] = None,
         base_classes: Optional[List[Reference]] = None,
         custom_base_class: Optional[str] = None,
@@ -206,7 +208,7 @@ class BaseModel(DataModel):
         methods: List[str] = [field.method for field in fields if field.method]
 
         super().__init__(
-            fields=fields,  # type: ignore
+            fields=fields,
             reference=reference,
             decorators=decorators,
             base_classes=base_classes,
@@ -220,6 +222,58 @@ class BaseModel(DataModel):
             nullable=nullable,
         )
 
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        if any(f for f in self.fields if f.field):
+            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
+        return super().imports
+
+    @cached_property
+    def template_file_path(self) -> Path:
+        # This property is for Backward compatibility
+        # Current version supports '{custom_template_dir}/BaseModel.jinja'
+        # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
+        if self._custom_template_dir is not None:
+            custom_template_file_path = (
+                self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
+            )
+            if custom_template_file_path.exists():
+                return custom_template_file_path
+        return super().template_file_path
+
+
+class BaseModel(BaseModelBase):
+    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic/BaseModel.jinja2'
+    BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
+
+    def __init__(
+        self,
+        *,
+        reference: Reference,
+        fields: List[DataModelFieldBase],
+        decorators: Optional[List[str]] = None,
+        base_classes: Optional[List[Reference]] = None,
+        custom_base_class: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[DefaultDict[str, Any]] = None,
+        path: Optional[Path] = None,
+        description: Optional[str] = None,
+        default: Any = UNDEFINED,
+        nullable: bool = False,
+    ) -> None:
+        super().__init__(
+            reference=reference,
+            fields=fields,
+            decorators=decorators,
+            base_classes=base_classes,
+            custom_base_class=custom_base_class,
+            custom_template_dir=custom_template_dir,
+            extra_template_data=extra_template_data,
+            path=path,
+            description=description,
+            default=default,
+            nullable=nullable,
+        )
         config_parameters: Dict[str, Any] = {}
 
         additionalProperties = self.extra_template_data.get('additionalProperties')
@@ -250,22 +304,3 @@ class BaseModel(DataModel):
             from datamodel_code_generator.model.pydantic import Config
 
             self.extra_template_data['config'] = Config.parse_obj(config_parameters)
-
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        if any(f for f in self.fields if f.field):
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
-
-    @cached_property
-    def template_file_path(self) -> Path:
-        # This property is for Backward compatibility
-        # Current version supports '{custom_template_dir}/BaseModel.jinja'
-        # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
-        if self._custom_template_dir is not None:
-            custom_template_file_path = (
-                self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
-            )
-            if custom_template_file_path.exists():
-                return custom_template_file_path
-        return super().template_file_path
