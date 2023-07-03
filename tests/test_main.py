@@ -551,7 +551,22 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_extra_template_data_config',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_extra_template_data_config_pydantic_v2',
+        ),
+    ],
+)
+def test_main_extra_template_data_config(
+    capsys: CaptureFixture, output_model, expected_output
+) -> None:
     """Test main function with custom config data in extra template."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
@@ -564,15 +579,14 @@ def test_main_extra_template_data_config(capsys: CaptureFixture) -> None:
                 str(input_filename),
                 '--extra-template-data',
                 str(extra_template_data),
+                '--output-model',
+                output_model,
             ]
         )
 
     captured = capsys.readouterr()
     assert (
-        captured.out
-        == (
-            EXPECTED_MAIN_PATH / 'main_extra_template_data_config' / 'output.py'
-        ).read_text()
+        captured.out == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -3577,8 +3591,21 @@ def test_main_jsonschema_field_extras():
     not isort.__version__.startswith('4.'),
     reason="isort 5.x don't sort pydantic modules",
 )
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_custom_type_path',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_custom_type_path_pydantic_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_custom_type_path():
+def test_main_jsonschema_custom_type_path(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3589,14 +3616,14 @@ def test_main_jsonschema_custom_type_path():
                 str(output_file),
                 '--input-file-type',
                 'jsonschema',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema_custom_type_path' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 

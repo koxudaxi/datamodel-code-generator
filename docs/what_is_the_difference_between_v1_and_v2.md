@@ -22,6 +22,7 @@ https://docs.pydantic.dev/2.0/migration/#changes-to-pydanticfield
 - regex (use pattern instead)
 
 ### Model Config
+- `pydantic.Config` -> `pydantic.ConfigDict` 
 - allow_mutation —> frozen (inverse value for getting same behavior).
 - allow_population_by_field_name → populate_by_name
 
