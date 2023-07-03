@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Dict, Optional, Sequence, Set, Type
+from typing import Any, ClassVar, Dict, Optional, Sequence, Set, Type
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -51,6 +51,7 @@ from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 def type_map_factory(
     data_type: Type[DataType],
     strict_types: Sequence[StrictTypes],
+    pattern_key: str,
 ) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
@@ -83,7 +84,7 @@ def type_map_factory(
             strict=StrictTypes.str in strict_types,
             # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
             kwargs={
-                'regex': r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
+                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
                 **({'strict': True} if StrictTypes.str in strict_types else {}),
             },
         ),
@@ -109,19 +110,6 @@ def strict_type_map_factory(data_type: Type[DataType]) -> Dict[StrictTypes, Data
     }
 
 
-kwargs_schema_to_model: Dict[str, str] = {
-    'exclusiveMinimum': 'gt',
-    'minimum': 'ge',
-    'exclusiveMaximum': 'lt',
-    'maximum': 'le',
-    'multipleOf': 'multiple_of',
-    'minItems': 'min_items',
-    'maxItems': 'max_items',
-    'minLength': 'min_length',
-    'maxLength': 'max_length',
-    'pattern': 'regex',
-}
-
 number_kwargs: Set[str] = {
     'exclusiveMinimum',
     'minimum',
@@ -146,15 +134,9 @@ escape_characters = str.maketrans(
 )
 
 
-def transform_kwargs(kwargs: Dict[str, Any], filter_: Set[str]) -> Dict[str, str]:
-    return {
-        kwargs_schema_to_model.get(k, k): v
-        for (k, v) in kwargs.items()
-        if v is not None and k in filter_
-    }
-
-
 class DataTypeManager(_DataTypeManager):
+    PATTERN_KEY: ClassVar[str] = 'regex'
+
     def __init__(
         self,
         python_version: PythonVersion = PythonVersion.PY_37,
@@ -176,17 +158,40 @@ class DataTypeManager(_DataTypeManager):
         self.type_map: Dict[Types, DataType] = type_map_factory(
             self.data_type,
             strict_types=self.strict_types,
+            pattern_key=self.PATTERN_KEY,
         )
         self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
             self.data_type,
         )
+
+        self.kwargs_schema_to_model: Dict[str, str] = {
+            'exclusiveMinimum': 'gt',
+            'minimum': 'ge',
+            'exclusiveMaximum': 'lt',
+            'maximum': 'le',
+            'multipleOf': 'multiple_of',
+            'minItems': 'min_items',
+            'maxItems': 'max_items',
+            'minLength': 'min_length',
+            'maxLength': 'max_length',
+            'pattern': self.PATTERN_KEY,
+        }
+
+    def transform_kwargs(
+        self, kwargs: Dict[str, Any], filter_: Set[str]
+    ) -> Dict[str, str]:
+        return {
+            self.kwargs_schema_to_model.get(k, k): v
+            for (k, v) in kwargs.items()
+            if v is not None and k in filter_
+        }
 
     def get_data_int_type(
         self,
         types: Types,
         **kwargs: Any,
     ) -> DataType:
-        data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, number_kwargs)
+        data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.int in self.strict_types
         if data_type_kwargs:
             if not strict:
@@ -217,7 +222,7 @@ class DataTypeManager(_DataTypeManager):
         types: Types,
         **kwargs: Any,
     ) -> DataType:
-        data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        data_type_kwargs = self.transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.float in self.strict_types
         if data_type_kwargs:
             if not strict:
@@ -244,7 +249,7 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_decimal_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs = transform_kwargs(kwargs, number_kwargs)
+        data_type_kwargs = self.transform_kwargs(kwargs, number_kwargs)
         if data_type_kwargs:
             return self.data_type.from_import(
                 IMPORT_CONDECIMAL,
@@ -253,22 +258,24 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_str_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, string_kwargs)
+        data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, string_kwargs)
         strict = StrictTypes.str in self.strict_types
         if data_type_kwargs:
             if strict:
                 data_type_kwargs['strict'] = True
-            if 'regex' in data_type_kwargs:
-                escaped_regex = data_type_kwargs['regex'].translate(escape_characters)
+            if self.PATTERN_KEY in data_type_kwargs:
+                escaped_regex = data_type_kwargs[self.PATTERN_KEY].translate(
+                    escape_characters
+                )
                 # TODO: remove unneeded escaped characters
-                data_type_kwargs['regex'] = f"r'{escaped_regex}'"
+                data_type_kwargs[self.PATTERN_KEY] = f"r'{escaped_regex}'"
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
         if strict:
             return self.strict_type_map[StrictTypes.str]
         return self.type_map[types]
 
     def get_data_bytes_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs: Dict[str, Any] = transform_kwargs(kwargs, byes_kwargs)
+        data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, byes_kwargs)
         strict = StrictTypes.bytes in self.strict_types
         if data_type_kwargs:
             if not strict:
