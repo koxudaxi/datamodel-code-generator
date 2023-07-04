@@ -578,6 +578,7 @@
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">TemporaryDirectory</span>
 <span class="kn">from</span> <span class="nn">datamodel_code_generator</span> <span class="kn">import</span> <span class="n">InputFileType</span><span class="p">,</span> <span class="n">generate</span>
+<span class="kn">from</span> <span class="nn">datamodel_code_generator</span> <span class="kn">import</span> <span class="n">DataModelType</span>
 
 <span class="n">json_schema</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;{</span>
 <span class="s2">    &quot;type&quot;: &quot;object&quot;,</span>
@@ -598,6 +599,8 @@
         <span class="n">input_file_type</span><span class="o">=</span><span class="n">InputFileType</span><span class="o">.</span><span class="n">JsonSchema</span><span class="p">,</span>
         <span class="n">input_filename</span><span class="o">=</span><span class="s2">&quot;example.json&quot;</span><span class="p">,</span>
         <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">,</span>
+        <span class="c1"># set up the output model types</span>
+        <span class="n">output_model_type</span><span class="o">=</span><span class="n">DataModelType</span><span class="o">.</span><span class="n">PydanticV2BaseModel</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
@@ -608,6 +611,61 @@
 <span class="c1">#   filename:  example.json</span>
 <span class="c1">#   timestamp: 2020-12-21T08:01:06+00:00</span>
 
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+
+<span class="k">class</span> <span class="nc">StreetType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">Street</span> <span class="o">=</span> <span class="s1">&#39;Street&#39;</span>
+    <span class="n">Avenue</span> <span class="o">=</span> <span class="s1">&#39;Avenue&#39;</span>
+    <span class="n">Boulevard</span> <span class="o">=</span> <span class="s1">&#39;Boulevard&#39;</span>
+
+
+<span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">number</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">street_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">street_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StreetType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+<p>Also, you can call parser directly</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">datamodel_code_generator</span> <span class="kn">import</span> <span class="n">DataModelType</span><span class="p">,</span> <span class="n">PythonVersion</span>
+<span class="kn">from</span> <span class="nn">datamodel_code_generator.model</span> <span class="kn">import</span> <span class="n">get_data_model_types</span>
+<span class="kn">from</span> <span class="nn">datamodel_code_generator.parser.jsonschema</span> <span class="kn">import</span> <span class="n">JsonSchemaParser</span>
+
+<span class="n">json_schema</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;{</span>
+<span class="s2">    &quot;type&quot;: &quot;object&quot;,</span>
+<span class="s2">    &quot;properties&quot;: {</span>
+<span class="s2">        &quot;number&quot;: {&quot;type&quot;: &quot;number&quot;},</span>
+<span class="s2">        &quot;street_name&quot;: {&quot;type&quot;: &quot;string&quot;},</span>
+<span class="s2">        &quot;street_type&quot;: {&quot;type&quot;: &quot;string&quot;,</span>
+<span class="s2">                        &quot;enum&quot;: [&quot;Street&quot;, &quot;Avenue&quot;, &quot;Boulevard&quot;]</span>
+<span class="s2">                        }</span>
+<span class="s2">    }</span>
+<span class="s2">}&quot;&quot;&quot;</span>
+
+
+<span class="n">data_model_types</span> <span class="o">=</span> <span class="n">get_data_model_types</span><span class="p">(</span>
+    <span class="n">DataModelType</span><span class="o">.</span><span class="n">PydanticV2BaseModel</span><span class="p">,</span>
+    <span class="n">target_python_version</span><span class="o">=</span><span class="n">PythonVersion</span><span class="o">.</span><span class="n">PY_311</span>
+<span class="p">)</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">JsonSchemaParser</span><span class="p">(</span>
+   <span class="n">json_schema</span><span class="p">,</span>
+   <span class="n">data_model_type</span><span class="o">=</span><span class="n">data_model_types</span><span class="o">.</span><span class="n">data_model</span><span class="p">,</span>
+   <span class="n">data_model_root_type</span><span class="o">=</span><span class="n">data_model_types</span><span class="o">.</span><span class="n">root_model</span><span class="p">,</span>
+   <span class="n">data_model_field_type</span><span class="o">=</span><span class="n">data_model_types</span><span class="o">.</span><span class="n">field_model</span><span class="p">,</span>
+   <span class="n">data_type_manager_type</span><span class="o">=</span><span class="n">data_model_types</span><span class="o">.</span><span class="n">data_type_manager</span><span class="p">,</span>
+   <span class="n">dump_resolve_reference_action</span><span class="o">=</span><span class="n">data_model_types</span><span class="o">.</span><span class="n">dump_resolve_reference_action</span><span class="p">,</span>
+                       <span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+ <span class="err">```</span>
+
+<span class="n">The</span> <span class="n">result</span> <span class="n">of</span> <span class="err">`</span><span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="err">`</span><span class="p">:</span>
+<span class="err">```</span><span class="n">python</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
