@@ -436,12 +436,12 @@ def test_main_json_array_include_null():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_null_and_array',
+            'pydantic.BaseModel',
+            'main_null_and_array',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_null_and_array_v2',
+            'pydantic_v2.BaseModel',
+            'main_null_and_array_v2',
         ),
     ],
 )
@@ -458,7 +458,7 @@ def test_main_null_and_array(output_model, expected_output):
                 '--input-file-type',
                 'jsonschema',
                 '--output-model',
-                output_model
+                output_model,
             ]
         )
         assert return_code == Exit.OK
