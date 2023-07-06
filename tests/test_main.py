@@ -432,8 +432,21 @@ def test_main_json_array_include_null():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_null_and_array',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_null_and_array_v2',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_null_and_array():
+def test_main_null_and_array(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -444,12 +457,14 @@ def test_main_null_and_array():
                 str(output_file),
                 '--input-file-type',
                 'jsonschema',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_null_and_array' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
