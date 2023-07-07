@@ -4,3 +4,4 @@
   entry: datamodel-codegen
   language: python
   require_serial: true
+  pass_filenames: false
