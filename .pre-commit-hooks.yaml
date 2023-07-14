@@ -1,0 +1,7 @@
+- id: datamodel-code-generator
+  name: datamodel-code-generator
+  description: "Pydantic model and dataclasses.dataclass generator for easy conversion of JSON, OpenAPI, JSON Schema, and YAML data sources"
+  entry: datamodel-codegen
+  language: python
+  require_serial: true
+  pass_filenames: false
