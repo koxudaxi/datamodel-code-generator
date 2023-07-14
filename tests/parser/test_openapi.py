@@ -729,3 +729,18 @@ def test_openapi_parser_with_query_parameters():
             / 'output.py'
         ).read_text()
     )
+
+
+def test_additional_imports():
+    """Test that additional imports are inside imports container."""
+    new_parser = OpenAPIParser(source='', additional_imports=['collections.deque'])
+    assert len(new_parser.imports) == 1
+    assert new_parser.imports['collections'] == {'deque'}
+
+
+def test_no_additional_imports():
+    """Test that not additional imports are not affecting imports container."""
+    new_parser = OpenAPIParser(
+        source='',
+    )
+    assert len(new_parser.imports) == 0

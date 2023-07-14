@@ -214,3 +214,21 @@ class D(DataModel):
 
     def render(self) -> str:
         return self._data
+
+
+def test_additional_imports():
+    """Test that additional imports are inside imports container."""
+    new_parser = C(
+        source='',
+        additional_imports=['collections.deque'],
+    )
+    assert len(new_parser.imports) == 1
+    assert new_parser.imports['collections'] == {'deque'}
+
+
+def test_no_additional_imports():
+    """Test that not additional imports are not affecting imports container."""
+    new_parser = C(
+        source='',
+    )
+    assert len(new_parser.imports) == 0

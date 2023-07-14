@@ -314,6 +314,7 @@ class Parser(ABC):
         data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: Optional[str] = None,
+        additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
         target_python_version: PythonVersion = PythonVersion.PY_37,
@@ -380,7 +381,10 @@ class Parser(ABC):
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
+
         self.imports: Imports = Imports()
+        self._append_additional_imports(additional_imports=additional_imports)
+
         self.base_class: Optional[str] = base_class
         self.target_python_version: PythonVersion = target_python_version
         self.results: List[DataModel] = []
@@ -503,6 +507,16 @@ class Parser(ABC):
                     self.source.geturl(), default_factory=self._get_text_from_url
                 ),
             )
+
+    def _append_additional_imports(
+        self, additional_imports: Optional[List[str]]
+    ) -> None:
+        if additional_imports is None:
+            additional_imports = []
+
+        for additional_import_string in additional_imports:
+            new_import = Import.from_full_path(additional_import_string)
+            self.imports.append(new_import)
 
     def _get_text_from_url(self, url: str) -> str:
         from datamodel_code_generator.http import get_body
