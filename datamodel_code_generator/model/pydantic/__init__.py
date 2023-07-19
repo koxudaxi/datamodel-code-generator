@@ -23,6 +23,7 @@ class Config(_BaseModel):
     allow_extra_fields: Optional[bool] = None
     allow_mutation: Optional[bool] = None
     arbitrary_types_allowed: Optional[bool] = None
+    orm_mode: Optional[bool] = None
 
 
 # def get_validator_template() -> Template:
