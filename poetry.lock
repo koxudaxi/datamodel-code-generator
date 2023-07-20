@@ -1035,13 +1035,13 @@ six = "*"
 
 [[package]]
 name = "pysnooper"
-version = "1.1.1"
+version = "1.2.0"
 description = "A poor man's debugger for Python."
 optional = false
 python-versions = "*"
 files = [
-    {file = "PySnooper-1.1.1-py2.py3-none-any.whl", hash = "sha256:378f13d731a3e04d3d0350e5f295bdd0f1b49fc8a8b8bf2067fe1e5290bd20be"},
-    {file = "PySnooper-1.1.1.tar.gz", hash = "sha256:d17dc91cca1593c10230dce45e46b1d3ff0f8910f0c38e941edf6ba1260b3820"},
+    {file = "PySnooper-1.2.0-py2.py3-none-any.whl", hash = "sha256:aa859aa9a746cffc1f35e4ee469d49c3cc5185b5fc0c571feb3af3c94d2eb625"},
+    {file = "PySnooper-1.2.0.tar.gz", hash = "sha256:810669e162a250a066d8662e573adbc5af770e937c5b5578f28bb7355d1c859b"},
 ]
 
 [package.extras]
@@ -1527,4 +1527,4 @@ http = ["httpx"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "869f8de98cd83f791007b3de2020e83aa526292daefd1c379c942d506c80fcc5"
+content-hash = "74520e358091126fa9e31ce4a6e41573d6af7c4cf206cc040d66a91cfaa91b48"
