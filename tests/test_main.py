@@ -4340,6 +4340,31 @@ def test_main_collapse_root_models_field_constraints():
 
 
 @freeze_time('2019-07-26')
+def test_main_collapse_root_models_with_references_to_flat_types():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'flat_type.jsonschema'),
+                '--output',
+                str(output_file),
+                '--collapse-root-models',
+            ]
+        )
+
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_collapse_root_models_with_references_to_flat_types'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
 def test_main_openapi_max_items_enum():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

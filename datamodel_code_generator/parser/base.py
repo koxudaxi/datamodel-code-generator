@@ -868,7 +868,9 @@ class Parser(ABC):
                     data_type.remove_reference()
 
                     root_type_model.reference.children = [
-                        c for c in root_type_model.reference.children if c.parent
+                        c
+                        for c in root_type_model.reference.children
+                        if getattr(c, 'parent', None)
                     ]
 
                     if not root_type_model.reference.children:
