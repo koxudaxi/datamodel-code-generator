@@ -5346,6 +5346,41 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
+def test_main_typed_dict_not_required_nullable():
+    """Test main function writing to TypedDict, with combos of Optional/NotRequired."""
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH
+                    / 'not_required_nullable.json'
+                ),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_not_required_nullable'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+@freeze_time('2019-07-26')
 def test_main_typed_dict_nullable():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

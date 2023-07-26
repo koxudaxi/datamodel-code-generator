@@ -130,7 +130,8 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def type_hint(self) -> str:
-        type_hint = super().type_hint
+        # With TypedDict, don't force property to be nullable if it's not required
+        type_hint = super().get_type_hint(fall_back_to_nullable=not self._not_required)
         if self._not_required:
             return f'{NOT_REQUIRED_PREFIX}{type_hint}]'
         return type_hint
@@ -142,7 +143,7 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> Tuple[Import, ...]:
         return (
-            *super().imports,
+            *super().get_imports(fall_back_to_nullable=not self._not_required),
             *(self.DEFAULT_IMPORTS if self._not_required else ()),
         )
 
