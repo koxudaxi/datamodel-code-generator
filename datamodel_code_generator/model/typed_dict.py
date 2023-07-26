@@ -16,7 +16,7 @@ from typing import (
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.improts import (
+from datamodel_code_generator.model.imports import (
     IMPORT_NOT_REQUIRED,
     IMPORT_NOT_REQUIRED_BACKPORT,
     IMPORT_TYPED_DICT,
