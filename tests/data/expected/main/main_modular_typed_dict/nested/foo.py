@@ -4,23 +4,23 @@
 
 from __future__ import annotations
 
-from typing import List, NotRequired, Optional, TypedDict
+from typing import List, NotRequired, TypedDict
 
-from .. import Id, OptionalModel
+from .. import Id, Optional
 
 
 class Tea(TypedDict):
-    flavour: NotRequired[Optional[str]]
-    id: NotRequired[Optional[Id]]
-    self: NotRequired[Optional[Tea]]
-    optional: NotRequired[Optional[List[OptionalModel]]]
+    flavour: NotRequired[str]
+    id: NotRequired[Id]
+    self: NotRequired[Tea]
+    optional: NotRequired[List[Optional]]
 
 
 class TeaClone(TypedDict):
-    flavour: NotRequired[Optional[str]]
-    id: NotRequired[Optional[Id]]
-    self: NotRequired[Optional[Tea]]
-    optional: NotRequired[Optional[List[OptionalModel]]]
+    flavour: NotRequired[str]
+    id: NotRequired[Id]
+    self: NotRequired[Tea]
+    optional: NotRequired[List[Optional]]
 
 
 ListModel = List[Tea]

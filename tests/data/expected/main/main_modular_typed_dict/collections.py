@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, NotRequired, Optional, TypedDict
+from typing import List, Literal, NotRequired, TypedDict
 
 from . import models
 
@@ -18,11 +18,11 @@ Rules = List[str]
 
 
 class Api(TypedDict):
-    apiKey: NotRequired[Optional[str]]
-    apiVersionNumber: NotRequired[Optional[str]]
-    apiUrl: NotRequired[Optional[str]]
-    apiDocumentationUrl: NotRequired[Optional[str]]
-    stage: NotRequired[Optional[Literal['test', 'dev', 'stg', 'prod']]]
+    apiKey: NotRequired[str]
+    apiVersionNumber: NotRequired[str]
+    apiUrl: NotRequired[str]
+    apiDocumentationUrl: NotRequired[str]
+    stage: NotRequired[Literal['test', 'dev', 'stg', 'prod']]
 
 
 Apis = List[Api]

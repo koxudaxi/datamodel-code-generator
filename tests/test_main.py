@@ -5353,10 +5353,7 @@ def test_main_typed_dict_not_required_nullable():
         return_code: Exit = main(
             [
                 '--input',
-                str(
-                    JSON_SCHEMA_DATA_PATH
-                    / 'not_required_nullable.json'
-                ),
+                str(JSON_SCHEMA_DATA_PATH / 'not_required_nullable.json'),
                 '--output',
                 str(output_file),
                 '--output-model-type',

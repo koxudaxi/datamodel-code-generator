@@ -152,7 +152,7 @@ class DataModelFieldBase(_BaseModel):
         return chain_as_tuple(*imports)
 
     @property
-    def imports(self):
+    def imports(self) -> Tuple[Import, ...]:
         return self.get_imports()
 
     @property
