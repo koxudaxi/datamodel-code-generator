@@ -224,7 +224,7 @@ def generate(
     output: Optional[Path] = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_37,
-    base_class: str = DEFAULT_BASE_CLASS,
+    base_class: str = '',
     additional_imports: Optional[List[str]] = None,
     custom_template_dir: Optional[Path] = None,
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
@@ -280,6 +280,10 @@ def generate(
     custom_file_header: Optional[str] = None,
     custom_file_header_path: Optional[Path] = None,
 ) -> None:
+    if not base_class and output_model_type == DataModelType.PydanticBaseModel:
+        # Mirror Config._validate_base_class, used when calling main
+        base_class = DEFAULT_BASE_CLASS
+
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
         input_text: Optional[str] = input_
