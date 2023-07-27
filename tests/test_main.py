@@ -4774,6 +4774,7 @@ def test_main_openapi_discriminator():
             ).read_text()
         )
 
+
 @freeze_time('2023-07-27')
 def test_main_openapi_discriminator_in_array():
     with TemporaryDirectory() as output_dir:
