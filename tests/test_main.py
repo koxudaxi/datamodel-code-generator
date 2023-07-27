@@ -4774,6 +4774,28 @@ def test_main_openapi_discriminator():
             ).read_text()
         )
 
+@freeze_time('2023-07-27')
+def test_main_openapi_discriminator_in_array():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_in_array.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_discriminator_in_array' / 'output.py'
+            ).read_text()
+        )
+
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_pattern_properties_by_reference():
