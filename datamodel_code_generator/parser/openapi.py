@@ -479,7 +479,11 @@ class OpenAPIParser(JsonSchemaParser):
 
         if OpenAPIScope.Parameters in self.open_api_scopes and fields:
             self.results.append(
-                self.data_model_type(fields=fields, reference=reference,custom_base_class=self.base_class)
+                self.data_model_type(
+                    fields=fields,
+                    reference=reference,
+                    custom_base_class=self.base_class,
+                )
             )
 
     def parse_operation(
