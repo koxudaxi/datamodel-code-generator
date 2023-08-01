@@ -155,7 +155,7 @@ class DataTypeManager(_DataTypeManager):
             use_union_operator,
         )
 
-        self.type_map: Dict[Types, DataType] = type_map_factory(
+        self.type_map: Dict[Types, DataType] = self.type_map_factory(
             self.data_type,
             strict_types=self.strict_types,
             pattern_key=self.PATTERN_KEY,
@@ -176,6 +176,14 @@ class DataTypeManager(_DataTypeManager):
             'maxLength': 'max_length',
             'pattern': self.PATTERN_KEY,
         }
+
+    def type_map_factory(
+        self,
+        data_type: Type[DataType],
+        strict_types: Sequence[StrictTypes],
+        pattern_key: str,
+    ) -> Dict[Types, DataType]:
+        return type_map_factory(data_type, strict_types, pattern_key)
 
     def transform_kwargs(
         self, kwargs: Dict[str, Any], filter_: Set[str]

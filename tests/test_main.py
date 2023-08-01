@@ -12,7 +12,13 @@ from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
 from packaging import version
 
-from datamodel_code_generator import InputFileType, chdir, generate, inferred_message
+from datamodel_code_generator import (
+    DataModelType,
+    InputFileType,
+    chdir,
+    generate,
+    inferred_message,
+)
 from datamodel_code_generator.__main__ import Exit, main
 
 try:
@@ -2692,6 +2698,26 @@ def test_main_generate():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_generate_non_pydantic_output():
+    """
+    See https://github.com/koxudaxi/datamodel-code-generator/issues/1452.
+    """
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        input_ = (JSON_SCHEMA_DATA_PATH / 'simple_string.json').relative_to(Path.cwd())
+        assert not input_.is_absolute()
+        generate(
+            input_=input_,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            output_model_type=DataModelType.DataclassesDataclass,
+        )
+
+        file = EXPECTED_MAIN_PATH / 'main_generate_non_pydantic_output' / 'output.py'
+        assert output_file.read_text() == file.read_text()
 
 
 @freeze_time('2019-07-26')
