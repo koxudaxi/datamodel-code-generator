@@ -224,7 +224,7 @@ def generate(
     output: Optional[Path] = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_37,
-    base_class: str = DEFAULT_BASE_CLASS,
+    base_class: str = '',
     additional_imports: Optional[List[str]] = None,
     custom_template_dir: Optional[Path] = None,
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
