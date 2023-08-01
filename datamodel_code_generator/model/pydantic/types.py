@@ -84,7 +84,7 @@ def type_map_factory(
             strict=StrictTypes.str in strict_types,
             # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
             kwargs={
-                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'",
+                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
                 **({'strict': True} if StrictTypes.str in strict_types else {}),
             },
         ),
@@ -155,7 +155,7 @@ class DataTypeManager(_DataTypeManager):
             use_union_operator,
         )
 
-        self.type_map: Dict[Types, DataType] = type_map_factory(
+        self.type_map: Dict[Types, DataType] = self.type_map_factory(
             self.data_type,
             strict_types=self.strict_types,
             pattern_key=self.PATTERN_KEY,
@@ -176,6 +176,14 @@ class DataTypeManager(_DataTypeManager):
             'maxLength': 'max_length',
             'pattern': self.PATTERN_KEY,
         }
+
+    def type_map_factory(
+        self,
+        data_type: Type[DataType],
+        strict_types: Sequence[StrictTypes],
+        pattern_key: str,
+    ) -> Dict[Types, DataType]:
+        return type_map_factory(data_type, strict_types, pattern_key)
 
     def transform_kwargs(
         self, kwargs: Dict[str, Any], filter_: Set[str]
