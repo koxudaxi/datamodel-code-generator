@@ -98,7 +98,8 @@ class DataModelFieldBase(_BaseModel):
                 self.required = False
                 self.nullable = False
 
-    def get_type_hint(self, fall_back_to_nullable: bool = True) -> str:
+    @property
+    def type_hint(self) -> str:
         type_hint = self.data_type.type_hint
 
         if not type_hint:
@@ -113,17 +114,13 @@ class DataModelFieldBase(_BaseModel):
             return type_hint
         elif self.required:
             return type_hint
-
-        if fall_back_to_nullable:
+        elif self.fall_back_to_nullable:
             return get_optional_type(type_hint, self.data_type.use_union_operator)
         else:
             return type_hint
 
     @property
-    def type_hint(self) -> str:
-        return self.get_type_hint()
-
-    def get_imports(self, fall_back_to_nullable: bool = True) -> Tuple[Import, ...]:
+    def imports(self) -> Tuple[Import, ...]:
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
@@ -134,7 +131,7 @@ class DataModelFieldBase(_BaseModel):
             )
         ]
 
-        if fall_back_to_nullable:
+        if self.fall_back_to_nullable:
             if (
                 self.nullable or (self.nullable is None and not self.required)
             ) and not self.data_type.use_union_operator:
@@ -150,10 +147,6 @@ class DataModelFieldBase(_BaseModel):
             )
             imports.append((import_annotated,))
         return chain_as_tuple(*imports)
-
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        return self.get_imports()
 
     @property
     def docstring(self) -> Optional[str]:
@@ -187,6 +180,10 @@ class DataModelFieldBase(_BaseModel):
     @property
     def has_default_factory(self) -> bool:
         return 'default_factory' in self.extras
+
+    @property
+    def fall_back_to_nullable(self) -> bool:
+        return True
 
 
 @lru_cache()
