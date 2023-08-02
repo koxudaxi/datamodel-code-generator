@@ -137,7 +137,9 @@ class DataModelFieldBase(_BaseModel):
             ) and not self.data_type.use_union_operator:
                 imports.append((IMPORT_OPTIONAL,))
         else:
-            if self.nullable and not self.data_type.use_union_operator:
+            if (
+                self.nullable and not self.data_type.use_union_operator
+            ):  # pragma: no cover
                 imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated:
             import_annotated = (
