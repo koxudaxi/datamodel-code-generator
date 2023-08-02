@@ -283,7 +283,7 @@ $ docker pull koxudaxi/datamodel-code-generator
 ```
 
 ## Advanced Uses
-You can genearte models from a URL.
+You can generate models from a URL.
 ```bash
 $ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
