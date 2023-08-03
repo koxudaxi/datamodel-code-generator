@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, NotRequired, Optional, TypedDict, Union
+from typing import Any, Dict, List, Literal, NotRequired, TypedDict, Union
 
 Species = Literal['dog', 'cat', 'snake']
 
@@ -12,15 +12,15 @@ Species = Literal['dog', 'cat', 'snake']
 class Pet(TypedDict):
     id: int
     name: str
-    tag: NotRequired[Optional[str]]
-    species: NotRequired[Optional[Species]]
+    tag: NotRequired[str]
+    species: NotRequired[Species]
 
 
 class User(TypedDict):
     id: int
     name: str
-    tag: NotRequired[Optional[str]]
+    tag: NotRequired[str]
 
 
 class Event(TypedDict):
-    name: NotRequired[Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]]]
+    name: NotRequired[Union[str, float, int, bool, Dict[str, Any], List[str]]]
