@@ -1,21 +1,7 @@
-from typing import Dict, Generator, Optional
+from typing import Generator, Optional
 
 from httpx import URL, Auth, Cookies, get, post
 from httpx._models import Request, Response
-
-
-def parse_cookies_str_to_dict(cookies: str) -> Dict[str, str]:
-    result: Dict[str, str] = {}
-    for item in cookies.split(';'):
-        item = item.strip()
-        if not item:
-            continue
-        if '=' not in item:
-            result[item] = ''
-            continue
-        name, value = item.split('=', 1)
-        result[name] = value
-    return result
 
 
 class vManageAuth(Auth):
@@ -32,8 +18,7 @@ class vManageAuth(Auth):
         response: Response = post(
             url=url, headers=headers, data=security_payload, verify=False
         )
-        cookies_string = response.headers.get('set-cookie', '')
-        return parse_cookies_str_to_dict(cookies_string).get('JSESSIONID')
+        return response.cookies.get('JSESSIONID')
 
     @staticmethod
     def get_xsrftoken(base_url: str, jsessionid: str) -> str:
@@ -62,10 +47,8 @@ class vManageAuth(Auth):
 
     def authenticate(self, request: Request):
         base_url = str(URL(scheme=request.url.scheme, netloc=request.url.netloc))
-        print(
-            f'Authenticating {self.username} {self.password} session using: {base_url}'
-        )
+        print(f'Authenticating {self.username} {self.password} with host: {base_url}')
         self.jsessionid = self.get_jsessionid(base_url, self.username, self.password)
         print(f'Obtained JSESSIONID={self.jsessionid}')
         self.xsrftoken = self.get_xsrftoken(base_url, self.jsessionid)
-        print(f'Obtained token={self.xsrftoken}')
+        print(f'Obtained x-xsrf-token={self.xsrftoken}')
