@@ -10,11 +10,11 @@ class RootModel(BaseModel):
     BASE_CLASS: ClassVar[str] = 'pydantic.RootModel'
 
     def __init__(
-            self,
-            **kwargs,
+        self,
+        **kwargs,
     ):
         # Remove custom_base_class for Pydantic V2 models; behaviour is different from Pydantic V1 as it will not
         # be treated as a root model. custom_base_class cannot both implement BaseModel and RootModel!
-        kwargs.pop("custom_base_class")
+        kwargs.pop('custom_base_class')
 
         super().__init__(**kwargs)
