@@ -15,6 +15,7 @@ class RootModel(BaseModel):
     ) -> None:
         # Remove custom_base_class for Pydantic V2 models; behaviour is different from Pydantic V1 as it will not
         # be treated as a root model. custom_base_class cannot both implement BaseModel and RootModel!
-        kwargs.pop('custom_base_class')
+        if 'custom_base_class' in kwargs:
+            kwargs.pop('custom_base_class')
 
         super().__init__(**kwargs)
