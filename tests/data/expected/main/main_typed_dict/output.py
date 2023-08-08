@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from typing_extensions import NotRequired, TypedDict
 
@@ -12,7 +12,7 @@ from typing_extensions import NotRequired, TypedDict
 class Pet(TypedDict):
     id: int
     name: str
-    tag: NotRequired[Optional[str]]
+    tag: NotRequired[str]
 
 
 Pets = List[Pet]
@@ -21,7 +21,7 @@ Pets = List[Pet]
 class User(TypedDict):
     id: int
     name: str
-    tag: NotRequired[Optional[str]]
+    tag: NotRequired[str]
 
 
 Users = List[User]
@@ -39,18 +39,18 @@ class Error(TypedDict):
 
 
 class Api(TypedDict):
-    apiKey: NotRequired[Optional[str]]
-    apiVersionNumber: NotRequired[Optional[str]]
-    apiUrl: NotRequired[Optional[str]]
-    apiDocumentationUrl: NotRequired[Optional[str]]
+    apiKey: NotRequired[str]
+    apiVersionNumber: NotRequired[str]
+    apiUrl: NotRequired[str]
+    apiDocumentationUrl: NotRequired[str]
 
 
 Apis = List[Api]
 
 
 class Event(TypedDict):
-    name: NotRequired[Optional[str]]
+    name: NotRequired[str]
 
 
 class Result(TypedDict):
-    event: NotRequired[Optional[Event]]
+    event: NotRequired[Event]

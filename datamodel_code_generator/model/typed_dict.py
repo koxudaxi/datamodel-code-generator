@@ -16,7 +16,7 @@ from typing import (
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.improts import (
+from datamodel_code_generator.model.imports import (
     IMPORT_NOT_REQUIRED,
     IMPORT_NOT_REQUIRED_BACKPORT,
     IMPORT_TYPED_DICT,
@@ -138,6 +138,10 @@ class DataModelField(DataModelFieldBase):
     @property
     def _not_required(self) -> bool:
         return not self.required and isinstance(self.parent, TypedDict)
+
+    @property
+    def fall_back_to_nullable(self) -> bool:
+        return not self._not_required
 
     @property
     def imports(self) -> Tuple[Import, ...]:
