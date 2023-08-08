@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, TypedDict
+from typing import Any, ClassVar
 
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 
@@ -11,7 +11,7 @@ class RootModel(BaseModel):
 
     def __init__(
         self,
-        **kwargs: TypedDict,
+        **kwargs: Any,
     ) -> None:
         # Remove custom_base_class for Pydantic V2 models; behaviour is different from Pydantic V1 as it will not
         # be treated as a root model. custom_base_class cannot both implement BaseModel and RootModel!
