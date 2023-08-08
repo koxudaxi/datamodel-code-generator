@@ -35,7 +35,9 @@ import argcomplete
 import black
 import toml
 from pydantic import BaseModel
-from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 from datamodel_code_generator import (
     DataModelType,
@@ -580,11 +582,21 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
-    @model_validator(mode='after')
-    def validate_root(self) -> Self:
-        if self.use_annotated:
-            self.field_constraints = True
-        return self
+    if PYDANTIC_V2:
+
+        @model_validator(mode='after')  # type: ignore
+        def validate_root(self: Self) -> Self:
+            if self.use_annotated:
+                self.field_constraints = True
+            return self
+
+    else:
+
+        @model_validator(mode='after')
+        def validate_root(cls, values: Any) -> Any:
+            if values.get('use_annotated'):
+                values['field_constraints'] = True
+            return values
 
     input: Optional[Union[Path, str]] = None
     input_file_type: InputFileType = InputFileType.Auto
