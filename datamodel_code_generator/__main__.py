@@ -472,9 +472,6 @@ class Config(BaseModel):
         def __getitem__(self, item: str) -> Any:
             return self.get(item)
 
-        def __setitem__(self, key: str, value: Any) -> None:
-            setattr(self, key, value)
-
         if TYPE_CHECKING:
 
             @classmethod
