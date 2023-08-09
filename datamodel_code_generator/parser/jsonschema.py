@@ -339,7 +339,7 @@ def _get_type(type_: str, format__: Optional[str] = None) -> Types:
     return json_schema_data_formats[type_]['default']
 
 
-JsonSchemaObject.update_forward_refs()
+JsonSchemaObject.model_rebuild()
 
 DEFAULT_FIELD_KEYS: Set[str] = {
     'example',
