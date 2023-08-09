@@ -173,6 +173,10 @@ class JsonSchemaObject(BaseModel):
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
 
+            @classmethod
+            def model_rebuild(cls) -> None:
+                cls.update_forward_refs()
+
     __constraint_fields__: Set[str] = {
         'exclusiveMinimum',
         'minimum',
@@ -339,7 +343,7 @@ def _get_type(type_: str, format__: Optional[str] = None) -> Types:
     return json_schema_data_formats[type_]['default']
 
 
-JsonSchemaObject.update_forward_refs()
+JsonSchemaObject.model_rebuild()
 
 DEFAULT_FIELD_KEYS: Set[str] = {
     'example',

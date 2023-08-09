@@ -28,7 +28,6 @@ from pydantic import BaseModel
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model import pydantic_v2 as pydantic_v2_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
@@ -38,6 +37,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.pydantic_v2 import RootModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -723,10 +723,7 @@ class Parser(ABC):
     def __replace_unique_list_to_set(self, models: List[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
-                if not (
-                    isinstance(model_field, pydantic_v2_model.DataModelField)
-                    or self.use_unique_items_as_set
-                ):
+                if not self.use_unique_items_as_set:
                     continue
 
                 if not (
@@ -797,10 +794,11 @@ class Parser(ABC):
             models.remove(duplicate)
 
     def __collapse_root_models(
-        self, models: List[DataModel], unused_models: List[DataModel]
+        self, models: List[DataModel], unused_models: List[DataModel], imports: Imports
     ) -> None:
         if not self.collapse_root_models:
             return None
+        unused_model_count = len(unused_models)
         for model in models:
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
@@ -834,6 +832,8 @@ class Parser(ABC):
                         model_field.extras = dict(
                             root_type_field.extras, **model_field.extras
                         )
+                        model_field.process_const()
+
                         if self.field_constraints:
                             if isinstance(
                                 root_type_field.constraints, ConstraintsBase
@@ -875,6 +875,17 @@ class Parser(ABC):
 
                     if not root_type_model.reference.children:
                         unused_models.append(root_type_model)
+
+        if self.data_model_root_type == RootModel and unused_model_count != len(
+            unused_models
+        ):
+            if {m for m in models if isinstance(m, RootModel)} - {  # pragma: no cover
+                m for m in unused_models if isinstance(m, RootModel)
+            }:
+                return None  # pragma: no cover
+
+            if 'RootModel' in imports['pydantic']:  # pragma: no cover
+                imports['pydantic'].remove('RootModel')
 
     def __set_default_enum_member(
         self,
@@ -1096,7 +1107,7 @@ class Parser(ABC):
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
-            self.__collapse_root_models(models, unused_models)
+            self.__collapse_root_models(models, unused_models, imports)
             self.__set_default_enum_member(models)
             self.__override_required_field(models)
             self.__sort_models(models, imports)

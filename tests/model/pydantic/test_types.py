@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from datamodel_code_generator.imports import Import
@@ -16,7 +18,7 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_POSITIVE_INT,
 )
 from datamodel_code_generator.model.pydantic.types import DataTypeManager
-from datamodel_code_generator.types import DataType, Types
+from datamodel_code_generator.types import DataType, Types, UnionIntFloat
 
 
 @pytest.mark.parametrize(
@@ -311,6 +313,16 @@ def test_get_data_float_type(
                 'type': 'condecimal',
                 'is_func': True,
                 'kwargs': {'multiple_of': 10},
+                'import_': IMPORT_CONDECIMAL,
+            },
+        ),
+        (
+            Types.decimal,
+            {'minimum': UnionIntFloat(10.01)},
+            {
+                'type': 'condecimal',
+                'is_func': True,
+                'kwargs': {'ge': Decimal('10.01')},
                 'import_': IMPORT_CONDECIMAL,
             },
         ),

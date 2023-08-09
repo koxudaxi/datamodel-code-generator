@@ -110,6 +110,9 @@ class UnionIntFloat:
     def __float__(self) -> float:
         return float(self.value)
 
+    def __str__(self) -> str:
+        return str(self.value)
+
     @classmethod
     def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
         yield cls.validate
@@ -234,6 +237,11 @@ class DataType(_BaseModel):
             revalidate_instances='never',
         )
     else:
+        if not TYPE_CHECKING:
+
+            @classmethod
+            def model_rebuild(cls) -> None:
+                cls.update_forward_refs()
 
         class Config:
             extra = 'forbid'
@@ -498,7 +506,7 @@ class DataType(_BaseModel):
         return len(self.data_types) > 1
 
 
-DataType.update_forward_refs()
+DataType.model_rebuild()
 
 DataTypeT = TypeVar('DataTypeT', bound=DataType)
 
