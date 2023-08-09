@@ -92,7 +92,7 @@ class DataModelFieldBase(_BaseModel):
             super().__init__(**data)
             if self.data_type.reference or self.data_type.data_types:
                 self.data_type.parent = self
-                self.process_const()
+            self.process_const()
 
     def process_const(self) -> None:
         if 'const' not in self.extras:

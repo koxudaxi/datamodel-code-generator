@@ -62,9 +62,11 @@ class DataModelField(DataModelFieldV1):
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
 
     def process_const(self) -> None:
+        if 'const' not in self.extras:
+            return None
         self.const = True
         self.nullable = False
-        const = self.extras.get('const')
+        const = self.extras['const']
         if self.data_type.type == 'str':  # Literal supports only str
             if isinstance(const, str):
                 self.data_type.type = None

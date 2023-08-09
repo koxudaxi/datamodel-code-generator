@@ -11,4 +11,4 @@ from pydantic import BaseModel
 
 class Namespace(BaseModel):
     apiVersion: Literal['v1']
-    kind: str = 'Namespace'
+    kind: Literal['Namespace']
