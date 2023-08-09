@@ -174,7 +174,7 @@ class JsonSchemaObject(BaseModel):
                 return cls.__fields__
 
             @classmethod
-            def model_rebuild(cls):
+            def model_rebuild(cls) -> None:
                 cls.update_forward_refs()
 
     __constraint_fields__: Set[str] = {

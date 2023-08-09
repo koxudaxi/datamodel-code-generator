@@ -236,7 +236,7 @@ class DataType(_BaseModel):
     else:
 
         @classmethod
-        def model_rebuild(cls):
+        def model_rebuild(cls) -> None:
             cls.update_forward_refs()
 
         class Config:
