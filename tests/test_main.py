@@ -5628,3 +5628,28 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_discriminator_literals():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_discriminator_literals'
+                / 'output.py'
+            ).read_text()
+        )
