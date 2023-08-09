@@ -177,7 +177,6 @@ class JsonSchemaObject(BaseModel):
             def model_rebuild(cls):
                 cls.update_forward_refs()
 
-
     __constraint_fields__: Set[str] = {
         'exclusiveMinimum',
         'minimum',
