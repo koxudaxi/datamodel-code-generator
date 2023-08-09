@@ -173,6 +173,11 @@ class JsonSchemaObject(BaseModel):
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
 
+            @classmethod
+            def model_rebuild(cls):
+                cls.update_forward_refs()
+
+
     __constraint_fields__: Set[str] = {
         'exclusiveMinimum',
         'minimum',
