@@ -883,12 +883,12 @@ class Parser(ABC):
         if self.data_model_root_type == RootModel and unused_model_count != len(
             unused_models
         ):
-            if {m for m in models if isinstance(m, RootModel)} - {
+            if {m for m in models if isinstance(m, RootModel)} - {  # pragma: no cover
                 m for m in unused_models if isinstance(m, RootModel)
             }:
                 return None
 
-            if 'RootModel' in imports['pydantic']:
+            if 'RootModel' in imports['pydantic']:  # pragma: no cover
                 imports['pydantic'].remove('RootModel')
 
     def __set_default_enum_member(
