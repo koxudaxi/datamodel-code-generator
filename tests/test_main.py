@@ -5528,6 +5528,7 @@ def test_main_pydantic_v2():
             == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
         )
 
+
 @freeze_time('2019-07-26')
 def test_main_openapi_custom_id_pydantic_v2():
     with TemporaryDirectory() as output_dir:
@@ -5545,8 +5546,11 @@ def test_main_openapi_custom_id_pydantic_v2():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2' / 'output.py').read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2' / 'output.py'
+            ).read_text()
         )
+
 
 @freeze_time('2019-07-26')
 def test_main_openapi_custom_id_pydantic_v2_custom_base():
@@ -5567,5 +5571,9 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2_custom_base' / 'output.py').read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_custom_id_pydantic_v2_custom_base'
+                / 'output.py'
+            ).read_text()
         )
