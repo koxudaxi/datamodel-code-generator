@@ -235,6 +235,10 @@ class DataType(_BaseModel):
         )
     else:
 
+        @classmethod
+        def model_rebuild(cls):
+            cls.update_forward_refs()
+
         class Config:
             extra = 'forbid'
             copy_on_model_validation = (
