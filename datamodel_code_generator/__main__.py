@@ -36,8 +36,10 @@ import black
 import toml
 from pydantic import BaseModel
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 from datamodel_code_generator import (
-    DEFAULT_BASE_CLASS,
     DataModelType,
     Error,
     InputFileType,
@@ -470,9 +472,6 @@ class Config(BaseModel):
         def __getitem__(self, item: str) -> Any:
             return self.get(item)
 
-        def __setitem__(self, key: str, value: Any) -> None:
-            setattr(self, key, value)
-
         if TYPE_CHECKING:
 
             @classmethod
@@ -580,23 +579,21 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
-    @model_validator(mode='after')
-    def validate_root(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        values = cls._validate_use_annotated(values)
-        return cls._validate_base_class(values)
+    if PYDANTIC_V2:
 
-    @classmethod
-    def _validate_use_annotated(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('use_annotated'):
-            values['field_constraints'] = True
-        return values
+        @model_validator(mode='after')  # type: ignore
+        def validate_root(self: Self) -> Self:
+            if self.use_annotated:
+                self.field_constraints = True
+            return self
 
-    @classmethod
-    def _validate_base_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if 'base_class' not in values and 'output_model_type' in values:
-            if values['output_model_type'] != DataModelType.PydanticBaseModel.value:
-                values['base_class'] = ''
-        return values
+    else:
+
+        @model_validator(mode='after')
+        def validate_root(cls, values: Any) -> Any:
+            if values.get('use_annotated'):
+                values['field_constraints'] = True
+            return values
 
     input: Optional[Union[Path, str]] = None
     input_file_type: InputFileType = InputFileType.Auto
@@ -605,7 +602,7 @@ class Config(BaseModel):
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
-    base_class: str = DEFAULT_BASE_CLASS
+    base_class: str = ''
     custom_template_dir: Optional[Path] = None
     extra_template_data: Optional[TextIOBase] = None
     validation: bool = False
@@ -666,9 +663,11 @@ class Config(BaseModel):
             for f in self.get_fields()
             if getattr(args, f) is not None
         }
-        set_args = self._validate_use_annotated(set_args)
-        set_args = self._validate_base_class(set_args)
-        parsed_args = self.parse_obj(set_args)
+
+        if set_args.get('use_annotated'):
+            set_args['field_constraints'] = True
+
+        parsed_args = Config.parse_obj(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
 

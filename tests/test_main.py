@@ -5527,3 +5527,57 @@ def test_main_pydantic_v2():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_custom_id_pydantic_v2():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'custom_id.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2' / 'output.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason="isort 5.x don't sort pydantic modules",
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_custom_id_pydantic_v2_custom_base():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'custom_id.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--base-class',
+                'custom_base.Base',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_custom_id_pydantic_v2_custom_base'
+                / 'output.py'
+            ).read_text()
+        )
