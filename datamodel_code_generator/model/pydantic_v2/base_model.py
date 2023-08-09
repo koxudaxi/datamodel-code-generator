@@ -67,9 +67,10 @@ class DataModelField(DataModelFieldV1):
         self.const = True
         self.nullable = False
         const = self.extras['const']
-        if self.data_type.type == 'str':  # Literal supports only str
-            if isinstance(const, str):
-                self.data_type = self.data_type.__class__(literals=[const])
+        if self.data_type.type == 'str' and isinstance(
+            const, str
+        ):  # pragma: no cover # Literal supports only str
+            self.data_type = self.data_type.__class__(literals=[const])
 
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
