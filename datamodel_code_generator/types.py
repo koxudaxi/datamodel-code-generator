@@ -234,10 +234,11 @@ class DataType(_BaseModel):
             revalidate_instances='never',
         )
     else:
+        if not TYPE_CHECKING:
 
-        @classmethod
-        def model_rebuild(cls) -> None:
-            cls.update_forward_refs()
+            @classmethod
+            def model_rebuild(cls) -> None:
+                cls.update_forward_refs()
 
         class Config:
             extra = 'forbid'
