@@ -817,10 +817,20 @@ def test_validation_failed():
         ),
         (
             'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_generic_container_types_set',
+            ['--use-generic-container-types', '--use-unique-items-as-set'],
+        ),
+        (
+            'pydantic_v2.BaseModel',
             'main_with_field_constraints_pydantic_v2_use_standard_collections',
             [
                 '--use-standard-collections',
             ],
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_standard_collections_set',
+            ['--use-standard-collections', '--use-unique-items-as-set'],
         ),
     ],
 )

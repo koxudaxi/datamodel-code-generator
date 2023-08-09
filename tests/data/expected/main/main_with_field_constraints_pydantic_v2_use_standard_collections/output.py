@@ -16,7 +16,7 @@ class Pet(BaseModel):
 
 
 class Pets(RootModel):
-    root: set[Pet] = Field(..., max_length=10, min_length=1)
+    root: list[Pet] = Field(..., max_length=10, min_length=1)
 
 
 class UID(RootModel):

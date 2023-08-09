@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import FrozenSet, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel
 
@@ -16,7 +16,7 @@ class Pet(BaseModel):
 
 
 class Pets(RootModel):
-    root: FrozenSet[Pet] = Field(..., max_length=10, min_length=1)
+    root: Sequence[Pet] = Field(..., max_length=10, min_length=1)
 
 
 class UID(RootModel):

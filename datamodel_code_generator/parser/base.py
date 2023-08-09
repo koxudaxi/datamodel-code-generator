@@ -28,7 +28,6 @@ from pydantic import BaseModel
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model import pydantic_v2 as pydantic_v2_model
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
@@ -724,10 +723,7 @@ class Parser(ABC):
     def __replace_unique_list_to_set(self, models: List[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
-                if not (
-                    isinstance(model_field, pydantic_v2_model.DataModelField)
-                    or self.use_unique_items_as_set
-                ):
+                if not self.use_unique_items_as_set:
                     continue
 
                 if not (
