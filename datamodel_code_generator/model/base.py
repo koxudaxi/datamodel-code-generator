@@ -93,10 +93,13 @@ class DataModelFieldBase(_BaseModel):
             if self.data_type.reference or self.data_type.data_types:
                 self.data_type.parent = self
             if 'const' in self.extras:
-                self.default = self.extras['const']
-                self.const = True
-                self.required = False
-                self.nullable = False
+                self.process_const()
+
+    def process_const(self) -> None:
+        self.default = self.extras['const']
+        self.const = True
+        self.required = False
+        self.nullable = False
 
     @property
     def type_hint(self) -> str:

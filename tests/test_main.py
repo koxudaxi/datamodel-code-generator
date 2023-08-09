@@ -4543,6 +4543,43 @@ def test_main_openapi_const(output_model, expected_output):
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_const_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_openapi_const_field_pydantic_v2',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_const_field(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'const.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model',
+                output_model,
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        )
+
+
 @freeze_time('2019-07-26')
 def test_main_openapi_complex_reference():
     with TemporaryDirectory() as output_dir:

@@ -61,6 +61,15 @@ class DataModelField(DataModelFieldV1):
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
 
+    def process_const(self) -> None:
+        self.const = True
+        self.nullable = False
+        const = self.extras.get('const')
+        if self.data_type.type == 'str':  # Literal supports only str
+            if isinstance(const, str):
+                self.data_type.type = None
+                self.data_type.literals = [const]
+
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
             # const is removed in pydantic 2.0
