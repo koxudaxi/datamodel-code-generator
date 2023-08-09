@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Set, Union
+from typing import List, Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel, confloat, conint, constr
 
@@ -16,7 +16,7 @@ class Pet(BaseModel):
 
 
 class Pets(RootModel):
-    root: Set[Pet] = Field(..., max_length=10, min_length=1)
+    root: List[Pet] = Field(..., max_length=10, min_length=1)
 
 
 class UID(RootModel):
