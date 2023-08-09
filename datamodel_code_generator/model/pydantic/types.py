@@ -44,7 +44,7 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_UUID4,
     IMPORT_UUID5,
 )
-from datamodel_code_generator.types import DataType, StrictTypes, Types
+from datamodel_code_generator.types import DataType, StrictTypes, Types, UnionIntFloat
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
 
@@ -261,7 +261,10 @@ class DataTypeManager(_DataTypeManager):
         if data_type_kwargs:
             return self.data_type.from_import(
                 IMPORT_CONDECIMAL,
-                kwargs={k: Decimal(v) for k, v in data_type_kwargs.items()},
+                kwargs={
+                    k: Decimal(str(v) if isinstance(v, UnionIntFloat) else v)
+                    for k, v in data_type_kwargs.items()
+                },
             )
         return self.type_map[types]
 

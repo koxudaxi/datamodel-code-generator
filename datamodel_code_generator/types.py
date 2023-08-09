@@ -110,6 +110,9 @@ class UnionIntFloat:
     def __float__(self) -> float:
         return float(self.value)
 
+    def __str__(self) -> str:
+        return str(self.value)
+
     @classmethod
     def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
         yield cls.validate
