@@ -886,7 +886,7 @@ class Parser(ABC):
             if {m for m in models if isinstance(m, RootModel)} - {  # pragma: no cover
                 m for m in unused_models if isinstance(m, RootModel)
             }:
-                return None
+                return None  # pragma: no cover
 
             if 'RootModel' in imports['pydantic']:  # pragma: no cover
                 imports['pydantic'].remove('RootModel')
