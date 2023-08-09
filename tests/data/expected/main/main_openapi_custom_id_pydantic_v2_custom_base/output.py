@@ -7,8 +7,9 @@ from __future__ import annotations
 from typing import Optional
 from uuid import UUID
 
-from custom_base import Base
 from pydantic import Field, RootModel
+
+from custom_base import Base
 
 
 class CustomId(RootModel):

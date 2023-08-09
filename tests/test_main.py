@@ -5552,6 +5552,10 @@ def test_main_openapi_custom_id_pydantic_v2():
         )
 
 
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason="isort 5.x don't sort pydantic modules",
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_custom_id_pydantic_v2_custom_base():
     with TemporaryDirectory() as output_dir:
