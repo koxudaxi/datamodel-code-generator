@@ -20,6 +20,7 @@ class ConfigDict(_BaseModel):
     allow_extra_fields: Optional[bool] = None
     frozen: Optional[bool] = None
     arbitrary_types_allowed: Optional[bool] = None
+    protected_namespaces: Optional[tuple[str, ...]] = None
 
 
 __all__ = [
