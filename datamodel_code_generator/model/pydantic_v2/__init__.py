@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 from pydantic import BaseModel as _BaseModel
 
@@ -20,6 +20,7 @@ class ConfigDict(_BaseModel):
     allow_extra_fields: Optional[bool] = None
     frozen: Optional[bool] = None
     arbitrary_types_allowed: Optional[bool] = None
+    protected_namespaces: Optional[Tuple[str, ...]] = None
 
 
 __all__ = [
