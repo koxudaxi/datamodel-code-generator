@@ -171,7 +171,12 @@ class DataModelField(DataModelFieldBase):
             return ''
 
         if self.use_annotated:
-            pass
+            if not self.required:
+                if self.use_default_kwarg:
+                    field_arguments = [f'default={repr(self.default)}', *field_arguments]
+                else:
+                    # TODO: Allow '=' style default for v1?
+                    field_arguments = [f'{repr(self.default)}', *field_arguments]
         elif self.required:
             field_arguments = ['...', *field_arguments]
         elif default_factory:
