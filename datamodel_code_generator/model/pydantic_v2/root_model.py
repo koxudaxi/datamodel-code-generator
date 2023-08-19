@@ -19,3 +19,8 @@ class RootModel(BaseModel):
             kwargs.pop('custom_base_class')
 
         super().__init__(**kwargs)
+
+        # PydanticV2 RootModels cannot have extra fields
+        if self.extra_template_data.get('allow_extra_fields'):
+            self.extra_template_data['allow_extra_fields'] = False
+            delattr(self.extra_template_data['config'], 'extra')
