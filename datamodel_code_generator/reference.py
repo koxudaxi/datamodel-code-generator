@@ -179,7 +179,7 @@ _UNDER_SCORE_1: Pattern[str] = re.compile(r'([^_])([A-Z][a-z]+)')
 _UNDER_SCORE_2: Pattern[str] = re.compile('([a-z0-9])([A-Z])')
 
 
-@lru_cache()
+@lru_cache
 def camel_to_snake(string: str) -> str:
     subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
     return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
@@ -732,7 +732,7 @@ class ModelResolver:
         )
 
 
-@lru_cache()
+@lru_cache
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
@@ -740,7 +740,7 @@ def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     return singular_name
 
 
-@lru_cache()
+@lru_cache
 def snake_to_upper_camel(word: str, delimiter: str = '_') -> str:
     prefix = ''
     if word.startswith(delimiter):

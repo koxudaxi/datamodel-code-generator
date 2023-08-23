@@ -157,7 +157,7 @@ def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
     return tuple(chain(*iterables))
 
 
-@lru_cache()
+@lru_cache
 def _remove_none_from_type(
     type_: str, split_pattern: Pattern[str], delimiter: str
 ) -> List[str]:
@@ -203,7 +203,7 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
     return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
 
 
-@lru_cache()
+@lru_cache
 def get_optional_type(type_: str, use_union_operator: bool) -> str:
     type_ = _remove_none_from_union(type_, use_union_operator)
 
