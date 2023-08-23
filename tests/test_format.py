@@ -22,7 +22,7 @@ def test_format_code_with_skip_string_normalization(
     skip_string_normalization: bool, expected_output: str
 ) -> None:
     formatter = CodeFormatter(
-        PythonVersion.PY_37, skip_string_normalization=skip_string_normalization
+        PythonVersion.PY_38, skip_string_normalization=skip_string_normalization
     )
 
     formatted_code = formatter.format_code("a = 'b'")

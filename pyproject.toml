@@ -14,7 +14,6 @@ classifiers = [
         "Natural Language :: English",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
@@ -40,7 +39,7 @@ patterns = ["(^version: str = ')[^']*(')"]
 datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 pydantic =  [
     {extras = ["email"], version = ">=1.5.1,<3.0", python = "<3.10"},
     {extras = ["email"], version = ">=1.9.0,<3.0", python = "~3.10"},
@@ -82,7 +81,7 @@ http = ["httpx"]
 line-length = 88
 extend-select = ['Q', 'RUF100', 'C4', 'UP', 'I']
 flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
-target-version = 'py37'
+target-version = 'py38'
 ignore = ['E501', 'UP006', 'UP007']
 extend-exclude = ['tests/data']
 
@@ -92,7 +91,7 @@ line-length = 88
 skip-string-normalization = true
 # language=RegExp
 exclude = '(tests/data|\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|.*\/models\.py.*|.*\/models\/.*)'
-target-version = ['py37']
+target-version = ['py38']
 
 [tool.ruff.isort]
 #multi-line-output = 3

@@ -73,7 +73,7 @@ def test_target_python_version():
                 '--output',
                 str(output_file),
                 '--target-python-version',
-                '3.6',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK

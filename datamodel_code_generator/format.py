@@ -13,8 +13,6 @@ from datamodel_code_generator.util import cached_property
 
 
 class PythonVersion(Enum):
-    PY_36 = '3.6'
-    PY_37 = '3.7'
     PY_38 = '3.8'
     PY_39 = '3.9'
     PY_310 = '3.10'
@@ -22,19 +20,19 @@ class PythonVersion(Enum):
 
     @cached_property
     def _is_py_38_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value}  # type: ignore
+        return True  # type: ignore
 
     @cached_property
     def _is_py_39_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value}  # type: ignore
+        return self.value not in {self.PY_38.value}  # type: ignore
 
     @cached_property
     def _is_py_310_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value, self.PY_39.value}  # type: ignore
+        return self.value not in {self.PY_38.value, self.PY_39.value}  # type: ignore
 
     @cached_property
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value, self.PY_39.value, self.PY_310.value}  # type: ignore
+        return self.value not in {self.PY_38.value, self.PY_39.value, self.PY_310.value}  # type: ignore
 
     @property
     def has_literal_type(self) -> bool:

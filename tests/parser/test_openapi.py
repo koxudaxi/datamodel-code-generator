@@ -364,13 +364,13 @@ def test_openapi_parser_parse_enum_models():
         Path(DATA_PATH / 'enum_models.yaml').read_text(),
     )
     expected_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_enum_models'
-    assert parser.parse() == (expected_dir / 'output_py37.py').read_text()
+    assert parser.parse() == (expected_dir / 'output_py38.py').read_text()
 
     parser = OpenAPIParser(
         Path(DATA_PATH / 'enum_models.yaml').read_text(),
-        target_python_version=PythonVersion.PY_36,
+        target_python_version=PythonVersion.PY_38,
     )
-    assert parser.parse() == (expected_dir / 'output_py36.py').read_text()
+    assert parser.parse() == (expected_dir / 'output_py38.py').read_text()
 
 
 def test_openapi_parser_parse_anyof():

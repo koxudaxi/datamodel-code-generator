@@ -2,6 +2,10 @@
 #   filename:  api.yaml
 #   timestamp: 2019-07-26T00:00:00+00:00
 
+from __future__ import (
+    annotations,
+)
+
 from typing import (
     List,
     Optional,
@@ -21,7 +25,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List["Pet"]
+    __root__: List[Pet]
 
 
 class User(BaseModel):
@@ -31,7 +35,7 @@ class User(BaseModel):
 
 
 class Users(BaseModel):
-    __root__: List["User"]
+    __root__: List[User]
 
 
 class Id(BaseModel):
@@ -79,7 +83,7 @@ class Api(BaseModel):
 
 
 class Apis(BaseModel):
-    __root__: List["Api"]
+    __root__: List[Api]
 
 
 class Event(BaseModel):
@@ -87,4 +91,4 @@ class Event(BaseModel):
 
 
 class Result(BaseModel):
-    event: Optional["Event"]
+    event: Optional[Event]

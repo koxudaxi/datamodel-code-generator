@@ -166,7 +166,7 @@ def test_target_python_version():
                 '--output',
                 str(output_file),
                 '--target-python-version',
-                '3.6',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
@@ -1686,27 +1686,6 @@ def test_main_use_generic_container_types_standard_collections(
         assert result == path.read_text()
 
 
-def test_main_use_generic_container_types_py36(capsys) -> None:
-    input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
-
-    return_code: Exit = main(
-        [
-            '--input',
-            str(input_filename),
-            '--use-generic-container-types',
-            '--target-python-version',
-            '3.6',
-        ]
-    )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert (
-        captured.err == '`--use-generic-container-types` can not be used with '
-        '`--target-python_version` 3.6.\n '
-        'The version will be not supported in a future version\n'
-    )
-
-
 def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> None:
     input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
 
@@ -2247,38 +2226,6 @@ def test_main_openapi_enum_models_as_literal_all():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
-            ).read_text()
-        )
-
-
-@pytest.mark.skipif(
-    version.parse(pydantic.VERSION) < version.parse('1.9.0'),
-    reason='Require Pydantic version 1.9.0 or later ',
-)
-@freeze_time('2019-07-26')
-def test_main_openapi_enum_models_as_literal_py37(capsys):
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'enum_models.yaml'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'openapi',
-                '--enum-field-as-literal',
-                'all',
-            ]
-        )
-
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_openapi_enum_models_as_literal_py37'
-                / 'output.py'
             ).read_text()
         )
 
@@ -4796,7 +4743,7 @@ def test_main_disable_warnings_config(capsys: CaptureFixture):
                 'jsonschema',
                 '--use-union-operator',
                 '--target-python-version',
-                '3.6',
+                '3.8',
                 '--disable-warnings',
             ]
         )

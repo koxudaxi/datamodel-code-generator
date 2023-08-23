@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, TypedDict
 
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import NotRequired
 
 
 class Pet(TypedDict):

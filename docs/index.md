@@ -329,7 +329,7 @@ usage: datamodel-codegen [-h] [--input INPUT] [--url URL]
                          [--custom-template-dir CUSTOM_TEMPLATE_DIR]
                          [--extra-template-data EXTRA_TEMPLATE_DATA]
                          [--aliases ALIASES]
-                         [--target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}]
+                         [--target-python-version {3.8,3.9,3.10,3.11}]
                          [--wrap-string-literal] [--validation]
                          [--use-double-quotes] [--encoding ENCODING] [--debug]
                          [--disable-warnings] [--version]
@@ -439,8 +439,8 @@ options:
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
   --aliases ALIASES     Alias mapping file
-  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
-                        target python version (default: 3.7)
+  --target-python-version {3.8,3.9,3.10,3.11}
+                        target python version (default: 3.8)
   --wrap-string-literal
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or

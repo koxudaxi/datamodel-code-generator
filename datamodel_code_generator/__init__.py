@@ -223,7 +223,7 @@ def generate(
     input_file_type: InputFileType = InputFileType.Auto,
     output: Optional[Path] = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
-    target_python_version: PythonVersion = PythonVersion.PY_37,
+    target_python_version: PythonVersion = PythonVersion.PY_38,
     base_class: str = '',
     additional_imports: Optional[List[str]] = None,
     custom_template_dir: Optional[Path] = None,

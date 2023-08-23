@@ -8,5 +8,5 @@ Example `pyproject.toml`:
 field-constraints = true
 snake-case-field = true
 strip-default-none = false
-target-python-version = "3.7"
+target-python-version = "3.8"
 ```

@@ -317,7 +317,7 @@ class Parser(ABC):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -1022,8 +1022,7 @@ class Parser(ABC):
         self.parse_raw()
 
         if with_import:
-            if self.target_python_version != PythonVersion.PY_36:
-                self.imports.append(IMPORT_ANNOTATIONS)
+            self.imports.append(IMPORT_ANNOTATIONS)
 
         if format_:
             code_formatter: Optional[CodeFormatter] = CodeFormatter(
