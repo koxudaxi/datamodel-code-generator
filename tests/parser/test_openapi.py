@@ -730,6 +730,7 @@ def test_openapi_parser_with_query_parameters():
         ).read_text()
     )
 
+
 def test_openapi_parser_array_called_fields_with_oneOf_items():
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -748,7 +749,6 @@ def test_openapi_parser_array_called_fields_with_oneOf_items():
             / 'output.py'
         ).read_text()
     )
-
 
 
 def test_additional_imports():
