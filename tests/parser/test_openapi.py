@@ -730,6 +730,26 @@ def test_openapi_parser_with_query_parameters():
         ).read_text()
     )
 
+def test_openapi_parser_array_called_fields_with_oneOf_items():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / 'array_called_fields_with_oneOf_items.yaml'),
+        openapi_scopes=[
+            OpenAPIScope.Parameters,
+            OpenAPIScope.Schemas,
+            OpenAPIScope.Paths,
+        ],
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_parse_array_called_fields_with_oneOf_items'
+            / 'output.py'
+        ).read_text()
+    )
+
+
 
 def test_additional_imports():
     """Test that additional imports are inside imports container."""
