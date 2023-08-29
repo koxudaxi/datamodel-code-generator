@@ -1458,13 +1458,13 @@ files = [
 
 [[package]]
 name = "types-setuptools"
-version = "68.0.0.2"
+version = "68.1.0.0"
 description = "Typing stubs for setuptools"
 optional = false
 python-versions = "*"
 files = [
-    {file = "types-setuptools-68.0.0.2.tar.gz", hash = "sha256:fede8b46862dd9fe68a12f11a8444c3d240d11178eba7d584d6f22ca3114b894"},
-    {file = "types_setuptools-68.0.0.2-py3-none-any.whl", hash = "sha256:311a14819416716029d1113c7452143e2fa857e6cc19186bb6830aff69379c48"},
+    {file = "types-setuptools-68.1.0.0.tar.gz", hash = "sha256:2bc9b0c0818f77bdcec619970e452b320a423bb3ac074f5f8bc9300ac281c4ae"},
+    {file = "types_setuptools-68.1.0.0-py3-none-any.whl", hash = "sha256:0c1618fb14850cb482adbec602bbb519c43f24942d66d66196bc7528320f33b1"},
 ]
 
 [[package]]
