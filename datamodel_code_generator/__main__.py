@@ -291,6 +291,7 @@ arg_parser.add_argument(
     '--use-default-kwarg',
     action='store_true',
     help='Use `default=` instead of a positional argument for Fields that have default values.',
+    default=None,
 )
 
 arg_parser.add_argument(
