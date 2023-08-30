@@ -19,9 +19,6 @@ class Pet(BaseModel):
 
 
 class Pets(RootModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
     root: List[Pet]
 
 
@@ -35,23 +32,14 @@ class User(BaseModel):
 
 
 class Users(RootModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
     root: List[User]
 
 
 class Id(RootModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
     root: str
 
 
 class Rules(RootModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
     root: List[str]
 
 
@@ -82,9 +70,6 @@ class Api(BaseModel):
 
 
 class Apis(RootModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
     root: List[Api]
 
 
