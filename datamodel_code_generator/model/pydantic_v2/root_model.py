@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal, Optional
 
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 
@@ -20,7 +20,6 @@ class RootModel(BaseModel):
 
         super().__init__(**kwargs)
 
+    def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:
         # PydanticV2 RootModels cannot have extra fields
-        if self.extra_template_data.get('allow_extra_fields'):
-            self.extra_template_data['allow_extra_fields'] = False
-            delattr(self.extra_template_data['config'], 'extra')
+        return None
