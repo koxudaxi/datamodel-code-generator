@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar, Literal, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 
 class RootModel(BaseModel):
