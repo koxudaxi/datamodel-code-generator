@@ -621,7 +621,7 @@ class Config(BaseModel):
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
-    use_default_kwarg: bool = True
+    use_default_kwarg: bool = False
     reuse_model: bool = False
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None
