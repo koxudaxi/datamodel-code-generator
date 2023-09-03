@@ -36,6 +36,7 @@ def test_infer_input_type():
                 'root_model.yaml',
                 'json_pointer.yaml',
                 'const.json',
+                'array_called_fields_with_oneOf_items.yaml',
             )
         ):
             continue
