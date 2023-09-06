@@ -44,9 +44,11 @@ from datamodel_code_generator.model.base import UNDEFINED, get_module_name
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
+    SPECIAL_PATH_FORMAT,
     Parser,
     Source,
     escape_characters,
+    get_special_path,
     title_to_class_name,
 )
 from datamodel_code_generator.reference import ModelType, Reference, is_url
@@ -90,13 +92,6 @@ def get_model_by_path(
     raise NotImplementedError(  # pragma: no cover
         f'Does not support json pointer to array. schema={schema}, key={keys}'
     )
-
-
-SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
-
-
-def get_special_path(keyword: str, path: List[str]) -> List[str]:
-    return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
 
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
