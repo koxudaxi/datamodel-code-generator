@@ -1041,7 +1041,7 @@ class Parser(ABC):
                 continue
 
             model.reference.name = scoped_model_resolver.add(
-                path=get_special_path('imported_name', model.path),
+                path=get_special_path('imported_name', model.path.split('/')),
                 original_name=model.reference.name,
                 unique=True,
                 class_name=True,
