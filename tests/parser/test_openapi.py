@@ -4,6 +4,7 @@ from typing import List, Optional
 
 import pydantic
 import pytest
+from packaging import version
 
 from datamodel_code_generator import OpenAPIScope, PythonVersion
 from datamodel_code_generator.model import DataModelFieldBase
@@ -732,6 +733,10 @@ def test_openapi_parser_with_query_parameters():
     )
 
 
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse('2.9.0'),
+    reason='Require Pydantic version 2.0.0 or later ',
+)
 def test_openapi_parser_array_called_fields_with_oneOf_items():
     parser = OpenAPIParser(
         data_model_field_type=DataModelField,
