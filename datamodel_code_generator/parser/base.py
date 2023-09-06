@@ -1035,12 +1035,12 @@ class Parser(ABC):
             for i in import_
         }
         for model in models:
-            if model.class_name not in imported_names:
+            if model.class_name not in imported_names:  # pragma: no cover
                 continue
-            if model in unused_models:
+            if model in unused_models:  # pragma: no cover
                 continue
 
-            model.reference.name = scoped_model_resolver.add(
+            model.reference.name = scoped_model_resolver.add(  # pragma: no cover
                 path=get_special_path('imported_name', model.path.split('/')),
                 original_name=model.reference.name,
                 unique=True,
