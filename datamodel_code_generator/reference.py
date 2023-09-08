@@ -277,6 +277,7 @@ class FieldNameResolver:
 class PydanticFieldNameResolver(FieldNameResolver):
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
+        # TODO: Support Pydantic V2
         return not hasattr(BaseModel, field_name)
 
 

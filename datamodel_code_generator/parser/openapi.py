@@ -37,11 +37,11 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     get_model_by_path,
-    get_special_path,
 )
 from datamodel_code_generator.reference import snake_to_upper_camel
 from datamodel_code_generator.types import (

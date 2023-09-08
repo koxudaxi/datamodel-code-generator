@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     DefaultDict,
@@ -27,6 +28,9 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.util import model_validator
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 
 class Constraints(_Constraints):
@@ -127,12 +131,9 @@ class BaseModel(BaseModelBase):
         )
         config_parameters: Dict[str, Any] = {}
 
-        additionalProperties = self.extra_template_data.get('additionalProperties')
-        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
-        if additionalProperties is not None or allow_extra_fields:
-            config_parameters['extra'] = (
-                "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
-            )
+        extra = self._get_config_extra()
+        if extra:
+            config_parameters['extra'] = extra
 
         for from_, to, invert in self.CONFIG_ATTRIBUTES:
             if from_ in self.extra_template_data:
@@ -155,3 +156,12 @@ class BaseModel(BaseModelBase):
 
             self.extra_template_data['config'] = ConfigDict.parse_obj(config_parameters)
             self._additional_imports.append(IMPORT_CONFIG_DICT)
+
+    def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:
+        additionalProperties = self.extra_template_data.get('additionalProperties')
+        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
+        if additionalProperties is not None or allow_extra_fields:
+            return (
+                "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
+            )
+        return None
