@@ -78,7 +78,7 @@ class Exit(IntEnum):
 
 
 class SortingHelpFormatter(HelpFormatter):
-    def add_arguments(self, actions: Iterable[Action]):
+    def add_arguments(self, actions: Iterable[Action]) -> None:
         actions = sorted(actions, key=attrgetter('option_strings'))
         super().add_arguments(actions)
 
