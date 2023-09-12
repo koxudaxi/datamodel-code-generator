@@ -96,7 +96,12 @@ def _bold_cyan(input: str) -> str:
     return f'\x1b[36;1m{input}\x1b[0m'
 
 
-arg_parser = ArgumentParser(formatter_class=SortingHelpFormatter, add_help=False)
+arg_parser = ArgumentParser(
+    usage='\n  datamodel-codegen [options]',
+    description='Generate Python data models from schema definitions or structured data',
+    formatter_class=SortingHelpFormatter,
+    add_help=False,
+)
 
 base_options = arg_parser.add_argument_group(_bold_cyan('Options'))
 typing_options = arg_parser.add_argument_group(_bold_cyan('Typing customization'))
