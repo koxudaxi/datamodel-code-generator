@@ -294,7 +294,7 @@ This method needs the [http extra option](#http-extra-option)
 
 The `datamodel-codegen` command:
 ```bash
-usage: 
+usage:
   datamodel-codegen [options]
 
 Generate Python data models from schema definitions or structured data
@@ -436,6 +436,7 @@ OpenAPI-only options:
 General options:
   --debug               show debug message
   --disable-warnings    disable warnings
+  --no-color            disable colorized output
   --version             show version
   -h, --help            show this help message and exit
 ```

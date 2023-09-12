@@ -77,10 +77,21 @@ class Exit(IntEnum):
     KeyboardInterrupt = 2
 
 
+namespace = Namespace(no_color=False)
+
+
 class SortingHelpFormatter(HelpFormatter):
+    def _bold_cyan(self, text: str) -> str:
+        return f'\x1b[36;1m{text}\x1b[0m'
+
     def add_arguments(self, actions: Iterable[Action]) -> None:
         actions = sorted(actions, key=attrgetter('option_strings'))
         super().add_arguments(actions)
+
+    def start_section(self, heading: str | None) -> None:
+        return super().start_section(
+            heading if namespace.no_color or not heading else self._bold_cyan(heading)
+        )
 
 
 def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
@@ -91,11 +102,6 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 DEFAULT_ENCODING = locale.getpreferredencoding()
 
-
-def _bold_cyan(input: str) -> str:
-    return f'\x1b[36;1m{input}\x1b[0m'
-
-
 arg_parser = ArgumentParser(
     usage='\n  datamodel-codegen [options]',
     description='Generate Python data models from schema definitions or structured data',
@@ -103,13 +109,13 @@ arg_parser = ArgumentParser(
     add_help=False,
 )
 
-base_options = arg_parser.add_argument_group(_bold_cyan('Options'))
-typing_options = arg_parser.add_argument_group(_bold_cyan('Typing customization'))
-field_options = arg_parser.add_argument_group(_bold_cyan('Field customization'))
-model_options = arg_parser.add_argument_group(_bold_cyan('Model customization'))
-template_options = arg_parser.add_argument_group(_bold_cyan('Template customization'))
-openapi_options = arg_parser.add_argument_group(_bold_cyan('OpenAPI-only options'))
-general_options = arg_parser.add_argument_group(_bold_cyan('General options'))
+base_options = arg_parser.add_argument_group('Options')
+typing_options = arg_parser.add_argument_group('Typing customization')
+field_options = arg_parser.add_argument_group('Field customization')
+model_options = arg_parser.add_argument_group('Model customization')
+template_options = arg_parser.add_argument_group('Template customization')
+openapi_options = arg_parser.add_argument_group('OpenAPI-only options')
+general_options = arg_parser.add_argument_group('General options')
 
 base_options.add_argument(
     '--input',
@@ -491,7 +497,9 @@ template_options.add_argument(
     type=str,
 )
 
-
+general_options.add_argument(
+    '--no-color', help='disable colorized output', action='store_true'
+)
 general_options.add_argument('--version', help='show version', action='store_true')
 general_options.add_argument(
     '-h',
@@ -721,7 +729,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if args is None:
         args = sys.argv[1:]
 
-    namespace: Namespace = arg_parser.parse_args(args)
+    arg_parser.parse_args(args, namespace=namespace)
 
     if namespace.version:
         from datamodel_code_generator.version import version
