@@ -1,5 +1,6 @@
 import platform
 import shutil
+from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
@@ -11,7 +12,9 @@ import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
 from packaging import version
+from pytest import MonkeyPatch
 
+import datamodel_code_generator.__main__
 from datamodel_code_generator import (
     DataModelType,
     InputFileType,
@@ -36,6 +39,15 @@ CSV_DATA_PATH: Path = DATA_PATH / 'csv'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
+
+
+@pytest.fixture(autouse=True)
+def reset_namespace(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(
+        target=datamodel_code_generator.__main__,
+        name='namespace',
+        value=Namespace(),
+    )
 
 
 @freeze_time('2019-07-26')

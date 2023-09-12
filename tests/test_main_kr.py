@@ -1,10 +1,14 @@
 import shutil
+from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
 from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
+from pytest import MonkeyPatch
 
+import datamodel_code_generator.__main__
 from datamodel_code_generator import inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 
@@ -19,6 +23,15 @@ EXPECTED_MAIN_KR_PATH = DATA_PATH / 'expected' / 'main_kr'
 
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
+
+
+@pytest.fixture(autouse=True)
+def reset_namespace(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(
+        target=datamodel_code_generator.__main__,
+        name='namespace',
+        value=Namespace(),
+    )
 
 
 @freeze_time('2019-07-26')
