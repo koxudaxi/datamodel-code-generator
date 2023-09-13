@@ -8,8 +8,7 @@ from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
 from pytest import MonkeyPatch
 
-import datamodel_code_generator.__main__
-from datamodel_code_generator import inferred_message
+from datamodel_code_generator import __main__, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 
 try:
@@ -28,7 +27,7 @@ TIMESTAMP = '1985-10-26T01:21:00-07:00'
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: MonkeyPatch):
     monkeypatch.setattr(
-        target=datamodel_code_generator.__main__,
+        target=__main__,
         name='namespace',
         value=Namespace(),
     )
