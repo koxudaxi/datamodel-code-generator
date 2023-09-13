@@ -5,8 +5,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 from _pytest.capture import CaptureFixture
+from _pytest.monkeypatch import MonkeyPatch
 from freezegun import freeze_time
-from pytest import MonkeyPatch
 
 from datamodel_code_generator import __main__, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
