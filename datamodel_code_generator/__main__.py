@@ -88,7 +88,7 @@ class SortingHelpFormatter(HelpFormatter):
         actions = sorted(actions, key=attrgetter('option_strings'))
         super().add_arguments(actions)
 
-    def start_section(self, heading: str | None) -> None:
+    def start_section(self, heading: Optional[str]) -> None:
         return super().start_section(
             heading if namespace.no_color or not heading else self._bold_cyan(heading)
         )
