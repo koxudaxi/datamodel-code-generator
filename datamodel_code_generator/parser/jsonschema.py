@@ -672,7 +672,9 @@ class JsonSchemaParser(Parser):
             )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
-            with self.model_resolver.current_base_path_context(self.model_resolver._base_path):
+            with self.model_resolver.current_base_path_context(
+                self.model_resolver._base_path
+            ):
                 self.model_resolver.delete(path)
                 return self.data_type(reference=base_classes[0])
         if required:
