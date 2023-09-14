@@ -9,15 +9,12 @@ import black
 import isort
 import pydantic
 import pytest
-from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
 from packaging import version
-from pytest import MonkeyPatch
 
 from datamodel_code_generator import (
     DataModelType,
     InputFileType,
-    __main__,
     chdir,
     generate,
     inferred_message,
@@ -28,6 +25,10 @@ try:
     from pytest import TempdirFactory
 except ImportError:
     from _pytest.tmpdir import TempdirFactory
+
+CaptureFixture = pytest.CaptureFixture
+FixtureRequest = pytest.FixtureRequest
+MonkeyPatch = pytest.MonkeyPatch
 
 DATA_PATH: Path = Path(__file__).parent / 'data'
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
@@ -43,11 +44,9 @@ TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: MonkeyPatch):
-    monkeypatch.setattr(
-        target=__main__,
-        name='namespace',
-        value=Namespace(),
-    )
+    namespace_ = Namespace(no_color=False)
+    monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
+    monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
 @freeze_time('2019-07-26')
@@ -770,12 +769,8 @@ def test_show_help(no_color: bool, capsys: CaptureFixture[str]):
         return_code: Exit = main(args)
         assert return_code == Exit.OK
 
-    output = capsys.readouterr()
-
-    if no_color:
-        assert '\x1b' not in output.out
-    else:
-        assert '\x1b' in output.out
+    output = capsys.readouterr().out
+    assert ('\x1b' not in output) == no_color
 
 
 def test_show_help_when_no_input(mocker):
