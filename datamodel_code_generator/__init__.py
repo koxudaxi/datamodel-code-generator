@@ -182,6 +182,7 @@ class DataModelType(Enum):
     PydanticV2BaseModel = 'pydantic_v2.BaseModel'
     DataclassesDataclass = 'dataclasses.dataclass'
     TypingTypedDict = 'typing.TypedDict'
+    MsgspecStruct = 'msgspec.Struct'
 
 
 class OpenAPIScope(Enum):

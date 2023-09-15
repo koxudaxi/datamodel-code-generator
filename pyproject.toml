@@ -58,6 +58,7 @@ toml = ">=0.10.0,<1.0.0"
 genson = ">=1.2.1,<2.0"
 httpx = { version = "*", optional = true }
 packaging = "*"
+msgspec = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">6.0"

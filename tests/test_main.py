@@ -5677,3 +5677,52 @@ def test_main_jsonschema_discriminator_literals():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_struct():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_use_annotated_with_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
+                '--output',
+                str(output_file),
+                '--field-constraints',
+                '--target-python-version',
+                '3.9',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_use_annotated_with_msgspec_meta_constraints'
+                / 'output.py'
+            ).read_text()
+        )

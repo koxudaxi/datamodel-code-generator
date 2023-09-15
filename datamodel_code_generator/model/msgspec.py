@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
+
+from datamodel_code_generator.imports import Import
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.model.imports import IMPORT_MSGSPEC_STRUCT, IMPORT_MSGSPEC_FIELD, IMPORT_MSGSPEC_META
+from datamodel_code_generator.model.pydantic.base_model import Constraints
+from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.types import chain_as_tuple
+
+
+def _has_field_assignment(field: DataModelFieldBase) -> bool:
+    return bool(field.field) or not (
+        field.required
+        or (field.represented_default == 'None' and field.strip_default_none)
+    )
+
+
+class Struct(DataModel):
+    TEMPLATE_FILE_PATH: ClassVar[str] = 'msgspec.jinja2'
+    BASE_CLASS: ClassVar[str] = 'msgspec.Struct'
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_MSGSPEC_STRUCT,)
+
+    def __init__(
+        self,
+        *,
+        reference: Reference,
+        fields: List[DataModelFieldBase],
+        decorators: Optional[List[str]] = None,
+        base_classes: Optional[List[Reference]] = None,
+        custom_base_class: Optional[str] = None,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+        methods: Optional[List[str]] = None,
+        path: Optional[Path] = None,
+        description: Optional[str] = None,
+        default: Any = UNDEFINED,
+        nullable: bool = False,
+    ) -> None:
+        super().__init__(
+            reference=reference,
+            fields=sorted(fields, key=_has_field_assignment, reverse=False),
+            decorators=decorators,
+            base_classes=base_classes,
+            custom_base_class=custom_base_class,
+            custom_template_dir=custom_template_dir,
+            extra_template_data=extra_template_data,
+            methods=methods,
+            path=path,
+            description=description,
+            default=default,
+            nullable=nullable,
+        )
+
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        extra_imports = []
+        if any(f for f in self.fields if f.field):
+            extra_imports.append(IMPORT_MSGSPEC_FIELD)
+        if any(f for f in self.fields if f.annotated):
+            extra_imports.append(IMPORT_MSGSPEC_META)
+        return chain_as_tuple(super().imports, extra_imports)
+
+
+class DataModelField(DataModelFieldBase):
+    _FIELD_KEYS: ClassVar[Set[str]] = {
+        'default',
+        'default_factory',
+    }
+    _META_FIELD_KEYS: ClassVar[Set[str]] = {
+        'description',
+        'gt',
+        'ge',
+        'lt',
+        'le',
+        'multiple_of',
+        # 'min_items', # not supported by msgspec
+        # 'max_items', # not supported by msgspec
+        'min_length',
+        'max_length',
+        'regex',
+        # 'unique_items', # not supported by msgspec
+    }
+    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le', 'multiple_of'}
+    constraints: Optional[Constraints] = None
+
+    def self_reference(self) -> bool:  # pragma: no cover
+        return isinstance(self.parent, Struct) and self.parent.reference.path in {
+            d.reference.path for d in self.data_type.all_data_types if d.reference
+        }
+
+    def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
+        if value is None or constraint not in self._COMPARE_EXPRESSIONS:
+            return value
+
+        if any(
+            data_type.type == 'float' for data_type in self.data_type.all_data_types
+        ):
+            return float(value)
+        return int(value)
+
+    @property
+    def field(self) -> Optional[str]:
+        """for backwards compatibility"""
+        result = str(self)
+        if result == '':
+            return None
+
+        return result
+
+    def __str__(self) -> str:
+        data: Dict[str, Any] = {
+            k: v for k, v in self.extras.items() if k in self._FIELD_KEYS
+        }
+        if self.alias:
+            data['name'] = self.alias
+
+        if self.default != UNDEFINED and self.default is not None:
+            data['default'] = self.default
+
+        if self.required:
+            data = {
+                k: v
+                for k, v in data.items()
+                if k
+                not in (
+                    'default',
+                    'default_factory',
+                )
+            }
+
+        if not data:
+            return ''
+
+        if len(data) == 1 and 'default' in data:  # pragma: no cover
+            return repr(data['default'])
+        kwargs = [
+            f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()
+        ]
+        return f'field({", ".join(kwargs)})'
+
+    @property
+    def annotated(self) -> Optional[str]:
+        if not self.use_annotated:
+            return None
+
+        data: Dict[str, Any] = {
+            k: v for k, v in self.extras.items() if k in self._META_FIELD_KEYS
+        }
+        if (
+            self.constraints is not None
+            and not self.self_reference()
+            and not self.data_type.strict
+        ):
+            data = {
+                **data,
+                **{
+                    k: self._get_strict_field_constraint_value(k, v)
+                    for k, v in self.constraints.model_dump().items()
+                    if k in self._META_FIELD_KEYS
+                },
+            }
+
+        meta_arguments = sorted(
+            f'{k}={repr(v)}' for k, v in data.items() if v is not None
+        )
+        if not meta_arguments:
+            return None
+
+        meta = f'Meta({", ".join(meta_arguments)})'
+
+        return f'Annotated[{self.type_hint}, {meta}]'
