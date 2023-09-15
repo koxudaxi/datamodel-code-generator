@@ -71,6 +71,7 @@ class DataModelField(DataModelFieldBase):
         'default_factory',
     }
     _META_FIELD_KEYS: ClassVar[Set[str]] = {
+        'title',
         'description',
         'gt',
         'ge',
