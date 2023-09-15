@@ -1111,169 +1111,151 @@
 <p>This method needs the <a href="#http-extra-option">http extra option</a></p>
 <h2 id="all-command-options">All Command Options</h2>
 <p>The <code>datamodel-codegen</code> command:</p>
-<div class="codehilite"><pre><span></span><code>usage:<span class="w"> </span>datamodel-codegen<span class="w"> </span><span class="o">[</span>-h<span class="o">]</span><span class="w"> </span><span class="o">[</span>--input<span class="w"> </span>INPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--url<span class="w"> </span>URL<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]]</span>
-<span class="w">                         </span><span class="o">[</span>--http-ignore-tls<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv<span class="o">}]</span>
-<span class="w">                         </span><span class="o">[</span>--output-model-type<span class="w"> </span><span class="o">{</span>pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict<span class="o">}]</span>
-<span class="w">                         </span><span class="o">[</span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
-<span class="w">                         </span><span class="o">[</span>--output<span class="w"> </span>OUTPUT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--base-class<span class="w"> </span>BASE_CLASS<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--field-constraints<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-annotated<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-non-positive-negative-number-constrained-types<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--field-extra-keys<span class="w"> </span>FIELD_EXTRA_KEYS<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS<span class="w"> </span>...<span class="o">]]</span>
-<span class="w">                         </span><span class="o">[</span>--field-include-all-keys<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--field-extra-keys-without-x-prefix<span class="w"> </span>FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX<span class="w"> </span>...<span class="o">]]</span><span class="w"> </span>
-<span class="w">                         </span><span class="o">[</span>--snake-case-field<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--original-field-name-delimiter<span class="w"> </span>ORIGINAL_FIELD_NAME_DELIMITER<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--strip-default-none<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--disable-appending-item-suffix<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--allow-population-by-field-name<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--allow-extra-fields<span class="o">]</span><span class="w"> </span><span class="o">[</span>--enable-faux-immutability<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-default<span class="o">]</span><span class="w"> </span><span class="o">[</span>--force-optional<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--strict-nullable<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--strict-types<span class="w"> </span><span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span><span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span>...<span class="o">]]</span>
-<span class="w">                         </span><span class="o">[</span>--disable-timestamp<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-standard-collections<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-generic-container-types<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-union-operator<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-schema-description<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-field-description<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-default-kwarg<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--reuse-model<span class="o">]</span><span class="w"> </span><span class="o">[</span>--keep-model-order<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--collapse-root-models<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--enum-field-as-literal<span class="w"> </span><span class="o">{</span>all,one<span class="o">}]</span><span class="w"> </span><span class="o">[</span>--use-one-literal-as-default<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--set-default-enum-member<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--empty-enum-field-name<span class="w"> </span>EMPTY_ENUM_FIELD_NAME<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--capitalise-enum-members<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--remove-special-field-name-prefix<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-subclass-enum<span class="o">]</span><span class="w"> </span><span class="o">[</span>--class-name<span class="w"> </span>CLASS_NAME<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-title-as-name<span class="o">]</span><span class="w"> </span><span class="o">[</span>--use-operation-id-as-name<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-unique-items-as-set<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--extra-template-data<span class="w"> </span>EXTRA_TEMPLATE_DATA<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--aliases<span class="w"> </span>ALIASES<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--target-python-version<span class="w"> </span><span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9,3.10,3.11<span class="o">}]</span>
-<span class="w">                         </span><span class="o">[</span>--wrap-string-literal<span class="o">]</span><span class="w"> </span><span class="o">[</span>--validation<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--use-double-quotes<span class="o">]</span><span class="w"> </span><span class="o">[</span>--encoding<span class="w"> </span>ENCODING<span class="o">]</span><span class="w"> </span><span class="o">[</span>--debug<span class="o">]</span>
-<span class="w">                         </span><span class="o">[</span>--disable-warnings<span class="o">]</span><span class="w"> </span><span class="o">[</span>--version<span class="o">]</span>
+<div class="codehilite"><pre><span></span><code>usage:
+<span class="w">  </span>datamodel-codegen<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
 
-options:
-<span class="w">  </span>-h,<span class="w"> </span>--help<span class="w">            </span>show<span class="w"> </span>this<span class="w"> </span><span class="nb">help</span><span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span><span class="nb">exit</span>
-<span class="w">  </span>--input<span class="w"> </span>INPUT<span class="w">         </span>Input<span class="w"> </span>file/directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>stdin<span class="o">)</span>
-<span class="w">  </span>--url<span class="w"> </span>URL<span class="w">             </span>Input<span class="w"> </span>file<span class="w"> </span>URL.<span class="w"> </span><span class="sb">`</span>--input<span class="sb">`</span><span class="w"> </span>is<span class="w"> </span>ignored<span class="w"> </span>when<span class="w"> </span><span class="sb">`</span>--url<span class="sb">`</span><span class="w"> </span>is
-<span class="w">                        </span>used
+Generate<span class="w"> </span>Python<span class="w"> </span>data<span class="w"> </span>models<span class="w"> </span>from<span class="w"> </span>schema<span class="w"> </span>definitions<span class="w"> </span>or<span class="w"> </span>structured<span class="w"> </span>data
+
+Options:
 <span class="w">  </span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]</span>
 <span class="w">                        </span>Set<span class="w"> </span>headers<span class="w"> </span><span class="k">in</span><span class="w"> </span>HTTP<span class="w"> </span>requests<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host.
 <span class="w">                        </span><span class="o">(</span>example:<span class="w"> </span><span class="s2">&quot;Authorization: Basic dXNlcjpwYXNz&quot;</span><span class="o">)</span>
 <span class="w">  </span>--http-ignore-tls<span class="w">     </span>Disable<span class="w"> </span>verification<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host<span class="s1">&#39;s TLS</span>
 <span class="s1">                        certificate</span>
+<span class="s1">  --input INPUT         Input file/directory (default: stdin)</span>
 <span class="s1">  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}</span>
 <span class="s1">                        Input file type (default: auto)</span>
+<span class="s1">  --output OUTPUT       Output file (default: stdout)</span>
 <span class="s1">  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict}</span>
 <span class="s1">                        Output model type (default: pydantic.BaseModel)</span>
-<span class="s1">  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]</span>
-<span class="s1">                        Scopes of OpenAPI model generation (default: schemas)</span>
-<span class="s1">  --output OUTPUT       Output file (default: stdout)</span>
+<span class="s1">  --url URL             Input file URL. `--input` is ignored when `--url` is</span>
+<span class="s1">                        used</span>
+
+<span class="s1">Typing customization:</span>
 <span class="s1">  --base-class BASE_CLASS</span>
 <span class="s1">                        Base Class (default: pydantic.BaseModel)</span>
+<span class="s1">  --enum-field-as-literal {all,one}</span>
+<span class="s1">                        Parse enum field as literal. all: all enum field type</span>
+<span class="s1">                        are Literal. one: field type is Literal when an enum</span>
+<span class="s1">                        has only one possible value</span>
 <span class="s1">  --field-constraints   Use field constraints and not con* annotations</span>
-<span class="s1">  --use-annotated       Use typing.Annotated for Field(). Also, `--field-</span>
-<span class="s1">                        constraints` option will be enabled.</span>
-<span class="s1">  --use-non-positive-negative-number-constrained-types</span>
-<span class="s1">                        Use the Non{Positive,Negative}{FloatInt} types instead</span>
-<span class="s1">                        of the corresponding con* constrained types.</span>
-<span class="s1">  --field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]</span>
-<span class="s1">                        Add extra keys to field parameters</span>
-<span class="s1">  --field-include-all-keys</span>
-<span class="s1">                        Add all keys to field parameters</span>
-<span class="s1">  --field-extra-keys-without-x-prefix</span>
-<span class="s1">                        Add extra keys with `x-` prefix to field parameters.</span>
-<span class="s1">                        The extra keys are stripped of the `x-` prefix.</span>
-<span class="s1">  --snake-case-field    Change camel-case field name to snake-case</span>
-<span class="s1">  --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER</span>
-<span class="s1">                        Set delimiter to convert to snake case. This option</span>
-<span class="s1">                        only can be used with --snake-case-field (default: `_`</span>
-<span class="s1">                        )</span>
-<span class="s1">  --strip-default-none  Strip default None on fields</span>
-<span class="s1">  --disable-appending-item-suffix</span>
-<span class="s1">                        Disable appending `Item` suffix to model name in an</span>
-<span class="s1">                        array</span>
-<span class="s1">  --allow-population-by-field-name</span>
-<span class="s1">                        Allow population by field name</span>
-<span class="s1">  --allow-extra-fields  Allow to pass extra fields, if this flag is not</span>
-<span class="s1">                        passed, extra fields are forbidden.</span>
-<span class="s1">  --enable-faux-immutability</span>
-<span class="s1">                        Enable faux immutability</span>
-<span class="s1">  --use-default         Use default value even if a field is required</span>
-<span class="s1">  --force-optional      Force optional for required fields</span>
-<span class="s1">  --strict-nullable     Treat default field as a non-nullable field (Only</span>
-<span class="s1">                        OpenAPI)</span>
+<span class="s1">  --set-default-enum-member</span>
+<span class="s1">                        Set enum members as default values for enum field</span>
 <span class="s1">  --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]</span>
 <span class="s1">                        Use strict types</span>
-<span class="s1">  --disable-timestamp   Disable timestamp on file headers</span>
-<span class="s1">  --use-standard-collections</span>
-<span class="s1">                        Use standard collections for type hinting (list, dict)</span>
+<span class="s1">  --use-annotated       Use typing.Annotated for Field(). Also, `--field-</span>
+<span class="s1">                        constraints` option will be enabled.</span>
 <span class="s1">  --use-generic-container-types</span>
 <span class="s1">                        Use generic container types for type hinting</span>
 <span class="s1">                        (typing.Sequence, typing.Mapping). If `--use-standard-</span>
 <span class="s1">                        collections` option is set, then import from</span>
 <span class="s1">                        collections.abc instead of typing</span>
+<span class="s1">  --use-non-positive-negative-number-constrained-types</span>
+<span class="s1">                        Use the Non{Positive,Negative}{FloatInt} types instead</span>
+<span class="s1">                        of the corresponding con* constrained types.</span>
+<span class="s1">  --use-one-literal-as-default</span>
+<span class="s1">                        Use one literal as default value for one literal field</span>
+<span class="s1">  --use-standard-collections</span>
+<span class="s1">                        Use standard collections for type hinting (list, dict)</span>
+<span class="s1">  --use-subclass-enum   Define Enum class as subclass with field type when</span>
+<span class="s1">                        enum has type (int, float, bytes, str)</span>
 <span class="s1">  --use-union-operator  Use | operator for Union type (PEP 604).</span>
-<span class="s1">  --use-schema-description</span>
-<span class="s1">                        Use schema description to populate class docstring</span>
-<span class="s1">  --use-field-description</span>
-<span class="s1">                        Use schema description to populate field docstring</span>
-<span class="s1">  --use-default-kwarg   Use `default=` instead of a positional argument for</span>
-<span class="s1">                        Fields that have default values.</span>
-<span class="s1">  --reuse-model         Re-use models on the field when a module has the model</span>
-<span class="s1">                        with the same content</span>
-<span class="s1">  --keep-model-order    Keep generated models&#39;</span><span class="w"> </span>order
-<span class="w">  </span>--collapse-root-models
-<span class="w">                        </span>Models<span class="w"> </span>generated<span class="w"> </span>with<span class="w"> </span>a<span class="w"> </span>root-type<span class="w"> </span>field<span class="w"> </span>will<span class="w"> </span>be
-<span class="w">                        </span>mergedinto<span class="w"> </span>the<span class="w"> </span>models<span class="w"> </span>using<span class="w"> </span>that<span class="w"> </span>root-type<span class="w"> </span>model
-<span class="w">  </span>--enum-field-as-literal<span class="w"> </span><span class="o">{</span>all,one<span class="o">}</span>
-<span class="w">                        </span>Parse<span class="w"> </span>enum<span class="w"> </span>field<span class="w"> </span>as<span class="w"> </span>literal.<span class="w"> </span>all:<span class="w"> </span>all<span class="w"> </span>enum<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span>
-<span class="w">                        </span>are<span class="w"> </span>Literal.<span class="w"> </span>one:<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>is<span class="w"> </span>Literal<span class="w"> </span>when<span class="w"> </span>an<span class="w"> </span>enum
-<span class="w">                        </span>has<span class="w"> </span>only<span class="w"> </span>one<span class="w"> </span>possible<span class="w"> </span>value
-<span class="w">  </span>--use-one-literal-as-default
-<span class="w">                        </span>Use<span class="w"> </span>one<span class="w"> </span>literal<span class="w"> </span>as<span class="w"> </span>default<span class="w"> </span>value<span class="w"> </span><span class="k">for</span><span class="w"> </span>one<span class="w"> </span>literal<span class="w"> </span>field
-<span class="w">  </span>--set-default-enum-member
-<span class="w">                        </span>Set<span class="w"> </span>enum<span class="w"> </span>members<span class="w"> </span>as<span class="w"> </span>default<span class="w"> </span>values<span class="w"> </span><span class="k">for</span><span class="w"> </span>enum<span class="w"> </span>field
-<span class="w">  </span>--empty-enum-field-name<span class="w"> </span>EMPTY_ENUM_FIELD_NAME
-<span class="w">                        </span>Set<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>when<span class="w"> </span>enum<span class="w"> </span>value<span class="w"> </span>is<span class="w"> </span>empty<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>_<span class="sb">`</span><span class="o">)</span>
-<span class="w">  </span>--capitalise-enum-members
-<span class="w">                        </span>Capitalize<span class="w"> </span>field<span class="w"> </span>names<span class="w"> </span>on<span class="w"> </span>enum
-<span class="w">  </span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX
-<span class="w">                        </span>Set<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>prefix<span class="w"> </span>when<span class="w"> </span>first<span class="w"> </span>character<span class="w"> </span>can<span class="s1">&#39;t be</span>
-<span class="s1">                        used as Python field name (default: `field`)</span>
+<span class="s1">  --use-unique-items-as-set</span>
+<span class="s1">                        define field type as `set` when the field attribute</span>
+<span class="s1">                        has `uniqueItems`</span>
+
+<span class="s1">Field customization:</span>
+<span class="s1">  --capitalise-enum-members, --capitalize-enum-members</span>
+<span class="s1">                        Capitalize field names on enum</span>
+<span class="s1">  --empty-enum-field-name EMPTY_ENUM_FIELD_NAME</span>
+<span class="s1">                        Set field name when enum value is empty (default: `_`)</span>
+<span class="s1">  --field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]</span>
+<span class="s1">                        Add extra keys to field parameters</span>
+<span class="s1">  --field-extra-keys-without-x-prefix FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX [FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX ...]</span>
+<span class="s1">                        Add extra keys with `x-` prefix to field parameters.</span>
+<span class="s1">                        The extra keys are stripped of the `x-` prefix.</span>
+<span class="s1">  --field-include-all-keys</span>
+<span class="s1">                        Add all keys to field parameters</span>
+<span class="s1">  --force-optional      Force optional for required fields</span>
+<span class="s1">  --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER</span>
+<span class="s1">                        Set delimiter to convert to snake case. This option</span>
+<span class="s1">                        only can be used with --snake-case-field (default: `_`</span>
+<span class="s1">                        )</span>
 <span class="s1">  --remove-special-field-name-prefix</span>
 <span class="s1">                        Remove field name prefix when first character can&#39;</span>t<span class="w"> </span>be
 <span class="w">                        </span>used<span class="w"> </span>as<span class="w"> </span>Python<span class="w"> </span>field<span class="w"> </span>name
-<span class="w">  </span>--use-subclass-enum<span class="w">   </span>Define<span class="w"> </span>Enum<span class="w"> </span>class<span class="w"> </span>as<span class="w"> </span>subclass<span class="w"> </span>with<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>when
-<span class="w">                        </span>enum<span class="w"> </span>has<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>int,<span class="w"> </span>float,<span class="w"> </span>bytes,<span class="w"> </span>str<span class="o">)</span>
-<span class="w">  </span>--class-name<span class="w"> </span>CLASS_NAME
-<span class="w">                        </span>Set<span class="w"> </span>class<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>root<span class="w"> </span>model
-<span class="w">  </span>--use-title-as-name<span class="w">   </span>use<span class="w"> </span>titles<span class="w"> </span>as<span class="w"> </span>class<span class="w"> </span>names<span class="w"> </span>of<span class="w"> </span>models
-<span class="w">  </span>--use-unique-items-as-set
-<span class="w">                        </span>define<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>as<span class="w"> </span><span class="sb">`</span><span class="nb">set</span><span class="sb">`</span><span class="w"> </span>when<span class="w"> </span>the<span class="w"> </span>field<span class="w"> </span>attribute
-<span class="w">                        </span>has<span class="w"> </span><span class="sb">`</span>uniqueItems<span class="sb">`</span>
-<span class="w">  </span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR
-<span class="w">                        </span>Custom<span class="w"> </span>template<span class="w"> </span>directory
-<span class="w">  </span>--extra-template-data<span class="w"> </span>EXTRA_TEMPLATE_DATA
-<span class="w">                        </span>Extra<span class="w"> </span>template<span class="w"> </span>data
-<span class="w">  </span>--aliases<span class="w"> </span>ALIASES<span class="w">     </span>Alias<span class="w"> </span>mapping<span class="w"> </span>file
+<span class="w">  </span>--snake-case-field<span class="w">    </span>Change<span class="w"> </span>camel-case<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>to<span class="w"> </span>snake-case
+<span class="w">  </span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX
+<span class="w">                        </span>Set<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>prefix<span class="w"> </span>when<span class="w"> </span>first<span class="w"> </span>character<span class="w"> </span>can<span class="s1">&#39;t be</span>
+<span class="s1">                        used as Python field name (default: `field`)</span>
+<span class="s1">  --strip-default-none  Strip default None on fields</span>
+<span class="s1">  --use-default         Use default value even if a field is required</span>
+<span class="s1">  --use-default-kwarg   Use `default=` instead of a positional argument for</span>
+<span class="s1">                        Fields that have default values.</span>
+<span class="s1">  --use-field-description</span>
+<span class="s1">                        Use schema description to populate field docstring</span>
+
+<span class="s1">Model customization:</span>
+<span class="s1">  --allow-extra-fields  Allow to pass extra fields, if this flag is not</span>
+<span class="s1">                        passed, extra fields are forbidden.</span>
+<span class="s1">  --allow-population-by-field-name</span>
+<span class="s1">                        Allow population by field name</span>
+<span class="s1">  --class-name CLASS_NAME</span>
+<span class="s1">                        Set class name of root model</span>
+<span class="s1">  --collapse-root-models</span>
+<span class="s1">                        Models generated with a root-type field will be</span>
+<span class="s1">                        mergedinto the models using that root-type model</span>
+<span class="s1">  --disable-appending-item-suffix</span>
+<span class="s1">                        Disable appending `Item` suffix to model name in an</span>
+<span class="s1">                        array</span>
+<span class="s1">  --disable-timestamp   Disable timestamp on file headers</span>
+<span class="s1">  --enable-faux-immutability</span>
+<span class="s1">                        Enable faux immutability</span>
+<span class="s1">  --enable-version-header</span>
+<span class="s1">                        Enable package version on file headers</span>
+<span class="s1">  --keep-model-order    Keep generated models&#39;</span><span class="w"> </span>order
+<span class="w">  </span>--reuse-model<span class="w">         </span>Re-use<span class="w"> </span>models<span class="w"> </span>on<span class="w"> </span>the<span class="w"> </span>field<span class="w"> </span>when<span class="w"> </span>a<span class="w"> </span>module<span class="w"> </span>has<span class="w"> </span>the<span class="w"> </span>model
+<span class="w">                        </span>with<span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>content
 <span class="w">  </span>--target-python-version<span class="w"> </span><span class="o">{</span><span class="m">3</span>.6,3.7,3.8,3.9,3.10,3.11<span class="o">}</span>
 <span class="w">                        </span>target<span class="w"> </span>python<span class="w"> </span>version<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="m">3</span>.7<span class="o">)</span>
+<span class="w">  </span>--use-schema-description
+<span class="w">                        </span>Use<span class="w"> </span>schema<span class="w"> </span>description<span class="w"> </span>to<span class="w"> </span>populate<span class="w"> </span>class<span class="w"> </span>docstring
+<span class="w">  </span>--use-title-as-name<span class="w">   </span>use<span class="w"> </span>titles<span class="w"> </span>as<span class="w"> </span>class<span class="w"> </span>names<span class="w"> </span>of<span class="w"> </span>models
+
+Template<span class="w"> </span>customization:
+<span class="w">  </span>--aliases<span class="w"> </span>ALIASES<span class="w">     </span>Alias<span class="w"> </span>mapping<span class="w"> </span>file
+<span class="w">  </span>--custom-file-header<span class="w"> </span>CUSTOM_FILE_HEADER
+<span class="w">                        </span>Custom<span class="w"> </span>file<span class="w"> </span>header
+<span class="w">  </span>--custom-file-header-path<span class="w"> </span>CUSTOM_FILE_HEADER_PATH
+<span class="w">                        </span>Custom<span class="w"> </span>file<span class="w"> </span>header<span class="w"> </span>file<span class="w"> </span>path
+<span class="w">  </span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR
+<span class="w">                        </span>Custom<span class="w"> </span>template<span class="w"> </span>directory
+<span class="w">  </span>--encoding<span class="w"> </span>ENCODING<span class="w">   </span>The<span class="w"> </span>encoding<span class="w"> </span>of<span class="w"> </span>input<span class="w"> </span>and<span class="w"> </span>output<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>UTF-8<span class="o">)</span>
+<span class="w">  </span>--extra-template-data<span class="w"> </span>EXTRA_TEMPLATE_DATA
+<span class="w">                        </span>Extra<span class="w"> </span>template<span class="w"> </span>data
+<span class="w">  </span>--use-double-quotes<span class="w">   </span>Model<span class="w"> </span>generated<span class="w"> </span>with<span class="w"> </span>double<span class="w"> </span>quotes.<span class="w"> </span>Single<span class="w"> </span>quotes<span class="w"> </span>or
+<span class="w">                        </span>your<span class="w"> </span>black<span class="w"> </span>config<span class="w"> </span>skip_string_normalization<span class="w"> </span>value<span class="w"> </span>will
+<span class="w">                        </span>be<span class="w"> </span>used<span class="w"> </span>without<span class="w"> </span>this<span class="w"> </span>option.
 <span class="w">  </span>--wrap-string-literal
 <span class="w">                        </span>Wrap<span class="w"> </span>string<span class="w"> </span>literal<span class="w"> </span>by<span class="w"> </span>using<span class="w"> </span>black<span class="w"> </span><span class="sb">`</span>experimental-
 <span class="w">                        </span>string-processing<span class="sb">`</span><span class="w"> </span>option<span class="w"> </span><span class="o">(</span>require<span class="w"> </span>black<span class="w"> </span><span class="m">20</span>.8b0<span class="w"> </span>or
 <span class="w">                        </span>later<span class="o">)</span>
+
+OpenAPI-only<span class="w"> </span>options:
+<span class="w">  </span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags,parameters<span class="o">}</span><span class="w"> </span>...<span class="o">]</span>
+<span class="w">                        </span>Scopes<span class="w"> </span>of<span class="w"> </span>OpenAPI<span class="w"> </span>model<span class="w"> </span>generation<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>schemas<span class="o">)</span>
+<span class="w">  </span>--strict-nullable<span class="w">     </span>Treat<span class="w"> </span>default<span class="w"> </span>field<span class="w"> </span>as<span class="w"> </span>a<span class="w"> </span>non-nullable<span class="w"> </span>field<span class="w"> </span><span class="o">(</span>Only
+<span class="w">                        </span>OpenAPI<span class="o">)</span>
+<span class="w">  </span>--use-operation-id-as-name
+<span class="w">                        </span>use<span class="w"> </span>operation<span class="w"> </span>id<span class="w"> </span>of<span class="w"> </span>OpenAPI<span class="w"> </span>as<span class="w"> </span>class<span class="w"> </span>names<span class="w"> </span>of<span class="w"> </span>models
 <span class="w">  </span>--validation<span class="w">          </span>Enable<span class="w"> </span>validation<span class="w"> </span><span class="o">(</span>Only<span class="w"> </span>OpenAPI<span class="o">)</span>
-<span class="w">  </span>--use-double-quotes<span class="w">   </span>Model<span class="w"> </span>generated<span class="w"> </span>with<span class="w"> </span>double<span class="w"> </span>quotes.<span class="w"> </span>Single<span class="w"> </span>quotes<span class="w"> </span>or
-<span class="w">                        </span>your<span class="w"> </span>black<span class="w"> </span>config<span class="w"> </span>skip_string_normalization<span class="w"> </span>value<span class="w"> </span>will
-<span class="w">                        </span>be<span class="w"> </span>used<span class="w"> </span>without<span class="w"> </span>this<span class="w"> </span>option.
-<span class="w">  </span>--encoding<span class="w"> </span>ENCODING<span class="w">   </span>The<span class="w"> </span>encoding<span class="w"> </span>of<span class="w"> </span>input<span class="w"> </span>and<span class="w"> </span>output<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>cp1252<span class="o">)</span>
+
+General<span class="w"> </span>options:
 <span class="w">  </span>--debug<span class="w">               </span>show<span class="w"> </span>debug<span class="w"> </span>message
 <span class="w">  </span>--disable-warnings<span class="w">    </span>disable<span class="w"> </span>warnings
+<span class="w">  </span>--no-color<span class="w">            </span>disable<span class="w"> </span>colorized<span class="w"> </span>output
 <span class="w">  </span>--version<span class="w">             </span>show<span class="w"> </span>version
+<span class="w">  </span>-h,<span class="w"> </span>--help<span class="w">            </span>show<span class="w"> </span>this<span class="w"> </span><span class="nb">help</span><span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span><span class="nb">exit</span>
 </code></pre></div>
 
 <p><a href="./supported-data-types.md" style="font-size: 2em; ">Click here to see supported input formats</a></p>
