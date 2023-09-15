@@ -93,6 +93,17 @@ class DataModelField(DataModelFieldBase):
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
 
+    def process_const(self) -> None:
+        if 'const' not in self.extras:
+            return None
+        self.const = True
+        self.nullable = False
+        const = self.extras['const']
+        if self.data_type.type == 'str' and isinstance(
+            const, str
+        ):  # pragma: no cover # Literal supports only str
+            self.data_type = self.data_type.__class__(literals=[const])
+
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
