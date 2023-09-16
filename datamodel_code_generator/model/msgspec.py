@@ -175,7 +175,7 @@ class DataModelField(DataModelFieldBase):
                 **data,
                 **{
                     k: self._get_strict_field_constraint_value(k, v)
-                    for k, v in self.constraints.model_dump().items()
+                    for k, v in self.constraints.dict().items()
                     if k in self._META_FIELD_KEYS
                 },
             }
