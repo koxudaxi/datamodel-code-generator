@@ -21,7 +21,7 @@ def get_data_model_types(
     data_model_type: DataModelType, target_python_version: PythonVersion
 ) -> DataModelSet:
     from .. import DataModelType
-    from . import dataclass, pydantic, pydantic_v2, rootmodel, typed_dict, msgspec
+    from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict
     from .types import DataTypeManager
 
     if data_model_type == DataModelType.PydanticBaseModel:

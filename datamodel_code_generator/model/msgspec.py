@@ -6,7 +6,11 @@ from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.imports import IMPORT_MSGSPEC_STRUCT, IMPORT_MSGSPEC_FIELD, IMPORT_MSGSPEC_META
+from datamodel_code_generator.model.imports import (
+    IMPORT_MSGSPEC_FIELD,
+    IMPORT_MSGSPEC_META,
+    IMPORT_MSGSPEC_STRUCT,
+)
 from datamodel_code_generator.model.pydantic.base_model import Constraints
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple
