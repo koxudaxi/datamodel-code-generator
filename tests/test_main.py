@@ -5689,6 +5689,9 @@ def test_main_msgspec_struct():
                 str(OPEN_API_DATA_PATH / 'api.yaml'),
                 '--output',
                 str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
                 '--output-model-type',
                 'msgspec.Struct',
             ]
