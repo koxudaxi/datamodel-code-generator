@@ -20,7 +20,7 @@ class Animal(BaseModel):
     """
 
 
-class Animals(RootModel):
+class Animals(RootModel[Animal]):
     root: Animal
 
 
@@ -39,5 +39,5 @@ class Pet(BaseModel):
     """
 
 
-class Pets(RootModel):
+class Pets(RootModel[Pet]):
     root: Pet
