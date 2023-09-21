@@ -8,6 +8,7 @@ $ pip install -e datamodel-code-generator
 ```
 
 # Contribute
+
 We are waiting for your contributions to `datamodel-code-generator`.
 
 ## How to contribute
@@ -18,7 +19,7 @@ $ git clone git@github.com:<your username>/datamodel-code-generator.git
 $ cd datamodel-code-generator
 
 ## 2. Install [poetry](https://github.com/python-poetry/poetry)
-$ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python 
+$ curl -sSL https://install.python-poetry.org | python3 - 
 
 ## 3. Install dependencies
 $ poetry install

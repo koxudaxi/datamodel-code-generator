@@ -18,6 +18,7 @@ See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for mor
 ## Sponsors
 [![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
 
+
 ## Quick Installation
 
 To install `datamodel-code-generator`:
@@ -455,6 +456,10 @@ This code generator creates [FastAPI](https://github.com/tiangolo/fastapi) app f
 ## PyPi
 
 [https://pypi.org/project/datamodel-code-generator](https://pypi.org/project/datamodel-code-generator)
+
+## Contributing
+
+See `docs/development-contributing.md` for how to get started!
 
 ## License
 
