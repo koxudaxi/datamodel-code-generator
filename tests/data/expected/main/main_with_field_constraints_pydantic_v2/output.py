@@ -15,19 +15,19 @@ class Pet(BaseModel):
     tag: Optional[str] = Field(None, max_length=64)
 
 
-class Pets(RootModel):
+class Pets(RootModel[List[Pet]]):
     root: List[Pet] = Field(..., max_length=10, min_length=1)
 
 
-class UID(RootModel):
+class UID(RootModel[int]):
     root: int = Field(..., ge=0)
 
 
-class Phone(RootModel):
+class Phone(RootModel[str]):
     root: str = Field(..., min_length=3)
 
 
-class FaxItem(RootModel):
+class FaxItem(RootModel[str]):
     root: str = Field(..., min_length=3)
 
 
@@ -44,15 +44,15 @@ class User(BaseModel):
     rating: Optional[float] = Field(None, gt=0.0, le=5.0)
 
 
-class Users(RootModel):
+class Users(RootModel[List[User]]):
     root: List[User]
 
 
-class Id(RootModel):
+class Id(RootModel[str]):
     root: str
 
 
-class Rules(RootModel):
+class Rules(RootModel[List[str]]):
     root: List[str]
 
 
@@ -76,7 +76,7 @@ class Api(BaseModel):
     )
 
 
-class Apis(RootModel):
+class Apis(RootModel[List[Api]]):
     root: List[Api]
 
 

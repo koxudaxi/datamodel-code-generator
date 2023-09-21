@@ -29,7 +29,7 @@ class Person(BaseModel):
     comment: Optional[MultipleLineString] = None
 
 
-class RootedCustomType(RootModel):
+class RootedCustomType(RootModel[SpecialString]):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
