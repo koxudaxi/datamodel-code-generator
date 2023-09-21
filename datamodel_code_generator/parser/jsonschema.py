@@ -331,10 +331,7 @@ def _get_type(type_: str, format__: Optional[str] = None) -> Types:
     if data_formats is not None:
         return data_formats
 
-    warn(
-        'format of {!r} not understood for {!r} - using default'
-        ''.format(format__, type_)
-    )
+    warn(f'format of {format__!r} not understood for {type_!r} - using default' '')
     return json_schema_data_formats[type_]['default']
 
 
