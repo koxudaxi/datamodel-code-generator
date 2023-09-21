@@ -5677,3 +5677,34 @@ def test_main_jsonschema_discriminator_literals():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_all_of_with_relative_ref():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'all_of_with_relative_ref' / 'openapi.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--keep-model-order',
+                '--collapse-root-models',
+                '--field-constraints',
+                '--use-title-as-name',
+                '--field-include-all-keys',
+                '--use-field-description',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_with_relative_ref' / 'output.py'
+            ).read_text()
+        )
