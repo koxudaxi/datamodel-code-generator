@@ -331,10 +331,7 @@ def _get_type(type_: str, format__: Optional[str] = None) -> Types:
     if data_formats is not None:
         return data_formats
 
-    warn(
-        'format of {!r} not understood for {!r} - using default'
-        ''.format(format__, type_)
-    )
+    warn(f'format of {format__!r} not understood for {type_!r} - using default' '')
     return json_schema_data_formats[type_]['default']
 
 
@@ -424,6 +421,7 @@ class JsonSchemaParser(Parser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -486,6 +484,7 @@ class JsonSchemaParser(Parser):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
+            known_third_party=known_third_party,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()

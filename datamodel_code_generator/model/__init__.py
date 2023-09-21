@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, Optional, Type
+from typing import TYPE_CHECKING, Callable, Iterable, List, NamedTuple, Optional, Type
 
 from ..types import DataTypeManager as DataTypeManagerABC
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
@@ -15,6 +15,7 @@ class DataModelSet(NamedTuple):
     field_model: Type[DataModelFieldBase]
     data_type_manager: Type[DataTypeManagerABC]
     dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]]
+    known_third_party: Optional[List[str]] = None
 
 
 def get_data_model_types(
@@ -67,6 +68,7 @@ def get_data_model_types(
             field_model=msgspec.DataModelField,
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,
+            known_third_party=['msgspec'],
         )
     raise ValueError(
         f'{data_model_type} is unsupported data model type'

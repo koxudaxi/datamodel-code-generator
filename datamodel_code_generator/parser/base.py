@@ -377,6 +377,7 @@ class Parser(ABC):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -492,6 +493,7 @@ class Parser(ABC):
         self.capitalise_enum_members = capitalise_enum_members
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
+        self.known_third_party = known_third_party
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -1065,6 +1067,7 @@ class Parser(ABC):
                 settings_path,
                 self.wrap_string_literal,
                 skip_string_normalization=not self.use_double_quotes,
+                known_third_party=self.known_third_party,
             )
         else:
             code_formatter = None
