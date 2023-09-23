@@ -915,8 +915,21 @@ def test_main_without_field_constraints(output_model, expected_output):
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_with_aliases',
+        ),
+        (
+            'msgspec.Struct',
+            'main_with_aliases_msgspec',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_with_aliases():
+def test_main_with_aliases(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -925,6 +938,10 @@ def test_main_with_aliases():
                 str(OPEN_API_DATA_PATH / 'api.yaml'),
                 '--aliases',
                 str(OPEN_API_DATA_PATH / 'aliases.json'),
+                '--target-python',
+                '3.9',
+                '--output-model',
+                output_model,
                 '--output',
                 str(output_file),
             ]
@@ -932,7 +949,7 @@ def test_main_with_aliases():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
