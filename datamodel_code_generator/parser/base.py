@@ -43,6 +43,13 @@ from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 from datamodel_code_generator.util import Protocol, runtime_checkable
 
+SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
+
+
+def get_special_path(keyword: str, path: List[str]) -> List[str]:
+    return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
+
+
 escape_characters = str.maketrans(
     {
         '\\': r'\\',
@@ -370,6 +377,7 @@ class Parser(ABC):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -485,6 +493,7 @@ class Parser(ABC):
         self.capitalise_enum_members = capitalise_enum_members
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
+        self.known_third_party = known_third_party
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -1013,6 +1022,33 @@ class Parser(ABC):
                 if model_field.nullable is not True:  # pragma: no cover
                     model_field.nullable = False
 
+    def __change_imported_model_name(
+        self,
+        models: List[DataModel],
+        unused_models: List[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
+    ) -> None:
+        imported_names = {
+            imports.alias[from_][i]
+            if i in imports.alias[from_] and i != imports.alias[from_][i]
+            else i
+            for from_, import_ in imports.items()
+            for i in import_
+        }
+        for model in models:
+            if model.class_name not in imported_names:  # pragma: no cover
+                continue
+            if model in unused_models:  # pragma: no cover
+                continue
+
+            model.reference.name = scoped_model_resolver.add(  # pragma: no cover
+                path=get_special_path('imported_name', model.path.split('/')),
+                original_name=model.reference.name,
+                unique=True,
+                class_name=True,
+            ).name
+
     def parse(
         self,
         with_import: Optional[bool] = True,
@@ -1030,6 +1066,7 @@ class Parser(ABC):
                 settings_path,
                 self.wrap_string_literal,
                 skip_string_normalization=not self.use_double_quotes,
+                known_third_party=self.known_third_party,
             )
         else:
             code_formatter = None
@@ -1111,6 +1148,9 @@ class Parser(ABC):
             self.__override_required_field(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
+            self.__change_imported_model_name(
+                models, unused_models, imports, scoped_model_resolver
+            )
 
             processed_models.append(Processed(module, models, init, imports))
 

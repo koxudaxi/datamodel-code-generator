@@ -18,7 +18,7 @@ class Pet(BaseModel):
     tag: Optional[str] = None
 
 
-class Pets(RootModel):
+class Pets(RootModel[List[Pet]]):
     model_config = ConfigDict(
         populate_by_name=True,
     )
@@ -34,21 +34,21 @@ class User(BaseModel):
     tag: Optional[str] = None
 
 
-class Users(RootModel):
+class Users(RootModel[List[User]]):
     model_config = ConfigDict(
         populate_by_name=True,
     )
     root: List[User]
 
 
-class Id(RootModel):
+class Id(RootModel[str]):
     model_config = ConfigDict(
         populate_by_name=True,
     )
     root: str
 
 
-class Rules(RootModel):
+class Rules(RootModel[List[str]]):
     model_config = ConfigDict(
         populate_by_name=True,
     )
@@ -81,7 +81,7 @@ class Api(BaseModel):
     )
 
 
-class Apis(RootModel):
+class Apis(RootModel[List[Api]]):
     model_config = ConfigDict(
         populate_by_name=True,
     )

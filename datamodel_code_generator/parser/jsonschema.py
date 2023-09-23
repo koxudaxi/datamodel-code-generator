@@ -44,9 +44,11 @@ from datamodel_code_generator.model.base import UNDEFINED, get_module_name
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
+    SPECIAL_PATH_FORMAT,
     Parser,
     Source,
     escape_characters,
+    get_special_path,
     title_to_class_name,
 )
 from datamodel_code_generator.reference import ModelType, Reference, is_url
@@ -90,13 +92,6 @@ def get_model_by_path(
     raise NotImplementedError(  # pragma: no cover
         f'Does not support json pointer to array. schema={schema}, key={keys}'
     )
-
-
-SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
-
-
-def get_special_path(keyword: str, path: List[str]) -> List[str]:
-    return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
 
 
 json_schema_data_formats: Dict[str, Dict[str, Types]] = {
@@ -336,10 +331,7 @@ def _get_type(type_: str, format__: Optional[str] = None) -> Types:
     if data_formats is not None:
         return data_formats
 
-    warn(
-        'format of {!r} not understood for {!r} - using default'
-        ''.format(format__, type_)
-    )
+    warn(f'format of {format__!r} not understood for {type_!r} - using default' '')
     return json_schema_data_formats[type_]['default']
 
 
@@ -429,6 +421,7 @@ class JsonSchemaParser(Parser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -491,6 +484,7 @@ class JsonSchemaParser(Parser):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
+            known_third_party=known_third_party,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -677,8 +671,11 @@ class JsonSchemaParser(Parser):
             )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
-            self.model_resolver.delete(path)
-            return self.data_type(reference=base_classes[0])
+            with self.model_resolver.current_base_path_context(
+                self.model_resolver._base_path
+            ):
+                self.model_resolver.delete(path)
+                return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
                 if (field.original_name or field.name) in required:

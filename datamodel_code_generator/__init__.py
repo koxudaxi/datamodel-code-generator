@@ -182,6 +182,7 @@ class DataModelType(Enum):
     PydanticV2BaseModel = 'pydantic_v2.BaseModel'
     DataclassesDataclass = 'dataclasses.dataclass'
     TypingTypedDict = 'typing.TypedDict'
+    MsgspecStruct = 'msgspec.Struct'
 
 
 class OpenAPIScope(Enum):
@@ -426,6 +427,7 @@ def generate(
         remove_special_field_name_prefix=remove_special_field_name_prefix,
         capitalise_enum_members=capitalise_enum_members,
         keep_model_order=keep_model_order,
+        known_third_party=data_model_types.known_third_party,
         **kwargs,
     )
 

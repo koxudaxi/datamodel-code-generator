@@ -4,6 +4,7 @@
 name = "annotated-types"
 version = "0.5.0"
 description = "Reusable constraint types to use with typing.Annotated"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -18,6 +19,7 @@ typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.9\""}
 name = "anyio"
 version = "3.7.1"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -37,13 +39,14 @@ trio = ["trio (<0.22)"]
 
 [[package]]
 name = "argcomplete"
-version = "3.1.1"
+version = "3.1.2"
 description = "Bash tab completion for argparse"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "argcomplete-3.1.1-py3-none-any.whl", hash = "sha256:35fa893a88deea85ea7b20d241100e64516d6af6d7b0ae2bed1d263d26f70948"},
-    {file = "argcomplete-3.1.1.tar.gz", hash = "sha256:6c4c563f14f01440aaffa3eae13441c5db2357b5eec639abe7c0b15334627dff"},
+    {file = "argcomplete-3.1.2-py3-none-any.whl", hash = "sha256:d97c036d12a752d1079f190bc1521c545b941fda89ad85d15afa909b4d1b9a99"},
+    {file = "argcomplete-3.1.2.tar.gz", hash = "sha256:d5d1e5efd41435260b8f85673b74ea2e883affcbec9f4230c582689e8e78251b"},
 ]
 
 [package.extras]
@@ -53,6 +56,7 @@ test = ["coverage", "mypy", "pexpect", "ruff", "wheel"]
 name = "attrs"
 version = "23.1.0"
 description = "Classes Without Boilerplate"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -71,6 +75,7 @@ tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=1.1.1)", "pympler", "pyte
 name = "black"
 version = "23.7.0"
 description = "The uncompromising code formatter."
+category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -114,9 +119,36 @@ jupyter = ["ipython (>=7.8.0)", "tokenize-rt (>=3.2.0)"]
 uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
+name = "cattrs"
+version = "23.1.2"
+description = "Composable complex class support for attrs and dataclasses."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "cattrs-23.1.2-py3-none-any.whl", hash = "sha256:b2bb14311ac17bed0d58785e5a60f022e5431aca3932e3fc5cc8ed8639de50a4"},
+    {file = "cattrs-23.1.2.tar.gz", hash = "sha256:db1c821b8c537382b2c7c66678c3790091ca0275ac486c76f3c8f3920e83c657"},
+]
+
+[package.dependencies]
+attrs = ">=20"
+exceptiongroup = {version = "*", markers = "python_version < \"3.11\""}
+typing_extensions = {version = ">=4.1.0", markers = "python_version < \"3.11\""}
+
+[package.extras]
+bson = ["pymongo (>=4.2.0,<5.0.0)"]
+cbor2 = ["cbor2 (>=5.4.6,<6.0.0)"]
+msgpack = ["msgpack (>=1.0.2,<2.0.0)"]
+orjson = ["orjson (>=3.5.2,<4.0.0)"]
+pyyaml = ["PyYAML (>=6.0,<7.0)"]
+tomlkit = ["tomlkit (>=0.11.4,<0.12.0)"]
+ujson = ["ujson (>=5.4.0,<6.0.0)"]
+
+[[package]]
 name = "certifi"
 version = "2023.7.22"
 description = "Python package for providing Mozilla's CA Bundle."
+category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -139,6 +171,7 @@ files = [
 name = "charset-normalizer"
 version = "3.2.0"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
+category = "main"
 optional = false
 python-versions = ">=3.7.0"
 files = [
@@ -223,6 +256,7 @@ files = [
 name = "click"
 version = "8.1.7"
 description = "Composable command line interface toolkit"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -237,6 +271,7 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
+category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 files = [
@@ -248,6 +283,7 @@ files = [
 name = "coverage"
 version = "7.3.0"
 description = "Code coverage measurement for Python"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -315,6 +351,7 @@ toml = ["tomli"]
 name = "dnspython"
 version = "2.4.2"
 description = "DNS toolkit"
+category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
@@ -334,6 +371,7 @@ wmi = ["wmi (>=1.5.1,<2.0.0)"]
 name = "email-validator"
 version = "2.0.0.post2"
 description = "A robust email address syntax and deliverability validation library."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -349,6 +387,7 @@ idna = ">=2.0.0"
 name = "exceptiongroup"
 version = "1.1.3"
 description = "Backport of PEP 654 (exception groups)"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -363,6 +402,7 @@ test = ["pytest (>=6)"]
 name = "freezegun"
 version = "1.2.2"
 description = "Let your Python tests travel through time"
+category = "dev"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -377,6 +417,7 @@ python-dateutil = ">=2.7"
 name = "genson"
 version = "1.2.2"
 description = "GenSON is a powerful, user-friendly JSON Schema generator."
+category = "main"
 optional = false
 python-versions = "*"
 files = [
@@ -387,6 +428,7 @@ files = [
 name = "h11"
 version = "0.14.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -398,6 +440,7 @@ files = [
 name = "httpcore"
 version = "0.17.3"
 description = "A minimal low-level HTTP client."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -409,16 +452,17 @@ files = [
 anyio = ">=3.0,<5.0"
 certifi = "*"
 h11 = ">=0.13,<0.15"
-sniffio = "==1.*"
+sniffio = ">=1.0.0,<2.0.0"
 
 [package.extras]
 http2 = ["h2 (>=3,<5)"]
-socks = ["socksio (==1.*)"]
+socks = ["socksio (>=1.0.0,<2.0.0)"]
 
 [[package]]
 name = "httpx"
 version = "0.24.1"
 description = "The next generation HTTP client."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -436,12 +480,13 @@ sniffio = "*"
 brotli = ["brotli", "brotlicffi"]
 cli = ["click (==8.*)", "pygments (==2.*)", "rich (>=10,<14)"]
 http2 = ["h2 (>=3,<5)"]
-socks = ["socksio (==1.*)"]
+socks = ["socksio (>=1.0.0,<2.0.0)"]
 
 [[package]]
 name = "idna"
 version = "3.4"
 description = "Internationalized Domain Names in Applications (IDNA)"
+category = "main"
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -471,6 +516,7 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 name = "inflect"
 version = "7.0.0"
 description = "Correctly generate plurals, singular nouns, ordinals, indefinite articles; convert numbers to words"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -490,6 +536,7 @@ testing = ["pygments", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdo
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -501,6 +548,7 @@ files = [
 name = "isort"
 version = "5.12.0"
 description = "A Python utility / library to sort Python imports."
+category = "main"
 optional = false
 python-versions = ">=3.8.0"
 files = [
@@ -518,6 +566,7 @@ requirements-deprecated-finder = ["pip-api", "pipreqs"]
 name = "jinja2"
 version = "3.1.2"
 description = "A very fast and expressive template engine."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -535,6 +584,7 @@ i18n = ["Babel (>=2.7)"]
 name = "jsonschema"
 version = "4.19.0"
 description = "An implementation of JSON Schema validation for Python"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -632,9 +682,26 @@ files = [
 ]
 
 [[package]]
+name = "lsprotocol"
+version = "2023.0.0b1"
+description = "Python implementation of the Language Server Protocol."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "lsprotocol-2023.0.0b1-py3-none-any.whl", hash = "sha256:ade2cd0fa0ede7965698cb59cd05d3adbd19178fd73e83f72ef57a032fbb9d62"},
+    {file = "lsprotocol-2023.0.0b1.tar.gz", hash = "sha256:f7a2d4655cbd5639f373ddd1789807450c543341fa0a32b064ad30dbb9f510d4"},
+]
+
+[package.dependencies]
+attrs = ">=21.3.0"
+cattrs = "*"
+
+[[package]]
 name = "markupsafe"
 version = "2.1.3"
 description = "Safely add untrusted strings to HTML/XML markup."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -694,6 +761,7 @@ files = [
 name = "mypy"
 version = "1.4.1"
 description = "Optional static typing for Python"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -740,6 +808,7 @@ reports = ["lxml"]
 name = "mypy-extensions"
 version = "1.0.0"
 description = "Type system extensions for programs checked with the mypy type checker."
+category = "main"
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -751,6 +820,7 @@ files = [
 name = "openapi-schema-validator"
 version = "0.6.0"
 description = "OpenAPI schema validation for Python"
+category = "main"
 optional = false
 python-versions = ">=3.8.0,<4.0.0"
 files = [
@@ -785,6 +855,7 @@ openapi-schema-validator = ">=0.6.0,<0.7.0"
 name = "packaging"
 version = "23.1"
 description = "Core utilities for Python packages"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -807,6 +878,7 @@ files = [
 name = "pathspec"
 version = "0.11.2"
 description = "Utility library for gitignore style pattern matching of file paths."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -829,6 +901,7 @@ files = [
 name = "platformdirs"
 version = "3.10.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -844,6 +917,7 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4)", "pytest-co
 name = "pluggy"
 version = "1.2.0"
 description = "plugin and hook calling mechanisms for python"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -859,6 +933,7 @@ testing = ["pytest", "pytest-benchmark"]
 name = "prance"
 version = "23.6.21.0"
 description = "Resolving Swagger/OpenAPI 2.0 and 3.0.0 Parser"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -896,6 +971,7 @@ files = [
 name = "pydantic"
 version = "2.3.0"
 description = "Data validation using Python type hints"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -916,6 +992,7 @@ email = ["email-validator (>=2.0.0)"]
 name = "pydantic-core"
 version = "2.6.3"
 description = ""
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1034,6 +1111,7 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 name = "pysnooper"
 version = "1.2.0"
 description = "A poor man's debugger for Python."
+category = "main"
 optional = false
 python-versions = "*"
 files = [
@@ -1046,13 +1124,14 @@ tests = ["pytest"]
 
 [[package]]
 name = "pytest"
-version = "7.4.0"
+version = "7.4.2"
 description = "pytest: simple powerful testing with Python"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-7.4.0-py3-none-any.whl", hash = "sha256:78bf16451a2eb8c7a2ea98e32dc119fd2aa758f1d5d66dbf0a59d69a3969df32"},
-    {file = "pytest-7.4.0.tar.gz", hash = "sha256:b4bf8c45bd59934ed84001ad51e11b4ee40d40a1229d2c79f9c592b0a3f6bd8a"},
+    {file = "pytest-7.4.2-py3-none-any.whl", hash = "sha256:1d881c6124e08ff0a1bb75ba3ec0bfd8b5354a01c194ddd5a0a870a48d99b002"},
+    {file = "pytest-7.4.2.tar.gz", hash = "sha256:a766259cfab564a2ad52cb1aae1b881a75c3eb7e34ca3779697c23ed47c47069"},
 ]
 
 [package.dependencies]
@@ -1070,6 +1149,7 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 name = "pytest-benchmark"
 version = "4.0.0"
 description = "A ``pytest`` fixture for benchmarking code. It will group the tests into rounds that are calibrated to the chosen timer."
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1090,6 +1170,7 @@ histogram = ["pygal", "pygaljs"]
 name = "pytest-cov"
 version = "4.1.0"
 description = "Pytest plugin for measuring coverage."
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1108,6 +1189,7 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 name = "pytest-mock"
 version = "3.11.1"
 description = "Thin-wrapper around the mock package for easier use with pytest"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1125,6 +1207,7 @@ dev = ["pre-commit", "pytest-asyncio", "tox"]
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
+category = "dev"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 files = [
@@ -1139,6 +1222,7 @@ six = ">=1.5"
 name = "pyyaml"
 version = "6.0.1"
 description = "YAML parser and emitter for Python"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -1203,6 +1287,7 @@ rpds-py = ">=0.7.0"
 name = "requests"
 version = "2.31.0"
 description = "Python HTTP for Humans."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1344,6 +1429,7 @@ files = [
 name = "ruamel-yaml"
 version = "0.17.32"
 description = "ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order"
+category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -1362,6 +1448,7 @@ jinja2 = ["ruamel.yaml.jinja2 (>=0.2)"]
 name = "ruamel-yaml-clib"
 version = "0.2.7"
 description = "C version of reader, parser and emitter for ruamel.yaml derived from libyaml"
+category = "main"
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -1408,6 +1495,7 @@ files = [
 name = "ruff"
 version = "0.0.285"
 description = "An extremely fast Python linter, written in Rust."
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1430,10 +1518,20 @@ files = [
     {file = "ruff-0.0.285.tar.gz", hash = "sha256:45866048d1dcdcc80855998cb26c4b2b05881f9e043d2e3bfe1aa36d9a2e8f28"},
 ]
 
+[package.dependencies]
+lsprotocol = ">=2023.0.0a1"
+pygls = ">=1.0.1"
+ruff = ">=0.0.274"
+typing-extensions = "*"
+
+[package.extras]
+dev = ["mypy (==1.4.1)", "pip-tools (>=6.13.0,<7.0.0)", "pytest (>=7.3.1,<8.0.0)", "pytest-asyncio (==0.21.1)", "python-lsp-jsonrpc (==1.0.0)"]
+
 [[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
@@ -1445,6 +1543,7 @@ files = [
 name = "sniffio"
 version = "1.3.0"
 description = "Sniff out which async library your code is running under"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1456,6 +1555,7 @@ files = [
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
@@ -1467,6 +1567,7 @@ files = [
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1474,10 +1575,15 @@ files = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 
+[package.extras]
+doc = ["sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme"]
+test = ["mypy", "pytest", "typing-extensions"]
+
 [[package]]
 name = "types-jinja2"
 version = "2.11.9"
 description = "Typing stubs for Jinja2"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -1492,6 +1598,7 @@ types-MarkupSafe = "*"
 name = "types-markupsafe"
 version = "1.1.10"
 description = "Typing stubs for MarkupSafe"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -1503,6 +1610,7 @@ files = [
 name = "types-pyyaml"
 version = "6.0.12.11"
 description = "Typing stubs for PyYAML"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -1512,19 +1620,21 @@ files = [
 
 [[package]]
 name = "types-setuptools"
-version = "68.1.0.0"
+version = "68.2.0.0"
 description = "Typing stubs for setuptools"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "types-setuptools-68.1.0.0.tar.gz", hash = "sha256:2bc9b0c0818f77bdcec619970e452b320a423bb3ac074f5f8bc9300ac281c4ae"},
-    {file = "types_setuptools-68.1.0.0-py3-none-any.whl", hash = "sha256:0c1618fb14850cb482adbec602bbb519c43f24942d66d66196bc7528320f33b1"},
+    {file = "types-setuptools-68.2.0.0.tar.gz", hash = "sha256:a4216f1e2ef29d089877b3af3ab2acf489eb869ccaf905125c69d2dc3932fd85"},
+    {file = "types_setuptools-68.2.0.0-py3-none-any.whl", hash = "sha256:77edcc843e53f8fc83bb1a840684841f3dc804ec94562623bfa2ea70d5a2ba1b"},
 ]
 
 [[package]]
 name = "types-toml"
 version = "0.10.8.7"
 description = "Typing stubs for toml"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -1536,6 +1646,7 @@ files = [
 name = "typing-extensions"
 version = "4.7.1"
 description = "Backported and Experimental Type Hints for Python 3.7+"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1547,6 +1658,7 @@ files = [
 name = "urllib3"
 version = "2.0.4"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1564,6 +1676,7 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "zipp"
 version = "3.16.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
