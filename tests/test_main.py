@@ -4588,6 +4588,10 @@ def test_main_openapi_const(output_model, expected_output):
             'pydantic_v2.BaseModel',
             'main_openapi_const_field_pydantic_v2',
         ),
+        (
+            'msgspec.Struct',
+            'main_openapi_const_field_msgspec',
+        ),
     ],
 )
 @freeze_time('2019-07-26')
