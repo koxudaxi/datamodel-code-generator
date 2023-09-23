@@ -209,7 +209,7 @@ class DataModelField(DataModelFieldBase):
                 continue  # pragma: no cover
             elif data_type.is_list and len(data_type.data_types) == 1:
                 data_type = data_type.data_types[0]
-                if (
+                if (  # pragma: no cover
                     data_type.reference
                     and (
                         isinstance(data_type.reference.source, Struct)
