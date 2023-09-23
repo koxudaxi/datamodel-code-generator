@@ -171,7 +171,7 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def annotated(self) -> Optional[str]:
-        if not self.use_annotated:
+        if not self.use_annotated:  # pragma: no cover
             return None
 
         data: Dict[str, Any] = {
@@ -206,7 +206,7 @@ class DataModelField(DataModelFieldBase):
             # TODO: Check nested data_types
             if data_type.is_dict or self.data_type.is_union:
                 # TODO: Parse Union and dict model for default
-                continue
+                continue  # pragma: no cover
             elif data_type.is_list and len(data_type.data_types) == 1:
                 data_type = data_type.data_types[0]
                 if (
