@@ -13,6 +13,7 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_STRUCT,
 )
 from datamodel_code_generator.model.pydantic.base_model import Constraints
+from datamodel_code_generator.model.rootmodel import RootModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple
 
@@ -210,7 +211,10 @@ class DataModelField(DataModelFieldBase):
                 data_type = data_type.data_types[0]
                 if (
                     data_type.reference
-                    and isinstance(data_type.reference.source, Struct)
+                    and (
+                        isinstance(data_type.reference.source, Struct)
+                        or isinstance(data_type.reference.source, RootModel)
+                    )
                     and isinstance(self.default, list)
                 ):
                     return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type=list[{data_type.alias or data_type.reference.source.class_name}])'
