@@ -283,6 +283,9 @@ class Config(BaseModel):
             if getattr(args, f) is not None
         }
 
+        if set_args.get('output_model_type') == DataModelType.MsgspecStruct.value:
+            set_args['use_annotated'] = True
+
         if set_args.get('use_annotated'):
             set_args['field_constraints'] = True
 

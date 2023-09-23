@@ -915,8 +915,21 @@ def test_main_without_field_constraints(output_model, expected_output):
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_with_aliases',
+        ),
+        (
+            'msgspec.Struct',
+            'main_with_aliases_msgspec',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_with_aliases():
+def test_main_with_aliases(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -925,6 +938,10 @@ def test_main_with_aliases():
                 str(OPEN_API_DATA_PATH / 'api.yaml'),
                 '--aliases',
                 str(OPEN_API_DATA_PATH / 'aliases.json'),
+                '--target-python',
+                '3.9',
+                '--output-model',
+                output_model,
                 '--output',
                 str(output_file),
             ]
@@ -932,7 +949,7 @@ def test_main_with_aliases():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4588,6 +4605,10 @@ def test_main_openapi_const(output_model, expected_output):
             'pydantic_v2.BaseModel',
             'main_openapi_const_field_pydantic_v2',
         ),
+        (
+            'msgspec.Struct',
+            'main_openapi_const_field_msgspec',
+        ),
     ],
 )
 @freeze_time('2019-07-26')
@@ -4897,8 +4918,21 @@ def test_main_jsonschema_pattern_properties_by_reference():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_default_object',
+        ),
+        (
+            'msgspec.Struct',
+            'main_openapi_msgspec_default_object',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_default_object():
+def test_main_openapi_default_object(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -4907,18 +4941,22 @@ def test_main_openapi_default_object():
                 str(OPEN_API_DATA_PATH / 'default_object.yaml'),
                 '--output',
                 str(output_dir),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'openapi',
+                '--target-python-version',
+                '3.9',
             ]
         )
         assert return_code == Exit.OK
 
-        main_modular_dir = EXPECTED_MAIN_PATH / 'main_openapi_default_object'
+        main_modular_dir = EXPECTED_MAIN_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
-            assert result == path.read_text()
+            assert result == path.read_text(), path
 
 
 @freeze_time('2019-07-26')
@@ -5706,5 +5744,57 @@ def test_main_openapi_all_of_with_relative_ref():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_all_of_with_relative_ref' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_struct():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_use_annotated_with_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
+                '--output',
+                str(output_file),
+                '--field-constraints',
+                '--target-python-version',
+                '3.9',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_use_annotated_with_msgspec_meta_constraints'
+                / 'output.py'
             ).read_text()
         )

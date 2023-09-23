@@ -216,6 +216,7 @@ class OpenAPIParser(JsonSchemaParser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ):
         super().__init__(
             source=source,
@@ -278,6 +279,7 @@ class OpenAPIParser(JsonSchemaParser):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
+            known_third_party=known_third_party,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

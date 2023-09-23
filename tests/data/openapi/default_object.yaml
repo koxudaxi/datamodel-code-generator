@@ -17,7 +17,7 @@ components:
       properties:
         text:
           type: string
-          default: 987
+          default: "987"
         number:
           type: number
     Bar:
@@ -77,7 +77,5 @@ components:
           items:
             $ref: '#/components/schemas/Nested.Foo'
           default:
-            - text: abc
-              number: 123
-            - text: efg
-              number: 456
+            - abc
+            - efg

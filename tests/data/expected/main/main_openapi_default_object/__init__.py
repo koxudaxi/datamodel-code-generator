@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 
 class Foo(BaseModel):
-    text: Optional[str] = 987
+    text: Optional[str] = '987'
     number: Optional[float] = None
 
 
