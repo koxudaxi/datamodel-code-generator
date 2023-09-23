@@ -93,7 +93,7 @@ class DataModelField(DataModelFieldBase):
         'regex',
         # 'unique_items', # not supported by msgspec
     }
-    _PARSE_METHOD = "convert"
+    _PARSE_METHOD = 'convert'
     _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le', 'multiple_of'}
     constraints: Optional[Constraints] = None
 
@@ -218,8 +218,6 @@ class DataModelField(DataModelFieldBase):
                     and isinstance(self.default, list)
                 ):
                     return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type=list[{data_type.alias or data_type.reference.source.class_name}])'
-            elif data_type.reference and isinstance(
-                data_type.reference.source, Struct
-            ):
+            elif data_type.reference and isinstance(data_type.reference.source, Struct):
                 return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type={data_type.alias or data_type.reference.source.class_name})'
         return None

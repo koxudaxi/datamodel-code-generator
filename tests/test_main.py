@@ -4929,7 +4929,7 @@ def test_main_jsonschema_pattern_properties_by_reference():
             'msgspec.Struct',
             'main_openapi_msgspec_default_object',
         ),
-    ]
+    ],
 )
 @freeze_time('2019-07-26')
 def test_main_openapi_default_object(output_model, expected_output):
@@ -4945,7 +4945,8 @@ def test_main_openapi_default_object(output_model, expected_output):
                 output_model,
                 '--input-file-type',
                 'openapi',
-                '--target-python-version', '3.9',
+                '--target-python-version',
+                '3.9',
             ]
         )
         assert return_code == Exit.OK
