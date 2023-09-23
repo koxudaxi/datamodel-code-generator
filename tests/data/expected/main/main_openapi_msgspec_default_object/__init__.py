@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional
+from typing import List, Optional
 
 from msgspec import Struct, convert, field
 
