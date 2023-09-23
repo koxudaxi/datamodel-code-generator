@@ -7,6 +7,7 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
+    IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
     IMPORT_MSGSPEC_META,
     IMPORT_MSGSPEC_STRUCT,
@@ -64,6 +65,8 @@ class Struct(DataModel):
         extra_imports = []
         if any(f for f in self.fields if f.field):
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
+        if any(f for f in self.fields if f.field and 'lambda: convert' in f.field):
+            extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if any(f for f in self.fields if f.annotated):
             extra_imports.append(IMPORT_MSGSPEC_META)
         return chain_as_tuple(super().imports, extra_imports)
@@ -89,6 +92,7 @@ class DataModelField(DataModelFieldBase):
         'regex',
         # 'unique_items', # not supported by msgspec
     }
+    _PARSE_METHOD = "convert"
     _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le', 'multiple_of'}
     constraints: Optional[Constraints] = None
 
@@ -147,12 +151,18 @@ class DataModelField(DataModelFieldBase):
                     'default_factory',
                 )
             }
+        elif self.default and 'default_factory' not in data:
+            default_factory = self._get_default_as_struct_model()
+            if default_factory is not None:
+                data.pop('default')
+                data['default_factory'] = default_factory
 
         if not data:
             return ''
 
-        if len(data) == 1 and 'default' in data:  # pragma: no cover
+        if len(data) == 1 and 'default' in data:
             return repr(data['default'])
+
         kwargs = [
             f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()
         ]
@@ -189,3 +199,23 @@ class DataModelField(DataModelFieldBase):
         meta = f'Meta({", ".join(meta_arguments)})'
 
         return f'Annotated[{self.type_hint}, {meta}]'
+
+    def _get_default_as_struct_model(self) -> Optional[str]:
+        for data_type in self.data_type.data_types or (self.data_type,):
+            # TODO: Check nested data_types
+            if data_type.is_dict or self.data_type.is_union:
+                # TODO: Parse Union and dict model for default
+                continue
+            elif data_type.is_list and len(data_type.data_types) == 1:
+                data_type = data_type.data_types[0]
+                if (
+                    data_type.reference
+                    and isinstance(data_type.reference.source, Struct)
+                    and isinstance(self.default, list)
+                ):
+                    return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type=list[{data_type.alias or data_type.reference.source.class_name}])'
+            elif data_type.reference and isinstance(
+                data_type.reference.source, Struct
+            ):
+                return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type={data_type.alias or data_type.reference.source.class_name})'
+        return None

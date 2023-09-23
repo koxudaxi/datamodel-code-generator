@@ -4897,8 +4897,21 @@ def test_main_jsonschema_pattern_properties_by_reference():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_default_object',
+        ),
+        (
+            'msgspec.Struct',
+            'main_openapi_msgspec_default_object',
+        ),
+    ]
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_default_object():
+def test_main_openapi_default_object(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -4907,18 +4920,21 @@ def test_main_openapi_default_object():
                 str(OPEN_API_DATA_PATH / 'default_object.yaml'),
                 '--output',
                 str(output_dir),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'openapi',
+                '--target-python-version', '3.9',
             ]
         )
         assert return_code == Exit.OK
 
-        main_modular_dir = EXPECTED_MAIN_PATH / 'main_openapi_default_object'
+        main_modular_dir = EXPECTED_MAIN_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
-            assert result == path.read_text()
+            assert result == path.read_text(), path
 
 
 @freeze_time('2019-07-26')

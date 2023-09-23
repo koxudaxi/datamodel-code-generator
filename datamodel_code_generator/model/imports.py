@@ -9,3 +9,4 @@ IMPORT_NOT_REQUIRED_BACKPORT = Import.from_full_path('typing_extensions.NotRequi
 IMPORT_MSGSPEC_STRUCT = Import.from_full_path('msgspec.Struct')
 IMPORT_MSGSPEC_FIELD = Import.from_full_path('msgspec.field')
 IMPORT_MSGSPEC_META = Import.from_full_path('msgspec.Meta')
+IMPORT_MSGSPEC_CONVERT = Import.from_full_path('msgspec.convert')
