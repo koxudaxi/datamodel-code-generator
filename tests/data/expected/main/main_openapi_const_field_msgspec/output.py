@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from msgspec import Struct
-from typing_extensions import Annotated, Literal
+from typing_extensions import Annotated
 
 
 class Api(Struct):
