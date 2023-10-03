@@ -73,7 +73,7 @@ types-toml = "*"
 types-setuptools = ">=67.6.0.5,<69.0.0.0"
 pydantic= "^2.0b3"
 httpx = "*"
-ruff = "^0.0.290"
+ruff = ">=0.0.290,<0.0.293"
 ruff-lsp = "^0.0.39"
 
 [tool.poetry.extras]
