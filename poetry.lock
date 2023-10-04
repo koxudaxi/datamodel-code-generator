@@ -1311,17 +1311,17 @@ idna2008 = ["idna"]
 
 [[package]]
 name = "ruamel-yaml"
-version = "0.17.32"
+version = "0.17.34"
 description = "ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order"
 optional = false
 python-versions = ">=3"
 files = [
-    {file = "ruamel.yaml-0.17.32-py3-none-any.whl", hash = "sha256:23cd2ed620231677564646b0c6a89d138b6822a0d78656df7abda5879ec4f447"},
-    {file = "ruamel.yaml-0.17.32.tar.gz", hash = "sha256:ec939063761914e14542972a5cba6d33c23b0859ab6342f61cf070cfc600efc2"},
+    {file = "ruamel.yaml-0.17.34-py3-none-any.whl", hash = "sha256:cde36dc1683b4f60f18c27ca94fc60c03e47003bac7910a78e00a639a4f282bd"},
+    {file = "ruamel.yaml-0.17.34.tar.gz", hash = "sha256:6ffd0a1906ddeac4a46b7b53d288a5a26bfab8f1986ddab3d8e406beda7e6e72"},
 ]
 
 [package.dependencies]
-"ruamel.yaml.clib" = {version = ">=0.2.7", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.12\""}
+"ruamel.yaml.clib" = {version = ">=0.2.7", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.13\""}
 
 [package.extras]
 docs = ["ryd"]
