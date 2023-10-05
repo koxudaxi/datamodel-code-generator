@@ -275,6 +275,7 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 - [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
 - [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
+- [msgspec.Struct](https://github.com/jcrist/msgspec)
 
 ## Installation
 
@@ -322,8 +323,7 @@ Options:
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
-  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict}
-                        Output model type (default: pydantic.BaseModel)
+  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used
 
