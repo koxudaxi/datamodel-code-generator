@@ -238,6 +238,9 @@ class Apis(BaseModel):
 
 ## Projects that use datamodel-code-generator
 These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
+- [apache/iceberg](https://github.com/apache/iceberg)
+  - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)* 
+    *[`make generate`](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34)*
 - [Netflix/consoleme](https://github.com/Netflix/consoleme)
   - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
@@ -245,13 +248,15 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 - [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
   - *Recommended for [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official documentation*
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
-  - [Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)
+  - *[Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)*
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
   - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
 - [IBM/compliance-trestle](https://github.com/IBM/compliance-trestle)
   - *[Building the models from the OSCAL schemas.](https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas)*
 - [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
   - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
+- [Nike-Inc/brickflow](https://github.com/Nike-Inc/brickflow)
+  - *[Code generate tools](https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/README.md?plain=1#L8)[`./tools/gen-bundle.sh`](https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/gen-bundle.sh#L15-L22)*
 ## Supported input types
 -  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
 -  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
