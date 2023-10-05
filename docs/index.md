@@ -1,6 +1,8 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html) and [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) from an openapi file and others.
+This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) and [msgspec.Struct](https://github.com/jcrist/msgspec)from an openapi file and others.
+
+
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
@@ -233,20 +235,32 @@ class Apis(BaseModel):
 
 ## Projects that use datamodel-code-generator
 These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
-- [Netflix/consoleme](https://github.com/Netflix/consoleme)
-  - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
-- [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
-  - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
-- [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
-  - *Recommended for [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official documentation*
-- [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
-  - [Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
   - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
+- [apache/iceberg](https://github.com/apache/iceberg)
+  - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)* 
+    *[`make generate`](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34)*
+- [argoproj-labs/hera](https://github.com/argoproj-labs/hera)
+  - *[`Makefile`](https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62)*
+- [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
+  - *Recommended for [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official documentation*
+- [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
+  - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
+- [hashintel/hash](https://github.com/hashintel/hash)
+  - *[`codegen.sh`](https://github.com/hashintel/hash/blob/9762b1a1937e14f6b387677e4c7fe4a5f3d4a1e1/libs/%40local/hash-graph-client/python/scripts/codegen.sh#L21-L39)*
 - [IBM/compliance-trestle](https://github.com/IBM/compliance-trestle)
   - *[Building the models from the OSCAL schemas.](https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas)*
+- [Netflix/consoleme](https://github.com/Netflix/consoleme)
+  - *[How do I generate models from the Swagger specification?](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
+- [Nike-Inc/brickflow](https://github.com/Nike-Inc/brickflow)
+  - *[Code generate tools](https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/README.md?plain=1#L8)[`./tools/gen-bundle.sh`](https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/gen-bundle.sh#L15-L22)*
+- [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
+  - *[Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)*
+- [PostHog/posthog](https://github.com/PostHog/posthog)
+  - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)* 
 - [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
   - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
+
 ## Supported input types
 -  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types))
 -  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
@@ -258,7 +272,7 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 - [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
 - [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
-
+- [msgspec.Struct](https://github.com/jcrist/msgspec)
 ## Installation
 
 To install `datamodel-code-generator`:
@@ -305,7 +319,7 @@ Options:
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
-  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict}
+  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic.BaseModel)
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used

@@ -1,6 +1,6 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html) and [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) from an openapi file and others.
+This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) and [msgspec.Struct](https://github.com/jcrist/msgspec)from an openapi file and others.
 
 [![Build Status](https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg)](https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest)
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
@@ -275,6 +275,7 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 - [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
 - [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
+- [msgspec.Struct](https://github.com/jcrist/msgspec)
 
 ## Installation
 
@@ -322,8 +323,7 @@ Options:
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
-  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict}
-                        Output model type (default: pydantic.BaseModel)
+  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used
 
