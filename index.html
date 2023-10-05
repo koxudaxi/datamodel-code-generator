@@ -831,8 +831,8 @@
 
 
 <h1 id="datamodel-code-generator">datamodel-code-generator</h1>
-<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic v1 and v2</a> model, <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a> and <a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a> from an openapi file and others.
-<a href="https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest"><img alt="Build Status" src="https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg" /></a>
+<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic v1 and v2</a> model, <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a>, <a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a> and <a href="https://github.com/jcrist/msgspec">msgspec.Struct</a>from an openapi file and others.</p>
+<p><a href="https://github.com/koxudaxi/datamodel-code-generator/actions?query=workflow%3ATest"><img alt="Build Status" src="https://github.com/koxudaxi/datamodel-code-generator/workflows/Test/badge.svg" /></a>
 <a href="https://pypi.python.org/pypi/datamodel-code-generator"><img alt="PyPI version" src="https://badge.fury.io/py/datamodel-code-generator.svg" /></a>
 <a href="https://anaconda.org/conda-forge/datamodel-code-generator"><img alt="Conda-forge" src="https://img.shields.io/conda/v/conda-forge/datamodel-code-generator" /></a>
 <a href="https://pepy.tech/project/datamodel-code-generator"><img alt="Downloads" src="https://pepy.tech/badge/datamodel-code-generator/month" /></a>
@@ -1062,18 +1062,29 @@
 
 <h2 id="projects-that-use-datamodel-code-generator">Projects that use datamodel-code-generator</h2>
 <p>These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
-- <a href="https://github.com/Netflix/consoleme">Netflix/consoleme</a>
-  - <em><a href="https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification">How do I generate models from the Swagger specification?</a></em>
-- <a href="https://github.com/DataDog/integrations-core">DataDog/integrations-core</a>
-  - <em><a href="https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md">Config models</a></em>
-- <a href="https://github.com/awslabs/aws-lambda-powertools-python">awslabs/aws-lambda-powertools-python</a>
-  - <em>Recommended for <a href="https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases">advanced-use-cases</a> in the official documentation</em>
-- <a href="https://github.com/open-metadata/OpenMetadata">open-metadata/OpenMetadata</a>
-  - <a href="https://github.com/open-metadata/OpenMetadata/blob/main/Makefile">Makefile</a>
 - <a href="https://github.com/airbytehq/airbyte">airbytehq/airbyte</a>
   - <em><a href="https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile">code-generator/Dockerfile</a></em>
+- <a href="https://github.com/apache/iceberg">apache/iceberg</a>
+  - <em><a href="https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39">Generate Python code</a></em> 
+    <em><a href="https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34"><code>make generate</code></a></em>
+- <a href="https://github.com/argoproj-labs/hera">argoproj-labs/hera</a>
+  - <em><a href="https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62"><code>Makefile</code></a></em>
+- <a href="https://github.com/awslabs/aws-lambda-powertools-python">awslabs/aws-lambda-powertools-python</a>
+  - <em>Recommended for <a href="https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases">advanced-use-cases</a> in the official documentation</em>
+- <a href="https://github.com/DataDog/integrations-core">DataDog/integrations-core</a>
+  - <em><a href="https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md">Config models</a></em>
+- <a href="https://github.com/hashintel/hash">hashintel/hash</a>
+  - <em><a href="https://github.com/hashintel/hash/blob/9762b1a1937e14f6b387677e4c7fe4a5f3d4a1e1/libs/%40local/hash-graph-client/python/scripts/codegen.sh#L21-L39"><code>codegen.sh</code></a></em>
 - <a href="https://github.com/IBM/compliance-trestle">IBM/compliance-trestle</a>
   - <em><a href="https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas">Building the models from the OSCAL schemas.</a></em>
+- <a href="https://github.com/Netflix/consoleme">Netflix/consoleme</a>
+  - <em><a href="https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification">How do I generate models from the Swagger specification?</a></em>
+- <a href="https://github.com/Nike-Inc/brickflow">Nike-Inc/brickflow</a>
+  - <em><a href="https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/README.md?plain=1#L8">Code generate tools</a><a href="https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/gen-bundle.sh#L15-L22"><code>./tools/gen-bundle.sh</code></a></em>
+- <a href="https://github.com/open-metadata/OpenMetadata">open-metadata/OpenMetadata</a>
+  - <em><a href="https://github.com/open-metadata/OpenMetadata/blob/main/Makefile">Makefile</a></em>
+- <a href="https://github.com/PostHog/posthog">PostHog/posthog</a>
+  - <em><a href="https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41">Generate models via <code>npm run</code></a></em> 
 - <a href="https://github.com/SeldonIO/MLServer">SeldonIO/MLServer</a>
   - <em><a href="https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh">generate-types.sh</a></em></p>
 <h2 id="supported-input-types">Supported input types</h2>
@@ -1089,6 +1100,7 @@
 <li><a href="https://docs.pydantic.dev/2.0/">pydantic_v2</a>.BaseModel</li>
 <li><a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a></li>
 <li><a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a></li>
+<li><a href="https://github.com/jcrist/msgspec">msgspec.Struct</a></li>
 </ul>
 <h2 id="installation">Installation</h2>
 <p>To install <code>datamodel-code-generator</code>:</p>
@@ -1128,7 +1140,7 @@ Options:
 <span class="s1">  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}</span>
 <span class="s1">                        Input file type (default: auto)</span>
 <span class="s1">  --output OUTPUT       Output file (default: stdout)</span>
-<span class="s1">  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict}</span>
+<span class="s1">  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}</span>
 <span class="s1">                        Output model type (default: pydantic.BaseModel)</span>
 <span class="s1">  --url URL             Input file URL. `--input` is ignored when `--url` is</span>
 <span class="s1">                        used</span>
