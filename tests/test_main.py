@@ -2688,6 +2688,10 @@ def test_main_openapi_nullable_strict_nullable():
             'pydantic_v2.BaseModel',
             'main_pattern_pydantic_v2',
         ),
+        (
+            'msgspec.Struct',
+            'main_pattern_msgspec',
+        ),
     ],
 )
 @freeze_time('2019-07-26')
@@ -2702,6 +2706,8 @@ def test_main_openapi_pattern(output_model, expected_output):
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--target-python',
+                '3.9',
                 '--output-model-type',
                 output_model,
             ]
