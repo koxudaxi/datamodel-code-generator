@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Any,
     ClassVar,
     DefaultDict,
@@ -29,7 +26,9 @@ from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DIC
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.util import model_validator
 
-if TYPE_CHECKING:
+try:
+    from typing import Literal
+except ImportError:
     from typing_extensions import Literal
 
 
