@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 from abc import ABC, abstractmethod
 from enum import Enum, auto
@@ -119,8 +117,8 @@ class UnionIntFloat:
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
+        cls, _source_type: Any, _handler: 'GetCoreSchemaHandler'
+    ) -> 'core_schema.CoreSchema':
         from_int_schema = core_schema.chain_schema(
             [
                 core_schema.union_schema(
@@ -145,7 +143,7 @@ class UnionIntFloat:
         )
 
     @classmethod
-    def validate(cls, v: Any) -> UnionIntFloat:
+    def validate(cls, v: Any) -> 'UnionIntFloat':
         if isinstance(v, UnionIntFloat):
             return v
         elif not isinstance(v, (int, float)):  # pragma: no cover
@@ -253,7 +251,7 @@ class DataType(_BaseModel):
 
     type: Optional[str] = None
     reference: Optional[Reference] = None
-    data_types: List[DataType] = []
+    data_types: List['DataType'] = []
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]] = None
     import_: Optional[Import] = None
@@ -271,14 +269,14 @@ class DataType(_BaseModel):
     parent: Optional[Any] = None
     children: List[Any] = []
     strict: bool = False
-    dict_key: Optional[DataType] = None
+    dict_key: Optional['DataType'] = None
 
     _exclude_fields: ClassVar[Set[str]] = {'parent', 'children'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'children', 'data_types', 'reference'}
 
     @classmethod
     def from_import(
-        cls: Type[DataTypeT],
+        cls: Type['DataTypeT'],
         import_: Import,
         *,
         is_optional: bool = False,
@@ -288,7 +286,7 @@ class DataType(_BaseModel):
         is_custom_type: bool = False,
         strict: bool = False,
         kwargs: Optional[Dict[str, Any]] = None,
-    ) -> DataTypeT:
+    ) -> 'DataTypeT':
         return cls(
             type=import_.import_,
             import_=import_,
@@ -345,7 +343,7 @@ class DataType(_BaseModel):
         return self.reference.short_name  # type: ignore
 
     @property
-    def all_data_types(self) -> Iterator[DataType]:
+    def all_data_types(self) -> Iterator['DataType']:
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
