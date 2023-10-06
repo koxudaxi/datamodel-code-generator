@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     DefaultDict,
@@ -26,10 +27,13 @@ from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DIC
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.util import model_validator
 
-try:
-    from typing import Literal
-except ImportError:
+if TYPE_CHECKING:
     from typing_extensions import Literal
+else:
+    try:
+        from typing import Literal
+    except ImportError:
+        from typing_extensions import Literal
 
 
 class Constraints(_Constraints):
@@ -71,7 +75,7 @@ class DataModelField(DataModelFieldV1):
         self.nullable = False
         const = self.extras['const']
         if self.data_type.type == 'str' and isinstance(
-            const, str
+                const, str
         ):  # pragma: no cover # Literal supports only str
             self.data_type = self.data_type.__class__(literals=[const])
 
@@ -101,19 +105,19 @@ class BaseModel(BaseModelBase):
     ]
 
     def __init__(
-        self,
-        *,
-        reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
-        default: Any = UNDEFINED,
-        nullable: bool = False,
+            self,
+            *,
+            reference: Reference,
+            fields: List[DataModelFieldBase],
+            decorators: Optional[List[str]] = None,
+            base_classes: Optional[List[Reference]] = None,
+            custom_base_class: Optional[str] = None,
+            custom_template_dir: Optional[Path] = None,
+            extra_template_data: Optional[DefaultDict[str, Any]] = None,
+            path: Optional[Path] = None,
+            description: Optional[str] = None,
+            default: Any = UNDEFINED,
+            nullable: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
