@@ -12,7 +12,9 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_META,
     IMPORT_MSGSPEC_STRUCT,
 )
-from datamodel_code_generator.model.pydantic.base_model import Constraints as _Constraints
+from datamodel_code_generator.model.pydantic.base_model import (
+    Constraints as _Constraints,
+)
 from datamodel_code_generator.model.rootmodel import RootModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import chain_as_tuple, get_optional_type
