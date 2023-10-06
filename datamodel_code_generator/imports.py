@@ -63,6 +63,8 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                         self.alias[import_.from_][import_.import_] = import_.alias
 
     def remove(self, imports: Union[Import, Iterable[Import]]) -> None:
+        if isinstance(imports, Import):  # pragma: no cover
+            imports = [imports]
         for import_ in imports:
             if '.' in import_.import_:
                 self.counter[(None, import_.import_)] -= 1

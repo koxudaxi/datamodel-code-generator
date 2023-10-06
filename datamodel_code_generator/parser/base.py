@@ -19,6 +19,7 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 from urllib.parse import ParseResult
@@ -237,7 +238,10 @@ class Child(Protocol):
         raise NotImplementedError
 
 
-def get_most_of_parent(value: Any, type_: Optional[Type[Any]] = None) -> Optional[Any]:
+T = TypeVar('T')
+
+
+def get_most_of_parent(value: Any, type_: Optional[Type[T]] = None) -> Optional[T]:
     if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
         return get_most_of_parent(value.parent)
     return value
@@ -873,7 +877,8 @@ class Parser(ABC):
                     else:  # pragma: no cover
                         continue
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
-                    imports.append(original_field.imports)
+                    if original_field:  # pragma: no cover
+                        imports.append(original_field.imports)
 
                     data_type.remove_reference()
 
