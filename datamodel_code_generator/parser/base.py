@@ -37,7 +37,6 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
-from datamodel_code_generator.model.pydantic_v2 import RootModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -807,7 +806,7 @@ class Parser(ABC):
     ) -> None:
         if not self.collapse_root_models:
             return None
-        unused_model_count = len(unused_models)
+
         for model in models:
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
@@ -873,7 +872,7 @@ class Parser(ABC):
                         ]
                     else:  # pragma: no cover
                         continue
-                    imports.append(copied_data_type.imports)
+                    imports.append(data_type.parent.parent.imports)
 
                     data_type.remove_reference()
 
@@ -885,17 +884,6 @@ class Parser(ABC):
 
                     if not root_type_model.reference.children:
                         unused_models.append(root_type_model)
-
-        if self.data_model_root_type == RootModel and unused_model_count != len(
-            unused_models
-        ):
-            if {m for m in models if isinstance(m, RootModel)} - {  # pragma: no cover
-                m for m in unused_models if isinstance(m, RootModel)
-            }:
-                return None  # pragma: no cover
-
-            if 'RootModel' in imports['pydantic']:  # pragma: no cover
-                imports['pydantic'].remove('RootModel')
 
     def __set_default_enum_member(
         self,
