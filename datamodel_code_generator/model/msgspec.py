@@ -205,6 +205,10 @@ class DataModelField(DataModelFieldBase):
 
         meta = f'Meta({", ".join(meta_arguments)})'
 
+        if not self.required:
+            type_hint = self.data_type.type_hint
+            annotated_type = f'Annotated[{type_hint}, {meta}]'
+            return get_optional_type(annotated_type, self.data_type.use_union_operator)
         return f'Annotated[{self.type_hint}, {meta}]'
 
     def _get_default_as_struct_model(self) -> Optional[str]:
