@@ -1090,14 +1090,17 @@ class Parser(ABC):
 
         module_models: List[Tuple[Tuple[str, ...], List[DataModel]]] = []
         unused_models: List[DataModel] = []
-        model_to_models: Dict[DataModel, List[DataModel]] = {}
+        model_to_module_models: Dict[
+            DataModel, Tuple[Tuple[str, ...], List[DataModel]]
+        ] = {}
+        module_to_import: Dict[Tuple[str, ...], Imports] = {}
 
         previous_module = ()  # type: Tuple[str, ...]
         for module, models in (
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
             for model in models:
-                model_to_models[model] = models
+                model_to_module_models[model] = module, models
             self.__delete_duplicate_models(models)
             self.__replace_duplicate_name_in_module(models)
             if len(previous_module) - len(module) > 1:
@@ -1123,7 +1126,9 @@ class Parser(ABC):
             imports: Imports
 
         processed_models: List[Processed] = []
+
         for module, models in module_models:
+            imports = module_to_import[module] = Imports()
             init = False
             if module:
                 parent = (*module[:-1], '__init__.py')
@@ -1137,7 +1142,6 @@ class Parser(ABC):
             else:
                 module = ('__init__.py',)
 
-            imports = Imports()
             scoped_model_resolver = ModelResolver()
 
             self.__replace_unique_list_to_set(models)
@@ -1157,8 +1161,10 @@ class Parser(ABC):
             processed_models.append(Processed(module, models, init, imports))
 
         for unused_model in unused_models:
-            if unused_model in model_to_models[unused_model]:  # pragma: no cover
-                model_to_models[unused_model].remove(unused_model)
+            module, models = model_to_module_models[unused_model]
+            if unused_model in models:  # pragma: no cover
+                module_to_import[module].remove(unused_model.imports)
+                models.remove(unused_model)
 
         for module, models, init, imports in processed_models:
             result: List[str] = []

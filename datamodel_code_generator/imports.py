@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from functools import lru_cache
-from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Union
+from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from datamodel_code_generator.util import BaseModel
 
@@ -28,6 +28,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
     def __init__(self) -> None:
         super().__init__(set)
         self.alias: DefaultDict[Optional[str], Dict[str, str]] = defaultdict(dict)
+        self.counter: Dict[Tuple[Optional[str], str], int] = defaultdict(int)
 
     def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
         return [
@@ -54,10 +55,25 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             for import_ in imports:
                 if '.' in import_.import_:
                     self[None].add(import_.import_)
+                    self.counter[(None, import_.import_)] += 1
                 else:
                     self[import_.from_].add(import_.import_)
+                    self.counter[(import_.from_, import_.import_)] += 1
                     if import_.alias:
                         self.alias[import_.from_][import_.import_] = import_.alias
+
+    def remove(self, imports: Union[Import, Iterable[Import]]) -> None:
+        for import_ in imports:
+            if '.' in import_.import_:
+                self.counter[(None, import_.import_)] -= 1
+                if self.counter[(None, import_.import_)] == 0:
+                    self[None].remove(import_.import_)
+            else:
+                self.counter[(import_.from_, import_.import_)] -= 1
+                if self.counter[(import_.from_, import_.import_)] == 0:
+                    self[import_.from_].remove(import_.import_)
+                    if import_.alias:
+                        del self.alias[import_.from_][import_.import_]
 
 
 IMPORT_ANNOTATED = Import.from_full_path('typing.Annotated')
