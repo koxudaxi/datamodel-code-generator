@@ -237,8 +237,8 @@ class Child(Protocol):
         raise NotImplementedError
 
 
-def get_most_of_parent(value: Any) -> Optional[Any]:
-    if isinstance(value, Child):
+def get_most_of_parent(value: Any, type_: Optional[Type[Any]] = None) -> Optional[Any]:
+    if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
         return get_most_of_parent(value.parent)
     return value
 
@@ -872,7 +872,8 @@ class Parser(ABC):
                         ]
                     else:  # pragma: no cover
                         continue
-                    imports.append(data_type.parent.parent.imports)
+                    original_field = get_most_of_parent(data_type, DataModelFieldBase)
+                    imports.append(original_field.imports)
 
                     data_type.remove_reference()
 
