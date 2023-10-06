@@ -873,6 +873,7 @@ class Parser(ABC):
                         ]
                     else:  # pragma: no cover
                         continue
+                    imports.append(copied_data_type.imports)
 
                     data_type.remove_reference()
 
