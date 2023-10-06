@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
+from pydantic import Field
+
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
@@ -10,10 +12,10 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_META,
     IMPORT_MSGSPEC_STRUCT,
 )
-from datamodel_code_generator.model.pydantic.base_model import Constraints
+from datamodel_code_generator.model.pydantic.base_model import Constraints as _Constraints
 from datamodel_code_generator.model.rootmodel import RootModel
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple
+from datamodel_code_generator.types import chain_as_tuple, get_optional_type
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -71,6 +73,12 @@ class Struct(DataModel):
         return chain_as_tuple(super().imports, extra_imports)
 
 
+class Constraints(_Constraints):
+    # To override existing pattern alias
+    regex: Optional[str] = Field(None, alias='regex')
+    pattern: Optional[str] = Field(None, alias='pattern')
+
+
 class DataModelField(DataModelFieldBase):
     _FIELD_KEYS: ClassVar[Set[str]] = {
         'default',
@@ -88,7 +96,7 @@ class DataModelField(DataModelFieldBase):
         # 'max_items', # not supported by msgspec
         'min_length',
         'max_length',
-        'regex',
+        'pattern',
         # 'unique_items', # not supported by msgspec
     }
     _PARSE_METHOD = 'convert'
