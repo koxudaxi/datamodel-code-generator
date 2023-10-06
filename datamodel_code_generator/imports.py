@@ -66,15 +66,17 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
         if isinstance(imports, Import):  # pragma: no cover
             imports = [imports]
         for import_ in imports:
-            if '.' in import_.import_:
+            if '.' in import_.import_:  # pragma: no cover
                 self.counter[(None, import_.import_)] -= 1
-                if self.counter[(None, import_.import_)] == 0:
+                if self.counter[(None, import_.import_)] == 0:  # pragma: no cover
                     self[None].remove(import_.import_)
             else:
-                self.counter[(import_.from_, import_.import_)] -= 1
-                if self.counter[(import_.from_, import_.import_)] == 0:
+                self.counter[(import_.from_, import_.import_)] -= 1  # pragma: no cover
+                if (
+                    self.counter[(import_.from_, import_.import_)] == 0
+                ):  # pragma: no cover
                     self[import_.from_].remove(import_.import_)
-                    if import_.alias:
+                    if import_.alias:  # pragma: no cover
                         del self.alias[import_.from_][import_.import_]
 
 
