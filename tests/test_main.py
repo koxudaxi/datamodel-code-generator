@@ -5804,3 +5804,59 @@ def test_main_msgspec_use_annotated_with_field_constraints():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_duplicate_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+                '--collapse-root-models',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'duplicate_field_constraints'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_duplicate_field_constraints_py38():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+                '--collapse-root-models',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = (
+            EXPECTED_MAIN_PATH / 'duplicate_field_constraints_msgspec_py38'
+        )
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
