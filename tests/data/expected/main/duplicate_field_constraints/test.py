@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, constr
 
-from . import common
-
 
 class Test(BaseModel):
     uid: constr(pattern=r'[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26,26}') = Field(

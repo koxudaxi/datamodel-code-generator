@@ -11,6 +11,7 @@ class Import(BaseModel):
     from_: Optional[str] = None
     import_: str
     alias: Optional[str] = None
+    reference_path: Optional[str] = None
 
     @classmethod
     @lru_cache()
@@ -29,6 +30,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
         super().__init__(set)
         self.alias: DefaultDict[Optional[str], Dict[str, str]] = defaultdict(dict)
         self.counter: Dict[Tuple[Optional[str], str], int] = defaultdict(int)
+        self.reference_paths: Dict[str, Import] = {}
 
     def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
         return [
@@ -53,6 +55,8 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
             if isinstance(imports, Import):
                 imports = [imports]
             for import_ in imports:
+                if import_.reference_path:
+                    self.reference_paths[import_.reference_path] = import_
                 if '.' in import_.import_:
                     self[None].add(import_.import_)
                     self.counter[(None, import_.import_)] += 1
@@ -70,14 +74,24 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                 self.counter[(None, import_.import_)] -= 1
                 if self.counter[(None, import_.import_)] == 0:  # pragma: no cover
                     self[None].remove(import_.import_)
+                    if not self[None]:
+                        del self[None]
             else:
                 self.counter[(import_.from_, import_.import_)] -= 1  # pragma: no cover
                 if (
                     self.counter[(import_.from_, import_.import_)] == 0
                 ):  # pragma: no cover
                     self[import_.from_].remove(import_.import_)
+                    if not self[import_.from_]:
+                        del self[import_.from_]
                     if import_.alias:  # pragma: no cover
                         del self.alias[import_.from_][import_.import_]
+                        if not self.alias[import_.from_]:
+                            del self.alias[import_.from_]
+
+    def remove_referenced_imports(self, reference_path: str) -> None:
+        if reference_path in self.reference_paths:
+            self.remove(self.reference_paths[reference_path])
 
 
 IMPORT_ANNOTATED = Import.from_full_path('typing.Annotated')

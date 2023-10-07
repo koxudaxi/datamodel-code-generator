@@ -690,7 +690,14 @@ class Parser(ABC):
 
                 if init:
                     from_ = '.' + from_
-                imports.append(Import(from_=from_, import_=import_, alias=alias))
+                imports.append(
+                    Import(
+                        from_=from_,
+                        import_=import_,
+                        alias=alias,
+                        reference_path=data_type.reference.path,
+                    ),
+                )
 
     @classmethod
     def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
@@ -878,6 +885,7 @@ class Parser(ABC):
                         continue
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
+                        # TODO: Improve detection of reference type
                         imports.append(original_field.imports)
 
                     data_type.remove_reference()
@@ -888,6 +896,7 @@ class Parser(ABC):
                         if getattr(c, 'parent', None)
                     ]
 
+                    imports.remove_referenced_imports(root_type_model.path)
                     if not root_type_model.reference.children:
                         unused_models.append(root_type_model)
 
@@ -1157,7 +1166,8 @@ class Parser(ABC):
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
             if unused_model in models:  # pragma: no cover
-                module_to_import[module].remove(unused_model.imports)
+                imports = module_to_import[module]
+                imports.remove(unused_model.imports)
                 models.remove(unused_model)
 
         for module, models, init, imports in processed_models:
