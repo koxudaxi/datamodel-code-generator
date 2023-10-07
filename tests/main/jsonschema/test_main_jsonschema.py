@@ -3067,8 +3067,21 @@ def test_main_typed_dict_not_required_nullable():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic_v2.BaseModel',
+            'discriminator_literals.py',
+        ),
+        (
+            'msgspec.Struct',
+            'discriminator_literals_msgspec.py',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_discriminator_literals():
+def test_main_jsonschema_discriminator_literals(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3078,18 +3091,33 @@ def test_main_jsonschema_discriminator_literals():
                 '--output',
                 str(output_file),
                 '--output-model-type',
-                'pydantic_v2.BaseModel',
+                output_model,
+                '--target-python',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_JSON_SCHEMA_PATH / 'discriminator_literals.py').read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output ).read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic_v2.BaseModel',
+            'discriminator_with_external_reference.py',
+        ),
+        (
+            'msgspec.Struct',
+            'discriminator_with_external_reference_msgspec.py',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_discriminator():
+def test_main_jsonschema_external_discriminator(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3104,20 +3132,35 @@ def test_main_jsonschema_external_discriminator():
                 '--output',
                 str(output_file),
                 '--output-model-type',
-                'pydantic_v2.BaseModel',
+                output_model,
+                '--target-python',
+                '3.9',
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
             == (
-                EXPECTED_JSON_SCHEMA_PATH / 'discriminator_with_external_reference.py'
+                EXPECTED_JSON_SCHEMA_PATH / expected_output
             ).read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'discriminator_with_external_references_folder',
+        ),
+        (
+            'msgspec.Struct',
+            'discriminator_with_external_references_folder_msgspec',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_discriminator_folder():
+def test_main_jsonschema_external_discriminator_folder(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -3126,11 +3169,15 @@ def test_main_jsonschema_external_discriminator_folder():
                 str(JSON_SCHEMA_DATA_PATH / 'discriminator_with_external_reference'),
                 '--output',
                 str(output_path),
+                '--output-model-type',
+                output_model,
+                '--target-python',
+                '3.9',
             ]
         )
         assert return_code == Exit.OK
         main_modular_dir = (
-            EXPECTED_JSON_SCHEMA_PATH / 'discriminator_with_external_references_folder'
+            EXPECTED_JSON_SCHEMA_PATH / expected_output
         )
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
