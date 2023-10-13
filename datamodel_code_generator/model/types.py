@@ -1,7 +1,13 @@
 from typing import Any, Dict, Optional, Sequence, Type
 
 from datamodel_code_generator import PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL, IMPORT_DATETIME, IMPORT_DATE, IMPORT_TIME
+from datamodel_code_generator.imports import (
+    IMPORT_ANY,
+    IMPORT_DATE,
+    IMPORT_DATETIME,
+    IMPORT_DECIMAL,
+    IMPORT_TIME,
+)
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
