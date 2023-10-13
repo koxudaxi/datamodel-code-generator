@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Sequence, Type
 
 from datamodel_code_generator import PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL, IMPORT_DATETIME, IMPORT_DATE, IMPORT_TIME
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
@@ -21,12 +21,12 @@ def type_map_factory(
         Types.float: data_type_float,
         Types.double: data_type_float,
         Types.decimal: data_type.from_import(IMPORT_DECIMAL),
-        Types.time: data_type_str,
+        Types.time: data_type.from_import(IMPORT_TIME),
         Types.string: data_type_str,
         Types.byte: data_type_str,  # base64 encoded string
         Types.binary: data_type(type='bytes'),
-        Types.date: data_type_str,
-        Types.date_time: data_type_str,
+        Types.date: data_type.from_import(IMPORT_DATE),
+        Types.date_time: data_type.from_import(IMPORT_DATETIME),
         Types.password: data_type_str,
         Types.email: data_type_str,
         Types.uuid: data_type_str,
