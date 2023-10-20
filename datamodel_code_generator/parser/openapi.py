@@ -150,7 +150,7 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
-    SCHEMA_PATH: ClassVar[str] = '#/components/schemas'
+    SCHEMA_PATHS: ClassVar[List[str]] = ['#/components/schemas']
 
     def __init__(
         self,
