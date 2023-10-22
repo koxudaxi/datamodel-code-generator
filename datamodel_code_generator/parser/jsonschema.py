@@ -356,7 +356,7 @@ EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS) |
 
 @snooper_to_methods(max_variable_length=None)
 class JsonSchemaParser(Parser):
-    SCHEMA_PATH: ClassVar[str] = '#/definitions'
+    SCHEMA_PATHS: ClassVar[List[str]] = ['#/definitions', '#/$defs']
 
     def __init__(
         self,
@@ -516,8 +516,8 @@ class JsonSchemaParser(Parser):
             }
 
     @cached_property
-    def schema_paths(self) -> List[str]:
-        return self.SCHEMA_PATH.lstrip('#/').split('/')
+    def schema_paths(self) -> List[Tuple[str, List[str]]]:
+        return [(s, s.lstrip('#/').split('/')) for s in self.SCHEMA_PATHS]
 
     @property
     def root_id(self) -> Optional[str]:
@@ -1664,13 +1664,20 @@ class JsonSchemaParser(Parser):
                 # parse $id before parsing $ref
                 root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
-                try:
-                    definitions = get_model_by_path(raw, self.schema_paths)
-                except KeyError:
+                definitions: Optional[Dict[Any, Any]] = None
+                for schema_path, split_schema_path in self.schema_paths:
+                    try:
+                        definitions = get_model_by_path(raw, split_schema_path)
+                        if definitions:
+                            break
+                    except KeyError:
+                        continue
+                if definitions is None:
                     definitions = {}
+
                 for key, model in definitions.items():
                     obj = JsonSchemaObject.parse_obj(model)
-                    self.parse_id(obj, [*path_parts, self.SCHEMA_PATH, key])
+                    self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
@@ -1679,7 +1686,7 @@ class JsonSchemaParser(Parser):
                 else:
                     self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
-                    path = [*path_parts, self.SCHEMA_PATH, key]
+                    path = [*path_parts, schema_path, key]
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)

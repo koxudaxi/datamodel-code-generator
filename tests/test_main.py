@@ -5832,31 +5832,93 @@ def test_main_duplicate_field_constraints():
             assert result == path.read_text()
 
 
+@pytest.mark.parametrize(
+    'collapse_root_models,python_version,expected_output',
+    [
+        (
+            '--collapse-root-models',
+            '3.8',
+            'duplicate_field_constraints_msgspec_py38_collapse_root_models',
+        ),
+        (
+            None,
+            '3.9',
+            'duplicate_field_constraints_msgspec',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_duplicate_field_constraints_py38():
+def test_main_duplicate_field_constraints_msgspec(
+    collapse_root_models, python_version, expected_output
+):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
             [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
-                '--output',
-                str(output_path),
-                '--input-file-type',
-                'jsonschema',
-                '--collapse-root-models',
-                '--output-model-type',
-                'msgspec.Struct',
-                '--target-python-version',
-                '3.8',
+                a
+                for a in [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
+                    '--output',
+                    str(output_path),
+                    '--input-file-type',
+                    'jsonschema',
+                    '--output-model-type',
+                    'msgspec.Struct',
+                    '--target-python-version',
+                    python_version,
+                    collapse_root_models,
+                ]
+                if a
             ]
         )
         assert return_code == Exit.OK
-        main_modular_dir = (
-            EXPECTED_MAIN_PATH / 'duplicate_field_constraints_msgspec_py38'
-        )
+        main_modular_dir = EXPECTED_MAIN_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_dataclass_field_defs():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'user_defs.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py'
+        ).read_text().replace('filename:  user.json', 'filename:  user_defs.json')
+
+
+@freeze_time('2019-07-26')
+def test_main_dataclass_default():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'user_default.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_dataclass_field_default' / 'output.py'
+            ).read_text()
+        )
