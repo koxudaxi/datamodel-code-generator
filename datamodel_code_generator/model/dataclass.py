@@ -108,7 +108,11 @@ class DataModelField(DataModelFieldBase):
             return ''
 
         if len(data) == 1 and 'default' in data:  # pragma: no cover
-            return repr(data['default'])
+            default = data['default']
+
+            if isinstance(default, (list, dict)):  # pragma: no cover
+                return f'field(default_factory=lambda :{repr(default)})'
+            return repr(default)
         kwargs = [
             f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()
         ]
