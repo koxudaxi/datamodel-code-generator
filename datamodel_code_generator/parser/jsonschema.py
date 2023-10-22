@@ -1664,7 +1664,7 @@ class JsonSchemaParser(Parser):
                 # parse $id before parsing $ref
                 root_obj = JsonSchemaObject.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
-                definitions: Optional[Dict[str, Any]] = None
+                definitions: Optional[Dict[Any, Any]] = None
                 for schema_path, split_schema_path in self.schema_paths:
                     try:
                         definitions = get_model_by_path(raw, split_schema_path)
