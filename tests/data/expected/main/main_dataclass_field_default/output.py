@@ -13,9 +13,9 @@ Model = Any
 @dataclass
 class User:
     name: Optional[str] = None
-    pets: Optional[List[User]] = field(default_factory=lambda: ["dog", "cat"])
+    pets: Optional[List[User]] = field(default_factory=lambda: ['dog', 'cat'])
 
 
 @dataclass
 class Pet:
-    name: Optional[str] = "dog"
+    name: Optional[str] = 'dog'
