@@ -1666,11 +1666,9 @@ class JsonSchemaParser(Parser):
                 self.parse_id(root_obj, path_parts)
                 definitions: Optional[Dict[str, Any]] = None
                 for schema_path, split_schema_path in self.schema_paths:
-                    try:
-                        definitions = get_model_by_path(raw, split_schema_path)
+                    definitions = get_model_by_path(raw, split_schema_path)
+                    if definitions:
                         break
-                    except KeyError:
-                        continue
                 if definitions is None:
                     definitions = {}
 

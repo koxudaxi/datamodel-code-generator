@@ -5879,3 +5879,23 @@ def test_main_duplicate_field_constraints_msgspec(
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_dataclass_field_defs():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'user_defs.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py'
+        ).read_text().replace('filename:  user.json', 'filename:  user_defs.json')
