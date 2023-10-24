@@ -1,4 +1,4 @@
-FROM python:3.11.0-alpine3.16 as builder
+FROM python:3.12.0-alpine3.17 as builder
 
 LABEL maintainer="Koudai Aono <koxudaxi@gmail.com>"
 
