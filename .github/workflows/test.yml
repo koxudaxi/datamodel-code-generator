@@ -40,6 +40,8 @@ jobs:
             pydantic-version: 1.5.1
           - python-version: 3.11
             pydantic-version: 1.5.1
+          - python-version: 3.12
+            pydantic-version: 1.5.1
     defaults:
       run:
         shell: bash
