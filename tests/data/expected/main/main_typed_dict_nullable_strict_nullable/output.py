@@ -29,8 +29,8 @@ class User(TypedDict):
 class Api(TypedDict):
     apiKey: NotRequired[str]
     apiVersionNumber: NotRequired[str]
-    apiUrl: NotRequired[str]
-    apiDocumentationUrl: NotRequired[str]
+    apiUrl: NotRequired[Optional[str]]
+    apiDocumentationUrl: NotRequired[Optional[str]]
 
 
 Apis = Optional[List[Api]]
