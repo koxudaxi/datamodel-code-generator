@@ -229,7 +229,7 @@ class FieldNameResolver:
 
         name = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹]|\W', '_', name)
         if name[0].isnumeric():
-            name = f'{self.special_field_name_prefix}{name}'
+            name = f'{self.special_field_name_prefix}_{name}'
 
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
