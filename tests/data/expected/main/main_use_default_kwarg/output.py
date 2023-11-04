@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -76,3 +76,8 @@ class Tag(BaseModel):
 
 class Notes(BaseModel):
     comments: List[str] = Field(default_factory=list)
+
+
+class Options(BaseModel):
+    comments: List[str]
+    oneOfComments: List[Union[str, float]]

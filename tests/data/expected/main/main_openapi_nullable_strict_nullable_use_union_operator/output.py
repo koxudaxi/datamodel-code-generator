@@ -76,3 +76,8 @@ class Tag(BaseModel):
 
 class Notes(BaseModel):
     comments: List[str] = Field(default_factory=list)
+
+
+class Options(BaseModel):
+    comments: List[str | None]
+    oneOfComments: List[str | float | None]

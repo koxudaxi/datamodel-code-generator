@@ -590,12 +590,6 @@ class JsonSchemaParser(Parser):
                 **obj.dict() if not self.field_constraints else {},
             )
 
-        if obj.nullable and self.strict_nullable:
-            if isinstance(obj.type, list) and 'null' not in obj.type:
-                obj.type.append('null')
-            elif isinstance(obj.type, str) and obj.type != 'null':
-                obj.type = [obj.type, 'null']
-
         if isinstance(obj.type, list):
             return self.data_type(
                 data_types=[
