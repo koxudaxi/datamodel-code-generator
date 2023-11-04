@@ -377,8 +377,8 @@ Field customization:
                         only can be used with --snake-case-field (default: `_`
                         )
   --remove-special-field-name-prefix
-                        Remove field name prefix when first character can't be
-                        used as Python field name
+                        Remove field name prefix if it has a special meaning
+                        e.g. underscores
   --snake-case-field    Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name prefix when first character can't be

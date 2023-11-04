@@ -297,7 +297,7 @@ field_options.add_argument(
 )
 field_options.add_argument(
     '--remove-special-field-name-prefix',
-    help="Remove field name prefix when first character can't be used as Python field name",
+    help='Remove field name prefix if it has a special meaning e.g. underscores',
     action='store_true',
     default=None,
 )
