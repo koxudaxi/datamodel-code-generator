@@ -75,7 +75,7 @@ types-toml = "*"
 types-setuptools = ">=67.6.0.5,<69.0.0.0"
 pydantic = "*"
 httpx = "*"
-ruff = ">=0.0.290,<0.1.4"
+ruff = ">=0.0.290,<0.1.5"
 ruff-lsp = ">=0.0.39,<0.0.41"
 pre-commit = "*"
 
