@@ -27,8 +27,13 @@ from urllib.parse import ParseResult
 from pydantic import BaseModel
 
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
+from datamodel_code_generator.imports import (
+    IMPORT_ANNOTATIONS,
+    Import,
+    Imports,
+)
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
@@ -722,6 +727,74 @@ class Parser(ABC):
                 )
                 models.remove(model)
 
+    def __apply_discriminator_type(
+        self,
+        models: List[DataModel],
+        imports: Imports,
+    ) -> None:
+        for model in models:
+            for field in model.fields:
+                discriminator = field.extras.get('discriminator')
+                if not discriminator or not isinstance(discriminator, dict):
+                    continue
+                property_name = discriminator.get('propertyName')
+                if not property_name:
+                    continue
+                mapping = discriminator.get('mapping', {})
+                for data_type in field.data_type.data_types:
+                    if not data_type.reference:
+                        continue
+                    discriminator_model = data_type.reference.source
+                    if not isinstance(
+                        discriminator_model,
+                        (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+                    ):
+                        continue
+                    type_name = None
+                    if mapping:
+                        for name, path in mapping.items():
+                            if (
+                                discriminator_model.path.split('#/')[-1]
+                                != path.split('#/')[-1]
+                            ):
+                                # TODO: support external reference
+                                continue
+                            type_name = name
+                    else:
+                        type_name = discriminator_model.path.split('/')[-1]
+                    if not type_name:
+                        raise RuntimeError(
+                            f'Discriminator type is not found. {data_type.reference.path}'
+                        )
+                    updated = False
+                    for discriminator_field in discriminator_model.fields:
+                        if (
+                            discriminator_field.original_name
+                            or discriminator_field.name
+                        ) != property_name:
+                            continue
+
+                        for (
+                            field_data_type
+                        ) in discriminator_field.data_type.all_data_types:
+                            if field_data_type.reference:
+                                field_data_type.remove_reference()
+                        discriminator_field.data_type = self.data_type(
+                            literals=[type_name]
+                        )
+                        discriminator_field.data_type.parent = discriminator_field
+                        discriminator_field.required = True
+                        imports.append(discriminator_field.imports)
+                        updated = True
+                    if not updated:
+                        discriminator_model.fields.append(
+                            self.data_model_field_type(
+                                name=property_name,
+                                data_type=self.data_type(literals=[type_name]),
+                                required=True,
+                            )
+                        )
+
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
         if data_type.is_list:
@@ -1155,6 +1228,7 @@ class Parser(ABC):
             self.__override_required_field(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
+            self.__apply_discriminator_type(models, imports)
 
             processed_models.append(
                 Processed(module, models, init, imports, scoped_model_resolver)
