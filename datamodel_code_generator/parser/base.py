@@ -766,14 +766,17 @@ class Parser(ABC):
                         raise RuntimeError(
                             f'Discriminator type is not found. {data_type.reference.path}'
                         )
-                    updated = False
+                    has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
                         if (
                             discriminator_field.original_name
                             or discriminator_field.name
                         ) != property_name:
                             continue
-
+                        literals = discriminator_field.data_type.literals
+                        if len(literals) == 1 and literals[0] == type_name:
+                            has_one_literal = True
+                            continue
                         for (
                             field_data_type
                         ) in discriminator_field.data_type.all_data_types:
@@ -785,8 +788,8 @@ class Parser(ABC):
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
                         imports.append(discriminator_field.imports)
-                        updated = True
-                    if not updated:
+                        has_one_literal = True
+                    if not has_one_literal:
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=property_name,
