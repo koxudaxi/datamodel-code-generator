@@ -147,6 +147,17 @@ class UnionIntFloat:
         if isinstance(v, UnionIntFloat):
             return v
         elif not isinstance(v, (int, float)):  # pragma: no cover
+            try:
+                int(v)
+                return cls(v)
+            except (TypeError, ValueError):
+                pass
+            try:
+                float(v)
+                return cls(v)
+            except (TypeError, ValueError):
+                pass
+
             raise TypeError(f'{v} is not int or float')
         return cls(v)
 
