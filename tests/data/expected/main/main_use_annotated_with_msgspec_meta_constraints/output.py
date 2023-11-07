@@ -62,7 +62,10 @@ class Api(Struct):
         Annotated[str, Meta(description='To be used as a version parameter value')]
     ] = None
     apiUrl: Optional[
-        Annotated[str, Meta(description="The URL describing the dataset's fields")]
+        Annotated[
+            str,
+            Meta(description="The URL describing the dataset's fields", min_length=1),
+        ]
     ] = None
     apiDocumentationUrl: Optional[
         Annotated[str, Meta(description='A URL to the API console for each API')]

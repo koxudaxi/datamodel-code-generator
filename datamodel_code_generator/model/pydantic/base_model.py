@@ -11,7 +11,11 @@ from datamodel_code_generator.model import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.base import UNDEFINED
-from datamodel_code_generator.model.pydantic.imports import IMPORT_EXTRA, IMPORT_FIELD
+from datamodel_code_generator.model.pydantic.imports import (
+    IMPORT_ANYURL,
+    IMPORT_EXTRA,
+    IMPORT_FIELD,
+)
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 from datamodel_code_generator.util import cached_property
@@ -134,10 +138,17 @@ class DataModelField(DataModelFieldBase):
         ):
             data = {
                 **data,
-                **{
-                    k: self._get_strict_field_constraint_value(k, v)
-                    for k, v in self.constraints.dict().items()
-                },
+                **(
+                    {}
+                    if any(
+                        d.import_ == IMPORT_ANYURL
+                        for d in self.data_type.all_data_types
+                    )
+                    else {
+                        k: self._get_strict_field_constraint_value(k, v)
+                        for k, v in self.constraints.dict().items()
+                    }
+                ),
             }
 
         if self.use_field_description:
