@@ -1171,6 +1171,7 @@ class Parser(ABC):
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
+        for module, models, init, imports, scoped_model_resolver in processed_models:
             result: List[str] = []
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
