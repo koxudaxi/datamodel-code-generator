@@ -18,5 +18,6 @@ class User(BaseModel):
     tel: Optional[constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$')] = None
     height: Optional[confloat(ge=0.0)] = None
     weight: Optional[confloat(ge=0.0)] = None
+    score: Optional[confloat(ge=1e-08)] = None
     active: Optional[bool] = None
     photo: Optional[conbytes(min_length=100)] = None
