@@ -1029,7 +1029,6 @@ class Parser(ABC):
     def __change_imported_model_name(
         self,
         models: List[DataModel],
-        unused_models: List[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
     ) -> None:
@@ -1042,8 +1041,6 @@ class Parser(ABC):
         }
         for model in models:
             if model.class_name not in imported_names:  # pragma: no cover
-                continue
-            if model in unused_models:  # pragma: no cover
                 continue
 
             model.reference.name = scoped_model_resolver.add(  # pragma: no cover
@@ -1127,6 +1124,7 @@ class Parser(ABC):
             models: List[DataModel]
             init: bool
             imports: Imports
+            scoped_model_resolver: ModelResolver
 
         processed_models: List[Processed] = []
 
@@ -1157,11 +1155,10 @@ class Parser(ABC):
             self.__override_required_field(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
-            self.__change_imported_model_name(
-                models, unused_models, imports, scoped_model_resolver
-            )
 
-            processed_models.append(Processed(module, models, init, imports))
+            processed_models.append(
+                Processed(module, models, init, imports, scoped_model_resolver)
+            )
 
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
@@ -1170,7 +1167,11 @@ class Parser(ABC):
                 imports.remove(unused_model.imports)
                 models.remove(unused_model)
 
-        for module, models, init, imports in processed_models:
+        for module, models, init, imports, scoped_model_resolver in processed_models:
+            # process after removing unused models
+            self.__change_imported_model_name(models, imports, scoped_model_resolver)
+
+        for module, models, init, imports, scoped_model_resolver in processed_models:
             result: List[str] = []
             if with_import:
                 result += [str(self.imports), str(imports), '\n']
