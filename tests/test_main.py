@@ -117,7 +117,7 @@ def test_main():
 
 @pytest.mark.skip(reason='pytest-xdist does not support the test')
 @freeze_time('2019-07-26')
-def test_main_without_arguments(request):
+def test_main_without_arguments():
     with pytest.raises(SystemExit):
         main()
 
