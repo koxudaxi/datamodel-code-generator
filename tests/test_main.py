@@ -4876,14 +4876,27 @@ def test_main_disable_warnings(capsys: CaptureFixture):
         assert captured.err == ''
 
 
+@pytest.mark.parametrize(
+    'input,output',
+    [
+        (
+            'discriminator.yaml',
+            'main_openapi_discriminator',
+        ),
+        (
+            'discriminator_without_mapping.yaml',
+            'main_openapi_discriminator_without_mapping',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_discriminator():
+def test_main_openapi_discriminator(input, output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
             [
                 '--input',
-                str(OPEN_API_DATA_PATH / 'discriminator.yaml'),
+                str(OPEN_API_DATA_PATH / input),
                 '--output',
                 str(output_file),
                 '--input-file-type',
@@ -4893,9 +4906,7 @@ def test_main_openapi_discriminator():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_openapi_discriminator' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / output / 'output.py').read_text()
         )
 
 
