@@ -300,7 +300,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     # add cli completion support
     argcomplete.autocomplete(arg_parser)
 
-    if args is None:
+    if args is None:  # pragma: no cover
         args = sys.argv[1:]
 
     arg_parser.parse_args(args, namespace=namespace)
