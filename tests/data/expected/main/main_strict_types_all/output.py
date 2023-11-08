@@ -30,5 +30,6 @@ class User(BaseModel):
     ] = None
     height: Optional[confloat(ge=0.0, strict=True)] = None
     weight: Optional[confloat(ge=0.0, strict=True)] = None
+    score: Optional[confloat(ge=1e-08, strict=True)] = None
     active: Optional[StrictBool] = None
     photo: Optional[StrictBytes] = None

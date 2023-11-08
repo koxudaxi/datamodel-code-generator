@@ -19,6 +19,7 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 from urllib.parse import ParseResult
@@ -26,8 +27,13 @@ from urllib.parse import ParseResult
 from pydantic import BaseModel
 
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANNOTATIONS, Import, Imports
+from datamodel_code_generator.imports import (
+    IMPORT_ANNOTATIONS,
+    Import,
+    Imports,
+)
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
     UNDEFINED,
@@ -37,7 +43,6 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
-from datamodel_code_generator.model.pydantic_v2 import RootModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -238,8 +243,11 @@ class Child(Protocol):
         raise NotImplementedError
 
 
-def get_most_of_parent(value: Any) -> Optional[Any]:
-    if isinstance(value, Child):
+T = TypeVar('T')
+
+
+def get_most_of_parent(value: Any, type_: Optional[Type[T]] = None) -> Optional[T]:
+    if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
         return get_most_of_parent(value.parent)
     return value
 
@@ -377,6 +385,7 @@ class Parser(ABC):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -492,6 +501,7 @@ class Parser(ABC):
         self.capitalise_enum_members = capitalise_enum_members
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
+        self.known_third_party = known_third_party
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -685,7 +695,14 @@ class Parser(ABC):
 
                 if init:
                     from_ = '.' + from_
-                imports.append(Import(from_=from_, import_=import_, alias=alias))
+                imports.append(
+                    Import(
+                        from_=from_,
+                        import_=import_,
+                        alias=alias,
+                        reference_path=data_type.reference.path,
+                    ),
+                )
 
     @classmethod
     def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
@@ -709,6 +726,77 @@ class Parser(ABC):
                     ),
                 )
                 models.remove(model)
+
+    def __apply_discriminator_type(
+        self,
+        models: List[DataModel],
+        imports: Imports,
+    ) -> None:
+        for model in models:
+            for field in model.fields:
+                discriminator = field.extras.get('discriminator')
+                if not discriminator or not isinstance(discriminator, dict):
+                    continue
+                property_name = discriminator.get('propertyName')
+                if not property_name:  # pragma: no cover
+                    continue
+                mapping = discriminator.get('mapping', {})
+                for data_type in field.data_type.data_types:
+                    if not data_type.reference:  # pragma: no cover
+                        continue
+                    discriminator_model = data_type.reference.source
+                    if not isinstance(  # pragma: no cover
+                        discriminator_model,
+                        (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+                    ):
+                        continue  # pragma: no cover
+                    type_name = None
+                    if mapping:
+                        for name, path in mapping.items():
+                            if (
+                                discriminator_model.path.split('#/')[-1]
+                                != path.split('#/')[-1]
+                            ):
+                                # TODO: support external reference
+                                continue
+                            type_name = name
+                    else:
+                        type_name = discriminator_model.path.split('/')[-1]
+                    if not type_name:  # pragma: no cover
+                        raise RuntimeError(
+                            f'Discriminator type is not found. {data_type.reference.path}'
+                        )
+                    has_one_literal = False
+                    for discriminator_field in discriminator_model.fields:
+                        if (
+                            discriminator_field.original_name
+                            or discriminator_field.name
+                        ) != property_name:
+                            continue
+                        literals = discriminator_field.data_type.literals
+                        if len(literals) == 1 and literals[0] == type_name:
+                            has_one_literal = True
+                            continue
+                        for (
+                            field_data_type
+                        ) in discriminator_field.data_type.all_data_types:
+                            if field_data_type.reference:  # pragma: no cover
+                                field_data_type.remove_reference()
+                        discriminator_field.data_type = self.data_type(
+                            literals=[type_name]
+                        )
+                        discriminator_field.data_type.parent = discriminator_field
+                        discriminator_field.required = True
+                        imports.append(discriminator_field.imports)
+                        has_one_literal = True
+                    if not has_one_literal:
+                        discriminator_model.fields.append(
+                            self.data_model_field_type(
+                                name=property_name,
+                                data_type=self.data_type(literals=[type_name]),
+                                required=True,
+                            )
+                        )
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
@@ -805,7 +893,7 @@ class Parser(ABC):
     ) -> None:
         if not self.collapse_root_models:
             return None
-        unused_model_count = len(unused_models)
+
         for model in models:
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
@@ -871,6 +959,10 @@ class Parser(ABC):
                         ]
                     else:  # pragma: no cover
                         continue
+                    original_field = get_most_of_parent(data_type, DataModelFieldBase)
+                    if original_field:  # pragma: no cover
+                        # TODO: Improve detection of reference type
+                        imports.append(original_field.imports)
 
                     data_type.remove_reference()
 
@@ -880,19 +972,9 @@ class Parser(ABC):
                         if getattr(c, 'parent', None)
                     ]
 
+                    imports.remove_referenced_imports(root_type_model.path)
                     if not root_type_model.reference.children:
                         unused_models.append(root_type_model)
-
-        if self.data_model_root_type == RootModel and unused_model_count != len(
-            unused_models
-        ):
-            if {m for m in models if isinstance(m, RootModel)} - {  # pragma: no cover
-                m for m in unused_models if isinstance(m, RootModel)
-            }:
-                return None  # pragma: no cover
-
-            if 'RootModel' in imports['pydantic']:  # pragma: no cover
-                imports['pydantic'].remove('RootModel')
 
     def __set_default_enum_member(
         self,
@@ -1023,7 +1105,6 @@ class Parser(ABC):
     def __change_imported_model_name(
         self,
         models: List[DataModel],
-        unused_models: List[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
     ) -> None:
@@ -1036,8 +1117,6 @@ class Parser(ABC):
         }
         for model in models:
             if model.class_name not in imported_names:  # pragma: no cover
-                continue
-            if model in unused_models:  # pragma: no cover
                 continue
 
             model.reference.name = scoped_model_resolver.add(  # pragma: no cover
@@ -1065,6 +1144,7 @@ class Parser(ABC):
                 settings_path,
                 self.wrap_string_literal,
                 skip_string_normalization=not self.use_double_quotes,
+                known_third_party=self.known_third_party,
             )
         else:
             code_formatter = None
@@ -1086,14 +1166,17 @@ class Parser(ABC):
 
         module_models: List[Tuple[Tuple[str, ...], List[DataModel]]] = []
         unused_models: List[DataModel] = []
-        model_to_models: Dict[DataModel, List[DataModel]] = {}
+        model_to_module_models: Dict[
+            DataModel, Tuple[Tuple[str, ...], List[DataModel]]
+        ] = {}
+        module_to_import: Dict[Tuple[str, ...], Imports] = {}
 
         previous_module = ()  # type: Tuple[str, ...]
         for module, models in (
             (k, [*v]) for k, v in grouped_models
         ):  # type: Tuple[str, ...], List[DataModel]
             for model in models:
-                model_to_models[model] = models
+                model_to_module_models[model] = module, models
             self.__delete_duplicate_models(models)
             self.__replace_duplicate_name_in_module(models)
             if len(previous_module) - len(module) > 1:
@@ -1117,9 +1200,12 @@ class Parser(ABC):
             models: List[DataModel]
             init: bool
             imports: Imports
+            scoped_model_resolver: ModelResolver
 
         processed_models: List[Processed] = []
+
         for module, models in module_models:
+            imports = module_to_import[module] = Imports()
             init = False
             if module:
                 parent = (*module[:-1], '__init__.py')
@@ -1133,7 +1219,6 @@ class Parser(ABC):
             else:
                 module = ('__init__.py',)
 
-            imports = Imports()
             scoped_model_resolver = ModelResolver()
 
             self.__replace_unique_list_to_set(models)
@@ -1146,17 +1231,24 @@ class Parser(ABC):
             self.__override_required_field(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
-            self.__change_imported_model_name(
-                models, unused_models, imports, scoped_model_resolver
+            self.__apply_discriminator_type(models, imports)
+
+            processed_models.append(
+                Processed(module, models, init, imports, scoped_model_resolver)
             )
 
-            processed_models.append(Processed(module, models, init, imports))
-
         for unused_model in unused_models:
-            if unused_model in model_to_models[unused_model]:  # pragma: no cover
-                model_to_models[unused_model].remove(unused_model)
+            module, models = model_to_module_models[unused_model]
+            if unused_model in models:  # pragma: no cover
+                imports = module_to_import[module]
+                imports.remove(unused_model.imports)
+                models.remove(unused_model)
 
-        for module, models, init, imports in processed_models:
+        for module, models, init, imports, scoped_model_resolver in processed_models:
+            # process after removing unused models
+            self.__change_imported_model_name(models, imports, scoped_model_resolver)
+
+        for module, models, init, imports, scoped_model_resolver in processed_models:
             result: List[str] = []
             if with_import:
                 result += [str(self.imports), str(imports), '\n']

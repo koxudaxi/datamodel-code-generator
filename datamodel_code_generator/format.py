@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from warnings import warn
 
 import black
@@ -19,6 +19,7 @@ class PythonVersion(Enum):
     PY_39 = '3.9'
     PY_310 = '3.10'
     PY_311 = '3.11'
+    PY_312 = '3.12'
 
     @cached_property
     def _is_py_38_or_later(self) -> bool:  # pragma: no cover
@@ -100,6 +101,7 @@ class CodeFormatter:
         settings_path: Optional[Path] = None,
         wrap_string_literal: Optional[bool] = None,
         skip_string_normalization: bool = True,
+        known_third_party: Optional[List[str]] = None,
     ) -> None:
         if not settings_path:
             settings_path = Path().resolve()
@@ -144,10 +146,17 @@ class CodeFormatter:
             )
 
         self.settings_path: str = str(settings_path)
+
+        self.isort_config_kwargs: Dict[str, Any] = {}
+        if known_third_party:
+            self.isort_config_kwargs['known_third_party'] = known_third_party
+
         if isort.__version__.startswith('4.'):
             self.isort_config = None
         else:
-            self.isort_config = isort.Config(settings_path=self.settings_path)
+            self.isort_config = isort.Config(
+                settings_path=self.settings_path, **self.isort_config_kwargs
+            )
 
     def format_code(
         self,
@@ -173,7 +182,9 @@ class CodeFormatter:
 
             def apply_isort(self, code: str) -> str:
                 return isort.SortImports(
-                    file_contents=code, settings_path=self.settings_path
+                    file_contents=code,
+                    settings_path=self.settings_path,
+                    **self.isort_config_kwargs,
                 ).output
 
         else:

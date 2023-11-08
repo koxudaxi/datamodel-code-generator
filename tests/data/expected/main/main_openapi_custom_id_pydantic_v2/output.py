@@ -10,7 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, RootModel
 
 
-class CustomId(RootModel):
+class CustomId(RootModel[UUID]):
     root: UUID = Field(..., description='My custom ID')
 
 

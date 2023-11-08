@@ -15,7 +15,7 @@ class Pet(BaseModel):
     tag: Optional[str] = None
 
 
-class Pets(RootModel):
+class Pets(RootModel[List[Pet]]):
     root: List[Pet]
 
 
@@ -25,15 +25,15 @@ class User(BaseModel):
     tag: Optional[str] = None
 
 
-class Users(RootModel):
+class Users(RootModel[List[User]]):
     root: List[User]
 
 
-class Id(RootModel):
+class Id(RootModel[str]):
     root: str
 
 
-class Rules(RootModel):
+class Rules(RootModel[List[str]]):
     root: List[str]
 
 
@@ -57,7 +57,7 @@ class Api(BaseModel):
     )
 
 
-class Apis(RootModel):
+class Apis(RootModel[List[Api]]):
     root: List[Api]
 
 

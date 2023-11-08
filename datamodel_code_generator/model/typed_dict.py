@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import keyword
 from pathlib import Path
 from typing import (

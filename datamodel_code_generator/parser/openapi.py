@@ -150,7 +150,7 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
-    SCHEMA_PATH: ClassVar[str] = '#/components/schemas'
+    SCHEMA_PATHS: ClassVar[List[str]] = ['#/components/schemas']
 
     def __init__(
         self,
@@ -216,6 +216,7 @@ class OpenAPIParser(JsonSchemaParser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ):
         super().__init__(
             source=source,
@@ -278,6 +279,7 @@ class OpenAPIParser(JsonSchemaParser):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
+            known_third_party=known_third_party,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -290,6 +292,22 @@ class OpenAPIParser(JsonSchemaParser):
         else:  # pragma: no cover
             ref_body = self.raw_obj
         return get_model_by_path(ref_body, ref_path.split('/')[1:])
+
+    def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+        # OpenAPI doesn't allow `null` in `type` field and list of types
+        # https://swagger.io/docs/specification/data-models/data-types/#null
+        if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
+            obj.type = [obj.type, 'null']
+
+        return super().get_data_type(obj)
+
+    def parse_one_of(
+        self, name: str, obj: JsonSchemaObject, path: List[str]
+    ) -> List[DataType]:
+        data_types = super().parse_one_of(name, obj, path)
+        if obj.nullable and self.strict_nullable:
+            data_types.append(DataType(type='None'))
+        return data_types
 
     def resolve_object(
         self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]

@@ -1,7 +1,16 @@
+{%- macro get_type_hint(_fields) -%}
+{%- if _fields -%}
+{#There will only ever be a single field for RootModel#}
+{{- _fields[0].type_hint}}
+{%- endif -%}
+{%- endmacro -%}
+
+
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
-class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
+
+class {{ class_name }}({{ base_class }}[{{get_type_hint(fields)}}]):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     """
     {{ description | indent(4) }}

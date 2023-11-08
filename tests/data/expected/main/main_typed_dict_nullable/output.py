@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, NotRequired, Optional, TypedDict
+from typing import List, NotRequired, Optional, TypedDict, Union
 
 
 class Cursors(TypedDict):
@@ -60,3 +60,8 @@ Tag = str
 
 class Notes(TypedDict):
     comments: NotRequired[List[str]]
+
+
+class Options(TypedDict):
+    comments: List[str]
+    oneOfComments: List[Union[str, float]]

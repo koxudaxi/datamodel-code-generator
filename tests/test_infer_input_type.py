@@ -26,6 +26,8 @@ def test_infer_input_type():
             continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / 'openapi').rglob('*'):
+        if 'all_of_with_relative_ref' in str(file):
+            continue
         if str(file).endswith(
             (
                 'aliases.json',

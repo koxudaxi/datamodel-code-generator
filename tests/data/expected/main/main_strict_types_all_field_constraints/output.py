@@ -26,5 +26,6 @@ class User(BaseModel):
     tel: Optional[StrictStr] = None
     height: Optional[StrictFloat] = None
     weight: Optional[StrictFloat] = None
+    score: Optional[StrictFloat] = None
     active: Optional[StrictBool] = None
     photo: Optional[StrictBytes] = None

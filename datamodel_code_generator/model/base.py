@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import lru_cache
@@ -145,7 +143,7 @@ class DataModelFieldBase(_BaseModel):
                 self.nullable and not self.data_type.use_union_operator
             ):  # pragma: no cover
                 imports.append((IMPORT_OPTIONAL,))
-        if self.use_annotated:
+        if self.use_annotated and self.annotated:
             import_annotated = (
                 IMPORT_ANNOTATED
                 if self.data_type.python_version.has_annotated_type

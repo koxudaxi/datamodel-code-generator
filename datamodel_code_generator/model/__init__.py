@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple, Optional, Type
+from typing import TYPE_CHECKING, Callable, Iterable, List, NamedTuple, Optional, Type
 
 from ..types import DataTypeManager as DataTypeManagerABC
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
@@ -15,13 +15,14 @@ class DataModelSet(NamedTuple):
     field_model: Type[DataModelFieldBase]
     data_type_manager: Type[DataTypeManagerABC]
     dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]]
+    known_third_party: Optional[List[str]] = None
 
 
 def get_data_model_types(
     data_model_type: DataModelType, target_python_version: PythonVersion
 ) -> DataModelSet:
     from .. import DataModelType
-    from . import dataclass, pydantic, pydantic_v2, rootmodel, typed_dict
+    from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict
     from .types import DataTypeManager
 
     if data_model_type == DataModelType.PydanticBaseModel:
@@ -59,6 +60,15 @@ def get_data_model_types(
             else typed_dict.DataModelFieldBackport,
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,
+        )
+    elif data_model_type == DataModelType.MsgspecStruct:
+        return DataModelSet(
+            data_model=msgspec.Struct,
+            root_model=msgspec.RootModel,
+            field_model=msgspec.DataModelField,
+            data_type_manager=DataTypeManager,
+            dump_resolve_reference_action=None,
+            known_third_party=['msgspec'],
         )
     raise ValueError(
         f'{data_model_type} is unsupported data model type'
