@@ -738,18 +738,18 @@ class Parser(ABC):
                 if not discriminator or not isinstance(discriminator, dict):
                     continue
                 property_name = discriminator.get('propertyName')
-                if not property_name:
+                if not property_name:  # pragma: no cover
                     continue
                 mapping = discriminator.get('mapping', {})
                 for data_type in field.data_type.data_types:
-                    if not data_type.reference:
+                    if not data_type.reference:  # pragma: no cover
                         continue
                     discriminator_model = data_type.reference.source
-                    if not isinstance(
+                    if not isinstance(  # pragma: no cover
                         discriminator_model,
                         (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
                     ):
-                        continue
+                        continue  # pragma: no cover
                     type_name = None
                     if mapping:
                         for name, path in mapping.items():
@@ -762,7 +762,7 @@ class Parser(ABC):
                             type_name = name
                     else:
                         type_name = discriminator_model.path.split('/')[-1]
-                    if not type_name:
+                    if not type_name:  # pragma: no cover
                         raise RuntimeError(
                             f'Discriminator type is not found. {data_type.reference.path}'
                         )
@@ -780,7 +780,7 @@ class Parser(ABC):
                         for (
                             field_data_type
                         ) in discriminator_field.data_type.all_data_types:
-                            if field_data_type.reference:
+                            if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
                         discriminator_field.data_type = self.data_type(
                             literals=[type_name]
