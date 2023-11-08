@@ -113,12 +113,11 @@ def test_main():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
+@pytest.mark.skip(reason='pytest-xdist does not support the test')
 @freeze_time('2019-07-26')
-def test_main_without_arguments():
+def test_main_without_arguments(request):
     with pytest.raises(SystemExit):
         main()
 
