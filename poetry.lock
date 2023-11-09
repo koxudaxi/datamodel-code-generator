@@ -611,7 +611,7 @@ files = [
 name = "isodate"
 version = "0.6.1"
 description = "An ISO 8601 date/time/duration parser and formatter"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "isodate-0.6.1-py2.py3-none-any.whl", hash = "sha256:0751eece944162659049d35f4f549ed815792b38793f07cf73381c1c87cbed96"},
@@ -659,7 +659,7 @@ i18n = ["Babel (>=2.7)"]
 name = "jsonschema"
 version = "3.2.0"
 description = "An implementation of JSON Schema validation for Python"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "jsonschema-3.2.0-py2.py3-none-any.whl", hash = "sha256:4e5b3cf8216f577bee9ce139cbe72eca3ea4f292ec60928ff24758ce626cd163"},
@@ -827,7 +827,7 @@ setuptools = "*"
 name = "openapi-schema-validator"
 version = "0.1.6"
 description = "OpenAPI schema validation for Python"
-optional = true
+optional = false
 python-versions = ">= 2.7, != 3.0.*, != 3.1.*, != 3.2.*, != 3.3.*, != 3.4.*"
 files = [
     {file = "openapi-schema-validator-0.1.6.tar.gz", hash = "sha256:230db361c71a5b08b25ec926797ac8b59a8f499bbd7316bd15b6cd0fc9aea5df"},
@@ -849,7 +849,7 @@ strict-rfc3339 = ["strict-rfc3339"]
 name = "openapi-spec-validator"
 version = "0.3.3"
 description = "OpenAPI 2.0 (aka Swagger) and OpenAPI 3.0 spec validator"
-optional = true
+optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
     {file = "openapi-spec-validator-0.3.3.tar.gz", hash = "sha256:43d606c5910ed66e1641807993bd0a981de2fc5da44f03e1c4ca2bb65b94b68e"},
@@ -1058,7 +1058,7 @@ ws = ["websockets (==10.*)"]
 name = "pyrsistent"
 version = "0.16.1"
 description = "Persistent/Functional/Immutable data structures"
-optional = true
+optional = false
 python-versions = ">=2.7"
 files = [
     {file = "pyrsistent-0.16.1.tar.gz", hash = "sha256:aa2ae1c2e496f4d6777f869ea5de7166a8ccb9c2e06ebcf6c7ff1b670c98c5ef"},
@@ -1668,4 +1668,4 @@ validation = ["openapi-spec-validator", "prance"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "f1414958315decee0f8629ed07cd19ff02a58816b462477daa00bd656be5a714"
+content-hash = "3e92c6177b16601bf25bbcdd7a7292fe9e7a8102051cc70acb9e2e7726377cef"

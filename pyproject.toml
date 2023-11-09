@@ -81,6 +81,7 @@ ruff-lsp = ">=0.0.39,<0.0.41"
 pre-commit = "*"
 pytest-xdist = "^3.3.1"
 prance = "*"
+openapi-spec-validator = "*"
 
 [tool.poetry.extras]
 http = ["httpx"]
