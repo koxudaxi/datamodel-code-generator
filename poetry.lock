@@ -1663,8 +1663,9 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [extras]
 debug = ["PySnooper"]
 http = ["httpx"]
+validation = ["openapi-spec-validator", "prance"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "a80ca8adc2c59d0b7c127b468c9190d34fb68b747e004c9f1f30798fa70de6d2"
+content-hash = "3e92c6177b16601bf25bbcdd7a7292fe9e7a8102051cc70acb9e2e7726377cef"

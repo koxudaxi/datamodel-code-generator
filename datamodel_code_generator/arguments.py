@@ -410,7 +410,8 @@ openapi_options.add_argument(
 )
 openapi_options.add_argument(
     '--validation',
-    help='Enable validation (Only OpenAPI)',
+    help='Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future '
+    'releases',
     action='store_true',
     default=None,
 )

@@ -23,6 +23,7 @@ from typing import (
     Union,
 )
 from urllib.parse import ParseResult
+from warnings import warn
 
 from pydantic import Field
 
@@ -550,13 +551,27 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_raw(self) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             if self.validation:
-                from prance import BaseParser
-
-                BaseParser(
-                    spec_string=source.text,
-                    backend='openapi-spec-validator',
-                    encoding=self.encoding,
+                warn(
+                    'Deprecated: `--validation` option is deprecated. the option will be removed in a future '
+                    'release. please use another tool to validate OpenAPI.\n'
                 )
+
+                try:
+                    from prance import BaseParser
+
+                    BaseParser(
+                        spec_string=source.text,
+                        backend='openapi-spec-validator',
+                        encoding=self.encoding,
+                    )
+                except ImportError:  # pragma: no cover
+                    warn(
+                        "Warning: Validation was skipped for OpenAPI. `prance` or `openapi-spec-validator` are not "
+                        "installed.\n"
+                        "To use --validation option after datamodel-code-generator 0.24.0, Please run `$pip install "
+                        "'datamodel-code-generator[validation]'`.\n"
+                    )
+
             specification: Dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
             schemas: Dict[Any, Any] = specification.get('components', {}).get(
