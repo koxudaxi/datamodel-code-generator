@@ -564,7 +564,7 @@ class OpenAPIParser(JsonSchemaParser):
                         backend='openapi-spec-validator',
                         encoding=self.encoding,
                     )
-                except ImportError:
+                except ImportError:  # pragma: no cover
                     warn(
                         "Warning: Validation was skipped for OpenAPI. `prance` or `openapi-spec-validator` are not "
                         "installed.\n"
