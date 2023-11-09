@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Callable, Dict, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, TypeVar
 
 import pydantic
 from packaging import version
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Literal
 
-    def _load_toml(f: BinaryIO) -> Dict[str, Any]:
+    def load_toml(path: Path) -> Dict[str, Any]:
         ...
 
 else:
@@ -56,14 +56,17 @@ else:
                 return value
 
     try:
-        from tomllib import load as _load_toml
+        import tomllib
+
+        def load_toml(path: Path) -> Dict[str, Any]:
+            with path.open('rb') as f:
+                return tomllib.load(f)
+
     except ImportError:
-        from toml import load as _load_toml
+        import toml
 
-
-def load_toml(path: Path) -> dict[str, Any]:
-    with path.open('rb') as f:
-        return _load_toml(f)
+        def load_toml(path: Path) -> Dict[str, Any]:
+            return toml.load(path)
 
 
 SafeLoader.yaml_constructors[
