@@ -79,7 +79,7 @@ else:
 def enable_debug_message() -> None:  # pragma: no cover
     if not pysnooper:
         raise Exception(
-            "Please run $pip install 'datamodel-code-generator[debug]' to use debug option"
+            "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
         )
 
     pysnooper.tracer.DISABLED = False

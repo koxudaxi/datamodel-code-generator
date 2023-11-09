@@ -440,7 +440,9 @@ OpenAPI-only options:
                         OpenAPI)
   --use-operation-id-as-name
                         use operation id of OpenAPI as class names of models
-  --validation          Enable validation (Only OpenAPI)
+  --validation          Deprecated: Enable validation (Only OpenAPI). this
+                        option is deprecated. it will be removed in future
+                        releases
 
 General options:
   --debug               show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
