@@ -286,7 +286,7 @@ $ pip install datamodel-code-generator
 ### `http` extra option
 If you want to resolve `$ref` for remote files then you should specify `http` extra option.
 ```bash
-$ pip install datamodel-code-generator[http]
+$ pip install 'datamodel-code-generator[http]'
 ```
 
 ### Docker Image
@@ -446,7 +446,7 @@ OpenAPI-only options:
   --validation          Enable validation (Only OpenAPI)
 
 General options:
-  --debug               show debug message
+  --debug               show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
   --no-color            disable colorized output
   --version             show version

@@ -27,7 +27,6 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-import pysnooper
 import yaml
 
 from datamodel_code_generator.format import PythonVersion
@@ -38,7 +37,12 @@ from datamodel_code_generator.util import SafeLoader  # type: ignore
 
 T = TypeVar('T')
 
-pysnooper.tracer.DISABLED = True
+try:
+    import pysnooper
+
+    pysnooper.tracer.DISABLED = True
+except ImportError:
+    pysnooper = None
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
@@ -73,6 +77,11 @@ else:
 
 
 def enable_debug_message() -> None:  # pragma: no cover
+    if not pysnooper:
+        raise Exception(
+            "Please run $pip install 'datamodel-code-generator[debug]' to use debug option"
+        )
+
     pysnooper.tracer.DISABLED = False
 
 
@@ -88,6 +97,8 @@ def snooper_to_methods(  # type: ignore
     max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
+        if not pysnooper:
+            return cls
         import inspect
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
