@@ -80,6 +80,7 @@ ruff = ">=0.0.290,<0.1.6"
 ruff-lsp = ">=0.0.39,<0.0.41"
 pre-commit = "*"
 pytest-xdist = "^3.3.1"
+prance = "*"
 
 [tool.poetry.extras]
 http = ["httpx"]
