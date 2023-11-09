@@ -41,7 +41,7 @@ try:
     import pysnooper
 
     pysnooper.tracer.DISABLED = True
-except ImportError:
+except ImportError:  # pragma: no cover
     pysnooper = None
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'

@@ -49,6 +49,15 @@ def reset_namespace(monkeypatch: MonkeyPatch):
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
+def test_debug(mocker) -> None:
+    with pytest.raises(expected_exception=SystemExit):
+        main(['--debug', '--help'])
+
+    mocker.patch('datamodel_code_generator.pysnooper', None)
+    with pytest.raises(expected_exception=SystemExit):
+        main(['--debug', '--help'])
+
+
 @freeze_time('2019-07-26')
 def test_main_inheritance_forward_ref():
     with TemporaryDirectory() as output_dir:
