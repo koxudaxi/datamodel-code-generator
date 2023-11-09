@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, Dict, TypeVar
 
 import pydantic
 from packaging import version
@@ -20,6 +21,10 @@ if TYPE_CHECKING:
     runtime_checkable: Callable[..., Any]
 
     from typing_extensions import Literal
+
+    def load_toml(path: Path) -> Dict[str, Any]:
+        ...
+
 else:
     try:
         from typing import Protocol
@@ -50,11 +55,23 @@ else:
                     value = instance.__dict__[self.func.__name__] = self.func(instance)
                 return value
 
+    try:
+        import tomllib
+
+        def load_toml(path: Path) -> Dict[str, Any]:
+            with path.open('rb') as f:
+                return tomllib.load(f)
+
+    except ImportError:
+        import toml
+
+        def load_toml(path: Path) -> Dict[str, Any]:
+            return toml.load(path)
+
 
 SafeLoader.yaml_constructors[
     'tag:yaml.org,2002:timestamp'
 ] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
-
 
 Model = TypeVar('Model', bound=_BaseModel)
 
