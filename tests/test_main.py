@@ -18,6 +18,7 @@ from datamodel_code_generator import (
     chdir,
     generate,
     inferred_message,
+    snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Exit, main
 
@@ -59,23 +60,9 @@ def test_debug(mocker) -> None:
 
 
 @freeze_time('2019-07-26')
-def test_main_without_pysnooper(mocker) -> None:
-    mocker.patch('datamodel_code_generator.pysnooper', None)
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'api.yaml'),
-                '--output',
-                str(output_file),
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
-        )
+def test_snooper_to_methods_without_pysnooper(mocker) -> None:
+    mock = mocker.Mock()
+    assert snooper_to_methods()(mock) == mock
 
 
 @freeze_time('2019-07-26')
