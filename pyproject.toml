@@ -93,24 +93,14 @@ line-length = 88
 extend-select = ['Q', 'RUF100', 'C4', 'UP', 'I']
 flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
 target-version = 'py37'
-ignore = ['E501', 'UP006', 'UP007']
+ignore = ['E501', 'UP006', 'UP007', 'Q000', 'Q003' ]
 extend-exclude = ['tests/data']
 
-
-[tool.black]
-line-length = 88
-skip-string-normalization = true
-# language=RegExp
-exclude = '(tests/data|\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist|.*\/models\.py.*|.*\/models\/.*)'
-target-version = ['py37']
-
-[tool.ruff.isort]
-#multi-line-output = 3
-#include-trailing-comma = true
-#force-grid-wrap = 0
-#use-parentheses = true
-#line-length = 88
-#skip = "tests/data"
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.mypy]
 plugins = "pydantic.mypy"

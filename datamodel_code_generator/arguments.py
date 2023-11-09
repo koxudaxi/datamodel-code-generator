@@ -421,7 +421,7 @@ openapi_options.add_argument(
 # ======================================================================================
 general_options.add_argument(
     '--debug',
-    help="show debug message (require \"debug\". `$ pip install 'datamodel-code-generator[debug]'`)",
+    help='show debug message (require "debug". `$ pip install \'datamodel-code-generator[debug]\'`)',
     action='store_true',
     default=None,
 )

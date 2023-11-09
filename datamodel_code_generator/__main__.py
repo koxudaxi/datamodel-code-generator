@@ -186,9 +186,7 @@ class Config(BaseModel):
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split(
-                        ':', maxsplit=1
-                    )  # type: str, str
+                    field_name, field_value = each_item.split(':', maxsplit=1)  # type: str, str
                     return field_name, field_value.lstrip()
                 except ValueError:
                     raise Error(f'Invalid http header: {each_item!r}')
@@ -342,8 +340,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"  # type: ignore
-            f"You have to install a newer black.\n"
-            f"Installed black version: {black.__version__}",
+            f'You have to install a newer black.\n'
+            f'Installed black version: {black.__version__}',
             file=sys.stderr,
         )
         return Exit.ERROR

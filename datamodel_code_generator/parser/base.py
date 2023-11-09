@@ -58,7 +58,7 @@ def get_special_path(keyword: str, path: List[str]) -> List[str]:
 escape_characters = str.maketrans(
     {
         '\\': r'\\',
-        "'": r"\'",
+        "'": r'\'',
         '\b': r'\b',
         '\f': r'\f',
         '\n': r'\n',
@@ -457,9 +457,9 @@ class Parser(ABC):
 
         self.source: Union[str, Path, List[Path], ParseResult] = source
         self.custom_template_dir = custom_template_dir
-        self.extra_template_data: DefaultDict[
-            str, Any
-        ] = extra_template_data or defaultdict(dict)
+        self.extra_template_data: DefaultDict[str, Any] = (
+            extra_template_data or defaultdict(dict)
+        )
 
         if allow_population_by_field_name:
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
@@ -1073,9 +1073,10 @@ class Parser(ABC):
         model_class_name_baseclasses: Dict[DataModel, Tuple[str, Set[str]]] = {}
         for model in models:
             class_name = model.class_name
-            model_class_name_baseclasses[model] = class_name, {
-                b.type_hint for b in model.base_classes if b.reference
-            } - {class_name}
+            model_class_name_baseclasses[model] = (
+                class_name,
+                {b.type_hint for b in model.base_classes if b.reference} - {class_name},
+            )
 
         changed: bool = True
         while changed:
@@ -1172,9 +1173,7 @@ class Parser(ABC):
         module_to_import: Dict[Tuple[str, ...], Imports] = {}
 
         previous_module = ()  # type: Tuple[str, ...]
-        for module, models in (
-            (k, [*v]) for k, v in grouped_models
-        ):  # type: Tuple[str, ...], List[DataModel]
+        for module, models in ((k, [*v]) for k, v in grouped_models):  # type: Tuple[str, ...], List[DataModel]
             for model in models:
                 model_to_module_models[model] = module, models
             self.__delete_duplicate_models(models)
