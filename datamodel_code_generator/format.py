@@ -30,11 +30,22 @@ class PythonVersion(Enum):
 
     @cached_property
     def _is_py_310_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value, self.PY_39.value}  # type: ignore
+        return self.value not in {
+            self.PY_36.value,
+            self.PY_37.value,
+            self.PY_38.value,
+            self.PY_39.value,
+        }  # type: ignore
 
     @cached_property
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value, self.PY_39.value, self.PY_310.value}  # type: ignore
+        return self.value not in {
+            self.PY_36.value,
+            self.PY_37.value,
+            self.PY_38.value,
+            self.PY_39.value,
+            self.PY_310.value,
+        }  # type: ignore
 
     @property
     def has_literal_type(self) -> bool:
