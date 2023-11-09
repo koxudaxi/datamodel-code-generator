@@ -129,7 +129,7 @@ class UnionIntFloat:
         )
 
         return core_schema.json_or_python_schema(
-            json_schema=core_schema.no_info_plain_validator_function(cls.validate),
+            json_schema=from_int_schema,
             python_schema=core_schema.union_schema(
                 [
                     # check if it's an instance first before doing any further work
