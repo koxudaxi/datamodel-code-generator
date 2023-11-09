@@ -61,6 +61,7 @@ def test_debug(mocker) -> None:
 
 @freeze_time('2019-07-26')
 def test_snooper_to_methods_without_pysnooper(mocker) -> None:
+    mocker.patch('datamodel_code_generator.pysnooper', None)
     mock = mocker.Mock()
     assert snooper_to_methods()(mock) == mock
 
