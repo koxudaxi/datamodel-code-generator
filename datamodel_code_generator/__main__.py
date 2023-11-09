@@ -31,7 +31,6 @@ from urllib.parse import ParseResult, urlparse
 
 import argcomplete
 import black
-import toml
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
@@ -62,6 +61,7 @@ from datamodel_code_generator.util import (
     ConfigDict,
     Model,
     field_validator,
+    load_toml,
     model_validator,
 )
 
@@ -316,7 +316,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     if pyproject_toml_path.is_file():
         pyproject_toml: Dict[str, Any] = {
             k.replace('-', '_'): v
-            for k, v in toml.load(str(pyproject_toml_path))
+            for k, v in load_toml(pyproject_toml_path)
             .get('tool', {})
             .get('datamodel-codegen', {})
             .items()

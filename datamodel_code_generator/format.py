@@ -7,9 +7,8 @@ from warnings import warn
 
 import black
 import isort
-import toml
 
-from datamodel_code_generator.util import cached_property
+from datamodel_code_generator.util import cached_property, load_toml
 
 
 class PythonVersion(Enum):
@@ -109,8 +108,7 @@ class CodeFormatter:
         root = black_find_project_root((settings_path,))
         path = root / 'pyproject.toml'
         if path.is_file():
-            value = str(path)
-            pyproject_toml = toml.load(value)
+            pyproject_toml = load_toml(path)
             config = pyproject_toml.get('tool', {}).get('black', {})
         else:
             config = {}
