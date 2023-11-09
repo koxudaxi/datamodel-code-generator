@@ -18,6 +18,7 @@ from datamodel_code_generator import (
     chdir,
     generate,
     inferred_message,
+    snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Exit, main
 
@@ -47,6 +48,22 @@ def reset_namespace(monkeypatch: MonkeyPatch):
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
+
+
+def test_debug(mocker) -> None:
+    with pytest.raises(expected_exception=SystemExit):
+        main(['--debug', '--help'])
+
+    mocker.patch('datamodel_code_generator.pysnooper', None)
+    with pytest.raises(expected_exception=SystemExit):
+        main(['--debug', '--help'])
+
+
+@freeze_time('2019-07-26')
+def test_snooper_to_methods_without_pysnooper(mocker) -> None:
+    mocker.patch('datamodel_code_generator.pysnooper', None)
+    mock = mocker.Mock()
+    assert snooper_to_methods()(mock) == mock
 
 
 @freeze_time('2019-07-26')
