@@ -1027,6 +1027,7 @@ class JsonSchemaParser(Parser):
             )
         elif item.allOf:
             all_of_path = get_special_path('allOf', path)
+            all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
             return self.parse_all_of(
                 self.model_resolver.add(
                     all_of_path, name, singular_name=singular_name, class_name=True
