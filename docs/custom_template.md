@@ -57,4 +57,4 @@ class Model(BaseModel):
 
 ```
 
-In this example, we kept it simple, but you can create more complex custom templates by copying [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/master/datamodel_code_generator/model/template) Use [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/master/datamodel_code_generator/model/template) as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
+In this example, we kept it simple, but you can create more complex custom templates by copying [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/datamodel_code_generator/model/template) Use [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/datamodel_code_generator/model/template) as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
