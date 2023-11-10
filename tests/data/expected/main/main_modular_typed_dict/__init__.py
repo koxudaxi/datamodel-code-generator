@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from typing import NotRequired, Optional, TypedDict
+from typing import NotRequired, TypedDict
 
 from . import foo, models
 from .nested import foo as foo_1
 
-OptionalModel = str
+Optional = str
 
 
 Id = str
@@ -21,13 +21,13 @@ class Error(TypedDict):
 
 
 class Result(TypedDict):
-    event: NotRequired[Optional[models.Event]]
+    event: NotRequired[models.Event]
 
 
 class Source(TypedDict):
-    country: NotRequired[Optional[str]]
+    country: NotRequired[str]
 
 
 class DifferentTea(TypedDict):
-    foo: NotRequired[Optional[foo.Tea]]
-    nested: NotRequired[Optional[foo_1.Tea]]
+    foo: NotRequired[foo.Tea]
+    nested: NotRequired[foo_1.Tea]

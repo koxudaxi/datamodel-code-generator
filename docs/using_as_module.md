@@ -12,7 +12,7 @@ In the below example, we use a file in a `TemporaryDirectory` to store our outpu
 
 ### Installation
 ```sh
-pip install "datamodel-code-generator[http]"
+pip install 'datamodel-code-generator[http]'
 ```
 
 ### Example

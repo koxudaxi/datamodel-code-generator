@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Iterable, Optional, Tuple
 
 from pydantic import BaseModel as _BaseModel
 
 from .base_model import BaseModel, DataModelField
 from .root_model import RootModel
 from .types import DataTypeManager
+
+
+def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
+    return '\n'.join(f'{class_name}.model_rebuild()' for class_name in class_names)
 
 
 class ConfigDict(_BaseModel):
@@ -16,6 +20,13 @@ class ConfigDict(_BaseModel):
     allow_extra_fields: Optional[bool] = None
     frozen: Optional[bool] = None
     arbitrary_types_allowed: Optional[bool] = None
+    protected_namespaces: Optional[Tuple[str, ...]] = None
 
 
-__all__ = ['BaseModel', 'DataModelField', 'RootModel', 'DataTypeManager']
+__all__ = [
+    'BaseModel',
+    'DataModelField',
+    'RootModel',
+    'dump_resolve_reference_action',
+    'DataTypeManager',
+]

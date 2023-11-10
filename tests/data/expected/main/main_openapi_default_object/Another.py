@@ -21,8 +21,5 @@ class Bar(BaseModel):
         default_factory=lambda: Foo_1.parse_obj({'text': 'abc', 'number': 123})
     )
     nested_foo: Optional[List[Nested.Foo]] = Field(
-        default_factory=lambda: [
-            Nested.Foo.parse_obj(v)
-            for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
-        ]
+        default_factory=lambda: [Nested.Foo.parse_obj(v) for v in ['abc', 'efg']]
     )

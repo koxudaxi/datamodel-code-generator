@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 from collections import defaultdict
 from contextlib import contextmanager
@@ -75,7 +73,7 @@ class _BaseModel(BaseModel):
                 exclude_unset: bool = False,
                 exclude_defaults: bool = False,
                 exclude_none: bool = False,
-            ) -> DictStrAny:
+            ) -> 'DictStrAny':
                 return self.model_dump(
                     include=include,
                     exclude=set(exclude or ()) | self._exclude_fields,
@@ -101,7 +99,7 @@ class _BaseModel(BaseModel):
                 exclude_unset: bool = False,
                 exclude_defaults: bool = False,
                 exclude_none: bool = False,
-            ) -> DictStrAny:
+            ) -> 'DictStrAny':
                 return super().dict(
                     include=include,
                     exclude=set(exclude or ()) | self._exclude_fields,
@@ -231,7 +229,7 @@ class FieldNameResolver:
 
         name = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹]|\W', '_', name)
         if name[0].isnumeric():
-            name = f'_{name}'
+            name = f'{self.special_field_name_prefix}_{name}'
 
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
@@ -277,6 +275,7 @@ class FieldNameResolver:
 class PydanticFieldNameResolver(FieldNameResolver):
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
+        # TODO: Support Pydantic V2
         return not hasattr(BaseModel, field_name)
 
 

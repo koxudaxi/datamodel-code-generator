@@ -23,6 +23,7 @@ from typing import (
     Union,
 )
 from urllib.parse import ParseResult
+from warnings import warn
 
 from pydantic import Field
 
@@ -37,11 +38,11 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
     get_model_by_path,
-    get_special_path,
 )
 from datamodel_code_generator.reference import snake_to_upper_camel
 from datamodel_code_generator.types import (
@@ -150,7 +151,7 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods(max_variable_length=None)
 class OpenAPIParser(JsonSchemaParser):
-    SCHEMA_PATH: ClassVar[str] = '#/components/schemas'
+    SCHEMA_PATHS: ClassVar[List[str]] = ['#/components/schemas']
 
     def __init__(
         self,
@@ -216,6 +217,7 @@ class OpenAPIParser(JsonSchemaParser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
+        known_third_party: Optional[List[str]] = None,
     ):
         super().__init__(
             source=source,
@@ -278,6 +280,7 @@ class OpenAPIParser(JsonSchemaParser):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
+            known_third_party=known_third_party,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -290,6 +293,22 @@ class OpenAPIParser(JsonSchemaParser):
         else:  # pragma: no cover
             ref_body = self.raw_obj
         return get_model_by_path(ref_body, ref_path.split('/')[1:])
+
+    def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+        # OpenAPI doesn't allow `null` in `type` field and list of types
+        # https://swagger.io/docs/specification/data-models/data-types/#null
+        if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
+            obj.type = [obj.type, 'null']
+
+        return super().get_data_type(obj)
+
+    def parse_one_of(
+        self, name: str, obj: JsonSchemaObject, path: List[str]
+    ) -> List[DataType]:
+        data_types = super().parse_one_of(name, obj, path)
+        if obj.nullable and self.strict_nullable:
+            data_types.append(DataType(type='None'))
+        return data_types
 
     def resolve_object(
         self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]
@@ -479,7 +498,11 @@ class OpenAPIParser(JsonSchemaParser):
 
         if OpenAPIScope.Parameters in self.open_api_scopes and fields:
             self.results.append(
-                self.data_model_type(fields=fields, reference=reference)
+                self.data_model_type(
+                    fields=fields,
+                    reference=reference,
+                    custom_base_class=self.base_class,
+                )
             )
 
     def parse_operation(
@@ -528,13 +551,27 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_raw(self) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             if self.validation:
-                from prance import BaseParser
-
-                BaseParser(
-                    spec_string=source.text,
-                    backend='openapi-spec-validator',
-                    encoding=self.encoding,
+                warn(
+                    'Deprecated: `--validation` option is deprecated. the option will be removed in a future '
+                    'release. please use another tool to validate OpenAPI.\n'
                 )
+
+                try:
+                    from prance import BaseParser
+
+                    BaseParser(
+                        spec_string=source.text,
+                        backend='openapi-spec-validator',
+                        encoding=self.encoding,
+                    )
+                except ImportError:  # pragma: no cover
+                    warn(
+                        'Warning: Validation was skipped for OpenAPI. `prance` or `openapi-spec-validator` are not '
+                        'installed.\n'
+                        'To use --validation option after datamodel-code-generator 0.24.0, Please run `$pip install '
+                        "'datamodel-code-generator[validation]'`.\n"
+                    )
+
             specification: Dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
             schemas: Dict[Any, Any] = specification.get('components', {}).get(

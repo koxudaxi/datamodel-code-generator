@@ -1,5 +1,6 @@
 import platform
 import shutil
+from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
@@ -8,17 +9,27 @@ import black
 import isort
 import pydantic
 import pytest
-from _pytest.capture import CaptureFixture
 from freezegun import freeze_time
 from packaging import version
 
-from datamodel_code_generator import InputFileType, chdir, generate, inferred_message
+from datamodel_code_generator import (
+    DataModelType,
+    InputFileType,
+    chdir,
+    generate,
+    inferred_message,
+    snooper_to_methods,
+)
 from datamodel_code_generator.__main__ import Exit, main
 
 try:
     from pytest import TempdirFactory
 except ImportError:
     from _pytest.tmpdir import TempdirFactory
+
+CaptureFixture = pytest.CaptureFixture
+FixtureRequest = pytest.FixtureRequest
+MonkeyPatch = pytest.MonkeyPatch
 
 DATA_PATH: Path = Path(__file__).parent / 'data'
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
@@ -30,6 +41,29 @@ CSV_DATA_PATH: Path = DATA_PATH / 'csv'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
+
+
+@pytest.fixture(autouse=True)
+def reset_namespace(monkeypatch: MonkeyPatch):
+    namespace_ = Namespace(no_color=False)
+    monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
+    monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
+
+
+def test_debug(mocker) -> None:
+    with pytest.raises(expected_exception=SystemExit):
+        main(['--debug', '--help'])
+
+    mocker.patch('datamodel_code_generator.pysnooper', None)
+    with pytest.raises(expected_exception=SystemExit):
+        main(['--debug', '--help'])
+
+
+@freeze_time('2019-07-26')
+def test_snooper_to_methods_without_pysnooper(mocker) -> None:
+    mocker.patch('datamodel_code_generator.pysnooper', None)
+    mock = mocker.Mock()
+    assert snooper_to_methods()(mock) == mock
 
 
 @freeze_time('2019-07-26')
@@ -96,10 +130,9 @@ def test_main():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
-    with pytest.raises(SystemExit):
-        main()
 
 
+@pytest.mark.skip(reason='pytest-xdist does not support the test')
 @freeze_time('2019-07-26')
 def test_main_without_arguments():
     with pytest.raises(SystemExit):
@@ -743,6 +776,19 @@ def test_stdin(monkeypatch):
         )
 
 
+@pytest.mark.parametrize(argnames='no_color', argvalues=[False, True])
+def test_show_help(no_color: bool, capsys: CaptureFixture[str]):
+    args = ['--no-color'] if no_color else []
+    args += ['--help']
+
+    with pytest.raises(expected_exception=SystemExit):
+        return_code: Exit = main(args)
+        assert return_code == Exit.OK
+
+    output = capsys.readouterr().out
+    assert ('\x1b' not in output) == no_color
+
+
 def test_show_help_when_no_input(mocker):
     print_help_mock = mocker.patch(
         'datamodel_code_generator.__main__.arg_parser.print_help'
@@ -755,7 +801,9 @@ def test_show_help_when_no_input(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_validation():
+def test_validation(mocker):
+    mock_prance = mocker.patch('prance.BaseParser')
+
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -772,10 +820,12 @@ def test_validation():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
         )
+        mock_prance.assert_called_once()
 
 
 @freeze_time('2019-07-26')
-def test_validation_failed():
+def test_validation_failed(mocker):
+    mock_prance = mocker.patch('prance.BaseParser', side_effect=Exception('error'))
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         assert (
@@ -792,6 +842,7 @@ def test_validation_failed():
             )
             == Exit.ERROR
         )
+        mock_prance.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -811,10 +862,20 @@ def test_validation_failed():
         ),
         (
             'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_generic_container_types_set',
+            ['--use-generic-container-types', '--use-unique-items-as-set'],
+        ),
+        (
+            'pydantic_v2.BaseModel',
             'main_with_field_constraints_pydantic_v2_use_standard_collections',
             [
                 '--use-standard-collections',
             ],
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_standard_collections_set',
+            ['--use-standard-collections', '--use-unique-items-as-set'],
         ),
     ],
 )
@@ -875,8 +936,21 @@ def test_main_without_field_constraints(output_model, expected_output):
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_with_aliases',
+        ),
+        (
+            'msgspec.Struct',
+            'main_with_aliases_msgspec',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_with_aliases():
+def test_main_with_aliases(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -885,6 +959,10 @@ def test_main_with_aliases():
                 str(OPEN_API_DATA_PATH / 'api.yaml'),
                 '--aliases',
                 str(OPEN_API_DATA_PATH / 'aliases.json'),
+                '--target-python',
+                '3.9',
+                '--output-model',
+                output_model,
                 '--output',
                 str(output_file),
             ]
@@ -892,7 +970,7 @@ def test_main_with_aliases():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_with_aliases' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -2631,6 +2709,10 @@ def test_main_openapi_nullable_strict_nullable():
             'pydantic_v2.BaseModel',
             'main_pattern_pydantic_v2',
         ),
+        (
+            'msgspec.Struct',
+            'main_pattern_msgspec',
+        ),
     ],
 )
 @freeze_time('2019-07-26')
@@ -2645,6 +2727,8 @@ def test_main_openapi_pattern(output_model, expected_output):
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--target-python',
+                '3.9',
                 '--output-model-type',
                 output_model,
             ]
@@ -2692,6 +2776,26 @@ def test_main_generate():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_generate_non_pydantic_output():
+    """
+    See https://github.com/koxudaxi/datamodel-code-generator/issues/1452.
+    """
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        input_ = (JSON_SCHEMA_DATA_PATH / 'simple_string.json').relative_to(Path.cwd())
+        assert not input_.is_absolute()
+        generate(
+            input_=input_,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            output_model_type=DataModelType.DataclassesDataclass,
+        )
+
+        file = EXPECTED_MAIN_PATH / 'main_generate_non_pydantic_output' / 'output.py'
+        assert output_file.read_text() == file.read_text()
 
 
 @freeze_time('2019-07-26')
@@ -4139,7 +4243,9 @@ def test_main_jsonschema_has_default_value():
 
 
 @freeze_time('2019-07-26')
-def test_openapi_special_yaml_keywords():
+def test_openapi_special_yaml_keywords(mocker):
+    mock_prance = mocker.patch('prance.BaseParser')
+
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -4158,6 +4264,7 @@ def test_openapi_special_yaml_keywords():
                 EXPECTED_MAIN_PATH / 'main_special_yaml_keywords' / 'output.py'
             ).read_text()
         )
+    mock_prance.assert_called_once()
 
 
 @freeze_time('2019-07-26')
@@ -4517,6 +4624,47 @@ def test_main_openapi_const(output_model, expected_output):
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_const_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_openapi_const_field_pydantic_v2',
+        ),
+        (
+            'msgspec.Struct',
+            'main_openapi_const_field_msgspec',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_const_field(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'const.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model',
+                output_model,
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        )
+
+
 @freeze_time('2019-07-26')
 def test_main_openapi_complex_reference():
     with TemporaryDirectory() as output_dir:
@@ -4752,14 +4900,27 @@ def test_main_disable_warnings(capsys: CaptureFixture):
         assert captured.err == ''
 
 
+@pytest.mark.parametrize(
+    'input,output',
+    [
+        (
+            'discriminator.yaml',
+            'main_openapi_discriminator',
+        ),
+        (
+            'discriminator_without_mapping.yaml',
+            'main_openapi_discriminator_without_mapping',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_discriminator():
+def test_main_openapi_discriminator(input, output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
             [
                 '--input',
-                str(OPEN_API_DATA_PATH / 'discriminator.yaml'),
+                str(OPEN_API_DATA_PATH / input),
                 '--output',
                 str(output_file),
                 '--input-file-type',
@@ -4769,9 +4930,7 @@ def test_main_openapi_discriminator():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_openapi_discriminator' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / output / 'output.py').read_text()
         )
 
 
@@ -4823,8 +4982,21 @@ def test_main_jsonschema_pattern_properties_by_reference():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_default_object',
+        ),
+        (
+            'msgspec.Struct',
+            'main_openapi_msgspec_default_object',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_default_object():
+def test_main_openapi_default_object(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -4833,18 +5005,22 @@ def test_main_openapi_default_object():
                 str(OPEN_API_DATA_PATH / 'default_object.yaml'),
                 '--output',
                 str(output_dir),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'openapi',
+                '--target-python-version',
+                '3.9',
             ]
         )
         assert return_code == Exit.OK
 
-        main_modular_dir = EXPECTED_MAIN_PATH / 'main_openapi_default_object'
+        main_modular_dir = EXPECTED_MAIN_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
-            assert result == path.read_text()
+            assert result == path.read_text(), path
 
 
 @freeze_time('2019-07-26')
@@ -5369,6 +5545,38 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
+def test_main_typed_dict_not_required_nullable():
+    """Test main function writing to TypedDict, with combos of Optional/NotRequired."""
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'not_required_nullable.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'typing.TypedDict',
+                '--target-python-version',
+                '3.11',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_not_required_nullable'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse('23.3.0'),
+    reason='Require Black version 23.3.0 or later ',
+)
+@freeze_time('2019-07-26')
 def test_main_typed_dict_nullable():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5491,4 +5699,305 @@ def test_main_pydantic_v2():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_custom_id_pydantic_v2():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'custom_id.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2' / 'output.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason="isort 5.x don't sort pydantic modules",
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_custom_id_pydantic_v2_custom_base():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'custom_id.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--base-class',
+                'custom_base.Base',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_custom_id_pydantic_v2_custom_base'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_discriminator_literals():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_discriminator_literals'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_all_of_with_relative_ref():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'all_of_with_relative_ref' / 'openapi.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--keep-model-order',
+                '--collapse-root-models',
+                '--field-constraints',
+                '--use-title-as-name',
+                '--field-include-all-keys',
+                '--use-field-description',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_with_relative_ref' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_struct():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api.yaml'),
+                '--output',
+                str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_use_annotated_with_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_constrained.yaml'),
+                '--output',
+                str(output_file),
+                '--field-constraints',
+                '--target-python-version',
+                '3.9',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_use_annotated_with_msgspec_meta_constraints'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_duplicate_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+                '--collapse-root-models',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'duplicate_field_constraints'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@pytest.mark.parametrize(
+    'collapse_root_models,python_version,expected_output',
+    [
+        (
+            '--collapse-root-models',
+            '3.8',
+            'duplicate_field_constraints_msgspec_py38_collapse_root_models',
+        ),
+        (
+            None,
+            '3.9',
+            'duplicate_field_constraints_msgspec',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_duplicate_field_constraints_msgspec(
+    collapse_root_models, python_version, expected_output
+):
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                a
+                for a in [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
+                    '--output',
+                    str(output_path),
+                    '--input-file-type',
+                    'jsonschema',
+                    '--output-model-type',
+                    'msgspec.Struct',
+                    '--target-python-version',
+                    python_version,
+                    collapse_root_models,
+                ]
+                if a
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / expected_output
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_main_dataclass_field_defs():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'user_defs.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py'
+        ).read_text().replace('filename:  user.json', 'filename:  user_defs.json')
+
+
+@freeze_time('2019-07-26')
+def test_main_dataclass_default():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'user_default.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'dataclasses.dataclass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_dataclass_field_default' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_all_of_ref_self():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'all_of_ref_self.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
         )

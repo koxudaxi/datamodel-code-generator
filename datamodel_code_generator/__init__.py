@@ -27,7 +27,6 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-import pysnooper
 import yaml
 
 from datamodel_code_generator.format import PythonVersion
@@ -38,7 +37,12 @@ from datamodel_code_generator.util import SafeLoader  # type: ignore
 
 T = TypeVar('T')
 
-pysnooper.tracer.DISABLED = True
+try:
+    import pysnooper
+
+    pysnooper.tracer.DISABLED = True
+except ImportError:  # pragma: no cover
+    pysnooper = None
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
@@ -73,6 +77,11 @@ else:
 
 
 def enable_debug_message() -> None:  # pragma: no cover
+    if not pysnooper:
+        raise Exception(
+            "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
+        )
+
     pysnooper.tracer.DISABLED = False
 
 
@@ -88,6 +97,8 @@ def snooper_to_methods(  # type: ignore
     max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
+        if not pysnooper:
+            return cls
         import inspect
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
@@ -182,6 +193,7 @@ class DataModelType(Enum):
     PydanticV2BaseModel = 'pydantic_v2.BaseModel'
     DataclassesDataclass = 'dataclasses.dataclass'
     TypingTypedDict = 'typing.TypedDict'
+    MsgspecStruct = 'msgspec.Struct'
 
 
 class OpenAPIScope(Enum):
@@ -224,7 +236,7 @@ def generate(
     output: Optional[Path] = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_37,
-    base_class: str = DEFAULT_BASE_CLASS,
+    base_class: str = '',
     additional_imports: Optional[List[str]] = None,
     custom_template_dir: Optional[Path] = None,
     extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
@@ -426,6 +438,7 @@ def generate(
         remove_special_field_name_prefix=remove_special_field_name_prefix,
         capitalise_enum_members=capitalise_enum_members,
         keep_model_order=keep_model_order,
+        known_third_party=data_model_types.known_third_party,
         **kwargs,
     )
 

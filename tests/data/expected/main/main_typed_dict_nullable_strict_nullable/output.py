@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import List, NotRequired, Optional, TypedDict
+from typing import List, NotRequired, Optional, TypedDict, Union
 
 
 class Cursors(TypedDict):
     prev: Optional[str]
     next: NotRequired[str]
     index: float
-    tag: NotRequired[Optional[str]]
+    tag: NotRequired[str]
 
 
 class TopLevel(TypedDict):
@@ -27,8 +27,8 @@ class User(TypedDict):
 
 
 class Api(TypedDict):
-    apiKey: NotRequired[Optional[str]]
-    apiVersionNumber: NotRequired[Optional[str]]
+    apiKey: NotRequired[str]
+    apiVersionNumber: NotRequired[str]
     apiUrl: NotRequired[Optional[str]]
     apiDocumentationUrl: NotRequired[Optional[str]]
 
@@ -40,7 +40,7 @@ class EmailItem(TypedDict):
     author: str
     address: str
     description: NotRequired[str]
-    tag: NotRequired[Optional[str]]
+    tag: NotRequired[str]
 
 
 Email = List[EmailItem]
@@ -60,3 +60,8 @@ Tag = str
 
 class Notes(TypedDict):
     comments: NotRequired[List[str]]
+
+
+class Options(TypedDict):
+    comments: List[Optional[str]]
+    oneOfComments: List[Optional[Union[str, float]]]

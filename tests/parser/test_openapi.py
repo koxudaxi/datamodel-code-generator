@@ -4,9 +4,11 @@ from typing import List, Optional
 
 import pydantic
 import pytest
+from packaging import version
 
 from datamodel_code_generator import OpenAPIScope, PythonVersion
 from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model.pydantic import DataModelField
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import OpenAPIParser
@@ -726,6 +728,31 @@ def test_openapi_parser_with_query_parameters():
         == (
             EXPECTED_OPEN_API_PATH
             / 'openapi_parser_with_query_parameters'
+            / 'output.py'
+        ).read_text()
+    )
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse('2.9.0'),
+    reason='Require Pydantic version 2.0.0 or later ',
+)
+def test_openapi_parser_array_called_fields_with_oneOf_items():
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelField,
+        source=Path(DATA_PATH / 'array_called_fields_with_oneOf_items.yaml'),
+        openapi_scopes=[
+            OpenAPIScope.Parameters,
+            OpenAPIScope.Schemas,
+            OpenAPIScope.Paths,
+        ],
+        field_constraints=True,
+    )
+    assert (
+        parser.parse()
+        == (
+            EXPECTED_OPEN_API_PATH
+            / 'openapi_parser_parse_array_called_fields_with_oneOf_items'
             / 'output.py'
         ).read_text()
     )

@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     DefaultDict,
@@ -27,6 +26,14 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.util import model_validator
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
+else:
+    try:
+        from typing import Literal
+    except ImportError:
+        from typing_extensions import Literal
 
 
 class Constraints(_Constraints):
@@ -60,6 +67,17 @@ class DataModelField(DataModelFieldV1):
     }
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
+
+    def process_const(self) -> None:
+        if 'const' not in self.extras:
+            return None
+        self.const = True
+        self.nullable = False
+        const = self.extras['const']
+        if self.data_type.type == 'str' and isinstance(
+            const, str
+        ):  # pragma: no cover # Literal supports only str
+            self.data_type = self.data_type.__class__(literals=[const])
 
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
@@ -116,12 +134,9 @@ class BaseModel(BaseModelBase):
         )
         config_parameters: Dict[str, Any] = {}
 
-        additionalProperties = self.extra_template_data.get('additionalProperties')
-        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
-        if additionalProperties is not None or allow_extra_fields:
-            config_parameters['extra'] = (
-                "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
-            )
+        extra = self._get_config_extra()
+        if extra:
+            config_parameters['extra'] = extra
 
         for from_, to, invert in self.CONFIG_ATTRIBUTES:
             if from_ in self.extra_template_data:
@@ -144,3 +159,12 @@ class BaseModel(BaseModelBase):
 
             self.extra_template_data['config'] = ConfigDict.parse_obj(config_parameters)
             self._additional_imports.append(IMPORT_CONFIG_DICT)
+
+    def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:
+        additionalProperties = self.extra_template_data.get('additionalProperties')
+        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
+        if additionalProperties is not None or allow_extra_fields:
+            return (
+                "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
+            )
+        return None

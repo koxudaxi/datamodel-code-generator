@@ -1,8 +1,9 @@
 import shutil
+from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from _pytest.capture import CaptureFixture
+import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator import inferred_message
@@ -13,12 +14,22 @@ try:
 except ImportError:
     from _pytest.tmpdir import TempdirFactory
 
+CaptureFixture = pytest.CaptureFixture
+MonkeyPatch = pytest.MonkeyPatch
+
 DATA_PATH: Path = Path(__file__).parent / 'data'
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
 EXPECTED_MAIN_KR_PATH = DATA_PATH / 'expected' / 'main_kr'
 
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
+
+
+@pytest.fixture(autouse=True)
+def reset_namespace(monkeypatch: MonkeyPatch):
+    namespace_ = Namespace(no_color=False)
+    monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
+    monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
 @freeze_time('2019-07-26')
