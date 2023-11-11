@@ -615,45 +615,119 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[name]['title'] = obj.title
 
+    def deep_merge(
+        self, dict1: Dict[Any, Any], dict2: Dict[Any, Any]
+    ) -> Dict[Any, Any]:
+        result = dict1.copy()
+        for key, value in dict2.items():
+            if key in result:
+                if isinstance(result[key], dict) and isinstance(value, dict):
+                    result[key] = self.deep_merge(result[key], value)
+                    continue
+                elif isinstance(result[key], list) and isinstance(value, list):
+                    result[key] = list(set(result[key] + value))
+                    continue
+            result[key] = value
+        return result
+
     def parse_any_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        data_types = self.parse_list_item(name, obj.anyOf, path, obj)
-        if not obj.properties and not obj.required:
-            return data_types
-        return [
-            self._parse_object_common_part(
-                name,
-                obj,
-                [*get_special_path('anyOfCommon', path), str(i)],
-                ignore_duplicate_model=True,
-                fields=[],
-                base_classes=[d.reference],
-                required=[],
-            )
-            for i, d in enumerate(data_types)
-            if d.reference
-        ]
+        base_object = obj.dict(exclude={'anyOf'}, exclude_unset=True, by_alias=True)
+        any_ofs = []
+        for any_of in obj.anyOf:
+            if any_of.ref:
+                any_ofs.append(any_of)
+            else:
+                any_ofs.append(
+                    JsonSchemaObject.parse_obj(
+                        self.deep_merge(
+                            base_object, any_of.dict(exclude_unset=True, by_alias=True)
+                        )
+                    )
+                )
+
+        return self.parse_list_item(
+            name,
+            any_ofs,
+            path,
+            obj,
+            singular_name=False,
+        )
+        #
+        # data_types = self.parse_list_item(name, obj.anyOf, path, obj)
+        # if not obj.properties and not obj.required:
+        #     return data_types
+        # return [
+        #     self._parse_object_common_part(
+        #         name,
+        #         obj,
+        #         [*get_special_path('anyOfCommon', path), str(i)],
+        #         ignore_duplicate_model=True,
+        #         fields=[],
+        #         base_classes=[d.reference],
+        #         required=[],
+        #     )
+        #     for i, d in enumerate(data_types)
+        #     if d.reference
+        # ]
 
     def parse_one_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        data_types = self.parse_list_item(name, obj.oneOf, path, obj)
-        if not obj.properties and not obj.required:
-            return data_types
-        return [
-            self._parse_object_common_part(
-                name,
-                obj,
-                [*get_special_path('oneOfCommon', path), str(i)],
-                ignore_duplicate_model=True,
-                fields=[],
-                base_classes=[d.reference],
-                required=[],
-            )
-            for i, d in enumerate(data_types)
-            if d.reference
-        ]
+        base_object = obj.dict(exclude={'oneOf'}, exclude_unset=True, by_alias=True)
+        one_ofs = []
+        for one_of in obj.oneOf:
+            if one_of.ref:
+                one_ofs.append(one_of)
+            else:
+                one_ofs.append(
+                    JsonSchemaObject.parse_obj(
+                        self.deep_merge(
+                            base_object, one_of.dict(exclude_unset=True, by_alias=True)
+                        )
+                    )
+                )
+
+        return self.parse_list_item(
+            name,
+            one_ofs,
+            path,
+            obj,
+            singular_name=False,
+        )
+        #
+        # data_types = self.parse_list_item(name, obj.oneOf, path, obj)
+        # if not obj.properties and not obj.required:
+        #     return data_types
+        # return [
+        #     self._parse_object_common_part(
+        #         name,
+        #         obj,
+        #         [*get_special_path('oneOfCommon', path), str(i)],
+        #         ignore_duplicate_model=True,
+        #         fields=[],
+        #         base_classes=[d.reference],
+        #         required=[],
+        #     )
+        #     for i, d in enumerate(data_types)
+        #     if d.reference
+        # ]
+        # base_object = obj.dict(exclude={'oneOf'}, exclude_unset=True, by_alias=True)
+        # return self.parse_list_item(
+        #     name,
+        #     [
+        #         JsonSchemaObject.parse_obj(
+        #             self.deep_merge(
+        #                 base_object, oneOf.dict(exclude_unset=True, by_alias=True)
+        #             )
+        #         )
+        #         for oneOf in obj.oneOf
+        #     ],
+        #     path,
+        #     obj,
+        #     singular_name=False,
+        # )
 
     def _parse_object_common_part(
         self,
