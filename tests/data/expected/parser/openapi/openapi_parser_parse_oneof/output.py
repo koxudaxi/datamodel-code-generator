@@ -18,12 +18,12 @@ class Car(BaseModel):
     tag: Optional[str] = None
 
 
-class OneOfItem(BaseModel):
+class OneOfItem1(BaseModel):
     name: Optional[str] = None
 
 
-class OneOfItem1(BaseModel):
-    __root__: Union[Pet, Car, OneOfItem, constr(max_length=5000)]
+class OneOfItem(BaseModel):
+    __root__: Union[Pet, Car, OneOfItem1, constr(max_length=5000)]
 
 
 class Item(BaseModel):
