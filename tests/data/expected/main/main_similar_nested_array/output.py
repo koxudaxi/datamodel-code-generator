@@ -30,23 +30,23 @@ class ObjectB(BaseModel):
     data: Optional[List[Datum1]] = None
 
 
+class KeyC(BaseModel):
+    nestedA: Optional[str] = None
+
+
+class KeyC1(BaseModel):
+    nestedB: Optional[str] = None
+
+
+class ObjectC(BaseModel):
+    keyC: Optional[Union[KeyC, KeyC1]] = None
+
+
 class KeyCItem(BaseModel):
     nestedA: Optional[str] = None
 
 
 class KeyCItem1(BaseModel):
-    nestedB: Optional[str] = None
-
-
-class ObjectC(BaseModel):
-    keyC: Optional[Union[KeyCItem, KeyCItem1]] = None
-
-
-class KeyCItem2(BaseModel):
-    nestedA: Optional[str] = None
-
-
-class KeyCItem3(BaseModel):
     nestedB: Optional[str] = None
 
 
@@ -63,4 +63,4 @@ class KeyCEnum1(Enum):
 
 
 class ObjectD(BaseModel):
-    keyC: Optional[List[Union[KeyCItem2, KeyCItem3, KeyCEnum, KeyCEnum1]]] = None
+    keyC: Optional[List[Union[KeyCItem, KeyCItem1, KeyCEnum, KeyCEnum1]]] = None

@@ -10,15 +10,15 @@ from typing import Optional, Union
 from pydantic import BaseModel
 
 
-class AddrItem(BaseModel):
+class Addr1(BaseModel):
     ipv4Addr: IPv4Address
     ipv6Addr: Optional[IPv6Address] = None
 
 
-class AddrItem1(BaseModel):
+class Addr2(BaseModel):
     ipv4Addr: Optional[IPv4Address] = None
     ipv6Addr: IPv6Address
 
 
 class Addr(BaseModel):
-    __root__: Union[AddrItem, AddrItem1]
+    __root__: Union[Addr1, Addr2]

@@ -819,12 +819,14 @@ class JsonSchemaParser(Parser):
                     union_models,
                 )
                 if all_of_item.anyOf:
+                    self.model_resolver.add(path, name, class_name=True, loaded=True)
                     union_models.extend(
                         d.reference
                         for d in self.parse_any_of(name, all_of_item, path)
                         if d.reference
                     )
                 if all_of_item.oneOf:
+                    self.model_resolver.add(path, name, class_name=True, loaded=True)
                     union_models.extend(
                         d.reference
                         for d in self.parse_one_of(name, all_of_item, path)
@@ -1280,6 +1282,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: List[str],
     ) -> DataType:
+        reference: Optional[Reference] = None
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
         elif obj.custom_type_path:
@@ -1287,14 +1290,16 @@ class JsonSchemaParser(Parser):
                 obj.custom_type_path, is_custom_type=True
             )
         elif obj.anyOf or obj.oneOf:
-            object_path = [*path, name]
+            reference = self.model_resolver.add(
+                path, name, loaded=True, class_name=True
+            )
             if obj.anyOf:
                 data_types: List[DataType] = self.parse_any_of(
-                    name, obj, get_special_path('anyOf', object_path)
+                    name, obj, get_special_path('anyOf', path)
                 )
             else:
                 data_types = self.parse_one_of(
-                    name, obj, get_special_path('oneOf', object_path)
+                    name, obj, get_special_path('oneOf', path)
                 )
 
             if len(data_types) > 1:
@@ -1324,7 +1329,10 @@ class JsonSchemaParser(Parser):
             )
         if self.use_title_as_name and obj.title:
             name = obj.title
-        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        if not reference:
+            reference = self.model_resolver.add(
+                path, name, loaded=True, class_name=True
+            )
         self.set_title(name, obj)
         self.set_additional_properties(name, obj)
         data_model_root_type = self.data_model_root_type(

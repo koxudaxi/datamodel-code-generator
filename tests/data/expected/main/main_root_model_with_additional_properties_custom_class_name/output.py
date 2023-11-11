@@ -19,11 +19,11 @@ class CustomNestedEnumResult(Enum):
     green = 'green'
 
 
-class CustomOneOfResultItem(BaseModel):
+class CustomOneOfResult(BaseModel):
     description: Optional[str] = None
 
 
-class CustomAnyOfResultItem(BaseModel):
+class CustomAnyOfResult(BaseModel):
     description: Optional[str] = None
 
 
@@ -42,8 +42,8 @@ class CustomModel(BaseModel):
     nested_object_result: Dict[str, CustomNestedObjectResult]
     nested_enum_result: Dict[str, CustomNestedEnumResult]
     all_of_result: Optional[Dict[str, CustomAllOfResult]] = None
-    one_of_result: Optional[Dict[str, Union[CustomUser, CustomOneOfResultItem]]] = None
-    any_of_result: Optional[Dict[str, Union[CustomUser, CustomAnyOfResultItem]]] = None
+    one_of_result: Optional[Dict[str, Union[CustomUser, CustomOneOfResult]]] = None
+    any_of_result: Optional[Dict[str, Union[CustomUser, CustomAnyOfResult]]] = None
     all_of_with_unknown_object: Optional[Dict[str, CustomUser]] = None
     objectRef: Optional[Dict[str, CustomUser]] = None
     deepNestedObjectRef: Optional[Dict[str, Dict[str, Dict[str, CustomUser]]]] = None
