@@ -654,23 +654,6 @@ class JsonSchemaParser(Parser):
             obj,
             singular_name=False,
         )
-        #
-        # data_types = self.parse_list_item(name, obj.anyOf, path, obj)
-        # if not obj.properties and not obj.required:
-        #     return data_types
-        # return [
-        #     self._parse_object_common_part(
-        #         name,
-        #         obj,
-        #         [*get_special_path('anyOfCommon', path), str(i)],
-        #         ignore_duplicate_model=True,
-        #         fields=[],
-        #         base_classes=[d.reference],
-        #         required=[],
-        #     )
-        #     for i, d in enumerate(data_types)
-        #     if d.reference
-        # ]
 
     def parse_one_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
@@ -696,38 +679,6 @@ class JsonSchemaParser(Parser):
             obj,
             singular_name=False,
         )
-        #
-        # data_types = self.parse_list_item(name, obj.oneOf, path, obj)
-        # if not obj.properties and not obj.required:
-        #     return data_types
-        # return [
-        #     self._parse_object_common_part(
-        #         name,
-        #         obj,
-        #         [*get_special_path('oneOfCommon', path), str(i)],
-        #         ignore_duplicate_model=True,
-        #         fields=[],
-        #         base_classes=[d.reference],
-        #         required=[],
-        #     )
-        #     for i, d in enumerate(data_types)
-        #     if d.reference
-        # ]
-        # base_object = obj.dict(exclude={'oneOf'}, exclude_unset=True, by_alias=True)
-        # return self.parse_list_item(
-        #     name,
-        #     [
-        #         JsonSchemaObject.parse_obj(
-        #             self.deep_merge(
-        #                 base_object, oneOf.dict(exclude_unset=True, by_alias=True)
-        #             )
-        #         )
-        #         for oneOf in obj.oneOf
-        #     ],
-        #     path,
-        #     obj,
-        #     singular_name=False,
-        # )
 
     def _parse_object_common_part(
         self,
