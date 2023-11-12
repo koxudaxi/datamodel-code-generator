@@ -223,7 +223,7 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
         i += 1
 
     left = '.' * (len(current_module_path) - i)
-    right = '.'.join(reference_path[i:])
+    right = ".".join([*reference_path[i:], name])
 
     if not left:
         left = '.'
