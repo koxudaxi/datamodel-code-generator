@@ -188,9 +188,9 @@ class JsonSchemaObject(BaseModel):
     __extra_key__: str = SPECIAL_PATH_FORMAT.format('extras')
 
     @model_validator(mode='before')
-    def validate_exclusive_maximum_and_exclusive_minimum(
-        cls, values: Dict[str, Any]
-    ) -> Any:
+    def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:
+        if not isinstance(values, dict):
+            return values
         exclusive_maximum: Union[float, bool, None] = values.get('exclusiveMaximum')
         exclusive_minimum: Union[float, bool, None] = values.get('exclusiveMinimum')
 
