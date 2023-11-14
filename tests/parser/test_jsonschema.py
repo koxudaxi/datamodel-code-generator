@@ -360,6 +360,14 @@ def test_parse_default(source_obj, generated_classes):
     assert dump_templates(list(parser.results)) == generated_classes
 
 
+def test_parse_array_schema():
+    parser = JsonSchemaParser('')
+    # with pytest.raises(ValidationError):
+    parser.parse_raw_obj(
+        'array schema', {'type': 'array', 'properties': {'name': True}}, []
+    )
+
+
 def test_parse_nested_array():
     parser = JsonSchemaParser(
         DATA_PATH / 'nested_array.json',

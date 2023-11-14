@@ -42,7 +42,9 @@ class Constraints(_Constraints):
     pattern: Optional[str] = Field(None, alias='pattern')
 
     @model_validator(mode='before')
-    def validate_min_max_items(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_min_max_items(cls, values: Any) -> Dict[str, Any]:
+        if not isinstance(values, dict):  # pragma: no cover
+            return values
         min_items = values.pop('minItems', None)
         if min_items is not None:
             values['minLength'] = min_items
