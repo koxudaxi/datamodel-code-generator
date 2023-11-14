@@ -124,7 +124,7 @@ byes_kwargs: Set[str] = {'minLength', 'maxLength'}
 
 escape_characters = str.maketrans(
     {
-        "'": r"\'",
+        "'": r'\'',
         '\b': r'\b',
         '\f': r'\f',
         '\n': r'\n',

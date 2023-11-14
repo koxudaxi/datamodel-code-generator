@@ -7,9 +7,8 @@ from warnings import warn
 
 import black
 import isort
-import toml
 
-from datamodel_code_generator.util import cached_property
+from datamodel_code_generator.util import cached_property, load_toml
 
 
 class PythonVersion(Enum):
@@ -17,6 +16,7 @@ class PythonVersion(Enum):
     PY_39 = '3.9'
     PY_310 = '3.10'
     PY_311 = '3.11'
+    PY_312 = '3.12'
 
     @cached_property
     def _is_py_38_or_later(self) -> bool:  # pragma: no cover
@@ -28,11 +28,18 @@ class PythonVersion(Enum):
 
     @cached_property
     def _is_py_310_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_38.value, self.PY_39.value}  # type: ignore
+        return self.value not in {
+            self.PY_38.value,
+            self.PY_39.value,
+        }  # type: ignore
 
     @cached_property
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_38.value, self.PY_39.value, self.PY_310.value}  # type: ignore
+        return self.value not in {
+            self.PY_38.value,
+            self.PY_39.value,
+            self.PY_310.value,
+        }  # type: ignore
 
     @property
     def has_literal_type(self) -> bool:
@@ -106,8 +113,7 @@ class CodeFormatter:
         root = black_find_project_root((settings_path,))
         path = root / 'pyproject.toml'
         if path.is_file():
-            value = str(path)
-            pyproject_toml = toml.load(value)
+            pyproject_toml = load_toml(path)
             config = pyproject_toml.get('tool', {}).get('black', {})
         else:
             config = {}

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
@@ -109,8 +107,12 @@ class DataModelField(DataModelFieldBase):
         if not data:
             return ''
 
-        if len(data) == 1 and 'default' in data:  # pragma: no cover
-            return repr(data['default'])
+        if len(data) == 1 and 'default' in data:
+            default = data['default']
+
+            if isinstance(default, (list, dict)):
+                return f'field(default_factory=lambda :{repr(default)})'
+            return repr(default)
         kwargs = [
             f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()
         ]

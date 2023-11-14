@@ -14,6 +14,7 @@ components:
           enum:
             - my_first_object
             - my_second_object
+            - my_third_object
     CreateObjectRequest:
       description: Request schema for object creation
       type: object
@@ -35,5 +36,7 @@ components:
         discriminator:
           propertyName: type
           mapping:
-            type1: "#/components/schemas/Schema1"
-            type2: "#/components/schemas/Schema2"
+            type1: "#/components/schemas/ObjectBase"
+            type2: "#/components/schemas/CreateObjectRequest"
+            type3: "#/components/schemas/UpdateObjectRequest"
+

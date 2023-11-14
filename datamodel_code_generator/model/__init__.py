@@ -64,7 +64,7 @@ def get_data_model_types(
     elif data_model_type == DataModelType.MsgspecStruct:
         return DataModelSet(
             data_model=msgspec.Struct,
-            root_model=rootmodel.RootModel,
+            root_model=msgspec.RootModel,
             field_model=msgspec.DataModelField,
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,

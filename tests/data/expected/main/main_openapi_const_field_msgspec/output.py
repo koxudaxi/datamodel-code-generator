@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from msgspec import Struct
+from msgspec import Meta, Struct
 from typing_extensions import Annotated
 
 

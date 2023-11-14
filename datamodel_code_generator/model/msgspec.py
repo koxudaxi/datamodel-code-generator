@@ -1,7 +1,19 @@
-from __future__ import annotations
-
+from functools import wraps
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
+from typing import (
+    Any,
+    ClassVar,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
+
+from pydantic import Field
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -12,10 +24,12 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_META,
     IMPORT_MSGSPEC_STRUCT,
 )
-from datamodel_code_generator.model.pydantic.base_model import Constraints
-from datamodel_code_generator.model.rootmodel import RootModel
+from datamodel_code_generator.model.pydantic.base_model import (
+    Constraints as _Constraints,
+)
+from datamodel_code_generator.model.rootmodel import RootModel as _RootModel
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple
+from datamodel_code_generator.types import chain_as_tuple, get_optional_type
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -25,6 +39,33 @@ def _has_field_assignment(field: DataModelFieldBase) -> bool:
     )
 
 
+DataModelT = TypeVar('DataModelT', bound=DataModel)
+
+
+def import_extender(cls: Type[DataModelT]) -> Type[DataModelT]:
+    original_imports: property = getattr(cls, 'imports', None)  # type: ignore
+
+    @wraps(original_imports.fget)  # type: ignore
+    def new_imports(self: DataModelT) -> Tuple[Import, ...]:
+        extra_imports = []
+        if any(f for f in self.fields if f.field):
+            extra_imports.append(IMPORT_MSGSPEC_FIELD)
+        if any(f for f in self.fields if f.field and 'lambda: convert' in f.field):
+            extra_imports.append(IMPORT_MSGSPEC_CONVERT)
+        if any(f for f in self.fields if f.annotated):
+            extra_imports.append(IMPORT_MSGSPEC_META)
+        return chain_as_tuple(original_imports.fget(self), extra_imports)  # type: ignore
+
+    setattr(cls, 'imports', property(new_imports))
+    return cls
+
+
+@import_extender
+class RootModel(_RootModel):
+    pass
+
+
+@import_extender
 class Struct(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'msgspec.jinja2'
     BASE_CLASS: ClassVar[str] = 'msgspec.Struct'
@@ -61,16 +102,11 @@ class Struct(DataModel):
             nullable=nullable,
         )
 
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        extra_imports = []
-        if any(f for f in self.fields if f.field):
-            extra_imports.append(IMPORT_MSGSPEC_FIELD)
-        if any(f for f in self.fields if f.field and 'lambda: convert' in f.field):
-            extra_imports.append(IMPORT_MSGSPEC_CONVERT)
-        if any(f for f in self.fields if f.annotated):
-            extra_imports.append(IMPORT_MSGSPEC_META)
-        return chain_as_tuple(super().imports, extra_imports)
+
+class Constraints(_Constraints):
+    # To override existing pattern alias
+    regex: Optional[str] = Field(None, alias='regex')
+    pattern: Optional[str] = Field(None, alias='pattern')
 
 
 class DataModelField(DataModelFieldBase):
@@ -90,7 +126,7 @@ class DataModelField(DataModelFieldBase):
         # 'max_items', # not supported by msgspec
         'min_length',
         'max_length',
-        'regex',
+        'pattern',
         # 'unique_items', # not supported by msgspec
     }
     _PARSE_METHOD = 'convert'
@@ -199,6 +235,10 @@ class DataModelField(DataModelFieldBase):
 
         meta = f'Meta({", ".join(meta_arguments)})'
 
+        if not self.required:
+            type_hint = self.data_type.type_hint
+            annotated_type = f'Annotated[{type_hint}, {meta}]'
+            return get_optional_type(annotated_type, self.data_type.use_union_operator)
         return f'Annotated[{self.type_hint}, {meta}]'
 
     def _get_default_as_struct_model(self) -> Optional[str]:

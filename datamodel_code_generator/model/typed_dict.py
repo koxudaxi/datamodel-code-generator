@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import keyword
 from pathlib import Path
 from typing import (
@@ -28,7 +26,7 @@ from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
 escape_characters = str.maketrans(
     {
         '\\': r'\\',
-        "'": r"\'",
+        "'": r'\'',
         '\b': r'\b',
         '\f': r'\f',
         '\n': r'\n',

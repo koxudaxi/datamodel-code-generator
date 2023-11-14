@@ -102,3 +102,21 @@ components:
               type: string
           default_factory: list
           nullable: false
+    options:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+              type: string
+              nullable: true
+        oneOfComments:
+           type: array
+           items:
+               oneOf:
+                - type: string
+                - type: number
+               nullable: true
+      required:
+        - comments
+        - oneOfComments

@@ -42,6 +42,6 @@ __all__ = [
     'CustomRootType',
     'DataClass',
     'dump_resolve_reference_action',
-    'DataTypeManager'
+    'DataTypeManager',
     # 'VALIDATOR_TEMPLATE',
 ]

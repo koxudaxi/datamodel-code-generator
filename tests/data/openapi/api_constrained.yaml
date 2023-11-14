@@ -211,6 +211,7 @@ components:
           apiUrl:
             type: string
             format: uri
+            minLength: 1
             description: "The URL describing the dataset's fields"
           apiDocumentationUrl:
             type: string
