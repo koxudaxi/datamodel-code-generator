@@ -362,9 +362,11 @@ def test_parse_default(source_obj, generated_classes):
 
 def test_parse_array_schema():
     parser = JsonSchemaParser('')
-    # with pytest.raises(ValidationError):
-    parser.parse_raw_obj(
-        'array schema', {'type': 'array', 'properties': {'name': True}}, []
+    parser.parse_raw_obj('schema', {'type': 'object', 'properties': {'name': True}}, [])
+    assert (
+        dump_templates(list(parser.results))
+        == """class Schema(BaseModel):
+    name: Optional[Any] = None"""
     )
 
 
