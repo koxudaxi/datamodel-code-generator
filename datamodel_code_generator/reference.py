@@ -495,7 +495,11 @@ class ModelResolver:
         if self.base_url:
             from .http import join_url
 
-            return join_url(self.base_url, ref)
+            joined_url = join_url(self.base_url, ref)
+            if '#' in joined_url:
+                return joined_url
+            return f'{joined_url}#'
+
         if is_url(ref):
             file_part, path_part = ref.split('#', 1)
             if file_part == self.root_id:
