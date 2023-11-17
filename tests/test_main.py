@@ -5978,3 +5978,30 @@ def test_main_all_of_ref_self():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_array_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'array_field_constraints.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--target-python-version',
+                '3.9',
+                '--field-constraints',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
+            ).read_text()
+        )
