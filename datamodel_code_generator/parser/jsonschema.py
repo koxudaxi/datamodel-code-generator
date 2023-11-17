@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import (
@@ -615,70 +616,62 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[name]['title'] = obj.title
 
-    def deep_merge(
+    def _deep_merge(
         self, dict1: Dict[Any, Any], dict2: Dict[Any, Any]
     ) -> Dict[Any, Any]:
-        result = dict1.copy()
+        result = deepcopy(dict1)
         for key, value in dict2.items():
             if key in result:
                 if isinstance(result[key], dict) and isinstance(value, dict):
-                    result[key] = self.deep_merge(result[key], value)
+                    result[key] = self._deep_merge(result[key], value)
                     continue
                 elif isinstance(result[key], list) and isinstance(value, list):
-                    result[key] = list(set(result[key] + value))
+                    result[key] = result[key] + value
                     continue
-            result[key] = value
+            result[key] = deepcopy(value)
         return result
+
+    def parse_combined_schema(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        target_attribute_name: str,
+    ) -> List[DataType]:
+        base_object = obj.dict(
+            exclude={target_attribute_name}, exclude_unset=True, by_alias=True
+        )
+        combined_schemas: List[JsonSchemaObject] = []
+        for target_attribute in getattr(obj, target_attribute_name, []):  # type: JsonSchemaObject
+            if target_attribute.ref:
+                combined_schemas.append(target_attribute)
+            else:
+                combined_schemas.append(
+                    JsonSchemaObject.parse_obj(
+                        self._deep_merge(
+                            base_object,
+                            target_attribute.dict(exclude_unset=True, by_alias=True),
+                        )
+                    )
+                )
+
+        return self.parse_list_item(
+            name,
+            combined_schemas,
+            path,
+            obj,
+            singular_name=False,
+        )
 
     def parse_any_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        base_object = obj.dict(exclude={'anyOf'}, exclude_unset=True, by_alias=True)
-        any_ofs = []
-        for any_of in obj.anyOf:
-            if any_of.ref:
-                any_ofs.append(any_of)
-            else:
-                any_ofs.append(
-                    JsonSchemaObject.parse_obj(
-                        self.deep_merge(
-                            base_object, any_of.dict(exclude_unset=True, by_alias=True)
-                        )
-                    )
-                )
-
-        return self.parse_list_item(
-            name,
-            any_ofs,
-            path,
-            obj,
-            singular_name=False,
-        )
+        return self.parse_combined_schema(name, obj, path, 'anyOf')
 
     def parse_one_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        base_object = obj.dict(exclude={'oneOf'}, exclude_unset=True, by_alias=True)
-        one_ofs = []
-        for one_of in obj.oneOf:
-            if one_of.ref:
-                one_ofs.append(one_of)
-            else:
-                one_ofs.append(
-                    JsonSchemaObject.parse_obj(
-                        self.deep_merge(
-                            base_object, one_of.dict(exclude_unset=True, by_alias=True)
-                        )
-                    )
-                )
-
-        return self.parse_list_item(
-            name,
-            one_ofs,
-            path,
-            obj,
-            singular_name=False,
-        )
+        return self.parse_combined_schema(name, obj, path, 'oneOf')
 
     def _parse_object_common_part(
         self,
