@@ -236,12 +236,6 @@ class BaseModelBase(DataModel, ABC):
             nullable=nullable,
         )
 
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        # if any(f for f in self.fields if f.field):
-        #     return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
-
     @cached_property
     def template_file_path(self) -> Path:
         # This property is for Backward compatibility
