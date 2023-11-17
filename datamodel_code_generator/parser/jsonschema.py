@@ -3,7 +3,6 @@ from __future__ import annotations
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager
-from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import (
@@ -619,7 +618,7 @@ class JsonSchemaParser(Parser):
     def _deep_merge(
         self, dict1: Dict[Any, Any], dict2: Dict[Any, Any]
     ) -> Dict[Any, Any]:
-        result = deepcopy(dict1)
+        result = dict1.copy()
         for key, value in dict2.items():
             if key in result:
                 if isinstance(result[key], dict) and isinstance(value, dict):
@@ -628,7 +627,7 @@ class JsonSchemaParser(Parser):
                 elif isinstance(result[key], list) and isinstance(value, list):
                     result[key] = result[key] + value
                     continue
-            result[key] = deepcopy(value)
+            result[key] = value
         return result
 
     def parse_combined_schema(
@@ -642,9 +641,27 @@ class JsonSchemaParser(Parser):
             exclude={target_attribute_name}, exclude_unset=True, by_alias=True
         )
         combined_schemas: List[JsonSchemaObject] = []
-        for target_attribute in getattr(obj, target_attribute_name, []):  # type: JsonSchemaObject
+        refs = []
+        for index, target_attribute in enumerate(
+            getattr(obj, target_attribute_name, [])
+        ):
             if target_attribute.ref:
                 combined_schemas.append(target_attribute)
+                refs.append(index)
+                # TODO: support partial ref
+                # {
+                #   "type": "integer",
+                #   "oneOf": [
+                #     { "minimum": 5 },
+                #     { "$ref": "#/definitions/positive" }
+                #   ],
+                #    "definitions": {
+                #     "positive": {
+                #       "minimum": 0,
+                #       "exclusiveMinimum": true
+                #     }
+                #    }
+                # }
             else:
                 combined_schemas.append(
                     JsonSchemaObject.parse_obj(
@@ -655,13 +672,28 @@ class JsonSchemaParser(Parser):
                     )
                 )
 
-        return self.parse_list_item(
+        parsed_schemas = self.parse_list_item(
             name,
             combined_schemas,
             path,
             obj,
             singular_name=False,
         )
+        common_path_keyword = f'{target_attribute_name}Common'
+        return [
+            self._parse_object_common_part(
+                name,
+                obj,
+                [*get_special_path(common_path_keyword, path), str(i)],
+                ignore_duplicate_model=True,
+                fields=[],
+                base_classes=[d.reference],
+                required=[],
+            )
+            if i in refs and d.reference
+            else d
+            for i, d in enumerate(parsed_schemas)
+        ]
 
     def parse_any_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]

@@ -31,8 +31,22 @@ class MySchema2(BaseModel):
     PostCode: str
 
 
+class US(BaseModel):
+    County: Optional[str] = None
+    PostCode: str
+
+
+class MySchema3(US):
+    class Config:
+        extra = Extra.allow
+
+    AddressLine1: str
+    AddressLine2: Optional[str] = None
+    City: Optional[str] = None
+
+
 class MySchema(BaseModel):
     class Config:
         extra = Extra.allow
 
-    __root__: Union[MySchema1, MySchema2] = Field(..., title='My schema')
+    __root__: Union[MySchema1, MySchema2, MySchema3] = Field(..., title='My schema')
