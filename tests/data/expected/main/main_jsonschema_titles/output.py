@@ -20,11 +20,11 @@ class Kind(BaseModel):
     __root__: str
 
 
-class ExtendedProcessingTaskItem(BaseModel):
+class ExtendedProcessingTask1(BaseModel):
     comment: Optional[str] = None
 
 
-class ProcessingStatusUnionItem(BaseModel):
+class ProcessingStatusUnion(BaseModel):
     id: Optional[int] = None
     description: Optional[str] = None
 
@@ -34,7 +34,7 @@ class ProcessingTasksTitle(BaseModel):
 
 
 class ExtendedProcessingTask(BaseModel):
-    __root__: Union[ProcessingTasksTitle, ExtendedProcessingTaskItem] = Field(
+    __root__: Union[ProcessingTasksTitle, ExtendedProcessingTask1] = Field(
         ..., title='Extended Processing Task Title'
     )
 
@@ -47,7 +47,7 @@ class ExtendedProcessingTasks(BaseModel):
 
 class ProcessingTask(BaseModel):
     processing_status_union: Optional[
-        Union[ProcessingStatusUnionItem, ExtendedProcessingTask, ProcessingStatus]
+        Union[ProcessingStatusUnion, ExtendedProcessingTask, ProcessingStatus]
     ] = Field('COMPLETED', title='Processing Status Union Title')
     processing_status: Optional[ProcessingStatus] = 'COMPLETED'
     name: Optional[str] = None

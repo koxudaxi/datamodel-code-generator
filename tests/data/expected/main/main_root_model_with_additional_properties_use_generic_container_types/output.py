@@ -19,11 +19,11 @@ class NestedEnumResult(Enum):
     green = 'green'
 
 
-class OneOfResultItem(BaseModel):
+class OneOfResult(BaseModel):
     description: Optional[str] = None
 
 
-class AnyOfResultItem(BaseModel):
+class AnyOfResult(BaseModel):
     description: Optional[str] = None
 
 
@@ -42,8 +42,8 @@ class Model(BaseModel):
     nested_object_result: Mapping[str, NestedObjectResult]
     nested_enum_result: Mapping[str, NestedEnumResult]
     all_of_result: Optional[Mapping[str, AllOfResult]] = None
-    one_of_result: Optional[Mapping[str, Union[User, OneOfResultItem]]] = None
-    any_of_result: Optional[Mapping[str, Union[User, AnyOfResultItem]]] = None
+    one_of_result: Optional[Mapping[str, Union[User, OneOfResult]]] = None
+    any_of_result: Optional[Mapping[str, Union[User, AnyOfResult]]] = None
     all_of_with_unknown_object: Optional[Mapping[str, User]] = None
     objectRef: Optional[Mapping[str, User]] = None
     deepNestedObjectRef: Optional[Mapping[str, Mapping[str, Mapping[str, User]]]] = None

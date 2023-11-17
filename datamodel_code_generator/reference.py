@@ -644,7 +644,8 @@ class ModelResolver:
         return self.references.get(self.resolve_ref(path))
 
     def delete(self, path: Union[Sequence[str], str]) -> None:
-        del self.references[self.resolve_ref(path)]
+        if self.resolve_ref(path) in self.references:
+            del self.references[self.resolve_ref(path)]
 
     def default_class_name_generator(self, name: str) -> str:
         # TODO: create a validate for class name
