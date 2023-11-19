@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum, auto
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from itertools import zip_longest
 from keyword import iskeyword
 from pathlib import Path, PurePath
@@ -37,7 +37,6 @@ from pydantic import BaseModel
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     ConfigDict,
-    cached_property,
     field_validator,
 )
 

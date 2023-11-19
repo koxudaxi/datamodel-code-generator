@@ -1,4 +1,5 @@
 from abc import ABC
+from functools import cached_property
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
 
@@ -18,7 +19,6 @@ from datamodel_code_generator.model.pydantic.imports import (
 )
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
-from datamodel_code_generator.util import cached_property
 
 
 class Constraints(ConstraintsBase):

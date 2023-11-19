@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -63,7 +63,6 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     BaseModel,
-    cached_property,
     field_validator,
     model_validator,
 )

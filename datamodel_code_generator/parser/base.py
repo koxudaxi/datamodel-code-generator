@@ -15,12 +15,14 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
     Type,
     TypeVar,
     Union,
+    runtime_checkable,
 )
 from urllib.parse import ParseResult
 
@@ -46,7 +48,6 @@ from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
-from datamodel_code_generator.util import Protocol, runtime_checkable
 
 SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
 

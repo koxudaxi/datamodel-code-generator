@@ -15,12 +15,14 @@ from typing import (
     List,
     Optional,
     Pattern,
+    Protocol,
     Sequence,
     Set,
     Tuple,
     Type,
     TypeVar,
     Union,
+    runtime_checkable,
 )
 
 import pydantic
@@ -53,8 +55,6 @@ from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     ConfigDict,
-    Protocol,
-    runtime_checkable,
 )
 
 if PYDANTIC_V2:

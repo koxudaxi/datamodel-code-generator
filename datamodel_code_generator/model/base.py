@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -39,7 +39,7 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, cached_property
+from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
