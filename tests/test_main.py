@@ -38,6 +38,7 @@ JSON_DATA_PATH: Path = DATA_PATH / 'json'
 YAML_DATA_PATH: Path = DATA_PATH / 'yaml'
 PYTHON_DATA_PATH: Path = DATA_PATH / 'python'
 CSV_DATA_PATH: Path = DATA_PATH / 'csv'
+GRAPHQL_DATA_PATH: Path = DATA_PATH / 'graphql'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
@@ -5977,4 +5978,25 @@ def test_main_all_of_ref_self():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_simple_star_wars():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'simple-star-wars.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_simple_star_wars' / 'output.py').read_text()
         )
