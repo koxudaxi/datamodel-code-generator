@@ -3640,7 +3640,7 @@ def test_main_jsonschema_field_include_all_keys():
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_jsonschema_field_extras_field_include_all_keys',
+            'main_jsonschema_field_extras_field_include_all_keys_v2',
         ),
     ],
 )
@@ -3681,7 +3681,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_jsonschema_field_extras_field_extra_keys',
+            'main_jsonschema_field_extras_field_extra_keys_v2',
         ),
     ],
 )
