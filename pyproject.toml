@@ -83,6 +83,10 @@ pytest-xdist = "^3.3.1"
 prance = "*"
 openapi-spec-validator = "*"
 
+
+[tool.poetry.group.graphql.dependencies]
+graphql-core = "^3.2.3"
+
 [tool.poetry.extras]
 http = ["httpx"]
 debug = ["PySnooper"]
