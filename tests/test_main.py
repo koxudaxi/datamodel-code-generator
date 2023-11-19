@@ -3631,7 +3631,22 @@ def test_main_jsonschema_field_include_all_keys():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras_field_include_all_keys():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras_field_include_all_keys(
+    output_model, expected_output
+):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3640,6 +3655,8 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
                 '--field-include-all-keys',
@@ -3650,16 +3667,25 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_jsonschema_field_extras_field_include_all_keys'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras_field_extra_keys():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3668,6 +3694,8 @@ def test_main_jsonschema_field_extras_field_extra_keys():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
                 '--field-extra-keys',
@@ -3680,16 +3708,25 @@ def test_main_jsonschema_field_extras_field_extra_keys():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_jsonschema_field_extras_field_extra_keys'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3698,6 +3735,8 @@ def test_main_jsonschema_field_extras():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
             ]
@@ -3705,9 +3744,7 @@ def test_main_jsonschema_field_extras():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 

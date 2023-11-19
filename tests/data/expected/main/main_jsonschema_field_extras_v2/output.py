@@ -10,12 +10,5 @@ from pydantic import BaseModel, Field
 
 
 class Extras(BaseModel):
-    name: Optional[str] = Field(
-        None,
-        description='normal key',
-        examples=['example'],
-        invalid_key_1='abc',
-        key2=456,
-        repr=True,
-    )
+    name: Optional[str] = Field(None, description='normal key', examples=['example'])
     age: Optional[int] = Field(None, example=12, examples=[13, 20])
