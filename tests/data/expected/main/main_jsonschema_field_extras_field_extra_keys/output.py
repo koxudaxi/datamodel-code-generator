@@ -13,7 +13,7 @@ class Extras(BaseModel):
     name: Optional[str] = Field(
         None,
         description='normal key',
-        examples=['example'],
+        example='example',
         invalid_key_1='abc',
         key2=456,
         repr=True,
