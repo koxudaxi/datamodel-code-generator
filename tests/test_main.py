@@ -1289,26 +1289,48 @@ def test_main_subclass_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_complicated_enum_default_member():
+@pytest.mark.parametrize(
+    'output_model,expected_output,option',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_complicated_enum_default_member',
+            '--set-default-enum-member',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            '--set-default-enum-member',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            None,
+        ),
+    ],
+)
+def test_main_complicated_enum_default_member(output_model, expected_output, option):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
             [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
-                '--output',
-                str(output_file),
-                '--set-default-enum-member',
+                a
+                for a in [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
+                    '--output',
+                    str(output_file),
+                    option,
+                    '--output-model',
+                    output_model,
+                ]
+                if a
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_complicated_enum_default_member'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
