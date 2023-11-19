@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
 
-from datamodel_code_generator.imports import Import, IMPORT_TYPE_ALIAS, IMPORT_UNION
+from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.reference import Reference
@@ -12,7 +12,10 @@ from datamodel_code_generator.reference import Reference
 class DataTypeUnion(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'Union.jinja2'
     BASE_CLASS: ClassVar[str] = ''
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPE_ALIAS, IMPORT_UNION, )
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (
+        IMPORT_TYPE_ALIAS,
+        IMPORT_UNION,
+    )
 
     def __init__(
         self,

@@ -6039,7 +6039,7 @@ def test_main_all_of_ref_self():
             == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
         )
 
-        
+
 @freeze_time('2019-07-26')
 def test_main_array_field_constraints():
     with TemporaryDirectory() as output_dir:
@@ -6066,7 +6066,7 @@ def test_main_array_field_constraints():
             ).read_text()
         )
 
-        
+
 @freeze_time('2019-07-26')
 def test_main_simple_star_wars():
     with TemporaryDirectory() as output_dir:

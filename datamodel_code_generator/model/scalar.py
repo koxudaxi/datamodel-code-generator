@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
 
-from datamodel_code_generator.imports import Import, IMPORT_TYPE_ALIAS
+from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.reference import Reference
@@ -18,18 +18,18 @@ _STR: str = 'str'
 DEFAULT_GRAPHQL_SCALAR_TYPE = _STR
 
 DEFAULT_GRAPHQL_SCALAR_TYPES: Dict[str, str] = {
-    "Boolean": _BOOLEAN,
-    "String": _STR,
-    "ID": _STR,
-    "Int": _INT,
-    "Float": _FLOAT,
+    'Boolean': _BOOLEAN,
+    'String': _STR,
+    'ID': _STR,
+    'Int': _INT,
+    'Float': _FLOAT,
 }
 
 
 class DataTypeScalar(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'Scalar.jinja2'
     BASE_CLASS: ClassVar[str] = ''
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPE_ALIAS, )
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)
 
     def __init__(
         self,
@@ -55,10 +55,12 @@ class DataTypeScalar(DataModel):
 
         # py_type
         py_type = extra_template_data[scalar_name].get(
-            "py_type",
-            DEFAULT_GRAPHQL_SCALAR_TYPES.get(reference.name, DEFAULT_GRAPHQL_SCALAR_TYPE)
+            'py_type',
+            DEFAULT_GRAPHQL_SCALAR_TYPES.get(
+                reference.name, DEFAULT_GRAPHQL_SCALAR_TYPE
+            ),
         )
-        extra_template_data[scalar_name]["py_type"] = py_type
+        extra_template_data[scalar_name]['py_type'] = py_type
 
         super().__init__(
             reference=reference,

@@ -6,8 +6,8 @@ from typing import (
     Callable,
     DefaultDict,
     Dict,
-    Iterator,
     Iterable,
+    Iterator,
     List,
     Mapping,
     Optional,
@@ -27,18 +27,20 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.reference import ModelType
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.parser.base import DataType
-from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.parser.base import escape_characters
-from datamodel_code_generator.types import Types
-from datamodel_code_generator.parser.base import Parser, Source
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
+from datamodel_code_generator.parser.base import (
+    DataType,
+    Parser,
+    Source,
+    escape_characters,
+)
+from datamodel_code_generator.reference import ModelType, Reference
 from datamodel_code_generator.types import (
     DataTypeManager,
     StrictTypes,
+    Types,
 )
 
 try:
@@ -72,7 +74,9 @@ class GraphQLParser(Parser):
     # `graphql.type.introspection.TypeKind` -- an enum with all supported types
     # `graphql.GraphQLNamedType` -- base type for each graphql object
     # see `graphql-core` for more details
-    support_graphql_types: Dict[graphql.type.introspection.TypeKind, List[graphql.GraphQLNamedType]]
+    support_graphql_types: Dict[
+        graphql.type.introspection.TypeKind, List[graphql.GraphQLNamedType]
+    ]
     # graphql types order for render
     # may be as a parameter in the future
     parse_order: List[graphql.type.introspection.TypeKind] = [
@@ -239,16 +243,16 @@ class GraphQLParser(Parser):
             if self.current_source_path is not None:
                 self.current_source_path = source.path
             with self.model_resolver.current_base_path_context(
-                    source.path.parent
+                source.path.parent
             ), self.model_resolver.current_root_context(path_parts):
                 yield source, path_parts
 
     def _resolve_types(self, paths: List[str], schema: graphql.GraphQLSchema) -> None:
         for type_name, type_ in schema.type_map.items():
-            if type_name.startswith("__"):
+            if type_name.startswith('__'):
                 continue
 
-            if type_name in ["Query", "Mutation"]:
+            if type_name in ['Query', 'Mutation']:
                 continue
 
             resolved_type = graphql_resolver.kind(type_, None)
@@ -257,7 +261,7 @@ class GraphQLParser(Parser):
                 self.all_graphql_objects[type_.name] = type_
                 # TODO: need a special method for each graph type
                 self.references[type_.name] = Reference(
-                    path=f"{str(*paths)}/{resolved_type.value}/{type_.name}",
+                    path=f'{str(*paths)}/{resolved_type.value}/{type_.name}',
                     name=type_.name,
                     original_name=type_.name,
                 )
@@ -266,10 +270,10 @@ class GraphQLParser(Parser):
 
     def _typename_field(self, name: str) -> DataModelFieldBase:
         return self.data_model_field_type(
-            name="typename__",
+            name='typename__',
             data_type=DataType(literals=[name]),
             required=True,
-            alias="__typename",
+            alias='__typename',
             use_one_literal_as_default=True,
             has_default=True,
         )
@@ -328,7 +332,7 @@ class GraphQLParser(Parser):
     def parse_field(
         self,
         field_name: str,
-        field: Union[graphql.GraphQLField, graphql.GraphQLInputField]
+        field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
     ) -> DataModelFieldBase:
         final_data_type = DataType(is_optional=True)
         data_type = final_data_type
@@ -349,10 +353,12 @@ class GraphQLParser(Parser):
 
         data_type.type = obj.name
 
-        required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
+        required = (not self.force_optional_for_required_fields) and (
+            not final_data_type.is_optional
+        )
         extras = {}
 
-        if hasattr(field, "default_value"):
+        if hasattr(field, 'default_value'):
             if field.default_value == graphql.pyutils.Undefined:
                 default = None
             else:
@@ -360,8 +366,8 @@ class GraphQLParser(Parser):
         else:
             if required is False:
                 if final_data_type.is_list:
-                    default = "list"
-                    extras = {"default_factory": "list"}
+                    default = 'list'
+                    extras = {'default_factory': 'list'}
                 else:
                     default = None
             else:
@@ -383,7 +389,11 @@ class GraphQLParser(Parser):
 
     def parse_object_like(
         self,
-        obj: Union[graphql.GraphQLInterfaceType, graphql.GraphQLObjectType, graphql.GraphQLInputObjectType]
+        obj: Union[
+            graphql.GraphQLInterfaceType,
+            graphql.GraphQLObjectType,
+            graphql.GraphQLInputObjectType,
+        ],
     ) -> None:
         fields = []
         exclude_field_names: Set[str] = set()
@@ -400,11 +410,8 @@ class GraphQLParser(Parser):
         fields.append(self._typename_field(obj.name))
 
         base_classes = []
-        if hasattr(obj, "interfaces"):
-            base_classes = [
-                self.references[i.name]
-                for i in obj.interfaces
-            ]
+        if hasattr(obj, 'interfaces'):
+            base_classes = [self.references[i.name] for i in obj.interfaces]
 
         data_model_type = self.data_model_type(
             reference=self.references[obj.name],
@@ -418,13 +425,17 @@ class GraphQLParser(Parser):
         )
         self.results.append(data_model_type)
 
-    def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:
+    def parse_interface(
+        self, interface_graphql_object: graphql.GraphQLInterfaceType
+    ) -> None:
         self.parse_object_like(interface_graphql_object)
 
     def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:
         self.parse_object_like(graphql_object)
 
-    def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:
+    def parse_input_object(
+        self, input_graphql_object: graphql.GraphQLInputObjectType
+    ) -> None:
         self.parse_object_like(input_graphql_object)
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
