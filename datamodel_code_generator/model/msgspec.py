@@ -39,20 +39,20 @@ def _has_field_assignment(field: DataModelFieldBase) -> bool:
     )
 
 
-DataModelT = TypeVar('DataModelT', bound=DataModel)
+DataModelFieldBaseT = TypeVar('DataModelFieldBaseT', bound=DataModelFieldBase)
 
 
-def import_extender(cls: Type[DataModelT]) -> Type[DataModelT]:
+def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]:
     original_imports: property = getattr(cls, 'imports', None)  # type: ignore
 
     @wraps(original_imports.fget)  # type: ignore
-    def new_imports(self: DataModelT) -> Tuple[Import, ...]:
+    def new_imports(self: DataModelFieldBaseT) -> Tuple[Import, ...]:
         extra_imports = []
-        if any(f for f in self.fields if f.field):
+        if self.field:
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
-        if any(f for f in self.fields if f.field and 'lambda: convert' in f.field):
+        if self.field and 'lambda: convert' in self.field:
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
-        if any(f for f in self.fields if f.annotated):
+        if self.annotated:
             extra_imports.append(IMPORT_MSGSPEC_META)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # type: ignore
 
@@ -60,12 +60,10 @@ def import_extender(cls: Type[DataModelT]) -> Type[DataModelT]:
     return cls
 
 
-@import_extender
 class RootModel(_RootModel):
     pass
 
 
-@import_extender
 class Struct(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'msgspec.jinja2'
     BASE_CLASS: ClassVar[str] = 'msgspec.Struct'
@@ -109,6 +107,7 @@ class Constraints(_Constraints):
     pattern: Optional[str] = Field(None, alias='pattern')
 
 
+@import_extender
 class DataModelField(DataModelFieldBase):
     _FIELD_KEYS: ClassVar[Set[str]] = {
         'default',

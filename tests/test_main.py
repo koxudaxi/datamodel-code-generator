@@ -1290,26 +1290,48 @@ def test_main_subclass_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_complicated_enum_default_member():
+@pytest.mark.parametrize(
+    'output_model,expected_output,option',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_complicated_enum_default_member',
+            '--set-default-enum-member',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            '--set-default-enum-member',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            None,
+        ),
+    ],
+)
+def test_main_complicated_enum_default_member(output_model, expected_output, option):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
             [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
-                '--output',
-                str(output_file),
-                '--set-default-enum-member',
+                a
+                for a in [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
+                    '--output',
+                    str(output_file),
+                    option,
+                    '--output-model',
+                    output_model,
+                ]
+                if a
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_complicated_enum_default_member'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -3632,7 +3654,22 @@ def test_main_jsonschema_field_include_all_keys():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras_field_include_all_keys():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras_field_include_all_keys(
+    output_model, expected_output
+):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3641,6 +3678,8 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
                 '--field-include-all-keys',
@@ -3651,16 +3690,25 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_jsonschema_field_extras_field_include_all_keys'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras_field_extra_keys():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3669,6 +3717,8 @@ def test_main_jsonschema_field_extras_field_extra_keys():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
                 '--field-extra-keys',
@@ -3681,16 +3731,25 @@ def test_main_jsonschema_field_extras_field_extra_keys():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_jsonschema_field_extras_field_extra_keys'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3699,6 +3758,8 @@ def test_main_jsonschema_field_extras():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
             ]
@@ -3706,9 +3767,7 @@ def test_main_jsonschema_field_extras():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -5980,7 +6039,34 @@ def test_main_all_of_ref_self():
             == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
         )
 
+        
+@freeze_time('2019-07-26')
+def test_main_array_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'array_field_constraints.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--target-python-version',
+                '3.9',
+                '--field-constraints',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
+            ).read_text()
+        )
 
+        
 @freeze_time('2019-07-26')
 def test_main_simple_star_wars():
     with TemporaryDirectory() as output_dir:

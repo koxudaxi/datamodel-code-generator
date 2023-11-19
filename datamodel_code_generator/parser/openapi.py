@@ -302,14 +302,6 @@ class OpenAPIParser(JsonSchemaParser):
 
         return super().get_data_type(obj)
 
-    def parse_one_of(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
-    ) -> List[DataType]:
-        data_types = super().parse_one_of(name, obj, path)
-        if obj.nullable and self.strict_nullable:
-            data_types.append(DataType(type='None'))
-        return data_types
-
     def resolve_object(
         self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]
     ) -> BaseModelT:

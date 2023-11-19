@@ -9,7 +9,7 @@ from typing import Optional
 from pydantic import BaseModel, Extra, Field
 
 
-class ConfigItem(BaseModel):
+class Config(BaseModel):
     __root__: str = Field(..., description='d2', min_length=1, title='t2')
 
 
@@ -20,7 +20,7 @@ class In(BaseModel):
     input_dataset_path: Optional[str] = Field(
         None, description='d1', min_length=1, title='Path to the input dataset'
     )
-    config: Optional[ConfigItem] = None
+    config: Optional[Config] = None
 
 
 class ValidatingSchemaId1(BaseModel):

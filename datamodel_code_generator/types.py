@@ -445,10 +445,19 @@ class DataType(_BaseModel):
                     data_type_type = data_type.type_hint
                     if data_type_type in data_types:  # pragma: no cover
                         continue
-                    data_types.append(data_type_type)
-                if NONE in data_types:
-                    data_types = [d for d in data_types if d != NONE]
-                    self.is_optional = True
+
+                    if NONE == data_type_type:
+                        self.is_optional = True
+                        continue
+
+                    non_optional_data_type_type = _remove_none_from_union(
+                        data_type_type, self.use_union_operator
+                    )
+
+                    if non_optional_data_type_type != data_type_type:
+                        self.is_optional = True
+
+                    data_types.append(non_optional_data_type_type)
                 if len(data_types) == 1:
                     type_ = data_types[0]
                 else:

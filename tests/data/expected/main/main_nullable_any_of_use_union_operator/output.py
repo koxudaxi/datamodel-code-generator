@@ -7,7 +7,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Extra, Field
 
 
-class ConfigItem(BaseModel):
+class Config(BaseModel):
     __root__: str = Field(..., description='d2', min_length=1, title='t2')
 
 
@@ -18,7 +18,7 @@ class In(BaseModel):
     input_dataset_path: str | None = Field(
         None, description='d1', min_length=1, title='Path to the input dataset'
     )
-    config: ConfigItem | None = None
+    config: Config | None = None
 
 
 class ValidatingSchemaId1(BaseModel):
