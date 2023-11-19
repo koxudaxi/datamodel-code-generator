@@ -6074,7 +6074,7 @@ def test_main_simple_star_wars():
         return_code: Exit = main(
             [
                 '--input',
-                str(GRAPHQL_DATA_PATH / 'simple-star-wars.json'),
+                str(GRAPHQL_DATA_PATH / 'simple-star-wars.graphql'),
                 '--output',
                 str(output_file),
                 '--input-file-type',
@@ -6084,5 +6084,5 @@ def test_main_simple_star_wars():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_simple_star_wars' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_simple_star_wars' / 'output.py').read_text()
         )
