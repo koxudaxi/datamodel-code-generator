@@ -80,4 +80,4 @@ class Notes(BaseModel):
 
 class Options(BaseModel):
     comments: List[Optional[str]]
-    oneOfComments: List[Optional[Union[str, float]]]
+    oneOfComments: List[Union[Optional[str], Optional[float]]]

@@ -18,29 +18,29 @@ class Car(BaseModel):
     tag: Optional[str] = None
 
 
-class OneOfItemItem(BaseModel):
+class OneOfItem1(BaseModel):
     name: Optional[str] = None
 
 
 class OneOfItem(BaseModel):
-    __root__: Union[Pet, Car, OneOfItemItem, constr(max_length=5000)]
+    __root__: Union[Pet, Car, OneOfItem1, constr(max_length=5000)]
 
 
-class ItemItem(BaseModel):
+class Item(BaseModel):
     name: Optional[str] = None
 
 
 class OneOfobj(BaseModel):
-    item: Optional[Union[Pet, Car, ItemItem, constr(max_length=5000)]] = None
+    item: Optional[Union[Pet, Car, Item, constr(max_length=5000)]] = None
 
 
-class OneOfArrayItem(BaseModel):
+class OneOfArray1(BaseModel):
     name: Optional[str] = None
     birthday: Optional[date] = None
 
 
 class OneOfArray(BaseModel):
-    __root__: List[Union[Pet, Car, OneOfArrayItem, constr(max_length=5000)]]
+    __root__: List[Union[Pet, Car, OneOfArray1, constr(max_length=5000)]]
 
 
 class Error(BaseModel):

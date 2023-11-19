@@ -33,23 +33,21 @@ class ProcessingTasksTitle(BaseModel):
     __root__: List[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
 
 
-class ExtendedProcessingTaskTitle(BaseModel):
+class ExtendedProcessingTask(BaseModel):
     __root__: Union[ProcessingTasksTitle, NestedCommentTitle] = Field(
         ..., title='Extended Processing Task Title'
     )
 
 
 class ExtendedProcessingTasksTitle(BaseModel):
-    __root__: List[ExtendedProcessingTaskTitle] = Field(
+    __root__: List[ExtendedProcessingTask] = Field(
         ..., title='Extended Processing Tasks Title'
     )
 
 
 class ProcessingTaskTitle(BaseModel):
     processing_status_union: Optional[
-        Union[
-            ProcessingStatusDetail, ExtendedProcessingTaskTitle, ProcessingStatusTitle
-        ]
+        Union[ProcessingStatusDetail, ExtendedProcessingTask, ProcessingStatusTitle]
     ] = Field('COMPLETED', title='Processing Status Union Title')
     processing_status: Optional[ProcessingStatusTitle] = 'COMPLETED'
     name: Optional[str] = None
