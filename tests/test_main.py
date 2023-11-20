@@ -6068,7 +6068,7 @@ def test_main_array_field_constraints():
 
 
 @freeze_time('2019-07-26')
-def test_main_simple_star_wars():
+def test_main_graphql_simple_star_wars():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6086,5 +6086,28 @@ def test_main_simple_star_wars():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_graphql_simple_star_wars' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_different_types_of_fields():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'different-types-of-fields.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_different_types_of_fields' / 'output.py'
             ).read_text()
         )
