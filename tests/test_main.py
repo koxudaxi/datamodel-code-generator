@@ -6111,3 +6111,28 @@ def test_main_graphql_different_types_of_fields():
                 EXPECTED_MAIN_PATH / 'main_graphql_different_types_of_fields' / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_custom_scalar_types():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_scalar_types' / 'output.py'
+            ).read_text()
+        )
