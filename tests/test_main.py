@@ -6065,6 +6065,28 @@ def test_main_array_field_constraints():
                 EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
             ).read_text()
         )
+        
+        
+@freeze_time('2019-07-26')
+def test_all_of_use_default():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'all_of_default.json'),
+                '--output',
+                str(output_file),
+                '--use-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_use_default' / 'output.py'
+            ).read_text()
+        )
 
 
 @freeze_time('2019-07-26')
