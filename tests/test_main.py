@@ -6108,7 +6108,9 @@ def test_main_graphql_different_types_of_fields():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_graphql_different_types_of_fields' / 'output.py'
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_different_types_of_fields'
+                / 'output.py'
             ).read_text()
         )
 
