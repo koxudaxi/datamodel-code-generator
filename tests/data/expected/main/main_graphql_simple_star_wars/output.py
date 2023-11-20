@@ -43,7 +43,7 @@ class Film(BaseModel):
     title: String
     vehicles: List[Vehicle]
     vehicles_ids: List[ID]
-    typename__: Literal['Film'] = Field(..., alias='__typename')
+    typename__: Optional[Literal['Film']] = Field('Film', alias='__typename')
 
 
 class Person(BaseModel):
@@ -66,7 +66,7 @@ class Person(BaseModel):
     starships_ids: List[ID]
     vehicles: List[Vehicle]
     vehicles_ids: List[ID]
-    typename__: Literal['Person'] = Field(..., alias='__typename')
+    typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
 
 
 class Planet(BaseModel):
@@ -84,7 +84,7 @@ class Planet(BaseModel):
     rotation_period: Optional[String] = None
     surface_water: Optional[String] = None
     terrain: Optional[String] = None
-    typename__: Literal['Planet'] = Field(..., alias='__typename')
+    typename__: Optional[Literal['Planet']] = Field('Planet', alias='__typename')
 
 
 class Species(BaseModel):
@@ -102,7 +102,7 @@ class Species(BaseModel):
     people: List[Person]
     people_ids: List[ID]
     skin_colors: Optional[String] = None
-    typename__: Literal['Species'] = Field(..., alias='__typename')
+    typename__: Optional[Literal['Species']] = Field('Species', alias='__typename')
 
 
 class Starship(BaseModel):
@@ -124,7 +124,7 @@ class Starship(BaseModel):
     pilots: List[Person]
     pilots_ids: List[ID]
     starship_class: Optional[String] = None
-    typename__: Literal['Starship'] = Field(..., alias='__typename')
+    typename__: Optional[Literal['Starship']] = Field('Starship', alias='__typename')
 
 
 class Vehicle(BaseModel):
@@ -144,4 +144,4 @@ class Vehicle(BaseModel):
     pilots: List[Person]
     pilots_ids: List[ID]
     vehicle_class: Optional[String] = None
-    typename__: Literal['Vehicle'] = Field(..., alias='__typename')
+    typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')

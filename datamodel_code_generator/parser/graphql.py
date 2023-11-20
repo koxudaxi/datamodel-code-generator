@@ -272,7 +272,8 @@ class GraphQLParser(Parser):
         return self.data_model_field_type(
             name='typename__',
             data_type=DataType(literals=[name]),
-            required=True,
+            default=name,
+            required=False,
             alias='__typename',
             use_one_literal_as_default=True,
             has_default=True,
