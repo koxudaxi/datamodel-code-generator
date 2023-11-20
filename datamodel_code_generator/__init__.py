@@ -409,7 +409,9 @@ def generate(
         if output_model_type == DataModelType.TypingTypedDict
         else enum_field_as_literal,
         use_one_literal_as_default=use_one_literal_as_default,
-        set_default_enum_member=set_default_enum_member,
+        set_default_enum_member=True
+        if output_model_type == DataModelType.DataclassesDataclass
+        else set_default_enum_member,
         use_subclass_enum=use_subclass_enum,
         strict_nullable=strict_nullable,
         use_generic_container_types=use_generic_container_types,

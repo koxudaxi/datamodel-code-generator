@@ -16,7 +16,16 @@
       "register": "hij",
       "schema": "klm",
       "x-repr": true,
-      "x-abc": true
+      "x-abc": true,
+      "example": "example"
+    },
+    "age": {
+      "type": "integer",
+      "example": 12,
+      "examples": [
+        13,
+        20
+      ]
     }
   }
 }

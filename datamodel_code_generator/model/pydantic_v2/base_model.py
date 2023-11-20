@@ -25,7 +25,7 @@ from datamodel_code_generator.model.pydantic.base_model import (
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.util import model_validator
+from datamodel_code_generator.util import field_validator, model_validator
 
 if TYPE_CHECKING:
     from typing_extensions import Literal
@@ -69,6 +69,17 @@ class DataModelField(DataModelFieldV1):
     }
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
+
+    @field_validator('extras')
+    def validate_extras(cls, values: Any) -> Dict[str, Any]:
+        if not isinstance(values, dict):
+            return values
+        if 'examples' in values:
+            return values
+
+        if 'example' in values:
+            values['examples'] = [values.pop('example')]
+        return values
 
     def process_const(self) -> None:
         if 'const' not in self.extras:

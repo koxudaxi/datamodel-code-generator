@@ -13,16 +13,9 @@ class Extras(BaseModel):
     name: Optional[str] = Field(
         None,
         description='normal key',
-        example='example',
-        field_comment='comment',
-        field_exclude=123,
-        field_invalid_key_2='efg',
+        examples=['example'],
         invalid_key_1='abc',
-        key1=123,
         key2=456,
-        register_='hij',
         repr=True,
-        schema_='klm',
-        x_abc=True,
     )
     age: Optional[int] = Field(None, example=12, examples=[13, 20])
