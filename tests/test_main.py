@@ -6065,8 +6065,8 @@ def test_main_array_field_constraints():
                 EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
             ).read_text()
         )
-        
-        
+
+
 @freeze_time('2019-07-26')
 def test_all_of_use_default():
     with TemporaryDirectory() as output_dir:
