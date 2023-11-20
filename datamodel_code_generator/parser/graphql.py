@@ -333,6 +333,7 @@ class GraphQLParser(Parser):
     def parse_field(
         self,
         field_name: str,
+        alias: str,
         field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
     ) -> DataModelFieldBase:
         final_data_type = DataType(is_optional=True)
@@ -380,6 +381,7 @@ class GraphQLParser(Parser):
             data_type=final_data_type,
             required=required,
             extras=extras,
+            alias=alias,
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
             use_field_description=field.description is not None,
@@ -400,12 +402,12 @@ class GraphQLParser(Parser):
         exclude_field_names: Set[str] = set()
 
         for field_name, field in obj.fields.items():
-            field_name_ = self.model_resolver.get_valid_field_name(
-                field_name, excludes=exclude_field_names, model_type=ModelType.ENUM
+            field_name_, alias = self.model_resolver.get_valid_field_name_and_alias(
+                field_name, excludes=exclude_field_names
             )
             exclude_field_names.add(field_name_)
 
-            data_model_field_type = self.parse_field(field_name_, field)
+            data_model_field_type = self.parse_field(field_name_, alias, field)
             fields.append(data_model_field_type)
 
         fields.append(self._typename_field(obj.name))
