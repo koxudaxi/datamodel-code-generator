@@ -6185,3 +6185,30 @@ def test_main_graphql_field_aliases():
                 EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_additional_imports' / 'output.py'
+            ).read_text()
+        )
