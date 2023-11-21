@@ -33,7 +33,7 @@ jobs:
           key: venv-${{ runner.os }}-codspeed-3.12-v1-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction -E http
+        run: poetry install --no-interaction
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v1
