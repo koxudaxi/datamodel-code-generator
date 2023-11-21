@@ -43,7 +43,11 @@ EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
-pytestmark = pytest.mark.usefixtures('benchmark')
+
+@pytest.fixture(autouse=True)
+@pytest.mark.benchmark
+def benchmark():
+    pass
 
 
 @pytest.fixture(autouse=True)
