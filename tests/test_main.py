@@ -45,9 +45,8 @@ TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
 
 @pytest.fixture(autouse=True)
-@pytest.mark.benchmark
-def benchmark():
-    yield
+def benchmark(request: FixtureRequest):
+    request.applymarker(pytest.mark.benchmark)
 
 
 @pytest.fixture(autouse=True)
