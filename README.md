@@ -268,6 +268,7 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 -  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
 -  JSON/YAML/CSV Data (it will be converted to JSON Schema)
 -  Python dictionary (it will be converted to JSON Schema)
+-  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/))
 
 ## Supported output types
 - [pydantic](https://docs.pydantic.dev/1.10/).BaseModel
