@@ -43,10 +43,7 @@ EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
-
-@pytest.fixture(autouse=True)
-def benchmark(request: FixtureRequest):
-    request.node.add_marker(pytest.mark.benchmark)
+pytestmark = pytest.mark.benchmark
 
 
 @pytest.fixture(autouse=True)
