@@ -83,6 +83,7 @@ pre-commit = "*"
 pytest-xdist = "^3.3.1"
 prance = "*"
 openapi-spec-validator = "*"
+pytest-codspeed = "^2.2.0"
 
 
 [tool.poetry.group.graphql.dependencies]

@@ -205,6 +205,7 @@ def test_target_python_version():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_autodetect():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -268,6 +269,7 @@ def test_main_jsonschema():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_jsonschema_nested_deep():
     with TemporaryDirectory() as output_dir:
         output_init_file: Path = Path(output_dir) / '__init__.py'
@@ -360,6 +362,7 @@ def test_main_jsonschema_external_files():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_jsonschema_multiple_files():
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
@@ -523,6 +526,7 @@ def test_main_yaml():
         )
 
 
+@pytest.mark.benchmark
 def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
     """Test main function on modular file."""
 
@@ -2310,6 +2314,7 @@ def test_main_openapi_use_one_literal_as_default():
     reason='Require Pydantic version 1.9.0 or later ',
 )
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_openapi_enum_models_as_literal_all():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -3536,6 +3541,7 @@ def test_main_jsonschema_special_field_name():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_jsonschema_complex_one_of():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5061,6 +5067,7 @@ def test_main_openapi_default_object(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_dataclass():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5819,6 +5826,7 @@ def test_main_jsonschema_discriminator_literals():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.benchmark
 def test_main_openapi_all_of_with_relative_ref():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
