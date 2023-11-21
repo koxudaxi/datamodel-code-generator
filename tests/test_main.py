@@ -6121,9 +6121,7 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / expected_output / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -6219,9 +6217,7 @@ def test_main_graphql_enums():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
         )
 
 
@@ -6242,7 +6238,5 @@ def test_main_graphql_union():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
         )
