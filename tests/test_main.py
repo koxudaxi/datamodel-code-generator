@@ -6089,8 +6089,21 @@ def test_all_of_use_default():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_graphql_simple_star_wars',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_graphql_simple_star_wars_dataclass',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_graphql_simple_star_wars():
+def test_main_graphql_simple_star_wars(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6101,13 +6114,15 @@ def test_main_graphql_simple_star_wars():
                 str(output_file),
                 '--input-file-type',
                 'graphql',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_graphql_simple_star_wars' / 'output.py'
+                EXPECTED_MAIN_PATH / expected_output / 'output.py'
             ).read_text()
         )
 
