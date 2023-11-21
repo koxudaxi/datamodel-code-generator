@@ -67,6 +67,7 @@ def test_snooper_to_methods_without_pysnooper(mocker) -> None:
     assert snooper_to_methods()(mock) == mock
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_inheritance_forward_ref():
     with TemporaryDirectory() as output_dir:
@@ -89,6 +90,7 @@ def test_main_inheritance_forward_ref():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_inheritance_forward_ref_keep_model_order():
     with TemporaryDirectory() as output_dir:
@@ -114,6 +116,7 @@ def test_main_inheritance_forward_ref_keep_model_order():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main():
     with TemporaryDirectory() as output_dir:
@@ -204,6 +207,7 @@ def test_target_python_version():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_autodetect():
     with TemporaryDirectory() as output_dir:
@@ -267,6 +271,7 @@ def test_main_jsonschema():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_nested_deep():
     with TemporaryDirectory() as output_dir:
@@ -336,6 +341,7 @@ def test_main_jsonschema_nested_skip():
             assert result == path.read_text()
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_external_files():
     with TemporaryDirectory() as output_dir:
@@ -359,6 +365,7 @@ def test_main_jsonschema_external_files():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_multiple_files():
     with TemporaryDirectory() as output_dir:
@@ -502,6 +509,7 @@ def test_main_null_and_array(output_model, expected_output):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_yaml():
     with TemporaryDirectory() as output_dir:
@@ -523,6 +531,7 @@ def test_main_yaml():
         )
 
 
+@pytest.mark.benchmark
 def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
     """Test main function on modular file."""
 
@@ -1023,6 +1032,7 @@ def test_main_with_bad_extra_data():
         assert return_code == Exit.ERROR
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_with_snake_case_field():
     with TemporaryDirectory() as output_dir:
@@ -1045,6 +1055,7 @@ def test_main_with_snake_case_field():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_with_strip_default_none():
     with TemporaryDirectory() as output_dir:
@@ -1211,6 +1222,7 @@ def test_enable_faux_immutability(output_model, expected_output):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_use_default():
     with TemporaryDirectory() as output_dir:
@@ -1231,6 +1243,7 @@ def test_use_default():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_force_optional():
     with TemporaryDirectory() as output_dir:
@@ -1335,6 +1348,7 @@ def test_main_complicated_enum_default_member(output_model, expected_output, opt
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_json_reuse_enum_default_member():
     with TemporaryDirectory() as output_dir:
@@ -1496,6 +1510,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
     person_response = mocker.Mock()
@@ -1522,6 +1537,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
         httpx_get_mock.assert_not_called()
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
     person_response = mocker.Mock()
@@ -1622,6 +1638,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_id():
     with TemporaryDirectory() as output_dir:
@@ -1742,6 +1759,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
         assert result == path.read_text()
 
 
+@pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
     tmpdir_factory: TempdirFactory,
 ) -> None:
@@ -1811,6 +1829,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
     )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_external_definitions():
     with TemporaryDirectory() as output_dir:
@@ -1861,6 +1880,7 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_nested_directory(tmpdir_factory: TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -2583,6 +2603,7 @@ def test_main_space_field_enum_snake_case_field():
             )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_all_of_ref():
     with TemporaryDirectory() as output_dir:
@@ -2651,6 +2672,7 @@ def test_main_combined_array():
             )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_openapi_all_of_required():
     with TemporaryDirectory() as output_dir:
@@ -2674,6 +2696,7 @@ def test_main_openapi_all_of_required():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_openapi_nullable():
     with TemporaryDirectory() as output_dir:
@@ -3277,6 +3300,7 @@ def test_main_disable_appending_item_suffix():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_strict_types():
     with TemporaryDirectory() as output_dir:
@@ -3325,6 +3349,7 @@ def test_main_strict_types_all():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_strict_types_all_with_field_constraints():
     with TemporaryDirectory() as output_dir:
@@ -3512,6 +3537,7 @@ def test_main_jsonschema_special_enum_empty_enum_field_name():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_special_field_name():
     with TemporaryDirectory() as output_dir:
@@ -3558,6 +3584,7 @@ def test_main_jsonschema_complex_one_of():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_complex_any_of():
     with TemporaryDirectory() as output_dir:
@@ -3631,6 +3658,7 @@ def test_main_jsonschema_combine_any_of_object():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_field_include_all_keys():
     with TemporaryDirectory() as output_dir:
@@ -4459,6 +4487,7 @@ def test_external_relative_ref():
             assert result == path.read_text()
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_collapse_root_models():
     with TemporaryDirectory() as output_dir:
