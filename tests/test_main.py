@@ -38,6 +38,7 @@ JSON_DATA_PATH: Path = DATA_PATH / 'json'
 YAML_DATA_PATH: Path = DATA_PATH / 'yaml'
 PYTHON_DATA_PATH: Path = DATA_PATH / 'python'
 CSV_DATA_PATH: Path = DATA_PATH / 'csv'
+GRAPHQL_DATA_PATH: Path = DATA_PATH / 'graphql'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
@@ -6009,5 +6010,125 @@ def test_main_array_field_constraints():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_all_of_use_default():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'all_of_default.json'),
+                '--output',
+                str(output_file),
+                '--use-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_use_default' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_simple_star_wars():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'simple-star-wars.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_simple_star_wars' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_different_types_of_fields():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'different-types-of-fields.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_different_types_of_fields'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_custom_scalar_types():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_scalar_types' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_field_aliases():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'field-aliases.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--aliases',
+                str(GRAPHQL_DATA_PATH / 'field-aliases.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
             ).read_text()
         )

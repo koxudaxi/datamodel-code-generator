@@ -178,6 +178,7 @@ class InputFileType(Enum):
     Yaml = 'yaml'
     Dict = 'dict'
     CSV = 'csv'
+    GraphQL = 'graphql'
 
 
 RAW_DATA_TYPES: List[InputFileType] = [
@@ -185,6 +186,7 @@ RAW_DATA_TYPES: List[InputFileType] = [
     InputFileType.Yaml,
     InputFileType.Dict,
     InputFileType.CSV,
+    InputFileType.GraphQL,
 ]
 
 
@@ -201,6 +203,10 @@ class OpenAPIScope(Enum):
     Paths = 'paths'
     Tags = 'tags'
     Parameters = 'parameters'
+
+
+class GraphQLScope(Enum):
+    Schema = 'schema'
 
 
 class Error(Exception):
@@ -273,6 +279,7 @@ def generate(
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
     openapi_scopes: Optional[List[OpenAPIScope]] = None,
+    graphql_scopes: Optional[List[GraphQLScope]] = None,
     wrap_string_literal: Optional[bool] = None,
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
@@ -329,6 +336,10 @@ def generate(
 
         parser_class: Type[Parser] = OpenAPIParser
         kwargs['openapi_scopes'] = openapi_scopes
+    elif input_file_type == InputFileType.GraphQL:
+        from datamodel_code_generator.parser.graphql import GraphQLParser
+
+        parser_class: Type[Parser] = GraphQLParser
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
