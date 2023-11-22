@@ -6354,6 +6354,8 @@ def test_main_graphql_github_api():
                 str(GRAPHQL_DATA_PATH / 'github-api-types.json'),
                 '--additional-imports',
                 'datetime.datetime,datetime.date',
+                '--aliases',
+                str(GRAPHQL_DATA_PATH / 'github-api-aliases.json'),
             ]
         )
         assert return_code == Exit.OK

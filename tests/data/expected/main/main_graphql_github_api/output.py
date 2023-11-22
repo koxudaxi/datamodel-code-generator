@@ -11255,7 +11255,7 @@ class ProjectV2(Closable, Node, Updatable):
     creator: Optional[Actor] = None
     databaseId: Optional[Int] = None
     field: Optional[ProjectV2FieldConfiguration] = None
-    fields: ProjectV2FieldConfigurationConnection
+    fields_: ProjectV2FieldConfigurationConnection = Field(..., alias='fields')
     id: ID
     items: ProjectV2ItemConnection
     number: Int
@@ -11819,7 +11819,9 @@ class ProjectV2View(Node):
 
     createdAt: DateTime
     databaseId: Optional[Int] = None
-    fields: Optional[ProjectV2FieldConfigurationConnection] = None
+    fields_: Optional[ProjectV2FieldConfigurationConnection] = Field(
+        None, alias='fields'
+    )
     filter: Optional[String] = None
     groupBy: Optional[ProjectV2FieldConnection] = None
     groupByFields: Optional[ProjectV2FieldConfigurationConnection] = None
