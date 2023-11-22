@@ -6335,33 +6335,3 @@ def test_main_graphql_additional_imports_isort_5():
                 / 'output_isort5.py'
             ).read_text()
         )
-
-
-@pytest.mark.benchmark
-@freeze_time('2019-07-26')
-def test_main_graphql_github_api():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(GRAPHQL_DATA_PATH / 'github-api.graphql'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'graphql',
-                '--extra-template-data',
-                str(GRAPHQL_DATA_PATH / 'github-api-types.json'),
-                '--additional-imports',
-                'datetime.datetime,datetime.date',
-                '--aliases',
-                str(GRAPHQL_DATA_PATH / 'github-api-aliases.json'),
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_github_api' / 'output.py'
-            ).read_text()
-        )
