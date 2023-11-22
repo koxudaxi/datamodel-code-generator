@@ -6118,8 +6118,21 @@ def test_all_of_use_default():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_graphql_simple_star_wars',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_graphql_simple_star_wars_dataclass',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_graphql_simple_star_wars():
+def test_main_graphql_simple_star_wars(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6130,14 +6143,14 @@ def test_main_graphql_simple_star_wars():
                 str(output_file),
                 '--input-file-type',
                 'graphql',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_simple_star_wars' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -6213,4 +6226,46 @@ def test_main_graphql_field_aliases():
             == (
                 EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
             ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_enums():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'enums.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_union():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'union.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
         )
