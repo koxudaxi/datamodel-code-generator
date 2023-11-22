@@ -385,6 +385,12 @@ template_options.add_argument(
     action='store_true',
     default=None,
 )
+base_options.add_argument(
+    '--additional-imports',
+    help='Custom imports for output (delimited list input)',
+    type=str,
+    default=None,
+)
 
 # ======================================================================================
 # Options specific to OpenAPI input schemas

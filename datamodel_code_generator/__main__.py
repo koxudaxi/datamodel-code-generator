@@ -196,6 +196,14 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
+    @model_validator(mode='before')
+    def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('additional_imports') is not None:
+            values['additional_imports'] = values.get('additional_imports').split(',')
+        else:
+            values['additional_imports'] = []
+        return values
+
     if PYDANTIC_V2:
 
         @model_validator(mode='after')  # type: ignore
@@ -220,6 +228,7 @@ class Config(BaseModel):
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
     base_class: str = ''
+    additional_imports: Optional[List[str]] = (None,)
     custom_template_dir: Optional[Path] = None
     extra_template_data: Optional[TextIOBase] = None
     validation: bool = False
@@ -390,6 +399,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             output_model_type=config.output_model_type,
             target_python_version=config.target_python_version,
             base_class=config.base_class,
+            additional_imports=config.additional_imports,
             custom_template_dir=config.custom_template_dir,
             validation=config.validation,
             field_constraints=config.field_constraints,

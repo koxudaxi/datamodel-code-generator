@@ -6269,3 +6269,69 @@ def test_main_graphql_union():
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
         )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason='See https://github.com/PyCQA/isort/issues/1600 for example',
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports_isort_4():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort4.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('5.'),
+    reason='See https://github.com/PyCQA/isort/issues/1600 for example',
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports_isort_5():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort5.py'
+            ).read_text()
+        )

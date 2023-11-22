@@ -438,6 +438,7 @@ Template customization:
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
                         later)
+  --additional-imports  Custom imports for output (delimited list input)
 
 OpenAPI-only options:
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
