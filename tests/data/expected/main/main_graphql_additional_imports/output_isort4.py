@@ -12,21 +12,27 @@ from typing_extensions import Literal
 
 from mymodule.myclass import MyCustomPythonClass
 
-# The `Boolean` scalar type represents `true` or `false`.
+"""
+The `Boolean` scalar type represents `true` or `false`.
+"""
 Boolean: TypeAlias = bool
 
 
 Date: TypeAlias = date
 
 
-# DateTime (ISO8601, example: 2020-01-01T10:11:12+00:00)
+"""
+DateTime (ISO8601, example: 2020-01-01T10:11:12+00:00)
+"""
 DateTime: TypeAlias = datetime
 
 
 MyCustomClass: TypeAlias = MyCustomPythonClass
 
 
-# The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+"""
+The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+"""
 String: TypeAlias = str
 
 
