@@ -6229,6 +6229,48 @@ def test_main_graphql_field_aliases():
         )
 
 
+@freeze_time('2019-07-26')
+def test_main_graphql_enums():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'enums.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_union():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'union.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
+        )
+
+
 @pytest.mark.skipif(
     not isort.__version__.startswith('4.'),
     reason='See https://github.com/PyCQA/isort/issues/1600 for example',
