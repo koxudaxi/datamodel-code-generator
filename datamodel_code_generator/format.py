@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from enum import Enum
+from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from warnings import warn
-from importlib import import_module
 
 import black
 import isort
@@ -173,22 +173,28 @@ class CodeFormatter:
         self.custom_formatters_kwargs = custom_formatters_kwargs or {}
         self.custom_formatters = self._check_custom_formatters(custom_formatters)
 
-    def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
+    def _load_custom_formatter(
+        self, custom_formatter_import: str
+    ) -> CustomCodeFormatter:
         import_ = import_module(custom_formatter_import)
 
-        if not hasattr(import_, "CodeFormatter"):
-            raise NameError(f"Custom formatter module `{import_.__name__}` must contains object with name Formatter")
+        if not hasattr(import_, 'CodeFormatter'):
+            raise NameError(
+                f'Custom formatter module `{import_.__name__}` must contains object with name Formatter'
+            )
 
-        formatter_class = import_.__getattribute__("CodeFormatter")
+        formatter_class = import_.__getattribute__('CodeFormatter')
 
         if not issubclass(formatter_class, CustomCodeFormatter):
             raise TypeError(
-                f"The custom module {custom_formatter_import} must inherit from `datamodel-code-generator`"
+                f'The custom module {custom_formatter_import} must inherit from `datamodel-code-generator`'
             )
 
         return formatter_class(formatter_kwargs=self.custom_formatters_kwargs)
 
-    def _check_custom_formatters(self, custom_formatters: Optional[List[str]]) -> List[CustomCodeFormatter]:
+    def _check_custom_formatters(
+        self, custom_formatters: Optional[List[str]]
+    ) -> List[CustomCodeFormatter]:
         if custom_formatters is None:
             return []
 

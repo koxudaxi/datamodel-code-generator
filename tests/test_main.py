@@ -6357,8 +6357,6 @@ def test_main_graphql_custom_formatters():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_graphql_custom_formatters'
-                / 'output.py'
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
             ).read_text()
         )

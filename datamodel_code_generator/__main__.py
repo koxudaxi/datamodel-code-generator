@@ -120,7 +120,9 @@ class Config(BaseModel):
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
 
-    @field_validator('aliases', 'extra_template_data', 'custom_formatters_kwargs', mode='before')
+    @field_validator(
+        'aliases', 'extra_template_data', 'custom_formatters_kwargs', mode='before'
+    )
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
@@ -408,10 +410,14 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             try:
                 custom_formatters_kwargs = json.load(data)
             except json.JSONDecodeError as e:
-                print(f'Unable to load custom_formatters_kwargs mapping: {e}', file=sys.stderr)
+                print(
+                    f'Unable to load custom_formatters_kwargs mapping: {e}',
+                    file=sys.stderr,
+                )
                 return Exit.ERROR
         if not isinstance(custom_formatters_kwargs, dict) or not all(
-            isinstance(k, str) and isinstance(v, str) for k, v in custom_formatters_kwargs.items()
+            isinstance(k, str) and isinstance(v, str)
+            for k, v in custom_formatters_kwargs.items()
         ):
             print(
                 'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
