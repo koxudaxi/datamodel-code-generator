@@ -298,6 +298,8 @@ def generate(
     keep_model_order: bool = False,
     custom_file_header: Optional[str] = None,
     custom_file_header_path: Optional[Path] = None,
+    custom_formatters: Optional[List[str]] = None,
+    custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -452,6 +454,8 @@ def generate(
         capitalise_enum_members=capitalise_enum_members,
         keep_model_order=keep_model_order,
         known_third_party=data_model_types.known_third_party,
+        custom_formatters=custom_formatters,
+        custom_formatters_kwargs=custom_formatters_kwargs,
         **kwargs,
     )
 
