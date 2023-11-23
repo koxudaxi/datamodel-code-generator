@@ -435,8 +435,11 @@ Template customization:
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
                         later)
-  --additional-imports  Custom imports for output (delimited list input)
-
+  --additional-imports  Custom imports for output (delimited list input).
+                        For example "datetime.date,datetime.datetime"
+  --custom-formatters   List of modules with custom formatter (delimited list input).
+  --custom-formatters-kwargs A file with kwargs for custom formatters.
+  
 OpenAPI-only options:
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
