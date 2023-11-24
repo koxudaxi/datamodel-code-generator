@@ -17,13 +17,13 @@ class Error(BaseModel):
     code: str
 
 
-class ModelItem(BaseModel):
+class Model1(BaseModel):
     emails: List[Email]
 
 
-class ModelItem1(BaseModel):
+class Model2(BaseModel):
     errors: List[Error]
 
 
 class Model(BaseModel):
-    __root__: Union[ModelItem, ModelItem1]
+    __root__: Union[Model1, Model2]

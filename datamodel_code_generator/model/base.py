@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    TypeVar,
     Union,
 )
 from warnings import warn
@@ -44,6 +45,8 @@ TEMPLATE_DIR: Path = Path(__file__).parents[0] / 'template'
 
 ALL_MODEL: str = '#all#'
 
+ConstraintsBaseT = TypeVar('ConstraintsBaseT', bound='ConstraintsBase')
+
 
 class ConstraintsBase(_BaseModel):
     unique_items: Optional[bool] = Field(None, alias='uniqueItems')
@@ -61,6 +64,37 @@ class ConstraintsBase(_BaseModel):
     @cached_property
     def has_constraints(self) -> bool:
         return any(v for v in self.dict().values() if v is not None)
+
+    @staticmethod
+    def merge_constraints(
+        a: ConstraintsBaseT, b: ConstraintsBaseT
+    ) -> Optional[ConstraintsBaseT]:
+        constraints_class = None
+        if isinstance(a, ConstraintsBase):  # pragma: no cover
+            root_type_field_constraints = {
+                k: v for k, v in a.dict(by_alias=True).items() if v is not None
+            }
+            constraints_class = a.__class__
+        else:
+            root_type_field_constraints = {}
+
+        if isinstance(b, ConstraintsBase):  # pragma: no cover
+            model_field_constraints = {
+                k: v for k, v in b.dict(by_alias=True).items() if v is not None
+            }
+            constraints_class = constraints_class or b.__class__
+        else:
+            model_field_constraints = {}
+
+        if not issubclass(constraints_class, ConstraintsBase):
+            return None
+
+        return constraints_class.parse_obj(
+            {
+                **root_type_field_constraints,
+                **model_field_constraints,
+            }
+        )
 
 
 class DataModelFieldBase(_BaseModel):

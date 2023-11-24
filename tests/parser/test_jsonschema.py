@@ -360,6 +360,16 @@ def test_parse_default(source_obj, generated_classes):
     assert dump_templates(list(parser.results)) == generated_classes
 
 
+def test_parse_array_schema():
+    parser = JsonSchemaParser('')
+    parser.parse_raw_obj('schema', {'type': 'object', 'properties': {'name': True}}, [])
+    assert (
+        dump_templates(list(parser.results))
+        == """class Schema(BaseModel):
+    name: Optional[Any] = None"""
+    )
+
+
 def test_parse_nested_array():
     parser = JsonSchemaParser(
         DATA_PATH / 'nested_array.json',

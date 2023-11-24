@@ -38,6 +38,7 @@ JSON_DATA_PATH: Path = DATA_PATH / 'json'
 YAML_DATA_PATH: Path = DATA_PATH / 'yaml'
 PYTHON_DATA_PATH: Path = DATA_PATH / 'python'
 CSV_DATA_PATH: Path = DATA_PATH / 'csv'
+GRAPHQL_DATA_PATH: Path = DATA_PATH / 'graphql'
 EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
 
 TIMESTAMP = '1985-10-26T01:21:00-07:00'
@@ -66,6 +67,7 @@ def test_snooper_to_methods_without_pysnooper(mocker) -> None:
     assert snooper_to_methods()(mock) == mock
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_inheritance_forward_ref():
     with TemporaryDirectory() as output_dir:
@@ -88,6 +90,7 @@ def test_main_inheritance_forward_ref():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_inheritance_forward_ref_keep_model_order():
     with TemporaryDirectory() as output_dir:
@@ -113,6 +116,7 @@ def test_main_inheritance_forward_ref_keep_model_order():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main():
     with TemporaryDirectory() as output_dir:
@@ -203,6 +207,7 @@ def test_target_python_version():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_autodetect():
     with TemporaryDirectory() as output_dir:
@@ -266,6 +271,7 @@ def test_main_jsonschema():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_nested_deep():
     with TemporaryDirectory() as output_dir:
@@ -335,6 +341,7 @@ def test_main_jsonschema_nested_skip():
             assert result == path.read_text()
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_external_files():
     with TemporaryDirectory() as output_dir:
@@ -358,6 +365,7 @@ def test_main_jsonschema_external_files():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_multiple_files():
     with TemporaryDirectory() as output_dir:
@@ -501,6 +509,7 @@ def test_main_null_and_array(output_model, expected_output):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_yaml():
     with TemporaryDirectory() as output_dir:
@@ -522,6 +531,7 @@ def test_main_yaml():
         )
 
 
+@pytest.mark.benchmark
 def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
     """Test main function on modular file."""
 
@@ -1022,6 +1032,7 @@ def test_main_with_bad_extra_data():
         assert return_code == Exit.ERROR
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_with_snake_case_field():
     with TemporaryDirectory() as output_dir:
@@ -1044,6 +1055,7 @@ def test_main_with_snake_case_field():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_with_strip_default_none():
     with TemporaryDirectory() as output_dir:
@@ -1210,6 +1222,7 @@ def test_enable_faux_immutability(output_model, expected_output):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_use_default():
     with TemporaryDirectory() as output_dir:
@@ -1230,6 +1243,7 @@ def test_use_default():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_force_optional():
     with TemporaryDirectory() as output_dir:
@@ -1289,29 +1303,52 @@ def test_main_subclass_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_complicated_enum_default_member():
+@pytest.mark.parametrize(
+    'output_model,expected_output,option',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_complicated_enum_default_member',
+            '--set-default-enum-member',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            '--set-default-enum-member',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            None,
+        ),
+    ],
+)
+def test_main_complicated_enum_default_member(output_model, expected_output, option):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
             [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
-                '--output',
-                str(output_file),
-                '--set-default-enum-member',
+                a
+                for a in [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
+                    '--output',
+                    str(output_file),
+                    option,
+                    '--output-model',
+                    output_model,
+                ]
+                if a
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_complicated_enum_default_member'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_json_reuse_enum_default_member():
     with TemporaryDirectory() as output_dir:
@@ -1473,6 +1510,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
     person_response = mocker.Mock()
@@ -1499,6 +1537,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
         httpx_get_mock.assert_not_called()
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
     person_response = mocker.Mock()
@@ -1599,6 +1638,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_id():
     with TemporaryDirectory() as output_dir:
@@ -1719,6 +1759,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
         assert result == path.read_text()
 
 
+@pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
     tmpdir_factory: TempdirFactory,
 ) -> None:
@@ -1788,6 +1829,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
     )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_external_definitions():
     with TemporaryDirectory() as output_dir:
@@ -1838,6 +1880,7 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_nested_directory(tmpdir_factory: TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -2024,7 +2067,20 @@ def test_main_json_capitalise_enum_members_without_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_datetime():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_datetime',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_openapi_datetime_pydantic_v2',
+        ),
+    ],
+)
+def test_main_openapi_datetime(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2035,12 +2091,14 @@ def test_main_openapi_datetime():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_openapi_datetime' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -2560,6 +2618,7 @@ def test_main_space_field_enum_snake_case_field():
             )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_all_of_ref():
     with TemporaryDirectory() as output_dir:
@@ -2628,6 +2687,7 @@ def test_main_combined_array():
             )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_openapi_all_of_required():
     with TemporaryDirectory() as output_dir:
@@ -2651,6 +2711,7 @@ def test_main_openapi_all_of_required():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_openapi_nullable():
     with TemporaryDirectory() as output_dir:
@@ -3254,6 +3315,7 @@ def test_main_disable_appending_item_suffix():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_strict_types():
     with TemporaryDirectory() as output_dir:
@@ -3302,6 +3364,7 @@ def test_main_strict_types_all():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_strict_types_all_with_field_constraints():
     with TemporaryDirectory() as output_dir:
@@ -3489,6 +3552,7 @@ def test_main_jsonschema_special_enum_empty_enum_field_name():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_special_field_name():
     with TemporaryDirectory() as output_dir:
@@ -3535,6 +3599,7 @@ def test_main_jsonschema_complex_one_of():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_complex_any_of():
     with TemporaryDirectory() as output_dir:
@@ -3608,6 +3673,7 @@ def test_main_jsonschema_combine_any_of_object():
         )
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_jsonschema_field_include_all_keys():
     with TemporaryDirectory() as output_dir:
@@ -3631,7 +3697,22 @@ def test_main_jsonschema_field_include_all_keys():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras_field_include_all_keys():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras_field_include_all_keys(
+    output_model, expected_output
+):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3640,6 +3721,8 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
                 '--field-include-all-keys',
@@ -3650,16 +3733,25 @@ def test_main_jsonschema_field_extras_field_include_all_keys():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_jsonschema_field_extras_field_include_all_keys'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras_field_extra_keys():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3668,6 +3760,8 @@ def test_main_jsonschema_field_extras_field_extra_keys():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
                 '--field-extra-keys',
@@ -3680,16 +3774,25 @@ def test_main_jsonschema_field_extras_field_extra_keys():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_jsonschema_field_extras_field_extra_keys'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_extras():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_v2',
+        ),
+    ],
+)
+def test_main_jsonschema_field_extras(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3698,6 +3801,8 @@ def test_main_jsonschema_field_extras():
                 str(JSON_SCHEMA_DATA_PATH / 'extras.json'),
                 '--output',
                 str(output_file),
+                '--output-model',
+                output_model,
                 '--input-file-type',
                 'jsonschema',
             ]
@@ -3705,9 +3810,7 @@ def test_main_jsonschema_field_extras():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema_field_extras' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4399,6 +4502,7 @@ def test_external_relative_ref():
             assert result == path.read_text()
 
 
+@pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_collapse_root_models():
     with TemporaryDirectory() as output_dir:
@@ -6000,4 +6104,297 @@ def test_main_all_of_ref_self():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_array_field_constraints():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'array_field_constraints.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--target-python-version',
+                '3.9',
+                '--field-constraints',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_all_of_use_default():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'all_of_default.json'),
+                '--output',
+                str(output_file),
+                '--use-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_use_default' / 'output.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_graphql_simple_star_wars',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_graphql_simple_star_wars_dataclass',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_simple_star_wars(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'simple-star-wars.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--output-model',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_different_types_of_fields():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'different-types-of-fields.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_different_types_of_fields'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_custom_scalar_types():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_scalar_types' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_field_aliases():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'field-aliases.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--aliases',
+                str(GRAPHQL_DATA_PATH / 'field-aliases.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_enums():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'enums.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_union():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'union.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason='See https://github.com/PyCQA/isort/issues/1600 for example',
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports_isort_4():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort4.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('5.'),
+    reason='See https://github.com/PyCQA/isort/issues/1600 for example',
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports_isort_5():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort5.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_custom_formatters():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--custom-formatters',
+                'tests.data.python.custom_formatters.add_comment',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
+            ).read_text()
         )

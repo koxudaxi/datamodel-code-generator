@@ -5,11 +5,20 @@
 from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv6Address
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel
 
 
-class Addr(BaseModel):
-    ipv4Addr: Optional[IPv4Address] = None
+class Addr1(BaseModel):
+    ipv4Addr: IPv4Address
     ipv6Addr: Optional[IPv6Address] = None
+
+
+class Addr2(BaseModel):
+    ipv4Addr: Optional[IPv4Address] = None
+    ipv6Addr: IPv6Address
+
+
+class Addr(BaseModel):
+    __root__: Union[Addr1, Addr2]
