@@ -10,11 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/development-contributing/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/custom-formatters/">
       
       
-        <link rel="prev" href="../pyproject_toml/">
+        <link rel="prev" href="../custom_template/">
       
+      
+        <link rel="next" href="../using_as_module/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -22,7 +24,7 @@
     
     
       
-        <title>Development-Contributing - datamodel-code-generator</title>
+        <title>Custom formatters - datamodel-code-generator</title>
       
     
     
@@ -73,7 +75,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#development" class="md-skip">
+        <a href="#custom-code-formatters" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Development-Contributing
+              Custom formatters
             
           </span>
         </div>
@@ -260,18 +262,20 @@
       
   
   
+    
+  
   
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -285,7 +289,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Usage
@@ -416,9 +420,29 @@
                 
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../custom-formatters/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Custom formatters
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -427,6 +451,35 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -523,18 +576,9 @@
       
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../development-contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -543,7 +587,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -568,6 +611,23 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -584,38 +644,21 @@
   
 
 
-<h1 id="development">Development</h1>
-<p>Install the package in editable mode:</p>
-<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:koxudaxi/datamodel-code-generator.git
-$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>datamodel-code-generator
+<h1 id="custom-code-formatters">Custom Code Formatters</h1>
+<p>New features of the <code>datamodel-code-generator</code> it is custom code formatters.</p>
+<h2 id="usage">Usage</h2>
+<p>To use the <code>--custom-formatters</code> option, you'll need to pass the module with your formatter. For example</p>
+<p><strong>your_module.py</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">datamodel_code_generator.format</span> <span class="kn">import</span> <span class="n">CustomCodeFormatter</span>
+
+<span class="k">class</span> <span class="nc">CodeFormatter</span><span class="p">(</span><span class="n">CustomCodeFormatter</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># processed code</span>
+        <span class="k">return</span> <span class="o">...</span>       
 </code></pre></div>
 
-<h1 id="contribute">Contribute</h1>
-<p>We are waiting for your contributions to <code>datamodel-code-generator</code>.</p>
-<h2 id="how-to-contribute">How to contribute</h2>
-<div class="codehilite"><pre><span></span><code><span class="c1">## 1. Clone your fork repository</span>
-$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:&lt;your<span class="w"> </span>username&gt;/datamodel-code-generator.git
-$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>datamodel-code-generator
-
-<span class="c1">## 2. Install [poetry](https://github.com/python-poetry/poetry)</span>
-$<span class="w"> </span>curl<span class="w"> </span>-sSL<span class="w"> </span>https://install.python-poetry.org<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-<span class="w"> </span>
-
-<span class="c1">## 3. Install dependencies</span>
-$<span class="w"> </span>poetry<span class="w"> </span>install
-
-<span class="c1">## 4. Create new branch and rewrite code.</span>
-$<span class="w"> </span>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>new-branch
-
-<span class="c1">## 5. Run unittest (you should pass all test and coverage should be 100%)</span>
-$<span class="w"> </span>poetry<span class="w"> </span>run<span class="w"> </span>./scripts/test.sh
-
-<span class="c1">## 6. Format code</span>
-$<span class="w"> </span>poetry<span class="w"> </span>run<span class="w"> </span>./scripts/format.sh
-
-<span class="c1">## 7. Check lint (mypy)</span>
-$<span class="w"> </span>poetry<span class="w"> </span>run<span class="w"> </span>./scripts/lint.sh
-
-<span class="c1">## 8. Commit and Push...</span>
+<p>and run the following command</p>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span><span class="o">{</span>your_input_file<span class="o">}</span><span class="w"> </span>--output<span class="w"> </span><span class="o">{</span>your_output_file<span class="o">}</span><span class="w"> </span>--custom-formatters<span class="w"> </span><span class="s2">&quot;{path_to_your_module}.your_module&quot;</span>
 </code></pre></div>
 
 

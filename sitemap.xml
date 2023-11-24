@@ -6,6 +6,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://koxudaxi.github.io/datamodel-code-generator/custom-formatters/</loc>
+         <lastmod>2023-11-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://koxudaxi.github.io/datamodel-code-generator/custom_template/</loc>
          <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
