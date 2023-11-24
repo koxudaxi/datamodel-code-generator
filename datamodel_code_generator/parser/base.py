@@ -946,7 +946,12 @@ class Parser(ABC):
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-
+                        if isinstance(
+                            root_type_field, pydantic_model.DataModelField
+                        ) and not model_field.extras.get('discriminator'):  # no: pragma
+                            discriminator = root_type_field.extras.get('discriminator')
+                            if discriminator:  # no: pragma
+                                model_field.extras['discriminator'] = discriminator
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
 

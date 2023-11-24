@@ -5039,26 +5039,46 @@ def test_main_openapi_discriminator(input, output):
 
 
 @freeze_time('2023-07-27')
-def test_main_openapi_discriminator_in_array():
+@pytest.mark.parametrize(
+    'kind,option, expected',
+    [
+        (
+            'anyOf',
+            '--collapse-root-models',
+            'main_openapi_discriminator_in_array_collapse_root_models',
+        ),
+        (
+            'oneOf',
+            '--collapse-root-models',
+            'main_openapi_discriminator_in_array_collapse_root_models',
+        ),
+        ('anyOf', None, 'main_openapi_discriminator_in_array'),
+        ('oneOf', None, 'main_openapi_discriminator_in_array'),
+    ],
+)
+def test_main_openapi_discriminator_in_array(kind, option, expected):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
+        input_file = f'discriminator_in_array_{kind.lower()}.yaml'
         return_code: Exit = main(
             [
-                '--input',
-                str(OPEN_API_DATA_PATH / 'discriminator_in_array.yaml'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'openapi',
+                a
+                for a in [
+                    '--input',
+                    str(OPEN_API_DATA_PATH / input_file),
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                    option,
+                ]
+                if a
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_openapi_discriminator_in_array' / 'output.py'
-            ).read_text()
-        )
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / expected / 'output.py'
+        ).read_text().replace('discriminator_in_array.yaml', input_file)
 
 
 @freeze_time('2019-07-26')

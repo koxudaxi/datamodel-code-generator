@@ -1080,12 +1080,16 @@ class JsonSchemaParser(Parser):
                 name, item, get_special_path('array', path)
             ).data_type
         elif item.anyOf:
+            if item.discriminator:
+                return self.parse_root_type(name, item, path)
             return self.data_type(
                 data_types=self.parse_any_of(
                     name, item, get_special_path('anyOf', path)
                 )
             )
         elif item.oneOf:
+            if item.discriminator:
+                return self.parse_root_type(name, item, path)
             return self.data_type(
                 data_types=self.parse_one_of(
                     name, item, get_special_path('oneOf', path)
@@ -1201,7 +1205,6 @@ class JsonSchemaParser(Parser):
             data_types.append(
                 self.parse_enum(name, obj, get_special_path('enum', path))
             )
-
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
             default=obj.default,

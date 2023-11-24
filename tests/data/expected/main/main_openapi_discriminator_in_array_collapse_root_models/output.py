@@ -30,11 +30,7 @@ class UpdateObjectRequest(ObjectBase):
     type: Literal['type3']
 
 
-class MyArray(BaseModel):
-    __root__: Union[ObjectBase, CreateObjectRequest, UpdateObjectRequest] = Field(
+class Demo(BaseModel):
+    myArray: List[Union[ObjectBase, CreateObjectRequest, UpdateObjectRequest]] = Field(
         ..., discriminator='type'
     )
-
-
-class Demo(BaseModel):
-    myArray: List[MyArray]
