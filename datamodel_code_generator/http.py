@@ -6,7 +6,7 @@ try:
     import httpx
 except ImportError:  # pragma: no cover
     raise Exception(
-        'Please run $pip install datamodel-code-generator[http] to resolve URL Reference'
+        "Please run `$pip install 'datamodel-code-generator[http]`' to resolve URL Reference"
     )
 
 

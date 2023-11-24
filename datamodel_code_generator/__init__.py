@@ -27,7 +27,6 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-import pysnooper
 import yaml
 
 from datamodel_code_generator.format import PythonVersion
@@ -38,7 +37,12 @@ from datamodel_code_generator.util import SafeLoader  # type: ignore
 
 T = TypeVar('T')
 
-pysnooper.tracer.DISABLED = True
+try:
+    import pysnooper
+
+    pysnooper.tracer.DISABLED = True
+except ImportError:  # pragma: no cover
+    pysnooper = None
 
 DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
 
@@ -73,6 +77,11 @@ else:
 
 
 def enable_debug_message() -> None:  # pragma: no cover
+    if not pysnooper:
+        raise Exception(
+            "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
+        )
+
     pysnooper.tracer.DISABLED = False
 
 
@@ -88,6 +97,8 @@ def snooper_to_methods(  # type: ignore
     max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
+        if not pysnooper:
+            return cls
         import inspect
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
@@ -167,6 +178,7 @@ class InputFileType(Enum):
     Yaml = 'yaml'
     Dict = 'dict'
     CSV = 'csv'
+    GraphQL = 'graphql'
 
 
 RAW_DATA_TYPES: List[InputFileType] = [
@@ -174,6 +186,7 @@ RAW_DATA_TYPES: List[InputFileType] = [
     InputFileType.Yaml,
     InputFileType.Dict,
     InputFileType.CSV,
+    InputFileType.GraphQL,
 ]
 
 
@@ -190,6 +203,10 @@ class OpenAPIScope(Enum):
     Paths = 'paths'
     Tags = 'tags'
     Parameters = 'parameters'
+
+
+class GraphQLScope(Enum):
+    Schema = 'schema'
 
 
 class Error(Exception):
@@ -262,6 +279,7 @@ def generate(
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
     openapi_scopes: Optional[List[OpenAPIScope]] = None,
+    graphql_scopes: Optional[List[GraphQLScope]] = None,
     wrap_string_literal: Optional[bool] = None,
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
@@ -280,6 +298,8 @@ def generate(
     keep_model_order: bool = False,
     custom_file_header: Optional[str] = None,
     custom_file_header_path: Optional[Path] = None,
+    custom_formatters: Optional[List[str]] = None,
+    custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -318,6 +338,10 @@ def generate(
 
         parser_class: Type[Parser] = OpenAPIParser
         kwargs['openapi_scopes'] = openapi_scopes
+    elif input_file_type == InputFileType.GraphQL:
+        from datamodel_code_generator.parser.graphql import GraphQLParser
+
+        parser_class: Type[Parser] = GraphQLParser
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
@@ -398,7 +422,9 @@ def generate(
         if output_model_type == DataModelType.TypingTypedDict
         else enum_field_as_literal,
         use_one_literal_as_default=use_one_literal_as_default,
-        set_default_enum_member=set_default_enum_member,
+        set_default_enum_member=True
+        if output_model_type == DataModelType.DataclassesDataclass
+        else set_default_enum_member,
         use_subclass_enum=use_subclass_enum,
         strict_nullable=strict_nullable,
         use_generic_container_types=use_generic_container_types,
@@ -428,6 +454,8 @@ def generate(
         capitalise_enum_members=capitalise_enum_members,
         keep_model_order=keep_model_order,
         known_third_party=data_model_types.known_third_party,
+        custom_formatters=custom_formatters,
+        custom_formatters_kwargs=custom_formatters_kwargs,
         **kwargs,
     )
 

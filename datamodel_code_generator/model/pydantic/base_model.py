@@ -204,6 +204,12 @@ class DataModelField(DataModelFieldBase):
             return None
         return f'Annotated[{self.type_hint}, {str(self)}]'
 
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        if self.field:
+            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
+        return super().imports
+
 
 class BaseModelBase(DataModel, ABC):
     def __init__(
@@ -237,12 +243,6 @@ class BaseModelBase(DataModel, ABC):
             default=default,
             nullable=nullable,
         )
-
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        if any(f for f in self.fields if f.field):
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
 
     @cached_property
     def template_file_path(self) -> Path:

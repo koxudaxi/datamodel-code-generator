@@ -7,9 +7,11 @@ This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) mod
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/project/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
+[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Pydantic v1](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json)](https://pydantic.dev)
+[![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 
 ## Sponsors
@@ -265,6 +267,7 @@ These OSS projects use datamodel-code-generator to generate many models. See the
 -  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
 -  JSON/YAML/CSV Data (it will be converted to JSON Schema)
 -  Python dictionary (it will be converted to JSON Schema)
+-  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/))
 
 ## Supported output types
 - [pydantic](https://docs.pydantic.dev/1.10/).BaseModel
@@ -282,7 +285,7 @@ $ pip install datamodel-code-generator
 ### `http` extra option
 If you want to resolve `$ref` for remote files then you should specify `http` extra option.
 ```bash
-$ pip install datamodel-code-generator[http]
+$ pip install 'datamodel-code-generator[http]'
 ```
 
 ### Docker Image
@@ -432,7 +435,11 @@ Template customization:
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
                         later)
-
+  --additional-imports  Custom imports for output (delimited list input).
+                        For example "datetime.date,datetime.datetime"
+  --custom-formatters   List of modules with custom formatter (delimited list input).
+  --custom-formatters-kwargs A file with kwargs for custom formatters.
+  
 OpenAPI-only options:
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
@@ -440,10 +447,12 @@ OpenAPI-only options:
                         OpenAPI)
   --use-operation-id-as-name
                         use operation id of OpenAPI as class names of models
-  --validation          Enable validation (Only OpenAPI)
+  --validation          Deprecated: Enable validation (Only OpenAPI). this
+                        option is deprecated. it will be removed in future
+                        releases
 
 General options:
-  --debug               show debug message
+  --debug               show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
   --no-color            disable colorized output
   --version             show version

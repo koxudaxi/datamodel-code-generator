@@ -188,9 +188,9 @@ class JsonSchemaObject(BaseModel):
     __extra_key__: str = SPECIAL_PATH_FORMAT.format('extras')
 
     @model_validator(mode='before')
-    def validate_exclusive_maximum_and_exclusive_minimum(
-        cls, values: Dict[str, Any]
-    ) -> Any:
+    def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:
+        if not isinstance(values, dict):
+            return values
         exclusive_maximum: Union[float, bool, None] = values.get('exclusiveMaximum')
         exclusive_minimum: Union[float, bool, None] = values.get('exclusiveMinimum')
 
@@ -422,6 +422,8 @@ class JsonSchemaParser(Parser):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -485,6 +487,8 @@ class JsonSchemaParser(Parser):
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
             known_third_party=known_third_party,
+            custom_formatters=custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -615,45 +619,95 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[name]['title'] = obj.title
 
-    def parse_any_of(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
+    def _deep_merge(
+        self, dict1: Dict[Any, Any], dict2: Dict[Any, Any]
+    ) -> Dict[Any, Any]:
+        result = dict1.copy()
+        for key, value in dict2.items():
+            if key in result:
+                if isinstance(result[key], dict) and isinstance(value, dict):
+                    result[key] = self._deep_merge(result[key], value)
+                    continue
+                elif isinstance(result[key], list) and isinstance(value, list):
+                    result[key] = result[key] + value
+                    continue
+            result[key] = value
+        return result
+
+    def parse_combined_schema(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: List[str],
+        target_attribute_name: str,
     ) -> List[DataType]:
-        data_types = self.parse_list_item(name, obj.anyOf, path, obj)
-        if not obj.properties and not obj.required:
-            return data_types
+        base_object = obj.dict(
+            exclude={target_attribute_name}, exclude_unset=True, by_alias=True
+        )
+        combined_schemas: List[JsonSchemaObject] = []
+        refs = []
+        for index, target_attribute in enumerate(
+            getattr(obj, target_attribute_name, [])
+        ):
+            if target_attribute.ref:
+                combined_schemas.append(target_attribute)
+                refs.append(index)
+                # TODO: support partial ref
+                # {
+                #   "type": "integer",
+                #   "oneOf": [
+                #     { "minimum": 5 },
+                #     { "$ref": "#/definitions/positive" }
+                #   ],
+                #    "definitions": {
+                #     "positive": {
+                #       "minimum": 0,
+                #       "exclusiveMinimum": true
+                #     }
+                #    }
+                # }
+            else:
+                combined_schemas.append(
+                    JsonSchemaObject.parse_obj(
+                        self._deep_merge(
+                            base_object,
+                            target_attribute.dict(exclude_unset=True, by_alias=True),
+                        )
+                    )
+                )
+
+        parsed_schemas = self.parse_list_item(
+            name,
+            combined_schemas,
+            path,
+            obj,
+            singular_name=False,
+        )
+        common_path_keyword = f'{target_attribute_name}Common'
         return [
             self._parse_object_common_part(
                 name,
                 obj,
-                [*get_special_path('anyOfCommon', path), str(i)],
+                [*get_special_path(common_path_keyword, path), str(i)],
                 ignore_duplicate_model=True,
                 fields=[],
                 base_classes=[d.reference],
                 required=[],
             )
-            for i, d in enumerate(data_types)
-            if d.reference
+            if i in refs and d.reference
+            else d
+            for i, d in enumerate(parsed_schemas)
         ]
+
+    def parse_any_of(
+        self, name: str, obj: JsonSchemaObject, path: List[str]
+    ) -> List[DataType]:
+        return self.parse_combined_schema(name, obj, path, 'anyOf')
 
     def parse_one_of(
         self, name: str, obj: JsonSchemaObject, path: List[str]
     ) -> List[DataType]:
-        data_types = self.parse_list_item(name, obj.oneOf, path, obj)
-        if not obj.properties and not obj.required:
-            return data_types
-        return [
-            self._parse_object_common_part(
-                name,
-                obj,
-                [*get_special_path('oneOfCommon', path), str(i)],
-                ignore_duplicate_model=True,
-                fields=[],
-                base_classes=[d.reference],
-                required=[],
-            )
-            for i, d in enumerate(data_types)
-            if d.reference
-        ]
+        return self.parse_combined_schema(name, obj, path, 'oneOf')
 
     def _parse_object_common_part(
         self,
@@ -678,13 +732,23 @@ class JsonSchemaParser(Parser):
                 return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
+                if self.force_optional_for_required_fields or (
+                    self.apply_default_values_for_required_fields and field.has_default
+                ):
+                    continue
                 if (field.original_name or field.name) in required:
                     field.required = True
         if obj.required:
             field_name_to_field = {f.original_name or f.name: f for f in fields}
             for required_ in obj.required:
                 if required_ in field_name_to_field:
-                    field_name_to_field[required_].required = True
+                    field = field_name_to_field[required_]
+                    if self.force_optional_for_required_fields or (
+                        self.apply_default_values_for_required_fields
+                        and field.has_default
+                    ):
+                        continue
+                    field.required = True
                 else:
                     fields.append(
                         self.data_model_field_type(
@@ -745,12 +809,14 @@ class JsonSchemaParser(Parser):
                     union_models,
                 )
                 if all_of_item.anyOf:
+                    self.model_resolver.add(path, name, class_name=True, loaded=True)
                     union_models.extend(
                         d.reference
                         for d in self.parse_any_of(name, all_of_item, path)
                         if d.reference
                     )
                 if all_of_item.oneOf:
+                    self.model_resolver.add(path, name, class_name=True, loaded=True)
                     union_models.extend(
                         d.reference
                         for d in self.parse_one_of(name, all_of_item, path)
@@ -1013,6 +1079,13 @@ class JsonSchemaParser(Parser):
             return self.parse_array_fields(
                 name, item, get_special_path('array', path)
             ).data_type
+        elif (
+            item.discriminator
+            and parent
+            and parent.is_array
+            and (item.oneOf or item.anyOf)
+        ):
+            return self.parse_root_type(name, item, path)
         elif item.anyOf:
             return self.data_type(
                 data_types=self.parse_any_of(
@@ -1027,6 +1100,7 @@ class JsonSchemaParser(Parser):
             )
         elif item.allOf:
             all_of_path = get_special_path('allOf', path)
+            all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
             return self.parse_all_of(
                 self.model_resolver.add(
                     all_of_path, name, singular_name=singular_name, class_name=True
@@ -1134,7 +1208,6 @@ class JsonSchemaParser(Parser):
             data_types.append(
                 self.parse_enum(name, obj, get_special_path('enum', path))
             )
-
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
             default=obj.default,
@@ -1205,6 +1278,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: List[str],
     ) -> DataType:
+        reference: Optional[Reference] = None
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
         elif obj.custom_type_path:
@@ -1212,14 +1286,16 @@ class JsonSchemaParser(Parser):
                 obj.custom_type_path, is_custom_type=True
             )
         elif obj.anyOf or obj.oneOf:
-            object_path = [*path, name]
+            reference = self.model_resolver.add(
+                path, name, loaded=True, class_name=True
+            )
             if obj.anyOf:
                 data_types: List[DataType] = self.parse_any_of(
-                    name, obj, get_special_path('anyOf', object_path)
+                    name, obj, get_special_path('anyOf', path)
                 )
             else:
                 data_types = self.parse_one_of(
-                    name, obj, get_special_path('oneOf', object_path)
+                    name, obj, get_special_path('oneOf', path)
                 )
 
             if len(data_types) > 1:
@@ -1249,7 +1325,10 @@ class JsonSchemaParser(Parser):
             )
         if self.use_title_as_name and obj.title:
             name = obj.title
-        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        if not reference:
+            reference = self.model_resolver.add(
+                path, name, loaded=True, class_name=True
+            )
         self.set_title(name, obj)
         self.set_additional_properties(name, obj)
         data_model_root_type = self.data_model_root_type(

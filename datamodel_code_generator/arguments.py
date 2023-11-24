@@ -385,6 +385,23 @@ template_options.add_argument(
     action='store_true',
     default=None,
 )
+base_options.add_argument(
+    '--additional-imports',
+    help='Custom imports for output (delimited list input). For example "datetime.date,datetime.datetime"',
+    type=str,
+    default=None,
+)
+base_options.add_argument(
+    '--custom-formatters',
+    help='List of modules with custom formatter (delimited list input).',
+    type=str,
+    default=None,
+)
+template_options.add_argument(
+    '--custom-formatters-kwargs',
+    help='A file with kwargs for custom formatters.',
+    type=FileType('rt'),
+)
 
 # ======================================================================================
 # Options specific to OpenAPI input schemas
@@ -410,7 +427,8 @@ openapi_options.add_argument(
 )
 openapi_options.add_argument(
     '--validation',
-    help='Enable validation (Only OpenAPI)',
+    help='Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future '
+    'releases',
     action='store_true',
     default=None,
 )
@@ -420,7 +438,7 @@ openapi_options.add_argument(
 # ======================================================================================
 general_options.add_argument(
     '--debug',
-    help='show debug message',
+    help='show debug message (require "debug". `$ pip install \'datamodel-code-generator[debug]\'`)',
     action='store_true',
     default=None,
 )

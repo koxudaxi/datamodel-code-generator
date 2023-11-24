@@ -58,7 +58,7 @@ def get_special_path(keyword: str, path: List[str]) -> List[str]:
 escape_characters = str.maketrans(
     {
         '\\': r'\\',
-        "'": r"\'",
+        "'": r'\'',
         '\b': r'\b',
         '\f': r'\f',
         '\n': r'\n',
@@ -248,7 +248,7 @@ T = TypeVar('T')
 
 def get_most_of_parent(value: Any, type_: Optional[Type[T]] = None) -> Optional[T]:
     if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
-        return get_most_of_parent(value.parent)
+        return get_most_of_parent(value.parent, type_)
     return value
 
 
@@ -386,6 +386,8 @@ class Parser(ABC):
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -411,12 +413,12 @@ class Parser(ABC):
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
         self.strip_default_none: bool = strip_default_none
-        self.apply_default_values_for_required_fields: bool = (
-            apply_default_values_for_required_fields
-        )
-        self.force_optional_for_required_fields: bool = (
-            force_optional_for_required_fields
-        )
+        self.apply_default_values_for_required_fields: (
+            bool
+        ) = apply_default_values_for_required_fields
+        self.force_optional_for_required_fields: (
+            bool
+        ) = force_optional_for_required_fields
         self.use_schema_description: bool = use_schema_description
         self.use_field_description: bool = use_field_description
         self.use_default_kwarg: bool = use_default_kwarg
@@ -457,9 +459,9 @@ class Parser(ABC):
 
         self.source: Union[str, Path, List[Path], ParseResult] = source
         self.custom_template_dir = custom_template_dir
-        self.extra_template_data: DefaultDict[
-            str, Any
-        ] = extra_template_data or defaultdict(dict)
+        self.extra_template_data: DefaultDict[str, Any] = (
+            extra_template_data or defaultdict(dict)
+        )
 
         if allow_population_by_field_name:
             self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
@@ -502,6 +504,8 @@ class Parser(ABC):
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
         self.known_third_party = known_third_party
+        self.custom_formatter = custom_formatters
+        self.custom_formatters_kwargs = custom_formatters_kwargs
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -914,7 +918,7 @@ class Parser(ABC):
                         and any(
                             d
                             for d in model_field.data_type.all_data_types
-                            if d.is_dict or d.is_list or d.is_union
+                            if d.is_dict or d.is_union
                         )
                     ):
                         continue
@@ -924,31 +928,33 @@ class Parser(ABC):
                     if isinstance(data_type.parent, self.data_model_field_type):
                         # for field
                         # override empty field by root-type field
-                        model_field.extras = dict(
-                            root_type_field.extras, **model_field.extras
-                        )
+                        model_field.extras = {
+                            **root_type_field.extras,
+                            **model_field.extras,
+                        }
                         model_field.process_const()
 
                         if self.field_constraints:
-                            if isinstance(
-                                root_type_field.constraints, ConstraintsBase
-                            ):  # pragma: no cover
-                                model_field.constraints = root_type_field.constraints.copy(
-                                    update={
-                                        k: v
-                                        for k, v in model_field.constraints.dict().items()
-                                        if v is not None
-                                    }
-                                    if isinstance(
-                                        model_field.constraints, ConstraintsBase
-                                    )
-                                    else {}
-                                )
-                        else:
-                            pass
-                            # skip function type-hint kwargs overriding
+                            model_field.constraints = ConstraintsBase.merge_constraints(
+                                root_type_field.constraints, model_field.constraints
+                            )
 
                         data_type.parent.data_type = copied_data_type
+
+                    elif data_type.parent.is_list:
+                        if self.field_constraints:
+                            model_field.constraints = ConstraintsBase.merge_constraints(
+                                root_type_field.constraints, model_field.constraints
+                            )
+                        if isinstance(
+                            root_type_field, pydantic_model.DataModelField
+                        ) and not model_field.extras.get('discriminator'):  # no: pragma
+                            discriminator = root_type_field.extras.get('discriminator')
+                            if discriminator:  # no: pragma
+                                model_field.extras['discriminator'] = discriminator
+                        data_type.parent.data_types.remove(data_type)
+                        data_type.parent.data_types.append(copied_data_type)
+
                     elif isinstance(data_type.parent, DataType):
                         # for data_type
                         data_type_id = id(data_type)
@@ -1073,9 +1079,10 @@ class Parser(ABC):
         model_class_name_baseclasses: Dict[DataModel, Tuple[str, Set[str]]] = {}
         for model in models:
             class_name = model.class_name
-            model_class_name_baseclasses[model] = class_name, {
-                b.type_hint for b in model.base_classes if b.reference
-            } - {class_name}
+            model_class_name_baseclasses[model] = (
+                class_name,
+                {b.type_hint for b in model.base_classes if b.reference} - {class_name},
+            )
 
         changed: bool = True
         while changed:
@@ -1145,6 +1152,8 @@ class Parser(ABC):
                 self.wrap_string_literal,
                 skip_string_normalization=not self.use_double_quotes,
                 known_third_party=self.known_third_party,
+                custom_formatters=self.custom_formatter,
+                custom_formatters_kwargs=self.custom_formatters_kwargs,
             )
         else:
             code_formatter = None
@@ -1172,9 +1181,7 @@ class Parser(ABC):
         module_to_import: Dict[Tuple[str, ...], Imports] = {}
 
         previous_module = ()  # type: Tuple[str, ...]
-        for module, models in (
-            (k, [*v]) for k, v in grouped_models
-        ):  # type: Tuple[str, ...], List[DataModel]
+        for module, models in ((k, [*v]) for k, v in grouped_models):  # type: Tuple[str, ...], List[DataModel]
             for model in models:
                 model_to_module_models[model] = module, models
             self.__delete_duplicate_models(models)

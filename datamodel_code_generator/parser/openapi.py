@@ -23,6 +23,7 @@ from typing import (
     Union,
 )
 from urllib.parse import ParseResult
+from warnings import warn
 
 from pydantic import Field
 
@@ -217,6 +218,8 @@ class OpenAPIParser(JsonSchemaParser):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             source=source,
@@ -280,6 +283,8 @@ class OpenAPIParser(JsonSchemaParser):
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
             known_third_party=known_third_party,
+            custom_formatters=custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -300,14 +305,6 @@ class OpenAPIParser(JsonSchemaParser):
             obj.type = [obj.type, 'null']
 
         return super().get_data_type(obj)
-
-    def parse_one_of(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
-    ) -> List[DataType]:
-        data_types = super().parse_one_of(name, obj, path)
-        if obj.nullable and self.strict_nullable:
-            data_types.append(DataType(type='None'))
-        return data_types
 
     def resolve_object(
         self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]
@@ -550,13 +547,27 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_raw(self) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             if self.validation:
-                from prance import BaseParser
-
-                BaseParser(
-                    spec_string=source.text,
-                    backend='openapi-spec-validator',
-                    encoding=self.encoding,
+                warn(
+                    'Deprecated: `--validation` option is deprecated. the option will be removed in a future '
+                    'release. please use another tool to validate OpenAPI.\n'
                 )
+
+                try:
+                    from prance import BaseParser
+
+                    BaseParser(
+                        spec_string=source.text,
+                        backend='openapi-spec-validator',
+                        encoding=self.encoding,
+                    )
+                except ImportError:  # pragma: no cover
+                    warn(
+                        'Warning: Validation was skipped for OpenAPI. `prance` or `openapi-spec-validator` are not '
+                        'installed.\n'
+                        'To use --validation option after datamodel-code-generator 0.24.0, Please run `$pip install '
+                        "'datamodel-code-generator[validation]'`.\n"
+                    )
+
             specification: Dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
             schemas: Dict[Any, Any] = specification.get('components', {}).get(

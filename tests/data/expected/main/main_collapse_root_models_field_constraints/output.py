@@ -17,16 +17,6 @@ class Users(BaseModel):
     __root__: List[str]
 
 
-class FileHash(BaseModel):
-    __root__: str = Field(
-        ...,
-        description='For file',
-        max_length=32,
-        min_length=32,
-        regex='^[a-fA-F\\d]{32}$',
-    )
-
-
 class FileRequest(BaseModel):
     file_hash: str = Field(
         ...,
@@ -48,4 +38,6 @@ class ImageRequest(BaseModel):
 
 
 class FileHashes(BaseModel):
-    __root__: List[FileHash]
+    __root__: List[str] = Field(
+        ..., max_length=32, min_length=32, regex='^[a-fA-F\\d]{32}$'
+    )
