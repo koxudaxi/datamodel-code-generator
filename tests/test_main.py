@@ -2067,7 +2067,20 @@ def test_main_json_capitalise_enum_members_without_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_datetime():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_datetime',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_openapi_datetime_pydantic_v2',
+        ),
+    ],
+)
+def test_main_openapi_datetime(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2078,12 +2091,14 @@ def test_main_openapi_datetime():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_openapi_datetime' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
