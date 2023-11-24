@@ -6335,3 +6335,28 @@ def test_main_graphql_additional_imports_isort_5():
                 / 'output_isort5.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_custom_formatters():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--custom-formatters',
+                'tests.data.python.custom_formatters.add_comment',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
+            ).read_text()
+        )
