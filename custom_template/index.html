@@ -667,47 +667,43 @@
 This option allows you to provide a directory containing Jinja2 templates for customizing the generated code. In this document, we'll explore how to use this option and provide an example to help you understand its usage.</p>
 <h2 id="usage">Usage</h2>
 <p>To use the <code>--custom-template-dir</code> option, you'll need to pass the directory path containing your custom templates as an argument. The command will look like this:</p>
-<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span><span class="o">{</span>your_input_file<span class="o">}</span><span class="w"> </span>--output<span class="w"> </span><span class="o">{</span>your_output_file<span class="o">}</span><span class="w"> </span>--custom-template-dir<span class="w"> </span><span class="o">{</span>your_custom_template_directory<span class="o">}</span>
-</code></pre></div>
-
-<p>Replace {your_input_file}, {your_output_file}, and {your_custom_template_directory} with the appropriate paths.</p>
+<p><div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span><span class="o">{</span>your_input_file<span class="o">}</span><span class="w"> </span>--output<span class="w"> </span><span class="o">{</span>your_output_file<span class="o">}</span><span class="w"> </span>--custom-template-dir<span class="w"> </span><span class="o">{</span>your_custom_template_directory<span class="o">}</span>
+</span></code></pre></div>
+Replace {your_input_file}, {your_output_file}, and {your_custom_template_directory} with the appropriate paths.</p>
 <h2 id="example">Example</h2>
 <p>Let's say you want to generate a custom Python data model from a JSON Schema file called person.json. You want the generated data model to include a custom comment at the top of the file. To achieve this, you can create a custom template using Jinja2.</p>
 <p>First, create a directory called <code>custom_templates</code> in your project directory. Inside this folder, create another folder called pydantic. Now, inside the <code>pydantic</code> folder, create a new file called <code>BaseModel.jinja2</code> with the following content:</p>
-<p><strong>custom_templates/pydantic/BaseModel.jinja2</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># This is a custom comment generated with custom_template!!</span>
-
-<span class="k">class</span><span class="w"> </span><span class="p">{{</span><span class="w"> </span><span class="k">class_name</span><span class="w"> </span><span class="p">}}({{</span><span class="w"> </span><span class="n">base_class</span><span class="w"> </span><span class="p">}}):</span>
-<span class="p">{</span><span class="o">%-</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">field</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">fields</span><span class="w"> </span><span class="o">%</span><span class="p">}</span>
-<span class="w">    </span><span class="p">{{</span><span class="w"> </span><span class="n">field</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="p">}}:</span><span class="w"> </span><span class="p">{{</span><span class="w"> </span><span class="n">field</span><span class="o">.</span><span class="n">type_hint</span><span class="w"> </span><span class="p">}}</span>
-<span class="p">{</span><span class="o">%-</span><span class="w"> </span><span class="n">endfor</span><span class="w"> </span><span class="o">-%</span><span class="p">}</span>
-</code></pre></div>
-
+<p><strong>custom_templates/pydantic/BaseModel.jinja2</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># This is a custom comment generated with custom_template!!
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>class {{ class_name }}({{ base_class }}):
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>{%- for field in fields %}
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    {{ field.name }}: {{ field.type_hint }}
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>{%- endfor -%}
+</span></code></pre></div></p>
 <p>This custom template includes the custom comment at the top and replicates the default rendering behavior of the BaseModel.jinja2 template from the Datamodel Code Generator.</p>
-<p>Now, you can use the --custom-template-dir option to generate the data model with your custom template:</p>
-<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>person.json<span class="w"> </span>--output<span class="w"> </span>person.py<span class="w"> </span>--custom-template-dir<span class="w"> </span>custom_templates
-</code></pre></div>
-
+<p>Now, you can use the --custom-template-dir option to generate the data model with your custom template:
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>person.json<span class="w"> </span>--output<span class="w"> </span>person.py<span class="w"> </span>--custom-template-dir<span class="w"> </span>custom_templates
+</span></code></pre></div></p>
 <p>The generated <code>person.py</code> file will now include your custom comment at the top:</p>
-<p><strong>person.py</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># generated by datamodel-codegen:</span>
-<span class="c1">#   filename:  person.json</span>
-<span class="c1">#   timestamp: 2023-04-09T05:36:24+00:00</span>
-
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
-
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
-
-<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
-
-<span class="c1"># This is a custom comment generated with custom_template!!</span>
-
-
-<span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-    <span class="n">age</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
-</code></pre></div>
-
+<p><strong>person.py</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># generated by datamodel-codegen:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">#   filename:  person.json</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">#   timestamp: 2023-04-09T05:36:24+00:00</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># This is a custom comment generated with custom_template!!</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="n">age</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+</span></code></pre></div></p>
 <p>In this example, we kept it simple, but you can create more complex custom templates by copying <a href="https://github.com/koxudaxi/datamodel-code-generator/tree/main/datamodel_code_generator/model/template">the default templates</a> Use <a href="https://github.com/koxudaxi/datamodel-code-generator/tree/main/datamodel_code_generator/model/template">the default templates</a> as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.</p>
 
 
