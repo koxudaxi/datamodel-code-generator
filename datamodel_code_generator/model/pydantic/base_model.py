@@ -125,6 +125,11 @@ class DataModelField(DataModelFieldBase):
         if self.const:
             data['const'] = True
 
+    def _process_annotated_field_arguments(
+        self, field_arguments: List[str]
+    ) -> List[str]:
+        return field_arguments
+
     def __str__(self) -> str:
         data: Dict[str, Any] = {
             k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
@@ -180,15 +185,7 @@ class DataModelField(DataModelFieldBase):
             return ''
 
         if self.use_annotated:
-            if not self.required:
-                if self.use_default_kwarg:
-                    field_arguments = [
-                        f'default={repr(self.default)}',
-                        *field_arguments,
-                    ]
-                else:
-                    # TODO: Allow '=' style default for v1?
-                    field_arguments = [f'{repr(self.default)}', *field_arguments]
+            field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif self.required:
             field_arguments = ['...', *field_arguments]
         elif default_factory:
