@@ -4251,7 +4251,17 @@ def test_jsonschema_without_titles_use_title_as_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_use_annotated_with_field_constraints():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        ('pydantic.BaseModel', 'main_use_annotated_with_field_constraints'),
+        (
+            'pydantic_v2.BaseModel',
+            'main_use_annotated_with_field_constraints_pydantic_v2',
+        ),
+    ],
+)
+def test_main_use_annotated_with_field_constraints(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -4264,16 +4274,14 @@ def test_main_use_annotated_with_field_constraints():
                 '--use-annotated',
                 '--target-python-version',
                 '3.9',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_use_annotated_with_field_constraints'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 

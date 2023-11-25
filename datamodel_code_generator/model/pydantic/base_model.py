@@ -125,6 +125,11 @@ class DataModelField(DataModelFieldBase):
         if self.const:
             data['const'] = True
 
+    def _process_annotated_field_arguments(
+        self, field_arguments: List[str]
+    ) -> List[str]:
+        return field_arguments
+
     def __str__(self) -> str:
         data: Dict[str, Any] = {
             k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
@@ -180,7 +185,7 @@ class DataModelField(DataModelFieldBase):
             return ''
 
         if self.use_annotated:
-            pass
+            field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif self.required:
             field_arguments = ['...', *field_arguments]
         elif default_factory:
