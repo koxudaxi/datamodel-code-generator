@@ -61,6 +61,7 @@ toml = { version = ">=0.10.0,<1.0.0", python = "<3.11" }
 PySnooper = { version = ">=0.4.1,<2.0.0", optional = true }
 httpx = { version = "*", optional = true }
 pyyaml = ">=6.0.1"
+graphql-core = {version = "^3.2.3", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">6.0"
@@ -85,9 +86,6 @@ prance = "*"
 openapi-spec-validator = "*"
 pytest-codspeed = "^2.2.0"
 
-
-[tool.poetry.group.graphql.dependencies]
-graphql-core = "^3.2.3"
 
 [tool.poetry.extras]
 http = ["httpx"]
