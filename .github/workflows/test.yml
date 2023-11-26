@@ -72,7 +72,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.pydantic-version }}-v1-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction -E http,graphql
+      run: poetry install --no-interaction -E http -E graphql
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
       if: runner.os != 'Windows'
       run: |
