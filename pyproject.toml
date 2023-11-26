@@ -89,6 +89,7 @@ pytest-codspeed = "^2.2.0"
 
 [tool.poetry.extras]
 http = ["httpx"]
+graphql = ["graphql-core"]
 debug = ["PySnooper"]
 validation = ["prance", "openapi-spec-validator"]
 
