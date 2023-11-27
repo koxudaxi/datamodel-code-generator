@@ -90,7 +90,9 @@ class BlackCodeFormatter(BaseCodeFormatter):
         else:
             self.black_mode = black.FileMode(
                 target_versions={
-                    BLACK_PYTHON_VERSION[formatter_kwargs.get('target-version', PythonVersion.PY_37)]
+                    BLACK_PYTHON_VERSION[
+                        formatter_kwargs.get('target-version', PythonVersion.PY_37)
+                    ]
                 },
                 line_length=formatter_kwargs.get(
                     'line-length', black.DEFAULT_LINE_LENGTH
