@@ -4,6 +4,7 @@ import pytest
 
 from datamodel_code_generator.formatter.base import (
     BaseCodeFormatter,
+    CodeFormattersRunner,
     load_code_formatter,
 )
 
@@ -82,3 +83,87 @@ def test_add_license_formatter_with_kwargs():
 x = 1
 y = 2"""
     )
+
+
+def test_runner_quick_init():
+    runner = CodeFormattersRunner()
+
+    assert runner.disable_default_formatter is False
+    assert runner.custom_formatters_kwargs == {
+        'black': {
+            'settings_path': None,
+            'wrap_string_literal': None,
+            'skip_string_normalization': True,
+        },
+        'isort': {
+            'settings_path': None,
+            'known_third_party': None,
+        },
+    }
+
+    assert len(runner.default_formatters) == 1
+    assert runner.default_formatters[0].formatter_name == 'ruff'
+
+    assert runner.custom_formatters == []
+
+
+def test_runner_set_default_formatters():
+    runner = CodeFormattersRunner(
+        default_formatter=['black', 'isort'],
+    )
+
+    assert runner.disable_default_formatter is False
+
+    assert len(runner.default_formatters) == 2
+    assert runner.default_formatters[0].formatter_name == 'black'
+    assert runner.default_formatters[1].formatter_name == 'isort'
+
+    assert runner.custom_formatters == []
+
+
+def test_runner_set_default_formatters_disable():
+    runner = CodeFormattersRunner(
+        default_formatter=['black', 'isort'],
+        disable_default_formatter=True,
+    )
+
+    assert runner.disable_default_formatter is True
+
+    assert len(runner.default_formatters) == 0
+    assert runner.custom_formatters == []
+
+
+def test_runner_custom_formatters():
+    runner = CodeFormattersRunner(custom_formatters=[ADD_LICENSE_FORMATTER])
+
+    assert len(runner.custom_formatters) == 1
+    assert runner.custom_formatters[0].formatter_name == 'license_formatter'
+
+
+def test_runner_custom_formatters_kwargs():
+    runner = CodeFormattersRunner(
+        custom_formatters=[ADD_LICENSE_FORMATTER],
+        custom_formatters_kwargs={
+            'license_formatter': {
+                'license_txt': 'MIT License\n\nCopyright (c) 2023 Blah-blah\n'
+            }
+        },
+    )
+
+    assert len(runner.custom_formatters) == 1
+    assert runner.custom_formatters[0].formatter_name == 'license_formatter'
+
+    assert runner.custom_formatters_kwargs == {
+        'black': {
+            'settings_path': None,
+            'wrap_string_literal': None,
+            'skip_string_normalization': True,
+        },
+        'isort': {
+            'settings_path': None,
+            'known_third_party': None,
+        },
+        'license_formatter': {
+            'license_txt': 'MIT License\n\nCopyright (c) 2023 Blah-blah\n'
+        },
+    }

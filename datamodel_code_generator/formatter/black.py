@@ -1,82 +1,17 @@
-from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict
+from warnings import warn
 
 import black
 
-from datamodel_code_generator.util import cached_property
+from datamodel_code_generator.format import (
+    BLACK_PYTHON_VERSION,
+    PythonVersion,
+    black_find_project_root,
+)
+from datamodel_code_generator.util import load_toml
 
 from .base import BaseCodeFormatter
-
-
-class PythonVersion(Enum):
-    PY_36 = '3.6'
-    PY_37 = '3.7'
-    PY_38 = '3.8'
-    PY_39 = '3.9'
-    PY_310 = '3.10'
-    PY_311 = '3.11'
-    PY_312 = '3.12'
-
-    @cached_property
-    def _is_py_38_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value}  # type: ignore
-
-    @cached_property
-    def _is_py_39_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_36.value, self.PY_37.value, self.PY_38.value}  # type: ignore
-
-    @cached_property
-    def _is_py_310_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {
-            self.PY_36.value,
-            self.PY_37.value,
-            self.PY_38.value,
-            self.PY_39.value,
-        }  # type: ignore
-
-    @cached_property
-    def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {
-            self.PY_36.value,
-            self.PY_37.value,
-            self.PY_38.value,
-            self.PY_39.value,
-            self.PY_310.value,
-        }  # type: ignore
-
-    @property
-    def has_literal_type(self) -> bool:
-        return self._is_py_38_or_later
-
-    @property
-    def has_union_operator(self) -> bool:  # pragma: no cover
-        return self._is_py_310_or_later
-
-    @property
-    def has_annotated_type(self) -> bool:
-        return self._is_py_39_or_later
-
-    @property
-    def has_typed_dict(self) -> bool:
-        return self._is_py_38_or_later
-
-    @property
-    def has_typed_dict_non_required(self) -> bool:
-        return self._is_py_311_or_later
-
-
-if TYPE_CHECKING:
-
-    class _TargetVersion(Enum):
-        ...
-
-    BLACK_PYTHON_VERSION: Dict[PythonVersion, _TargetVersion]
-else:
-    BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
-        v: getattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
-        for v in PythonVersion
-        if hasattr(black.TargetVersion, f'PY{v.name.split("_")[-1]}')
-    }
 
 
 class BlackCodeFormatter(BaseCodeFormatter):
@@ -84,6 +19,37 @@ class BlackCodeFormatter(BaseCodeFormatter):
 
     def __init__(self, formatter_kwargs: Dict[str, Any]) -> None:
         super().__init__(formatter_kwargs=formatter_kwargs)
+
+        if 'settings_path' not in self.formatter_kwargs:
+            settings_path = Path().resolve()
+        else:
+            settings_path = Path(self.formatter_kwargs['settings_path'])
+
+        wrap_string_literal = self.formatter_kwargs.get('wrap_string_literal', None)
+        skip_string_normalization = self.formatter_kwargs.get(
+            'skip_string_normalization', True
+        )
+
+        config = self._load_config(settings_path)
+
+        black_kwargs: Dict[str, Any] = {}
+        if wrap_string_literal is not None:
+            experimental_string_processing = wrap_string_literal
+        else:
+            experimental_string_processing = config.get(
+                'experimental-string-processing'
+            )
+
+        if experimental_string_processing is not None:  # pragma: no cover
+            if black.__version__.startswith('19.'):  # type: ignore
+                warn(
+                    f"black doesn't support `experimental-string-processing` option"  # type: ignore
+                    f' for wrapping string literal in {black.__version__}'
+                )
+            else:
+                black_kwargs[
+                    'experimental_string_processing'
+                ] = experimental_string_processing
 
         if TYPE_CHECKING:
             self.black_mode: black.FileMode
@@ -94,14 +60,24 @@ class BlackCodeFormatter(BaseCodeFormatter):
                         formatter_kwargs.get('target-version', PythonVersion.PY_37)
                     ]
                 },
-                line_length=formatter_kwargs.get(
-                    'line-length', black.DEFAULT_LINE_LENGTH
-                ),
-                string_normalization=not formatter_kwargs.get(
-                    'skip-string-normalization', True
-                ),
+                line_length=config.get('line-length', black.DEFAULT_LINE_LENGTH),
+                string_normalization=not skip_string_normalization
+                or not config.get('skip-string-normalization', True),
                 **formatter_kwargs,
             )
+
+    @staticmethod
+    def _load_config(settings_path: Path) -> Dict[str, Any]:
+        root = black_find_project_root((settings_path,))
+        path = root / 'pyproject.toml'
+
+        if path.is_file():
+            pyproject_toml = load_toml(path)
+            config = pyproject_toml.get('tool', {}).get('black', {})
+        else:
+            config = {}
+
+        return config
 
     def apply(self, code: str) -> str:
         return black.format_str(
