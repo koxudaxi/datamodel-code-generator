@@ -57,7 +57,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install old Poetry
       uses: snok/install-poetry@v1
-      if: ${{ matrix.python-version }} == '3.7'
+      if: matrix.python-version == '3.7'
       with:
         version: 1.4.2
         virtualenvs-path: .venv
@@ -66,7 +66,7 @@ jobs:
         installer-parallel: true
     - name: Install Poetry
       uses: snok/install-poetry@v1
-      if: ${{ matrix.python-version }} != '3.7'
+      if: matrix.python-version != '3.7'
       with:
         version: 1.7.1
         virtualenvs-path: .venv
