@@ -2046,7 +2046,20 @@ def test_main_json_capitalise_enum_members_without_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_datetime():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_openapi_datetime',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_openapi_datetime_pydantic_v2',
+        ),
+    ],
+)
+def test_main_openapi_datetime(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2057,12 +2070,14 @@ def test_main_openapi_datetime():
                 str(output_file),
                 '--input-file-type',
                 'openapi',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_openapi_datetime' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4183,7 +4198,17 @@ def test_jsonschema_without_titles_use_title_as_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_use_annotated_with_field_constraints():
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        ('pydantic.BaseModel', 'main_use_annotated_with_field_constraints'),
+        (
+            'pydantic_v2.BaseModel',
+            'main_use_annotated_with_field_constraints_pydantic_v2',
+        ),
+    ],
+)
+def test_main_use_annotated_with_field_constraints(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -4196,16 +4221,14 @@ def test_main_use_annotated_with_field_constraints():
                 '--use-annotated',
                 '--target-python-version',
                 '3.9',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_use_annotated_with_field_constraints'
-                / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4968,6 +4991,49 @@ def test_main_openapi_discriminator(input, output):
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / output / 'output.py').read_text()
         )
+
+
+@freeze_time('2023-07-27')
+@pytest.mark.parametrize(
+    'kind,option, expected',
+    [
+        (
+            'anyOf',
+            '--collapse-root-models',
+            'main_openapi_discriminator_in_array_collapse_root_models',
+        ),
+        (
+            'oneOf',
+            '--collapse-root-models',
+            'main_openapi_discriminator_in_array_collapse_root_models',
+        ),
+        ('anyOf', None, 'main_openapi_discriminator_in_array'),
+        ('oneOf', None, 'main_openapi_discriminator_in_array'),
+    ],
+)
+def test_main_openapi_discriminator_in_array(kind, option, expected):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        input_file = f'discriminator_in_array_{kind.lower()}.yaml'
+        return_code: Exit = main(
+            [
+                a
+                for a in [
+                    '--input',
+                    str(OPEN_API_DATA_PATH / input_file),
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                    option,
+                ]
+                if a
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / expected / 'output.py'
+        ).read_text().replace('discriminator_in_array.yaml', input_file)
 
 
 @freeze_time('2019-07-26')
@@ -6065,8 +6131,21 @@ def test_all_of_use_default():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_graphql_simple_star_wars',
+        ),
+        (
+            'dataclasses.dataclass',
+            'main_graphql_simple_star_wars_dataclass',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_graphql_simple_star_wars():
+def test_main_graphql_simple_star_wars(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6077,14 +6156,14 @@ def test_main_graphql_simple_star_wars():
                 str(output_file),
                 '--input-file-type',
                 'graphql',
+                '--output-model',
+                output_model,
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_simple_star_wars' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -6159,5 +6238,138 @@ def test_main_graphql_field_aliases():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_enums():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'enums.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_union():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'union.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('4.'),
+    reason='See https://github.com/PyCQA/isort/issues/1600 for example',
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports_isort_4():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort4.py'
+            ).read_text()
+        )
+
+
+@pytest.mark.skipif(
+    not isort.__version__.startswith('5.'),
+    reason='See https://github.com/PyCQA/isort/issues/1600 for example',
+)
+@freeze_time('2019-07-26')
+def test_main_graphql_additional_imports_isort_5():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'additional-imports.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--extra-template-data',
+                str(GRAPHQL_DATA_PATH / 'additional-imports-types.json'),
+                '--additional-imports',
+                'datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort5.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_graphql_custom_formatters():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'custom-scalar-types.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--custom-formatters',
+                'tests.data.python.custom_formatters.add_comment',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
             ).read_text()
         )

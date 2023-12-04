@@ -387,6 +387,8 @@ class Parser(ABC):
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -503,6 +505,8 @@ class Parser(ABC):
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
         self.known_third_party = known_third_party
+        self.custom_formatter = custom_formatters
+        self.custom_formatters_kwargs = custom_formatters_kwargs
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -943,7 +947,12 @@ class Parser(ABC):
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-
+                        if isinstance(
+                            root_type_field, pydantic_model.DataModelField
+                        ) and not model_field.extras.get('discriminator'):  # no: pragma
+                            discriminator = root_type_field.extras.get('discriminator')
+                            if discriminator:  # no: pragma
+                                model_field.extras['discriminator'] = discriminator
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
 
@@ -1143,6 +1152,8 @@ class Parser(ABC):
                 self.wrap_string_literal,
                 skip_string_normalization=not self.use_double_quotes,
                 known_third_party=self.known_third_party,
+                custom_formatters=self.custom_formatter,
+                custom_formatters_kwargs=self.custom_formatters_kwargs,
             )
         else:
             code_formatter = None

@@ -421,6 +421,8 @@ class JsonSchemaParser(Parser):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -484,6 +486,8 @@ class JsonSchemaParser(Parser):
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
             known_third_party=known_third_party,
+            custom_formatters=custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -1074,6 +1078,13 @@ class JsonSchemaParser(Parser):
             return self.parse_array_fields(
                 name, item, get_special_path('array', path)
             ).data_type
+        elif (
+            item.discriminator
+            and parent
+            and parent.is_array
+            and (item.oneOf or item.anyOf)
+        ):
+            return self.parse_root_type(name, item, path)
         elif item.anyOf:
             return self.data_type(
                 data_types=self.parse_any_of(
@@ -1196,7 +1207,6 @@ class JsonSchemaParser(Parser):
             data_types.append(
                 self.parse_enum(name, obj, get_special_path('enum', path))
             )
-
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
             default=obj.default,

@@ -154,6 +154,8 @@ class GraphQLParser(Parser):
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -217,6 +219,8 @@ class GraphQLParser(Parser):
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
             known_third_party=known_third_party,
+            custom_formatters=custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

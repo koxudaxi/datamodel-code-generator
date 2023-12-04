@@ -4,6 +4,7 @@ from typing import ClassVar, Dict, Sequence, Type
 
 from datamodel_code_generator.model.pydantic import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.pydantic.imports import IMPORT_CONSTR
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_AWARE_DATETIME
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 
 
@@ -27,4 +28,5 @@ class DataTypeManager(_DataTypeManager):
                     **({'strict': True} if StrictTypes.str in strict_types else {}),
                 },
             ),
+            Types.date_time: data_type.from_import(IMPORT_AWARE_DATETIME),
         }

@@ -1,6 +1,7 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) and [msgspec.Struct](https://github.com/jcrist/msgspec) from an openapi file and others.
+This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) 
+and [msgspec.Struct](https://github.com/jcrist/msgspec) from an openapi file and others.
 
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
@@ -12,13 +13,11 @@ This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) mod
 [![Pydantic v1](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json)](https://pydantic.dev)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
-
 ## Help
 See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
 
 ## Sponsors
 [![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
-
 
 ## Quick Installation
 
@@ -238,7 +237,10 @@ class Apis(BaseModel):
 </details>
 
 ## Projects that use datamodel-code-generator
-These OSS projects use datamodel-code-generator to generate many models. See the following linked projects for real world examples and inspiration.
+ 
+These OSS projects use datamodel-code-generator to generate many models. 
+See the following linked projects for real world examples and inspiration.
+
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
   - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
 - [apache/iceberg](https://github.com/apache/iceberg)
@@ -266,18 +268,19 @@ These OSS projects use datamodel-code-generator to generate many models. See the
   - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
 
 ## Supported input types
--  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types))
--  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html))
--  JSON/YAML/CSV Data (it will be converted to JSON Schema)
--  Python dictionary (it will be converted to JSON Schema)
--  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/))
+-  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types));
+-  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
+-  JSON/YAML/CSV Data (it will be converted to JSON Schema);
+-  Python dictionary (it will be converted to JSON Schema);
+-  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
 
 ## Supported output types
-- [pydantic](https://docs.pydantic.dev/1.10/).BaseModel
-- [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel
-- [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html)
-- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
-- [msgspec.Struct](https://github.com/jcrist/msgspec)
+- [pydantic](https://docs.pydantic.dev/1.10/).BaseModel;
+- [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel;
+- [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
+- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
+- [msgspec.Struct](https://github.com/jcrist/msgspec);
+- Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
 
 ## Installation
 
@@ -290,6 +293,13 @@ $ pip install datamodel-code-generator
 If you want to resolve `$ref` for remote files then you should specify `http` extra option.
 ```bash
 $ pip install 'datamodel-code-generator[http]'
+```
+
+### `graphql` extra option
+
+If you want to generate data model from a GraphQL schema then you should specify `graphql` extra option.
+```bash
+$ pip install 'datamodel-code-generator[graphql]'
 ```
 
 ### Docker Image
@@ -438,6 +448,10 @@ Template customization:
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
                         later)
+  --additional-imports  Custom imports for output (delimited list input).
+                        For example "datetime.date,datetime.datetime"
+  --custom-formatters   List of modules with custom formatter (delimited list input).
+  --custom-formatters-kwargs A file with kwargs for custom formatters.
 
 OpenAPI-only options:
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
