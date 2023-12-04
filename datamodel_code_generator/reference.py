@@ -38,7 +38,7 @@ from datamodel_code_generator.util import (
     PYDANTIC_V2,
     ConfigDict,
     cached_property,
-    field_validator,
+    model_validator,
 )
 
 if TYPE_CHECKING:
@@ -121,14 +121,19 @@ class Reference(_BaseModel):
     children: List[Any] = []
     _exclude_fields: ClassVar[Set[str]] = {'children'}
 
-    @field_validator('original_name')
-    def validate_original_name(cls, v: Any, values: Dict[str, Any]) -> str:
+    @model_validator(mode='before')
+    def validate_original_name(cls, values: Any) -> Any:
         """
         If original_name is empty then, `original_name` is assigned `name`
         """
-        if v:  # pragma: no cover
-            return v
-        return values.get('name', v)  # pragma: no cover
+        if not isinstance(values, dict):  # pragma: no cover
+            return values
+        original_name = values.get('original_name')
+        if original_name:
+            return values
+
+        values['original_name'] = values.get('name', original_name)
+        return values
 
     if PYDANTIC_V2:
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
