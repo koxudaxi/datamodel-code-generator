@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum as _enum
 from collections import defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -63,7 +63,6 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     BaseModel,
-    cached_property,
     field_validator,
     model_validator,
 )
@@ -313,7 +312,7 @@ class JsonSchemaObject(BaseModel):
         return isinstance(self.type, list) and 'null' in self.type
 
 
-@lru_cache()
+@lru_cache
 def get_ref_type(ref: str) -> JSONReference:
     if ref[0] == '#':
         return JSONReference.LOCAL
@@ -370,7 +369,7 @@ class JsonSchemaParser(Parser):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,

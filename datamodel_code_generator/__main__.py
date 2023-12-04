@@ -154,13 +154,6 @@ class Config(BaseModel):
     def validate_use_generic_container_types(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
-        if values.get('use_generic_container_types'):
-            target_python_version: PythonVersion = values['target_python_version']
-            if target_python_version == target_python_version.PY_36:
-                raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
-                    ' The version will be not supported in a future version'
-                )
         return values
 
     @model_validator(mode='after')
@@ -236,7 +229,7 @@ class Config(BaseModel):
     output: Optional[Path] = None
     debug: bool = False
     disable_warnings: bool = False
-    target_python_version: PythonVersion = PythonVersion.PY_37
+    target_python_version: PythonVersion = PythonVersion.PY_38
     base_class: str = ''
     additional_imports: Optional[List[str]] = (None,)
     custom_template_dir: Optional[Path] = None

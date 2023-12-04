@@ -52,7 +52,7 @@ def type_map_factory(
 class DataTypeManager(_DataTypeManager):
     def __init__(
         self,
-        python_version: PythonVersion = PythonVersion.PY_37,
+        python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,

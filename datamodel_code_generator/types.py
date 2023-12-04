@@ -15,12 +15,14 @@ from typing import (
     List,
     Optional,
     Pattern,
+    Protocol,
     Sequence,
     Set,
     Tuple,
     Type,
     TypeVar,
     Union,
+    runtime_checkable,
 )
 
 import pydantic
@@ -53,8 +55,6 @@ from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     ConfigDict,
-    Protocol,
-    runtime_checkable,
 )
 
 if PYDANTIC_V2:
@@ -166,7 +166,7 @@ def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
     return tuple(chain(*iterables))
 
 
-@lru_cache()
+@lru_cache
 def _remove_none_from_type(
     type_: str, split_pattern: Pattern[str], delimiter: str
 ) -> List[str]:
@@ -212,7 +212,7 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
     return f'{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]'
 
 
-@lru_cache()
+@lru_cache
 def get_optional_type(type_: str, use_union_operator: bool) -> str:
     type_ = _remove_none_from_union(type_, use_union_operator)
 
@@ -266,7 +266,7 @@ class DataType(_BaseModel):
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]] = None
     import_: Optional[Import] = None
-    python_version: PythonVersion = PythonVersion.PY_37
+    python_version: PythonVersion = PythonVersion.PY_38
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
@@ -480,8 +480,6 @@ class DataType(_BaseModel):
             source = self.reference.source
             if isinstance(source, Nullable) and source.nullable:
                 self.is_optional = True
-        if self.reference and self.python_version == PythonVersion.PY_36:
-            type_ = f"'{type_}'"
         if self.is_list:
             if self.use_generic_container:
                 list_ = SEQUENCE
@@ -571,7 +569,7 @@ class Types(Enum):
 class DataTypeManager(ABC):
     def __init__(
         self,
-        python_version: PythonVersion = PythonVersion.PY_37,
+        python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
@@ -586,14 +584,6 @@ class DataTypeManager(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_union_operator: bool = use_union_operator
-
-        if (
-            use_generic_container_types and python_version == PythonVersion.PY_36
-        ):  # pragma: no cover
-            raise Exception(
-                'use_generic_container_types can not be used with target_python_version 3.6.\n'
-                ' The version will be not supported in a future version'
-            )
 
         if TYPE_CHECKING:
             self.data_type: Type[DataType]

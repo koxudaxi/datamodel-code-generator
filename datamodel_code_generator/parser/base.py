@@ -15,12 +15,14 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
     Type,
     TypeVar,
     Union,
+    runtime_checkable,
 )
 from urllib.parse import ParseResult
 
@@ -46,7 +48,6 @@ from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
-from datamodel_code_generator.util import Protocol, runtime_checkable
 
 SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
 
@@ -332,7 +333,7 @@ class Parser(ABC):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -1142,8 +1143,7 @@ class Parser(ABC):
         self.parse_raw()
 
         if with_import:
-            if self.target_python_version != PythonVersion.PY_36:
-                self.imports.append(IMPORT_ANNOTATIONS)
+            self.imports.append(IMPORT_ANNOTATIONS)
 
         if format_:
             code_formatter: Optional[CodeFormatter] = CodeFormatter(

@@ -424,8 +424,8 @@ Model customization:
   --keep-model-order    Keep generated models' order
   --reuse-model         Re-use models on the field when a module has the model
                         with the same content
-  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
-                        target python version (default: 3.7)
+  --target-python-version {3.8,3.9,3.10,3.11}
+                        target python version (default: 3.8)
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
