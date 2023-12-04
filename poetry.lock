@@ -2021,13 +2021,13 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "virtualenv"
-version = "20.24.7"
+version = "20.25.0"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "virtualenv-20.24.7-py3-none-any.whl", hash = "sha256:a18b3fd0314ca59a2e9f4b556819ed07183b3e9a3702ecfe213f593d44f7b3fd"},
-    {file = "virtualenv-20.24.7.tar.gz", hash = "sha256:69050ffb42419c91f6c1284a7b24e0475d793447e35929b488bf6a0aade39353"},
+    {file = "virtualenv-20.25.0-py3-none-any.whl", hash = "sha256:4238949c5ffe6876362d9c0180fc6c3a824a7b12b80604eeb8085f2ed7460de3"},
+    {file = "virtualenv-20.25.0.tar.gz", hash = "sha256:bf51c0d9c7dd63ea8e44086fa1e4fb1093a31e963b86959257378aef020e1f1b"},
 ]
 
 [package.dependencies]
