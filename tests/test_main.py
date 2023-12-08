@@ -6439,7 +6439,7 @@ def test_main_openapi_discriminator_enum():
                 '--output',
                 str(output_file),
                 '--target-python-version',
-                '3.11',
+                '3.10',
                 '--output-model-type',
                 'pydantic_v2.BaseModel',
                 '--input-file-type',
