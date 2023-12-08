@@ -1265,6 +1265,31 @@ def test_force_optional():
 
 
 @freeze_time('2019-07-26')
+def test_force_optional_pydantic_v2_with_json_schema_const():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'force_optional_with_const.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--force-optional',
+                '--use-double-quotes',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'force_optional_with_const' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
 def test_main_with_exclusive():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
