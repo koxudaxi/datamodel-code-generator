@@ -87,10 +87,9 @@ class DataModelField(DataModelFieldV1):
         self.const = True
         self.nullable = False
         const = self.extras['const']
-        if self.data_type.type == 'str' and isinstance(
-            const, str
-        ):  # pragma: no cover # Literal supports only str
-            self.data_type = self.data_type.__class__(literals=[const])
+        self.data_type = self.data_type.__class__(literals=[const])
+        if not self.default:
+            self.default = const
 
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
@@ -103,7 +102,7 @@ class DataModelField(DataModelFieldV1):
     def _process_annotated_field_arguments(
         self, field_arguments: List[str]
     ) -> List[str]:
-        if not self.required:
+        if not self.required or self.const:
             if self.use_default_kwarg:
                 return [
                     f'default={repr(self.default)}',
