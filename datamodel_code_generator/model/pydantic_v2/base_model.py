@@ -69,7 +69,19 @@ class DataModelField(DataModelFieldV1):
     }
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
+    json_schema_extra: Dict[str, Any] = {}
+    @property
+    def field(self) -> Optional[str]:
+        field = super().field
 
+        if self.json_schema_extra:
+            if field is not None:
+                field = field.split(")")[0]
+                field += f", json_schema_extra={self.json_schema_extra})"
+            else:
+                field = f"Field(..., json_schema_extra={self.json_schema_extra})"
+
+        return field
     @field_validator('extras')
     def validate_extras(cls, values: Any) -> Dict[str, Any]:
         if not isinstance(values, dict):

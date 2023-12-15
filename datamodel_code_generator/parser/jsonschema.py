@@ -237,6 +237,7 @@ class JsonSchemaObject(BaseModel):
     allOf: List[JsonSchemaObject] = []
     enum: List[Any] = []
     writeOnly: Optional[bool] = None
+    readOnly: Optional[bool] = None
     properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]] = None
     required: List[str] = []
     ref: Optional[str] = Field(default=None, alias='$ref')
@@ -571,12 +572,24 @@ class JsonSchemaParser(Parser):
             else None,
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(field),
+            json_schema_extra=self.get_json_schema_extra(field),
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=original_field_name,
             has_default=field.has_default,
         )
+
+    def get_json_schema_extra(self, field: JsonSchemaObject) -> Dict[str, Any]:
+        json_schema_extra = {}
+
+        if field.readOnly is not None:
+            json_schema_extra["readOnly"] = field.readOnly
+
+        if field.writeOnly is not None:
+            json_schema_extra["writeOnly"] = field.writeOnly
+
+        return json_schema_extra
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:
