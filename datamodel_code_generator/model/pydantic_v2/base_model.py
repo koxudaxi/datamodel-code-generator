@@ -74,10 +74,9 @@ class DataModelField(DataModelFieldV1):
     @property
     def field(self) -> Optional[str]:
         field = super().field
-
         if self.json_schema_extra:
             if field is not None:
-                field = field.split(')')[0]
+                field = field[:-1]
                 field += f', json_schema_extra={self.json_schema_extra})'
             else:
                 field = f'Field(..., json_schema_extra={self.json_schema_extra})'
