@@ -584,10 +584,10 @@ class JsonSchemaParser(Parser):
         json_schema_extra = {}
 
         if field.readOnly is not None:
-            json_schema_extra["readOnly"] = field.readOnly
+            json_schema_extra['readOnly'] = field.readOnly
 
         if field.writeOnly is not None:
-            json_schema_extra["writeOnly"] = field.writeOnly
+            json_schema_extra['writeOnly'] = field.writeOnly
 
         return json_schema_extra
 
