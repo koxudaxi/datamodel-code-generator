@@ -348,7 +348,16 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'default_factory',
 }
 
-EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS) | {
+EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: Set[str] = {
+    'readOnly',
+    'writeOnly',
+}
+
+EXCLUDE_FIELD_KEYS = (
+    set(JsonSchemaObject.get_fields())
+    - DEFAULT_FIELD_KEYS
+    - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
+) | {
     '$id',
     '$ref',
     JsonSchemaObject.__extra_key__,
@@ -503,19 +512,27 @@ class JsonSchemaParser(Parser):
             *self.field_extra_keys_without_x_prefix,
         }
 
+        if self.data_model_field_type.can_have_extra_keys:
+            self.get_field_extra_key: Callable[[str], str] = (
+                lambda key: self.model_resolver.get_valid_field_name_and_alias(key)[0]
+            )
+
+        else:
+            self.get_field_extra_key = lambda key: key
+
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(
+                self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
-                )[0]: v
+                ): v
                 for k, v in obj.extras.items()
             }
         else:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(
+                self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
-                )[0]: v
+                ): v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }
@@ -572,24 +589,12 @@ class JsonSchemaParser(Parser):
             else None,
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(field),
-            json_schema_extra=self.get_json_schema_extra(field),
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=original_field_name,
             has_default=field.has_default,
         )
-
-    def get_json_schema_extra(self, field: JsonSchemaObject) -> Dict[str, Any]:
-        json_schema_extra = {}
-
-        if field.readOnly is not None:
-            json_schema_extra['readOnly'] = field.readOnly
-
-        if field.writeOnly is not None:
-            json_schema_extra['writeOnly'] = field.writeOnly
-
-        return json_schema_extra
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         if obj.type is None:

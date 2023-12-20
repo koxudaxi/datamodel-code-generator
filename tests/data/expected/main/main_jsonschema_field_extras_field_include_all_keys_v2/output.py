@@ -17,16 +17,17 @@ class Extras(BaseModel):
         json_schema_extra={
             'key1': 123,
             'key2': 456,
-            'field_exclude': 123,
-            'invalid_key_1': 'abc',
-            'field_invalid_key_2': 'efg',
-            'field_comment': 'comment',
-            'register_': 'hij',
-            'schema_': 'klm',
-            'x_abc': True,
+            '$exclude': 123,
+            'invalid-key-1': 'abc',
+            '-invalid+key_2': 'efg',
+            '$comment': 'comment',
+            'register': 'hij',
+            'schema': 'klm',
+            'x-abc': True,
+            'readOnly': True,
         },
         repr=True,
     )
     age: Optional[int] = Field(
-        None, examples=[13, 20], json_schema_extra={'example': 12}
+        None, examples=[13, 20], json_schema_extra={'example': 12, 'writeOnly': True}
     )
