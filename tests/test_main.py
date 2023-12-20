@@ -6448,3 +6448,30 @@ def test_main_graphql_custom_formatters():
                 EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_discriminator_enum():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum.yaml'),
+                '--output',
+                str(output_file),
+                '--target-python-version',
+                '3.10',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_discriminator_enum' / 'output.py'
+            ).read_text()
+        )

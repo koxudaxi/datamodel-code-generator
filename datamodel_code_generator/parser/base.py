@@ -29,6 +29,8 @@ from pydantic import BaseModel
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
+    IMPORT_LITERAL,
+    IMPORT_LITERAL_BACKPORT,
     Import,
     Imports,
 )
@@ -801,6 +803,11 @@ class Parser(ABC):
                                 required=True,
                             )
                         )
+                    imports.append(
+                        IMPORT_LITERAL
+                        if self.target_python_version.has_literal_type
+                        else IMPORT_LITERAL_BACKPORT
+                    )
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
