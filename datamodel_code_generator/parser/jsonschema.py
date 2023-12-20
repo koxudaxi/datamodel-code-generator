@@ -367,6 +367,7 @@ EXCLUDE_FIELD_KEYS = (
 @snooper_to_methods(max_variable_length=None)
 class JsonSchemaParser(Parser):
     SCHEMA_PATHS: ClassVar[List[str]] = ['#/definitions', '#/$defs']
+    SCHEMA_OBJECT_TYPE: ClassVar[Type[JsonSchemaObject]] = JsonSchemaObject
 
     def __init__(
         self,
@@ -686,7 +687,7 @@ class JsonSchemaParser(Parser):
                 # }
             else:
                 combined_schemas.append(
-                    JsonSchemaObject.parse_obj(
+                    self.SCHEMA_OBJECT_TYPE.parse_obj(
                         self._deep_merge(
                             base_object,
                             target_attribute.dict(exclude_unset=True, by_alias=True),
@@ -1632,7 +1633,7 @@ class JsonSchemaParser(Parser):
         raw: Dict[str, Any],
         path: List[str],
     ) -> None:
-        self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
+        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.parse_obj(raw), path)
 
     def parse_obj(
         self,
@@ -1759,7 +1760,7 @@ class JsonSchemaParser(Parser):
                 # Some jsonschema docs include attribute self to have include version details
                 raw.pop('self', None)
                 # parse $id before parsing $ref
-                root_obj = JsonSchemaObject.parse_obj(raw)
+                root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: Optional[Dict[Any, Any]] = None
                 for schema_path, split_schema_path in self.schema_paths:
@@ -1773,13 +1774,15 @@ class JsonSchemaParser(Parser):
                     definitions = {}
 
                 for key, model in definitions.items():
-                    obj = JsonSchemaObject.parse_obj(model)
+                    obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)
                     self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
-                    self.parse_obj(model_name, JsonSchemaObject.parse_obj(models), path)
+                    self.parse_obj(
+                        model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path
+                    )
                 else:
                     self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
@@ -1800,7 +1803,7 @@ class JsonSchemaParser(Parser):
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
                         self.parse_obj(
-                            model_name, JsonSchemaObject.parse_obj(models), path
+                            model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path
                         )
                     previous_reserved_refs = reserved_refs
                     reserved_refs = set(self.reserved_refs.get(key) or [])
