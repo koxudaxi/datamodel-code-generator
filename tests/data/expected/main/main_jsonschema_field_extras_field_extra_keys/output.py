@@ -14,8 +14,7 @@ class Extras(BaseModel):
         None,
         description='normal key',
         example='example',
-        invalid_key_1='abc',
-        key2=456,
+        json_schema_extra={'key2': 456, 'invalid_key_1': 'abc'},
         repr=True,
     )
     age: Optional[int] = Field(None, example=12, examples=[13, 20])
