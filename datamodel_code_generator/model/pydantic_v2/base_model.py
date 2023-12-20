@@ -101,6 +101,7 @@ class DataModelField(DataModelFieldV1):
     }
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
+    can_have_extra_keys: ClassVar[bool] = False
 
     @field_validator('extras')
     def validate_extras(cls, values: Any) -> Dict[str, Any]:

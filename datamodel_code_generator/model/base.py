@@ -117,6 +117,7 @@ class DataModelFieldBase(_BaseModel):
     use_one_literal_as_default: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
+    can_have_extra_keys: ClassVar[bool] = True
 
     if not TYPE_CHECKING:
 
