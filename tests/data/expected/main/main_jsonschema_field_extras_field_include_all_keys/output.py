@@ -20,9 +20,10 @@ class Extras(BaseModel):
         invalid_key_1='abc',
         key1=123,
         key2=456,
+        readOnly=True,
         register_='hij',
         repr=True,
         schema_='klm',
         x_abc=True,
     )
-    age: Optional[int] = Field(None, example=12, examples=[13, 20])
+    age: Optional[int] = Field(None, example=12, examples=[13, 20], writeOnly=True)

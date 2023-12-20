@@ -67,8 +67,41 @@ class DataModelField(DataModelFieldV1):
         'max_length',
         'pattern',
     }
+    _DEFAULT_FIELD_KEYS: ClassVar[Set[str]] = {
+        'default',
+        'default_factory',
+        'alias',
+        'alias_priority',
+        'validation_alias',
+        'serialization_alias',
+        'title',
+        'description',
+        'examples',
+        'exclude',
+        'discriminator',
+        'json_schema_extra',
+        'frozen',
+        'validate_default',
+        'repr',
+        'init_var',
+        'kw_only',
+        'pattern',
+        'strict',
+        'gt',
+        'ge',
+        'lt',
+        'le',
+        'multiple_of',
+        'allow_inf_nan',
+        'max_digits',
+        'decimal_places',
+        'min_length',
+        'max_length',
+        'union_mode',
+    }
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
+    can_have_extra_keys: ClassVar[bool] = False
 
     @field_validator('extras')
     def validate_extras(cls, values: Any) -> Dict[str, Any]:
@@ -98,6 +131,15 @@ class DataModelField(DataModelFieldV1):
 
         # unique_items is not supported in pydantic 2.0
         data.pop('unique_items', None)
+
+        # **extra is not supported in pydantic 2.0
+        json_schema_extra = {
+            k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS
+        }
+        if json_schema_extra:
+            data['json_schema_extra'] = json_schema_extra
+            for key in json_schema_extra.keys():
+                data.pop(key)
 
     def _process_annotated_field_arguments(
         self, field_arguments: List[str]

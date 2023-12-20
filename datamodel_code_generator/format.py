@@ -92,7 +92,7 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
         from typing import Iterable, Tuple, Union
 
         def _find_project_root(
-            srcs: Union[Sequence[str], Iterable[str]]
+            srcs: Union[Sequence[str], Iterable[str]],
         ) -> Union[Tuple[Path, str], Path]:
             ...
 
