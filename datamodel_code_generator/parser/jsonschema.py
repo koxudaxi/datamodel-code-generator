@@ -237,6 +237,7 @@ class JsonSchemaObject(BaseModel):
     allOf: List[JsonSchemaObject] = []
     enum: List[Any] = []
     writeOnly: Optional[bool] = None
+    readOnly: Optional[bool] = None
     properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]] = None
     required: List[str] = []
     ref: Optional[str] = Field(default=None, alias='$ref')
@@ -347,7 +348,16 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'default_factory',
 }
 
-EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS) | {
+EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: Set[str] = {
+    'readOnly',
+    'writeOnly',
+}
+
+EXCLUDE_FIELD_KEYS = (
+    set(JsonSchemaObject.get_fields())
+    - DEFAULT_FIELD_KEYS
+    - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
+) | {
     '$id',
     '$ref',
     JsonSchemaObject.__extra_key__,
@@ -502,19 +512,27 @@ class JsonSchemaParser(Parser):
             *self.field_extra_keys_without_x_prefix,
         }
 
+        if self.data_model_field_type.can_have_extra_keys:
+            self.get_field_extra_key: Callable[[str], str] = (
+                lambda key: self.model_resolver.get_valid_field_name_and_alias(key)[0]
+            )
+
+        else:
+            self.get_field_extra_key = lambda key: key
+
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(
+                self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
-                )[0]: v
+                ): v
                 for k, v in obj.extras.items()
             }
         else:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(
+                self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
-                )[0]: v
+                ): v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }

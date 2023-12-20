@@ -151,7 +151,7 @@ class DataModelField(DataModelFieldBase):
                     )
                     else {
                         k: self._get_strict_field_constraint_value(k, v)
-                        for k, v in self.constraints.dict().items()
+                        for k, v in self.constraints.dict(exclude_unset=True).items()
                     }
                 ),
             }
