@@ -64,4 +64,4 @@ class Notes(TypedDict):
 
 class Options(TypedDict):
     comments: List[Optional[str]]
-    oneOfComments: List[Optional[Union[str, float]]]
+    oneOfComments: List[Union[Optional[str], Optional[float]]]

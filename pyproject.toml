@@ -60,6 +60,8 @@ openapi-spec-validator = { version = ">=0.2.8,<0.7.0", optional = true }
 toml = { version = ">=0.10.0,<1.0.0", python = "<3.11" }
 PySnooper = { version = ">=0.4.1,<2.0.0", optional = true }
 httpx = { version = "*", optional = true }
+pyyaml = ">=6.0.1"
+graphql-core = {version = "^3.2.3", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">6.0"
@@ -72,19 +74,22 @@ freezegun = "*"
 types-Jinja2 = "*"
 types-PyYAML = "*"
 types-toml = "*"
-types-setuptools = ">=67.6.0.5,<69.0.0.0"
+types-setuptools = ">=67.6.0.5,<70.0.0.0"
 pydantic = "*"
-httpx = "*"
+httpx = ">=0.24.1"
 PySnooper = "*"
-ruff = ">=0.0.290,<0.1.6"
+ruff = ">=0.0.290,<0.1.9"
 ruff-lsp = ">=0.0.39,<0.0.41"
 pre-commit = "*"
 pytest-xdist = "^3.3.1"
 prance = "*"
 openapi-spec-validator = "*"
+pytest-codspeed = "^2.2.0"
+
 
 [tool.poetry.extras]
 http = ["httpx"]
+graphql = ["graphql-core"]
 debug = ["PySnooper"]
 validation = ["prance", "openapi-spec-validator"]
 

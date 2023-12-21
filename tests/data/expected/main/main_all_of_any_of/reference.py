@@ -25,13 +25,13 @@ class Target(BaseModel):
     third: str
 
 
-class Target6(First, Target):
+class Target8(First, Target):
     pass
 
 
-class Target7(Second, Target):
+class Target9(Second, Target):
     pass
 
 
-class Target4(BaseModel):
-    __root__: Union[Target6, Target7]
+class Target6(BaseModel):
+    __root__: Union[Target8, Target9]

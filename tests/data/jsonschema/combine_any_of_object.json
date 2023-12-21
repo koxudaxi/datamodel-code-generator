@@ -25,7 +25,18 @@
                 "PostCode": { "type": "string" }
             },
             "required": [ "PostCode" ]
+        },
+        { "$ref": "#/definitions/US" }
+    ],
+    "definitions": {
+        "US":  {
+            "type": "object",
+            "properties": {
+                "County":   { "type": "string" },
+                "PostCode": { "type": "string" }
+            },
+            "required": [ "PostCode" ]
         }
-    ]
+    }
 }
 

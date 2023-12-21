@@ -218,6 +218,8 @@ class OpenAPIParser(JsonSchemaParser):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             source=source,
@@ -281,6 +283,8 @@ class OpenAPIParser(JsonSchemaParser):
             capitalise_enum_members=capitalise_enum_members,
             keep_model_order=keep_model_order,
             known_third_party=known_third_party,
+            custom_formatters=custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -301,14 +305,6 @@ class OpenAPIParser(JsonSchemaParser):
             obj.type = [obj.type, 'null']
 
         return super().get_data_type(obj)
-
-    def parse_one_of(
-        self, name: str, obj: JsonSchemaObject, path: List[str]
-    ) -> List[DataType]:
-        data_types = super().parse_one_of(name, obj, path)
-        if obj.nullable and self.strict_nullable:
-            data_types.append(DataType(type='None'))
-        return data_types
 
     def resolve_object(
         self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]

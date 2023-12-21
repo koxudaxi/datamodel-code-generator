@@ -13,25 +13,25 @@ class Model(BaseModel):
     __root__: Any
 
 
-class TargetItem(BaseModel):
+class Target1(BaseModel):
     first: str
 
 
-class TargetItem1(BaseModel):
+class Target2(BaseModel):
     second: str
 
 
-class Target1(BaseModel):
+class Target3(BaseModel):
     third: str
 
 
-class Target2(TargetItem, Target1):
+class Target4(Target1, Target3):
     pass
 
 
-class Target3(TargetItem1, Target1):
+class Target5(Target2, Target3):
     pass
 
 
 class Target(BaseModel):
-    __root__: Union[Target2, Target3]
+    __root__: Union[Target4, Target5]

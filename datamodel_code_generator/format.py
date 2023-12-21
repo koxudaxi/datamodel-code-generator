@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from warnings import warn
@@ -91,7 +92,7 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
         from typing import Iterable, Tuple, Union
 
         def _find_project_root(
-            srcs: Union[Sequence[str], Iterable[str]]
+            srcs: Union[Sequence[str], Iterable[str]],
         ) -> Union[Tuple[Path, str], Path]:
             ...
 
@@ -112,6 +113,8 @@ class CodeFormatter:
         wrap_string_literal: Optional[bool] = None,
         skip_string_normalization: bool = True,
         known_third_party: Optional[List[str]] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         if not settings_path:
             settings_path = Path().resolve()
@@ -167,12 +170,49 @@ class CodeFormatter:
                 settings_path=self.settings_path, **self.isort_config_kwargs
             )
 
+        self.custom_formatters_kwargs = custom_formatters_kwargs or {}
+        self.custom_formatters = self._check_custom_formatters(custom_formatters)
+
+    def _load_custom_formatter(
+        self, custom_formatter_import: str
+    ) -> CustomCodeFormatter:
+        import_ = import_module(custom_formatter_import)
+
+        if not hasattr(import_, 'CodeFormatter'):
+            raise NameError(
+                f'Custom formatter module `{import_.__name__}` must contains object with name Formatter'
+            )
+
+        formatter_class = import_.__getattribute__('CodeFormatter')
+
+        if not issubclass(formatter_class, CustomCodeFormatter):
+            raise TypeError(
+                f'The custom module {custom_formatter_import} must inherit from `datamodel-code-generator`'
+            )
+
+        return formatter_class(formatter_kwargs=self.custom_formatters_kwargs)
+
+    def _check_custom_formatters(
+        self, custom_formatters: Optional[List[str]]
+    ) -> List[CustomCodeFormatter]:
+        if custom_formatters is None:
+            return []
+
+        return [
+            self._load_custom_formatter(custom_formatter_import)
+            for custom_formatter_import in custom_formatters
+        ]
+
     def format_code(
         self,
         code: str,
     ) -> str:
         code = self.apply_isort(code)
         code = self.apply_black(code)
+
+        for formatter in self.custom_formatters:
+            code = formatter.apply(code)
+
         return code
 
     def apply_black(self, code: str) -> str:
@@ -200,3 +240,11 @@ class CodeFormatter:
 
             def apply_isort(self, code: str) -> str:
                 return isort.code(code, config=self.isort_config)
+
+
+class CustomCodeFormatter:
+    def __init__(self, formatter_kwargs: Dict[str, Any]) -> None:
+        self.formatter_kwargs = formatter_kwargs
+
+    def apply(self, code: str) -> str:
+        raise NotImplementedError

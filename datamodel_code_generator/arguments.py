@@ -385,6 +385,23 @@ template_options.add_argument(
     action='store_true',
     default=None,
 )
+base_options.add_argument(
+    '--additional-imports',
+    help='Custom imports for output (delimited list input). For example "datetime.date,datetime.datetime"',
+    type=str,
+    default=None,
+)
+base_options.add_argument(
+    '--custom-formatters',
+    help='List of modules with custom formatter (delimited list input).',
+    type=str,
+    default=None,
+)
+template_options.add_argument(
+    '--custom-formatters-kwargs',
+    help='A file with kwargs for custom formatters.',
+    type=FileType('rt'),
+)
 
 # ======================================================================================
 # Options specific to OpenAPI input schemas

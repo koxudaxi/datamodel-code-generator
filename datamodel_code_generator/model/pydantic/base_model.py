@@ -125,6 +125,11 @@ class DataModelField(DataModelFieldBase):
         if self.const:
             data['const'] = True
 
+    def _process_annotated_field_arguments(
+        self, field_arguments: List[str]
+    ) -> List[str]:
+        return field_arguments
+
     def __str__(self) -> str:
         data: Dict[str, Any] = {
             k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
@@ -146,7 +151,7 @@ class DataModelField(DataModelFieldBase):
                     )
                     else {
                         k: self._get_strict_field_constraint_value(k, v)
-                        for k, v in self.constraints.dict().items()
+                        for k, v in self.constraints.dict(exclude_unset=True).items()
                     }
                 ),
             }
@@ -180,7 +185,7 @@ class DataModelField(DataModelFieldBase):
             return ''
 
         if self.use_annotated:
-            pass
+            field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif self.required:
             field_arguments = ['...', *field_arguments]
         elif default_factory:
@@ -195,6 +200,12 @@ class DataModelField(DataModelFieldBase):
         if not self.use_annotated or not str(self):
             return None
         return f'Annotated[{self.type_hint}, {str(self)}]'
+
+    @property
+    def imports(self) -> Tuple[Import, ...]:
+        if self.field:
+            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
+        return super().imports
 
 
 class BaseModelBase(DataModel, ABC):
@@ -229,12 +240,6 @@ class BaseModelBase(DataModel, ABC):
             default=default,
             nullable=nullable,
         )
-
-    @property
-    def imports(self) -> Tuple[Import, ...]:
-        if any(f for f in self.fields if f.field):
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
-        return super().imports
 
     @cached_property
     def template_file_path(self) -> Path:

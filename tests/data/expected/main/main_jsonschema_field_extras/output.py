@@ -10,4 +10,5 @@ from pydantic import BaseModel, Field
 
 
 class Extras(BaseModel):
-    name: Optional[str] = Field(None, description='normal key')
+    name: Optional[str] = Field(None, description='normal key', example='example')
+    age: Optional[int] = Field(None, example=12, examples=[13, 20])

@@ -8,8 +8,15 @@ theme:
       accent: 'light blue'
     analytics:
       gtag: 275257853
+
 markdown_extensions:
-  - codehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
   - admonition
 
 repo_name: koxudaxi/datamodel-code-generator
@@ -24,7 +31,9 @@ nav:
       - Generate from OpenAPI: openapi.md
       - Generate from JSON Schema: jsonschema.md
       - Generate from JSON Data: jsondata.md
+      - Generate from GraphQL Schema: graphql.md
       - Custom template: custom_template.md
+      - Custom formatters: custom-formatters.md
       - Using as module: using_as_module.md
       - Formatting: formatting.md
       - Field Constraints: field-constraints.md

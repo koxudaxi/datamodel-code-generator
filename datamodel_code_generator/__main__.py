@@ -120,7 +120,9 @@ class Config(BaseModel):
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
 
-    @field_validator('aliases', 'extra_template_data', mode='before')
+    @field_validator(
+        'aliases', 'extra_template_data', 'custom_formatters_kwargs', mode='before'
+    )
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
@@ -196,6 +198,22 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
+    @model_validator(mode='before')
+    def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('additional_imports') is not None:
+            values['additional_imports'] = values.get('additional_imports').split(',')
+        else:
+            values['additional_imports'] = []
+        return values
+
+    @model_validator(mode='before')
+    def validate_custom_formatters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get('custom_formatters') is not None:
+            values['custom_formatters'] = values.get('custom_formatters').split(',')
+        else:
+            values['custom_formatters'] = []
+        return values
+
     if PYDANTIC_V2:
 
         @model_validator(mode='after')  # type: ignore
@@ -220,6 +238,7 @@ class Config(BaseModel):
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_37
     base_class: str = ''
+    additional_imports: Optional[List[str]] = (None,)
     custom_template_dir: Optional[Path] = None
     extra_template_data: Optional[TextIOBase] = None
     validation: bool = False
@@ -273,6 +292,8 @@ class Config(BaseModel):
     keep_model_order: bool = False
     custom_file_header: Optional[str] = None
     custom_file_header_path: Optional[Path] = None
+    custom_formatters: Optional[List[str]] = None
+    custom_formatters_kwargs: Optional[TextIOBase] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -382,6 +403,28 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             )
             return Exit.ERROR
 
+    if config.custom_formatters_kwargs is None:
+        custom_formatters_kwargs = None
+    else:
+        with config.custom_formatters_kwargs as data:
+            try:
+                custom_formatters_kwargs = json.load(data)
+            except json.JSONDecodeError as e:
+                print(
+                    f'Unable to load custom_formatters_kwargs mapping: {e}',
+                    file=sys.stderr,
+                )
+                return Exit.ERROR
+        if not isinstance(custom_formatters_kwargs, dict) or not all(
+            isinstance(k, str) and isinstance(v, str)
+            for k, v in custom_formatters_kwargs.items()
+        ):
+            print(
+                'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
+                file=sys.stderr,
+            )
+            return Exit.ERROR
+
     try:
         generate(
             input_=config.url or config.input or sys.stdin.read(),
@@ -390,6 +433,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             output_model_type=config.output_model_type,
             target_python_version=config.target_python_version,
             base_class=config.base_class,
+            additional_imports=config.additional_imports,
             custom_template_dir=config.custom_template_dir,
             validation=config.validation,
             field_constraints=config.field_constraints,
@@ -442,6 +486,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             keep_model_order=config.keep_model_order,
             custom_file_header=config.custom_file_header,
             custom_file_header_path=config.custom_file_header_path,
+            custom_formatters=config.custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
         )
         return Exit.OK
     except InvalidClassNameError as e:
