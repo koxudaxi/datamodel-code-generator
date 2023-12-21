@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Union
 from unittest.mock import call
 
 import pytest
@@ -464,3 +466,69 @@ def test_no_additional_imports():
         source='',
     )
     assert len(new_parser.imports) == 0
+
+
+@pytest.mark.parametrize(
+    'source_obj,generated_classes',
+    [
+        (
+            {
+                '$id': 'https://example.com/person.schema.json',
+                '$schema': 'http://json-schema.org/draft-07/schema#',
+                'title': 'Person',
+                'type': 'object',
+                'properties': {
+                    'firstName': {
+                        'type': 'string',
+                        'description': "The person's first name.",
+                        'alt_type': 'integer',
+                    },
+                    'lastName': {
+                        'type': 'string',
+                        'description': "The person's last name.",
+                        'alt_type': 'integer',
+                    },
+                    'age': {
+                        'description': 'Age in years which must be equal to or greater than zero.',
+                        'type': 'integer',
+                        'minimum': 0,
+                        'alt_type': 'number',
+                    },
+                    'real_age': {
+                        'description': 'Age in years which must be equal to or greater than zero.',
+                        'type': 'integer',
+                        'minimum': 0,
+                    },
+                },
+            },
+            """class Person(BaseModel):
+    firstName: Optional[int] = None
+    lastName: Optional[int] = None
+    age: Optional[confloat(ge=0.0)] = None
+    real_age: Optional[conint(ge=0)] = None""",
+        ),
+    ],
+)
+def test_json_schema_parser_extension(source_obj, generated_classes):
+    """
+    Contrived example to extend the JsonSchemaParser to support an alt_type, which
+    replaces the type if present.
+    """
+
+    class AltJsonSchemaObject(JsonSchemaObject):
+        properties: Optional[Dict[str, Union[AltJsonSchemaObject, bool]]] = None
+        alt_type: Optional[str] = None
+
+        def model_post_init(self, context: Any) -> None:
+            if self.alt_type:
+                self.type = self.alt_type
+
+    class AltJsonSchemaParser(JsonSchemaParser):
+        SCHEMA_OJBECT_TYPE = AltJsonSchemaObject
+
+    parser = AltJsonSchemaParser(
+        data_model_field_type=DataModelFieldBase,
+        source='',
+    )
+    parser.parse_object('Person', AltJsonSchemaObject.parse_obj(source_obj), [])
+    assert dump_templates(list(parser.results)) == generated_classes
