@@ -232,9 +232,9 @@ class Pet(BaseModel):
                 },
             },
             """class Person(BaseModel):
-        firstName: Optional[str] = None
-        lastName: Optional[str] = None
-        age: Optional[conint(ge=0)] = None""",
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    age: Optional[conint(ge=0)] = None""",
         ),
         (
             {
@@ -265,8 +265,8 @@ class Pet(BaseModel):
                 },
             },
             """class Person(BaseModel):
-        name: Optional[str] = None
-        home_address: Optional[HomeAddress] = None""",
+    name: Optional[str] = None
+    home_address: Optional[HomeAddress] = None""",
         ),
     ],
 )
@@ -291,7 +291,7 @@ def test_parse_object(source_obj, generated_classes):
                 'discriminator': 'type',
             },
             """class AnyObject(BaseModel):
-        __root__: Any = Field(..., description='This field accepts any object', discriminator='type', title='AnyJson')""",
+    __root__: Any = Field(..., description='This field accepts any object', discriminator='type', title='AnyJson')""",
         )
     ],
 )
@@ -347,13 +347,13 @@ def test_parse_one_of_object(source_obj, generated_classes):
                 },
             },
             """class Defaults(BaseModel):
-        string: Optional[str] = 'default string'
-        string_on_field: Optional[str] = Field('default string', description='description')
-        number: Optional[float] = 123
-        number_on_field: Optional[float] = Field(123, description='description')
-        number_array: Optional[List] = [1, 2, 3]
-        string_array: Optional[List] = ['a', 'b', 'c']
-        object: Optional[Dict[str, Any]] = {'key': 'value'}""",
+    string: Optional[str] = 'default string'
+    string_on_field: Optional[str] = Field('default string', description='description')
+    number: Optional[float] = 123
+    number_on_field: Optional[float] = Field(123, description='description')
+    number_array: Optional[List] = [1, 2, 3]
+    string_array: Optional[List] = ['a', 'b', 'c']
+    object: Optional[Dict[str, Any]] = {'key': 'value'}""",
         )
     ],
 )
@@ -503,10 +503,10 @@ def test_no_additional_imports():
                 },
             },
             """class Person(BaseModel):
-        firstName: Optional[int] = None
-        lastName: Optional[int] = None
-        age: Optional[confloat(ge=0.0)] = None
-        real_age: Optional[conint(ge=0)] = None""",
+    firstName: Optional[int] = None
+    lastName: Optional[int] = None
+    age: Optional[confloat(ge=0.0)] = None
+    real_age: Optional[conint(ge=0)] = None""",
         ),
     ],
 )
