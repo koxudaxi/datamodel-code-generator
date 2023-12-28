@@ -270,6 +270,8 @@ class JsonSchemaObject(BaseModel):
         def __init__(self, **data: Any) -> None:
             super().__init__(**data)
             self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
+            if 'const' in data.get(self.__extra_key__, {}):
+                self.extras['const'] = data[self.__extra_key__]['const']
 
     @cached_property
     def is_object(self) -> bool:
