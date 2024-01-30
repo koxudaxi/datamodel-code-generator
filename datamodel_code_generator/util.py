@@ -70,7 +70,6 @@ else:
             return toml.load(path)
 
 
-
 SafeLoaderTemp = deepcopy(SafeLoader)
 SafeLoaderTemp.yaml_constructors = deepcopy(SafeLoader.yaml_constructors)
 
