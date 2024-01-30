@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, TypeVar
 
@@ -69,9 +70,15 @@ else:
             return toml.load(path)
 
 
-SafeLoader.yaml_constructors[
+
+SafeLoaderTemp = deepcopy(SafeLoader)
+SafeLoaderTemp.yaml_constructors = deepcopy(SafeLoader.yaml_constructors)
+
+SafeLoaderTemp.yaml_constructors[
     'tag:yaml.org,2002:timestamp'
 ] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
+
+SafeLoader = SafeLoaderTemp
 
 Model = TypeVar('Model', bound=_BaseModel)
 
