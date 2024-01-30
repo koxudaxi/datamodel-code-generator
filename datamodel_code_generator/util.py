@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from copy import deepcopy
+import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, TypeVar
 
@@ -70,8 +70,8 @@ else:
             return toml.load(path)
 
 
-SafeLoaderTemp = deepcopy(SafeLoader)
-SafeLoaderTemp.yaml_constructors = deepcopy(SafeLoader.yaml_constructors)
+SafeLoaderTemp = copy.deepcopy(SafeLoader)
+SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
 SafeLoaderTemp.add_constructor(
     'tag:yaml.org,2002:timestamp',
     SafeLoaderTemp.yaml_constructors['tag:yaml.org,2002:str'],
