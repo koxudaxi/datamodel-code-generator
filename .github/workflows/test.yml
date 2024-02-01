@@ -21,6 +21,16 @@ jobs:
             black-version: default
             python-version: 3.8
             pydantic-version: 1.8.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 24.1.0
+            python-version: 3.12
+            pydantic-version: 2.4.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 23.12.1
+            python-version: 3.12
+            pydantic-version: 2.4.2
         exclude:
           - os: windows-latest
             black-version: 22.1.0
@@ -91,10 +101,10 @@ jobs:
       if: matrix.pydantic-version != 'default'
       run: |
         poetry run pip install pydantic=="${{ matrix.pydantic-version }}"
-    - name: Install Black 22.1.0
-      if: matrix.black-version == '22.1.0'
+    - name: Install Black ${{ matrix.black-version }}
+      if: matrix.black-version != 'default'
       run: |
-         poetry run pip install black=="22.1.0"
+         poetry run pip install black=="${{ matrix.black-version }}"
     - name: Lint
       if: matrix.pydantic-version == 'default'
       run: |
