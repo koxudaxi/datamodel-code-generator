@@ -137,9 +137,10 @@ class CodeFormatter:
                     'experimental-string-processing'
                 )
             else:
-                experimental_string_processing = config.get(
-                    'preview', False
-                ) and config.get('unstable', False)
+                experimental_string_processing = config.get('preview', False) and (
+                    config.get('unstable', False)
+                    or 'string_processing' in config.get('enable-unstable-feature', [])
+                )
 
         if experimental_string_processing is not None:  # pragma: no cover
             if black.__version__.startswith('19.'):  # type: ignore
