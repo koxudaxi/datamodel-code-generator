@@ -703,6 +703,10 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_pyproject():
     if platform.system() == 'Windows':
@@ -1755,6 +1759,10 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -1781,6 +1789,10 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
         assert result == path.read_text()
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
     tmpdir_factory: TempdirFactory,
@@ -2366,6 +2378,10 @@ def test_main_openapi_use_one_literal_as_default():
     version.parse(pydantic.VERSION) < version.parse('1.9.0'),
     reason='Require Pydantic version 1.9.0 or later ',
 )
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_all():
     with TemporaryDirectory() as output_dir:
@@ -2396,6 +2412,10 @@ def test_main_openapi_enum_models_as_literal_all():
 @pytest.mark.skipif(
     version.parse(pydantic.VERSION) < version.parse('1.9.0'),
     reason='Require Pydantic version 1.9.0 or later ',
+)
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_py37(capsys):
@@ -2687,6 +2707,10 @@ def test_main_all_of_with_object():
             )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_main_combined_array():
     with TemporaryDirectory() as output_dir:
@@ -3359,6 +3383,10 @@ def test_main_strict_types():
         )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_main_strict_types_all():
     with TemporaryDirectory() as output_dir:

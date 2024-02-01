@@ -3,6 +3,7 @@ from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import black
 import pytest
 from freezegun import freeze_time
 
@@ -180,6 +181,10 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_pyproject():
     with TemporaryDirectory() as output_dir:

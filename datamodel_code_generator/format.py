@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from warnings import warn
 
 import black
+import black.mode
 import isort
 
 from datamodel_code_generator.util import cached_property, load_toml
@@ -131,9 +132,15 @@ class CodeFormatter:
         if wrap_string_literal is not None:
             experimental_string_processing = wrap_string_literal
         else:
-            experimental_string_processing = config.get(
-                'experimental-string-processing'
-            )
+            if black.__version__ < '24.1.0':  # type: ignore
+                experimental_string_processing = config.get(
+                    'experimental-string-processing'
+                )
+            else:
+                experimental_string_processing = config.get('preview', False) and (
+                    config.get('unstable', False)
+                    or 'string_processing' in config.get('enable-unstable-feature', [])
+                )
 
         if experimental_string_processing is not None:  # pragma: no cover
             if black.__version__.startswith('19.'):  # type: ignore
@@ -141,10 +148,16 @@ class CodeFormatter:
                     f"black doesn't support `experimental-string-processing` option"  # type: ignore
                     f' for wrapping string literal in {black.__version__}'
                 )
-            else:
+            elif black.__version__ < '24.1.0':  # type: ignore
                 black_kwargs[
                     'experimental_string_processing'
                 ] = experimental_string_processing
+            elif experimental_string_processing:
+                black_kwargs['preview'] = True
+                black_kwargs['unstable'] = config.get('unstable', False)
+                black_kwargs['enabled_features'] = {
+                    black.mode.Preview.string_processing
+                }
 
         if TYPE_CHECKING:
             self.black_mode: black.FileMode
