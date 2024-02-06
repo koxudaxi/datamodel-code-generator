@@ -419,7 +419,7 @@ Model customization:
   --enable-version-header
                         Enable package version on file headers
   --keep-model-order    Keep generated models' order
-  --reuse-model         Re-use models on the field when a module has the model
+  --reuse-model         Reuse models on the field when a module has the model
                         with the same content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
                         target python version (default: 3.7)
