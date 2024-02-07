@@ -12,7 +12,7 @@ from pydantic import AnyUrl, BaseModel, Field, conint
 class Problem(BaseModel):
     detail: Optional[str] = Field(
         None,
-        description='A human readable explanation specific to this occurrence of the\nproblem. You MUST NOT expose internal informations, personal\ndata or implementation details through this field.\n',
+        description='A human readable explanation specific to this occurrence of the\nproblem. You MUST NOT expose internal information, personal\ndata or implementation details through this field.\n',
         example='Request took too long to complete.',
     )
     instance: Optional[AnyUrl] = Field(
