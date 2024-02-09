@@ -333,7 +333,7 @@ Options:
                         certificate
   --input INPUT         Input file/directory (default: stdin)
   --input-file-type {auto,openapi,graphql,jsonschema,json,yaml,dict,csv}
-                        Input filge type (default: auto)
+                        Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
   --url URL             Input file URL. `--input` is ignored when `--url` is
