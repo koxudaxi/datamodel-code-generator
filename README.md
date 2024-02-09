@@ -332,8 +332,8 @@ Options:
   --http-ignore-tls     Disable verification of the remote host's TLS
                         certificate
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
-                        Input file type (default: auto)
+  --input-file-type {auto,openapi,graphql,jsonschema,json,yaml,dict,csv}
+                        Input filge type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
   --url URL             Input file URL. `--input` is ignored when `--url` is
