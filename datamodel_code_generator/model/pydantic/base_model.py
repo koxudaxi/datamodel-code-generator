@@ -87,7 +87,9 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def self_reference(self) -> bool:
-        return isinstance(self.parent, BaseModelBase) and self.parent.reference.path in {
+        return isinstance(
+            self.parent, BaseModelBase
+        ) and self.parent.reference.path in {
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
 
