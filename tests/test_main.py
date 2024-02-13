@@ -622,6 +622,10 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
         ),
     ],
 )
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_extra_template_data_config(
     capsys: CaptureFixture, output_model, expected_output
 ) -> None:
@@ -964,6 +968,10 @@ def test_main_without_field_constraints(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_with_aliases(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1135,6 +1143,10 @@ def test_enable_version_header():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_allow_population_by_field_name(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1170,6 +1182,10 @@ def test_allow_population_by_field_name(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_allow_extra_fields(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1205,6 +1221,10 @@ def test_allow_extra_fields(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_enable_faux_immutability(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -2823,6 +2843,10 @@ def test_main_openapi_nullable_strict_nullable():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_pattern(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -4121,6 +4145,10 @@ def test_long_description():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_long_description_wrap_string_literal():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -4310,6 +4338,10 @@ def test_jsonschema_without_titles_use_title_as_name():
             'main_use_annotated_with_field_constraints_pydantic_v2',
         ),
     ],
+)
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
 )
 def test_main_use_annotated_with_field_constraints(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
@@ -5182,6 +5214,10 @@ def test_main_jsonschema_pattern_properties_by_reference():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_default_object(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
@@ -5277,6 +5313,10 @@ def test_main_dataclass_field():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_jsonschema_enum_root_literal():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5968,6 +6008,10 @@ def test_main_jsonschema_discriminator_literals():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_all_of_with_relative_ref():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6023,6 +6067,10 @@ def test_main_msgspec_struct():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_msgspec_use_annotated_with_field_constraints():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6092,6 +6140,10 @@ def test_main_duplicate_field_constraints():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_duplicate_field_constraints_msgspec(
     collapse_root_models, python_version, expected_output
 ):
@@ -6252,6 +6304,10 @@ def test_all_of_use_default():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_simple_star_wars(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6275,6 +6331,10 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_different_types_of_fields():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6300,6 +6360,10 @@ def test_main_graphql_different_types_of_fields():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_custom_scalar_types():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6325,6 +6389,10 @@ def test_main_graphql_custom_scalar_types():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_field_aliases():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6350,6 +6418,10 @@ def test_main_graphql_field_aliases():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_enums():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6371,6 +6443,10 @@ def test_main_graphql_enums():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_union():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6429,6 +6505,10 @@ def test_main_graphql_additional_imports_isort_4():
     reason='See https://github.com/PyCQA/isort/issues/1600 for example',
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_additional_imports_isort_5():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6458,6 +6538,10 @@ def test_main_graphql_additional_imports_isort_5():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_custom_formatters():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6483,6 +6567,10 @@ def test_main_graphql_custom_formatters():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_enum():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
