@@ -6242,6 +6242,10 @@ def test_main_all_of_ref_self():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_array_field_constraints():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
