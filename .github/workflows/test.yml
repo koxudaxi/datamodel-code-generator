@@ -23,6 +23,11 @@ jobs:
             pydantic-version: 1.8.2
           - os: ubuntu-latest
             isort-version: 5.6.4
+            black-version: 19.10b0
+            python-version: 3.9
+            pydantic-version: 1.8.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
             black-version: 24.1.0
             python-version: 3.12
             pydantic-version: 2.4.2
@@ -31,6 +36,7 @@ jobs:
             black-version: 23.12.1
             python-version: 3.12
             pydantic-version: 2.4.2
+
         exclude:
           - os: windows-latest
             black-version: 22.1.0
