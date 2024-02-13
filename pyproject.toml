@@ -153,3 +153,10 @@ ignore-init-method-arguments = true
 [tool.pydantic-pycharm-plugin.parsable-types]
 # str field may parse int and float
 str = ["int", "float"]
+
+[tool.codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = '.git,*.lock,tests'
+# check-hidden = true
+# ignore-regex = ''
+# ignore-words-list = ''

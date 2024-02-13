@@ -525,7 +525,7 @@ def infer_input_type(text: str) -> InputFileType:
 
 
 inferred_message = (
-    'The input file type was determined to be: {}\nThis can be specificied explicitly with the '
+    'The input file type was determined to be: {}\nThis can be specified explicitly with the '
     '`--input-file-type` option.'
 )
 

@@ -9,3 +9,11 @@ repos:
       - id: ruff-format
         files: "^datamodel_code_generator|^tests"
         exclude: "^tests/data"
+  - repo: https://github.com/codespell-project/codespell
+    # Configuration for codespell is in pyproject.toml
+    rev: v2.2.6
+    hooks:
+    - id: codespell
+      additional_dependencies:
+        - tomli
+      exclude: "^tests/"

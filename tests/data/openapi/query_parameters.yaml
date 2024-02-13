@@ -100,7 +100,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Pet"
         '500':
-          description: An internal error occured
+          description: An internal error occurred
           content:
             application/json:
               schema:
