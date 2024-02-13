@@ -7,10 +7,14 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from warnings import warn
 
 import black
-import black.mode
 import isort
 
 from datamodel_code_generator.util import cached_property, load_toml
+
+try:
+    import black.mode
+except ImportError:  # pragma: no cover
+    black.mode = None
 
 
 class PythonVersion(Enum):
