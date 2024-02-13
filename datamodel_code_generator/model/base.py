@@ -63,7 +63,7 @@ class ConstraintsBase(_BaseModel):
 
     @cached_property
     def has_constraints(self) -> bool:
-        return any(v for v in self.dict().values() if v is not None)
+        return any(v is not None for v in self.dict().values())
 
     @staticmethod
     def merge_constraints(
