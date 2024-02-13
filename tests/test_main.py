@@ -5172,6 +5172,10 @@ def test_main_jsonschema_pattern_properties_by_reference():
             'main_openapi_default_object',
         ),
         (
+            'pydantic_v2.BaseModel',
+            'main_openapi_pydantic_v2_default_object',
+        ),
+        (
             'msgspec.Struct',
             'main_openapi_msgspec_default_object',
         ),
