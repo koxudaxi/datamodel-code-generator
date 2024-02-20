@@ -681,7 +681,8 @@ class Parser(ABC):
                     continue
 
                 if isinstance(data_type, BaseClassDataType):
-                    from_ = ''.join(relative(model.module_name, data_type.full_name))
+                    left, right = relative(model.module_name, data_type.full_name)
+                    from_ = ''.join([left, right]) if left.endswith('.') else '.'.join([left, right])
                     import_ = data_type.reference.short_name
                     full_path = from_, import_
                 else:
