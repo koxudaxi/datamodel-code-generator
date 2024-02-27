@@ -2201,6 +2201,7 @@ def test_space_and_special_characters_dict():
             ).read_text()
         )
 
+
 @pytest.mark.parametrize(
     'output_model,expected_output',
     [
@@ -2215,10 +2216,7 @@ def test_space_and_special_characters_dict():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_require_referenced_field(
-    output_model,
-    expected_output
-):
+def test_main_require_referenced_field(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_dir: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2235,14 +2233,12 @@ def test_main_require_referenced_field(
         )
         assert return_code == Exit.OK
 
-        assert (
-            (output_dir / "referenced.py").read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'referenced.py').read_text()
-        )
-        assert (
-            (output_dir / "required.py").read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'required.py').read_text()
-        )
+        assert (output_dir / 'referenced.py').read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'referenced.py'
+        ).read_text()
+        assert (output_dir / 'required.py').read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'required.py'
+        ).read_text()
 
 
 @freeze_time('2019-07-26')
