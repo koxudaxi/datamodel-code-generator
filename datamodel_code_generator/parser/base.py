@@ -1235,6 +1235,7 @@ class Parser(ABC):
 
             scoped_model_resolver = ModelResolver()
 
+            self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
             self.__change_from_import(models, imports, scoped_model_resolver, init)
             self.__extract_inherited_enum(models)
@@ -1242,7 +1243,6 @@ class Parser(ABC):
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models, imports)
             self.__set_default_enum_member(models)
-            self.__override_required_field(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
             self.__apply_discriminator_type(models, imports)
