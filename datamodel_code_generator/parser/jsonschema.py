@@ -118,6 +118,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'date-time': Types.date_time,
         'time': Types.time,
         'password': Types.password,
+        'path': Types.path,
         'email': Types.email,
         'idn-email': Types.email,
         'uuid': Types.uuid,
