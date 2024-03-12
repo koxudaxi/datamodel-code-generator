@@ -267,8 +267,7 @@ class TemplateBase(ABC):
         return self.render()
 
 
-class BaseClassDataType(DataType):
-    ...
+class BaseClassDataType(DataType): ...
 
 
 UNDEFINED: Any = object()

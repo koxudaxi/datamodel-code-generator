@@ -632,9 +632,9 @@ class JsonSchemaParser(Parser):
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if isinstance(obj.additionalProperties, bool):
-            self.extra_template_data[name][
-                'additionalProperties'
-            ] = obj.additionalProperties
+            self.extra_template_data[name]['additionalProperties'] = (
+                obj.additionalProperties
+            )
 
     def set_title(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.title:
