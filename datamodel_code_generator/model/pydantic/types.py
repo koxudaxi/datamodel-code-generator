@@ -8,8 +8,8 @@ from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,
     IMPORT_DATETIME,
-    IMPORT_PATH,
     IMPORT_DECIMAL,
+    IMPORT_PATH,
     IMPORT_TIME,
     IMPORT_UUID,
 )
