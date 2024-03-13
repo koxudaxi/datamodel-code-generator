@@ -402,6 +402,7 @@ def test_parse_nested_array():
         ('boolean', None, 'bool', None, None),
         ('string', 'date', 'date', 'datetime', 'date'),
         ('string', 'date-time', 'datetime', 'datetime', 'datetime'),
+        ('string', 'path', 'Path', 'pathlib', 'Path'),
         ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
         ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
         ('string', 'uri', 'AnyUrl', 'pydantic', 'AnyUrl'),
