@@ -780,7 +780,11 @@ class Parser(ABC):
                         ) != property_name:
                             continue
                         literals = discriminator_field.data_type.literals
-                        if len(literals) == 1 and literals[0] == type_names[0] if type_names else None:
+                        if (
+                            len(literals) == 1 and literals[0] == type_names[0]
+                            if type_names
+                            else None
+                        ):
                             has_one_literal = True
                             continue
                         for (
