@@ -94,8 +94,7 @@ class Config(BaseModel):
         if TYPE_CHECKING:
 
             @classmethod
-            def get_fields(cls) -> Dict[str, Any]:
-                ...
+            def get_fields(cls) -> Dict[str, Any]: ...
 
         else:
 

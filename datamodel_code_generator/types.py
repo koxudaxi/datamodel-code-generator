@@ -548,6 +548,7 @@ class Types(Enum):
     date = auto()
     date_time = auto()
     password = auto()
+    path = auto()
     email = auto()
     uuid = auto()
     uuid1 = auto()
