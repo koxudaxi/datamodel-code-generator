@@ -6638,3 +6638,36 @@ def test_main_openapi_discriminator_enum():
                 EXPECTED_MAIN_PATH / 'main_openapi_discriminator_enum' / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_enum_duplicate():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum_duplicate.yaml'),
+                '--output',
+                str(output_file),
+                '--target-python-version',
+                '3.10',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_discriminator_enum_duplicate'
+                / 'output.py'
+            ).read_text()
+        )

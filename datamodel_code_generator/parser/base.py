@@ -756,7 +756,7 @@ class Parser(ABC):
                         (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
                     ):
                         continue  # pragma: no cover
-                    type_name = None
+                    type_names = []
                     if mapping:
                         for name, path in mapping.items():
                             if (
@@ -765,10 +765,10 @@ class Parser(ABC):
                             ):
                                 # TODO: support external reference
                                 continue
-                            type_name = name
+                            type_names.append(name)
                     else:
-                        type_name = discriminator_model.path.split('/')[-1]
-                    if not type_name:  # pragma: no cover
+                        type_names = [discriminator_model.path.split('/')[-1]]
+                    if not type_names:  # pragma: no cover
                         raise RuntimeError(
                             f'Discriminator type is not found. {data_type.reference.path}'
                         )
@@ -780,7 +780,11 @@ class Parser(ABC):
                         ) != property_name:
                             continue
                         literals = discriminator_field.data_type.literals
-                        if len(literals) == 1 and literals[0] == type_name:
+                        if (
+                            len(literals) == 1 and literals[0] == type_names[0]
+                            if type_names
+                            else None
+                        ):
                             has_one_literal = True
                             continue
                         for (
@@ -789,7 +793,7 @@ class Parser(ABC):
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
                         discriminator_field.data_type = self.data_type(
-                            literals=[type_name]
+                            literals=type_names
                         )
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
@@ -799,7 +803,7 @@ class Parser(ABC):
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=property_name,
-                                data_type=self.data_type(literals=[type_name]),
+                                data_type=self.data_type(literals=type_names),
                                 required=True,
                             )
                         )
