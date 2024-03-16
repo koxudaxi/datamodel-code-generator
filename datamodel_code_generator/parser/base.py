@@ -408,19 +408,19 @@ class Parser(ABC):
         self.base_class: Optional[str] = base_class
         self.target_python_version: PythonVersion = target_python_version
         self.results: List[DataModel] = []
-        self.dump_resolve_reference_action: Optional[
-            Callable[[Iterable[str]], str]
-        ] = dump_resolve_reference_action
+        self.dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = (
+            dump_resolve_reference_action
+        )
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
         self.strip_default_none: bool = strip_default_none
-        self.apply_default_values_for_required_fields: (
-            bool
-        ) = apply_default_values_for_required_fields
-        self.force_optional_for_required_fields: (
-            bool
-        ) = force_optional_for_required_fields
+        self.apply_default_values_for_required_fields: bool = (
+            apply_default_values_for_required_fields
+        )
+        self.force_optional_for_required_fields: bool = (
+            force_optional_for_required_fields
+        )
         self.use_schema_description: bool = use_schema_description
         self.use_field_description: bool = use_field_description
         self.use_default_kwarg: bool = use_default_kwarg
@@ -433,9 +433,9 @@ class Parser(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.use_union_operator: bool = use_union_operator
         self.enable_faux_immutability: bool = enable_faux_immutability
-        self.custom_class_name_generator: Optional[
-            Callable[[str], str]
-        ] = custom_class_name_generator
+        self.custom_class_name_generator: Optional[Callable[[str], str]] = (
+            custom_class_name_generator
+        )
         self.field_extra_keys: Set[str] = field_extra_keys or set()
         self.field_extra_keys_without_x_prefix: Set[str] = (
             field_extra_keys_without_x_prefix or set()
@@ -568,9 +568,9 @@ class Parser(ABC):
 
     def __delete_duplicate_models(self, models: List[DataModel]) -> None:
         model_class_names: Dict[str, DataModel] = {}
-        model_to_duplicate_models: DefaultDict[
-            DataModel, List[DataModel]
-        ] = defaultdict(list)
+        model_to_duplicate_models: DefaultDict[DataModel, List[DataModel]] = (
+            defaultdict(list)
+        )
         for model in models[:]:
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
