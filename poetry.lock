@@ -1381,24 +1381,24 @@ histogram = ["pygal", "pygaljs"]
 
 [[package]]
 name = "pytest-codspeed"
-version = "2.2.0"
+version = "2.2.1"
 description = "Pytest plugin to create CodSpeed benchmarks"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest_codspeed-2.2.0-py3-none-any.whl", hash = "sha256:5da48b842fc465926d122dd15bb86e86af5d9f0c53ec1b7c736e9a9aed558c13"},
-    {file = "pytest_codspeed-2.2.0.tar.gz", hash = "sha256:665003fc20117b64a98d16ffd1008f5bd6bf3b1e9af142b98c00abff7f626bbd"},
+    {file = "pytest_codspeed-2.2.1-py3-none-any.whl", hash = "sha256:aad08033015f3e6c8c14c8bf0eca475921a9b088e92c98b626bf8af8f516471e"},
+    {file = "pytest_codspeed-2.2.1.tar.gz", hash = "sha256:0adc24baf01c64a6ca0a0b83b3cd704351708997e09ec086b7776c32227d4e0a"},
 ]
 
 [package.dependencies]
-cffi = ">=1.15.1,<1.16.0"
-filelock = ">=3.12.2,<3.13.0"
+cffi = ">=1.15.1"
+filelock = ">=3.12.2"
 pytest = ">=3.8"
-setuptools = {version = ">=67.8.0,<67.9.0", markers = "python_full_version >= \"3.12.0b1\""}
+setuptools = {version = "*", markers = "python_full_version >= \"3.12.0\""}
 
 [package.extras]
 compat = ["pytest-benchmark (>=4.0.0,<4.1.0)", "pytest-xdist (>=2.0.0,<2.1.0)"]
-lint = ["black (>=23.3.0,<23.4.0)", "isort (>=5.12.0,<5.13.0)", "mypy (>=1.3.0,<1.4.0)", "ruff (>=0.0.275,<0.1.0)"]
+lint = ["mypy (>=1.3.0,<1.4.0)", "ruff (>=0.3.3,<0.4.0)"]
 test = ["pytest (>=7.0,<8.0)", "pytest-cov (>=4.0.0,<4.1.0)"]
 
 [[package]]
