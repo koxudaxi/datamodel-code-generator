@@ -126,6 +126,7 @@ class DataModelField(DataModelFieldBase):
         'min_length',
         'max_length',
         'pattern',
+        'examples',
         # 'unique_items', # not supported by msgspec
     }
     _PARSE_METHOD = 'convert'
