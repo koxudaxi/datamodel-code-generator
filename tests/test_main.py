@@ -6671,3 +6671,26 @@ def test_main_openapi_discriminator_enum_duplicate():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_root_one_of():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'root_one_of'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        expected_directory = EXPECTED_MAIN_PATH / 'main_root_one_of'
+        for path in expected_directory.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(expected_directory)
+            ).read_text()
+            assert result == path.read_text()

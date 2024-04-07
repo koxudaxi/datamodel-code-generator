@@ -671,7 +671,8 @@ class Parser(ABC):
         for model in models:
             scoped_model_resolver.add(model.path, model.class_name)
         for model in models:
-            imports.append(model.imports)
+            before_import = model.imports
+            imports.append(before_import)
             for data_type in model.all_data_types:
                 # To change from/import
 
@@ -709,6 +710,9 @@ class Parser(ABC):
                         reference_path=data_type.reference.path,
                     ),
                 )
+            after_import = model.imports
+            if before_import != after_import:
+                imports.append(after_import)
 
     @classmethod
     def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
