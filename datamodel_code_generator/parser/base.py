@@ -408,19 +408,19 @@ class Parser(ABC):
         self.base_class: Optional[str] = base_class
         self.target_python_version: PythonVersion = target_python_version
         self.results: List[DataModel] = []
-        self.dump_resolve_reference_action: Optional[
-            Callable[[Iterable[str]], str]
-        ] = dump_resolve_reference_action
+        self.dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = (
+            dump_resolve_reference_action
+        )
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
         self.strip_default_none: bool = strip_default_none
-        self.apply_default_values_for_required_fields: (
-            bool
-        ) = apply_default_values_for_required_fields
-        self.force_optional_for_required_fields: (
-            bool
-        ) = force_optional_for_required_fields
+        self.apply_default_values_for_required_fields: bool = (
+            apply_default_values_for_required_fields
+        )
+        self.force_optional_for_required_fields: bool = (
+            force_optional_for_required_fields
+        )
         self.use_schema_description: bool = use_schema_description
         self.use_field_description: bool = use_field_description
         self.use_default_kwarg: bool = use_default_kwarg
@@ -433,9 +433,9 @@ class Parser(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.use_union_operator: bool = use_union_operator
         self.enable_faux_immutability: bool = enable_faux_immutability
-        self.custom_class_name_generator: Optional[
-            Callable[[str], str]
-        ] = custom_class_name_generator
+        self.custom_class_name_generator: Optional[Callable[[str], str]] = (
+            custom_class_name_generator
+        )
         self.field_extra_keys: Set[str] = field_extra_keys or set()
         self.field_extra_keys_without_x_prefix: Set[str] = (
             field_extra_keys_without_x_prefix or set()
@@ -568,9 +568,9 @@ class Parser(ABC):
 
     def __delete_duplicate_models(self, models: List[DataModel]) -> None:
         model_class_names: Dict[str, DataModel] = {}
-        model_to_duplicate_models: DefaultDict[
-            DataModel, List[DataModel]
-        ] = defaultdict(list)
+        model_to_duplicate_models: DefaultDict[DataModel, List[DataModel]] = (
+            defaultdict(list)
+        )
         for model in models[:]:
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
@@ -671,7 +671,8 @@ class Parser(ABC):
         for model in models:
             scoped_model_resolver.add(model.path, model.class_name)
         for model in models:
-            imports.append(model.imports)
+            before_import = model.imports
+            imports.append(before_import)
             for data_type in model.all_data_types:
                 # To change from/import
 
@@ -714,6 +715,9 @@ class Parser(ABC):
                         reference_path=data_type.reference.path,
                     ),
                 )
+            after_import = model.imports
+            if before_import != after_import:
+                imports.append(after_import)
 
     @classmethod
     def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
@@ -761,7 +765,7 @@ class Parser(ABC):
                         (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
                     ):
                         continue  # pragma: no cover
-                    type_name = None
+                    type_names = []
                     if mapping:
                         for name, path in mapping.items():
                             if (
@@ -770,10 +774,10 @@ class Parser(ABC):
                             ):
                                 # TODO: support external reference
                                 continue
-                            type_name = name
+                            type_names.append(name)
                     else:
-                        type_name = discriminator_model.path.split('/')[-1]
-                    if not type_name:  # pragma: no cover
+                        type_names = [discriminator_model.path.split('/')[-1]]
+                    if not type_names:  # pragma: no cover
                         raise RuntimeError(
                             f'Discriminator type is not found. {data_type.reference.path}'
                         )
@@ -785,7 +789,11 @@ class Parser(ABC):
                         ) != property_name:
                             continue
                         literals = discriminator_field.data_type.literals
-                        if len(literals) == 1 and literals[0] == type_name:
+                        if (
+                            len(literals) == 1 and literals[0] == type_names[0]
+                            if type_names
+                            else None
+                        ):
                             has_one_literal = True
                             continue
                         for (
@@ -794,7 +802,7 @@ class Parser(ABC):
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
                         discriminator_field.data_type = self.data_type(
-                            literals=[type_name]
+                            literals=type_names
                         )
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
@@ -804,7 +812,7 @@ class Parser(ABC):
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=property_name,
-                                data_type=self.data_type(literals=[type_name]),
+                                data_type=self.data_type(literals=type_names),
                                 required=True,
                             )
                         )
@@ -1240,6 +1248,7 @@ class Parser(ABC):
 
             scoped_model_resolver = ModelResolver()
 
+            self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
             self.__change_from_import(models, imports, scoped_model_resolver, init)
             self.__extract_inherited_enum(models)
@@ -1247,7 +1256,6 @@ class Parser(ABC):
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models, imports)
             self.__set_default_enum_member(models)
-            self.__override_required_field(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
             self.__apply_discriminator_type(models, imports)

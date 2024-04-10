@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Literal
 
-    def load_toml(path: Path) -> Dict[str, Any]:
-        ...
+    def load_toml(path: Path) -> Dict[str, Any]: ...
 
 else:
     try:

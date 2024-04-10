@@ -118,6 +118,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'date-time': Types.date_time,
         'time': Types.time,
         'password': Types.password,
+        'path': Types.path,
         'email': Types.email,
         'idn-email': Types.email,
         'uuid': Types.uuid,
@@ -632,9 +633,9 @@ class JsonSchemaParser(Parser):
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if isinstance(obj.additionalProperties, bool):
-            self.extra_template_data[name][
-                'additionalProperties'
-            ] = obj.additionalProperties
+            self.extra_template_data[name]['additionalProperties'] = (
+                obj.additionalProperties
+            )
 
     def set_title(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.title:

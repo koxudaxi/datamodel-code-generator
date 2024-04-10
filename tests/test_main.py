@@ -2202,6 +2202,45 @@ def test_space_and_special_characters_dict():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_require_referenced_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_require_referenced_field_pydantic_v2',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_require_referenced_field(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+
+        assert (output_dir / 'referenced.py').read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'referenced.py'
+        ).read_text()
+        assert (output_dir / 'required.py').read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'required.py'
+        ).read_text()
+
+
 @freeze_time('2019-07-26')
 def test_csv_file():
     with TemporaryDirectory() as output_dir:
@@ -6599,3 +6638,59 @@ def test_main_openapi_discriminator_enum():
                 EXPECTED_MAIN_PATH / 'main_openapi_discriminator_enum' / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_enum_duplicate():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum_duplicate.yaml'),
+                '--output',
+                str(output_file),
+                '--target-python-version',
+                '3.10',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_discriminator_enum_duplicate'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_root_one_of():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'root_one_of'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        expected_directory = EXPECTED_MAIN_PATH / 'main_root_one_of'
+        for path in expected_directory.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(expected_directory)
+            ).read_text()
+            assert result == path.read_text()

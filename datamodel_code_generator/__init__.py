@@ -58,8 +58,7 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
 
 if TYPE_CHECKING:
 
-    def get_version() -> str:
-        ...
+    def get_version() -> str: ...
 
 else:
 

@@ -76,8 +76,7 @@ class PythonVersion(Enum):
 
 if TYPE_CHECKING:
 
-    class _TargetVersion(Enum):
-        ...
+    class _TargetVersion(Enum): ...
 
     BLACK_PYTHON_VERSION: Dict[PythonVersion, _TargetVersion]
 else:
@@ -98,8 +97,7 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
 
         def _find_project_root(
             srcs: Union[Sequence[str], Iterable[str]],
-        ) -> Union[Tuple[Path, str], Path]:
-            ...
+        ) -> Union[Tuple[Path, str], Path]: ...
 
     else:
         from black import find_project_root as _find_project_root
@@ -153,9 +151,9 @@ class CodeFormatter:
                     f' for wrapping string literal in {black.__version__}'
                 )
             elif black.__version__ < '24.1.0':  # type: ignore
-                black_kwargs[
-                    'experimental_string_processing'
-                ] = experimental_string_processing
+                black_kwargs['experimental_string_processing'] = (
+                    experimental_string_processing
+                )
             elif experimental_string_processing:
                 black_kwargs['preview'] = True
                 black_kwargs['unstable'] = config.get('unstable', False)
@@ -240,8 +238,7 @@ class CodeFormatter:
 
     if TYPE_CHECKING:
 
-        def apply_isort(self, code: str) -> str:
-            ...
+        def apply_isort(self, code: str) -> str: ...
 
     else:
         if isort.__version__.startswith('4.'):

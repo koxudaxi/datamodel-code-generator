@@ -27,6 +27,7 @@ Below are the data types and features recognized by datamodel-code-generator for
 - password
 - email
 - idn-email
+- path
 - uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 - ipv4
 - ipv6
