@@ -390,6 +390,7 @@ class Parser(ABC):
         known_third_party: Optional[List[str]] = None,
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -490,6 +491,9 @@ class Parser(ABC):
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
         self.http_headers: Optional[Sequence[Tuple[str, str]]] = http_headers
+        self.http_query_parameters: Optional[Sequence[Tuple[str, str]]] = (
+            http_query_parameters
+        )
         self.http_ignore_tls: bool = http_ignore_tls
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
@@ -547,7 +551,7 @@ class Parser(ABC):
         return self.remote_text_cache.get_or_put(
             url,
             default_factory=lambda url_: get_body(
-                url, self.http_headers, self.http_ignore_tls
+                url, self.http_headers, self.http_ignore_tls, self.http_query_parameters
             ),
         )
 

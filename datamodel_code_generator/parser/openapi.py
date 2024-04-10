@@ -220,6 +220,7 @@ class OpenAPIParser(JsonSchemaParser):
         known_third_party: Optional[List[str]] = None,
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     ):
         super().__init__(
             source=source,
@@ -285,6 +286,7 @@ class OpenAPIParser(JsonSchemaParser):
             known_third_party=known_third_party,
             custom_formatters=custom_formatters,
             custom_formatters_kwargs=custom_formatters_kwargs,
+            http_query_parameters=http_query_parameters,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

@@ -299,6 +299,7 @@ def generate(
     custom_file_header_path: Optional[Path] = None,
     custom_formatters: Optional[List[str]] = None,
     custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -308,7 +309,9 @@ def generate(
 
         input_text = remote_text_cache.get_or_put(
             input_.geturl(),
-            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls),
+            default_factory=lambda url: get_body(
+                url, http_headers, http_ignore_tls, http_query_parameters
+            ),
         )
     else:
         input_text = None
@@ -455,6 +458,7 @@ def generate(
         known_third_party=data_model_types.known_third_party,
         custom_formatters=custom_formatters,
         custom_formatters_kwargs=custom_formatters_kwargs,
+        http_query_parameters=http_query_parameters,
         **kwargs,
     )
 
