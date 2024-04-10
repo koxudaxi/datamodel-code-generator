@@ -1,5 +1,5 @@
 {
-  "$id": "https://example.com/external_files_in_directory/definitions/pet.json",
+  "$id": "https://example.com/external_files_in_directory/relative/animal/pet/pet.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Pet",
   "type": "object",
@@ -11,7 +11,7 @@
       "type": "integer"
     },
     "fur": {
-      "$ref": "fur.json#"
+      "$ref": "../fur.json"
     }
   }
 }
