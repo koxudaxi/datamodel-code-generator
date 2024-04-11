@@ -120,6 +120,7 @@ class Reference(_BaseModel):
     source: Optional[Any] = None
     children: List[Any] = []
     _exclude_fields: ClassVar[Set[str]] = {'children'}
+    http_folder_output: Optional[Path] = None
 
     @model_validator(mode='before')
     def validate_original_name(cls, values: Any) -> Any:
@@ -157,6 +158,12 @@ class Reference(_BaseModel):
     @property
     def short_name(self) -> str:
         return self.name.rsplit('.', 1)[-1]
+
+    @property
+    def override_path(self) -> Optional[Path]:
+        if self.http_folder_output:
+            return Path(f'{self.http_folder_output.as_posix()}/{self.short_name}')
+        return None
 
 
 SINGULAR_NAME_SUFFIX: str = 'Item'
@@ -555,7 +562,12 @@ class ModelResolver:
             joined_path += '#'
         return joined_path
 
-    def add_ref(self, ref: str, resolved: bool = False) -> Reference:
+    def add_ref(
+        self,
+        ref: str,
+        resolved: bool = False,
+        http_folder_output: Optional[Path] = None,
+    ) -> Reference:
         if not resolved:
             path = self.resolve_ref(ref)
         else:
@@ -580,6 +592,7 @@ class ModelResolver:
             original_name=original_name,
             name=name,
             loaded=False,
+            http_folder_output=http_folder_output,
         )
 
         self.references[path] = reference
@@ -595,6 +608,7 @@ class ModelResolver:
         unique: bool = True,
         singular_name_suffix: Optional[str] = None,
         loaded: bool = False,
+        http_folder_output: Optional[Path] = None,
     ) -> Reference:
         joined_path = self.join_path(path)
         reference: Optional[Reference] = self.references.get(joined_path)
@@ -641,6 +655,7 @@ class ModelResolver:
                 name=name,
                 loaded=loaded,
                 duplicate_name=duplicate_name,
+                http_folder_output=http_folder_output,
             )
             self.references[joined_path] = reference
         return reference

@@ -592,6 +592,7 @@ def test_openapi_model_resolver():
     assert references == {
         'api.yaml#/components/schemas/Error': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Error',
             'original_name': 'Error',
@@ -599,6 +600,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Event': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Event',
             'original_name': 'Event',
@@ -606,6 +608,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Id': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Id',
             'original_name': 'Id',
@@ -613,6 +616,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Pet': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Pet',
             'original_name': 'Pet',
@@ -620,6 +624,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Pets': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Pets',
             'original_name': 'Pets',
@@ -627,6 +632,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Result': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Result',
             'original_name': 'Result',
@@ -634,6 +640,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Rules': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Rules',
             'original_name': 'Rules',
@@ -641,6 +648,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Users': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Users',
             'original_name': 'Users',
@@ -648,6 +656,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/Users/Users/0#-datamodel-code-generator-#-object-#-special-#': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'User',
             'original_name': 'Users',
@@ -655,6 +664,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/apis': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Apis',
             'original_name': 'apis',
@@ -662,6 +672,7 @@ def test_openapi_model_resolver():
         },
         'api.yaml#/components/schemas/apis/apis/0#-datamodel-code-generator-#-object-#-special-#': {
             'duplicate_name': None,
+            'http_folder_output': None,
             'loaded': True,
             'name': 'Api',
             'original_name': 'apis',
