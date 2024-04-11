@@ -10,6 +10,8 @@ from datamodel_code_generator.imports import (
     IMPORT_DATETIME,
     IMPORT_DECIMAL,
     IMPORT_PATH,
+    IMPORT_PENDULUM_DATE,
+    IMPORT_PENDULUM_DATETIME,
     IMPORT_TIME,
     IMPORT_UUID,
 )
@@ -53,11 +55,12 @@ def type_map_factory(
     data_type: Type[DataType],
     strict_types: Sequence[StrictTypes],
     pattern_key: str,
+    use_pendulum: bool,
 ) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
     data_type_str = data_type(type='str')
-    return {
+    result = {
         Types.integer: data_type_int,
         Types.int32: data_type_int,
         Types.int64: data_type_int,
@@ -100,6 +103,11 @@ def type_map_factory(
         Types.array: data_type.from_import(IMPORT_ANY, is_list=True),
         Types.any: data_type.from_import(IMPORT_ANY),
     }
+    if use_pendulum:
+        result[Types.date] = data_type.from_import(IMPORT_PENDULUM_DATE)
+        result[Types.date_time] = data_type.from_import(IMPORT_PENDULUM_DATETIME)
+
+    return result
 
 
 def strict_type_map_factory(data_type: Type[DataType]) -> Dict[StrictTypes, DataType]:
@@ -147,6 +155,7 @@ class DataTypeManager(_DataTypeManager):
         strict_types: Optional[Sequence[StrictTypes]] = None,
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
+        use_pendulum: bool = False,
     ):
         super().__init__(
             python_version,
@@ -155,6 +164,7 @@ class DataTypeManager(_DataTypeManager):
             strict_types,
             use_non_positive_negative_number_constrained_types,
             use_union_operator,
+            use_pendulum,
         )
 
         self.type_map: Dict[Types, DataType] = self.type_map_factory(
@@ -185,7 +195,7 @@ class DataTypeManager(_DataTypeManager):
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
     ) -> Dict[Types, DataType]:
-        return type_map_factory(data_type, strict_types, pattern_key)
+        return type_map_factory(data_type, strict_types, pattern_key, self.use_pendulum)
 
     def transform_kwargs(
         self, kwargs: Dict[str, Any], filter_: Set[str]

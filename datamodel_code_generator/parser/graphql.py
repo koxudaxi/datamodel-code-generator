@@ -156,6 +156,7 @@ class GraphQLParser(Parser):
         known_third_party: Optional[List[str]] = None,
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        use_pendulum: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -221,6 +222,7 @@ class GraphQLParser(Parser):
             known_third_party=known_third_party,
             custom_formatters=custom_formatters,
             custom_formatters_kwargs=custom_formatters_kwargs,
+            use_pendulum=use_pendulum,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

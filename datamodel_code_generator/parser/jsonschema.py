@@ -438,6 +438,7 @@ class JsonSchemaParser(Parser):
         known_third_party: Optional[List[str]] = None,
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        use_pendulum: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -503,6 +504,7 @@ class JsonSchemaParser(Parser):
             known_third_party=known_third_party,
             custom_formatters=custom_formatters,
             custom_formatters_kwargs=custom_formatters_kwargs,
+            use_pendulum=use_pendulum,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
