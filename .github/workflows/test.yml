@@ -122,9 +122,10 @@ jobs:
          ./scripts/test.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.pydantic-version != '1.5.1'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests
         file: ./coverage.xml
         fail_ci_if_error: true
