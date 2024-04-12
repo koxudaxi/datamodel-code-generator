@@ -3089,8 +3089,8 @@ def test_main_http_jsonschema(mocker):
         'httpx.get',
         side_effect=[
             get_mock_response('person.json'),
-            get_mock_response('definitions/pet.json'),
-            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/relative/animal/pet/pet.json'),
+            get_mock_response('definitions/relative/animal/fur.json'),
             get_mock_response('definitions/friends.json'),
             get_mock_response('definitions/food.json'),
             get_mock_response('definitions/machine/robot.json'),
@@ -3126,13 +3126,13 @@ def test_main_http_jsonschema(mocker):
                     follow_redirects=True,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
@@ -3201,8 +3201,8 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
         'httpx.get',
         side_effect=[
             get_mock_response('person.json'),
-            get_mock_response('definitions/pet.json'),
-            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/relative/animal/pet/pet.json'),
+            get_mock_response('definitions/relative/animal/fur.json'),
             get_mock_response('definitions/friends.json'),
             get_mock_response('definitions/food.json'),
             get_mock_response('definitions/machine/robot.json'),
@@ -3242,13 +3242,13 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
                     follow_redirects=True,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
@@ -6671,3 +6671,26 @@ def test_main_openapi_discriminator_enum_duplicate():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_root_one_of():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'root_one_of'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        expected_directory = EXPECTED_MAIN_PATH / 'main_root_one_of'
+        for path in expected_directory.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(expected_directory)
+            ).read_text()
+            assert result == path.read_text()
