@@ -8,9 +8,10 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
-from .definitions import food, friends, pet
+from .definitions import food, friends
 from .definitions.drink import coffee, tea
 from .definitions.machine import robot
+from .definitions.relative.animal.pet import pet
 
 
 class Person(BaseModel):
