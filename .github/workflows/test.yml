@@ -128,4 +128,4 @@ jobs:
         file: ./coverage.xml
         fail_ci_if_error: true
         env_vars: OS,PYTHON,ISORT
-        token: ${{ secrets.CODECOV_TOKEN }}
+        #token: ${{ secrets.CODECOV_TOKEN }}
