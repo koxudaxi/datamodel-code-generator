@@ -7,9 +7,10 @@ from __future__ import annotations
 from typing import Optional
 
 from ... import person
-from .. import food, pet
+from .. import food
 from ..drink import coffee
-from ..pet import Pet
+from ..relative.animal.pet import pet
+from ..relative.animal.pet.pet import Pet
 
 
 class Robot(Pet):
