@@ -101,6 +101,7 @@ def test_json_schema_object_ref_url_json(mocker):
                 headers=None,
                 verify=True,
                 follow_redirects=True,
+                params=None,
             ),
         ]
     )
@@ -133,6 +134,7 @@ class Pet(BaseModel):
         headers=None,
         verify=True,
         follow_redirects=True,
+        params=None,
     )
 
 
@@ -169,6 +171,7 @@ class User(BaseModel):
         headers=None,
         verify=True,
         follow_redirects=True,
+        params=None,
     )
 
 
@@ -203,6 +206,7 @@ class Pet(BaseModel):
         headers=None,
         verify=True,
         follow_redirects=True,
+        params=None,
     )
 
 
