@@ -300,6 +300,7 @@ def generate(
     custom_formatters: Optional[List[str]] = None,
     custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     use_pendulum: bool = False,
+    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -309,7 +310,9 @@ def generate(
 
         input_text = remote_text_cache.get_or_put(
             input_.geturl(),
-            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls),
+            default_factory=lambda url: get_body(
+                url, http_headers, http_ignore_tls, http_query_parameters
+            ),
         )
     else:
         input_text = None
@@ -457,6 +460,7 @@ def generate(
         custom_formatters=custom_formatters,
         custom_formatters_kwargs=custom_formatters_kwargs,
         use_pendulum=use_pendulum,
+        http_query_parameters=http_query_parameters,
         **kwargs,
     )
 

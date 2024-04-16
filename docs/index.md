@@ -327,6 +327,9 @@ Options:
                         (example: "Authorization: Basic dXNlcjpwYXNz")
   --http-ignore-tls     Disable verification of the remote host's TLS
                         certificate
+  --http-query-parameters QUERY_PARAMETER [QUERY_PARAMETER ...]
+                        Set query parameters in HTTP requests to the remote host.
+                        (example: "ref=branch")
   --input INPUT         Input file/directory (default: stdin)
   --input-file-type {auto,openapi,graphql,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)

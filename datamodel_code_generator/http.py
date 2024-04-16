@@ -14,9 +14,14 @@ def get_body(
     url: str,
     headers: Optional[Sequence[Tuple[str, str]]] = None,
     ignore_tls: bool = False,
+    query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
 ) -> str:
     return httpx.get(
-        url, headers=headers, verify=not ignore_tls, follow_redirects=True
+        url,
+        headers=headers,
+        verify=not ignore_tls,
+        follow_redirects=True,
+        params=query_parameters,
     ).text
 
 
