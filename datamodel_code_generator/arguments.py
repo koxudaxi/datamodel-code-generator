@@ -58,6 +58,12 @@ base_options.add_argument(
     help='Set headers in HTTP requests to the remote host. (example: "Authorization: Basic dXNlcjpwYXNz")',
 )
 base_options.add_argument(
+    '--http-query-parameters',
+    nargs='+',
+    metavar='HTTP_QUERY_PARAMETERS',
+    help='Set query parameters in HTTP requests to the remote host. (example: "ref=branch")',
+)
+base_options.add_argument(
     '--http-ignore-tls',
     help="Disable verification of the remote host's TLS certificate",
     action='store_true',

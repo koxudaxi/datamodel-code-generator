@@ -157,6 +157,7 @@ class GraphQLParser(Parser):
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         http_folder_output: Optional[Path] = None,
+        http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -223,6 +224,7 @@ class GraphQLParser(Parser):
             custom_formatters=custom_formatters,
             custom_formatters_kwargs=custom_formatters_kwargs,
             http_folder_output=http_folder_output,
+            http_query_parameters=http_query_parameters,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

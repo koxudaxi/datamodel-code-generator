@@ -1551,6 +1551,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -1616,6 +1617,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -1656,6 +1658,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -3124,48 +3127,56 @@ def test_main_http_jsonschema(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -3173,22 +3184,31 @@ def test_main_http_jsonschema(mocker):
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'headers_arguments,headers_requests,http_ignore_tls',
+    'headers_arguments,headers_requests,query_parameters_arguments,query_parameters_requests,http_ignore_tls',
     [
         (
             ('Authorization: Basic dXNlcjpwYXNz',),
             [('Authorization', 'Basic dXNlcjpwYXNz')],
+            ('key=value',),
+            [('key', 'value')],
             False,
         ),
         (
             ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
             [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
+            ('key=value', 'newkey=newvalue'),
+            [('key', 'value'), ('newkey', 'newvalue')],
             True,
         ),
     ],
 )
-def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
-    mocker, headers_arguments, headers_requests, http_ignore_tls
+def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
+    mocker,
+    headers_arguments,
+    headers_requests,
+    query_parameters_arguments,
+    query_parameters_requests,
+    http_ignore_tls,
 ):
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
@@ -3217,6 +3237,8 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
             'https://example.com/external_files_in_directory/person.json',
             '--http-headers',
             *headers_arguments,
+            '--http-query-parameters',
+            *query_parameters_arguments,
             '--output',
             str(output_file),
             '--input-file-type',
@@ -3240,48 +3262,56 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
             ]
         )
@@ -3325,12 +3355,14 @@ def test_main_http_openapi(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -3375,6 +3407,7 @@ def test_main_http_json(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -4054,6 +4087,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
