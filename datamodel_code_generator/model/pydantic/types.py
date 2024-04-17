@@ -12,6 +12,7 @@ from datamodel_code_generator.imports import (
     IMPORT_PATH,
     IMPORT_PENDULUM_DATE,
     IMPORT_PENDULUM_DATETIME,
+    IMPORT_PENDULUM_TIME,
     IMPORT_TIME,
     IMPORT_UUID,
 )
@@ -106,6 +107,7 @@ def type_map_factory(
     if use_pendulum:
         result[Types.date] = data_type.from_import(IMPORT_PENDULUM_DATE)
         result[Types.date_time] = data_type.from_import(IMPORT_PENDULUM_DATETIME)
+        result[Types.time] = data_type.from_import(IMPORT_PENDULUM_TIME)
 
     return result
 
