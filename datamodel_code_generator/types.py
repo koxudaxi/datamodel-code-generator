@@ -580,12 +580,6 @@ class DataTypeManager(ABC):
         use_union_operator: bool = False,
         use_pendulum: bool = False,
     ) -> None:
-        import pdb
-        import traceback
-
-        traceback.print_stack()
-        pdb.set_trace()
-
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
         self.use_generic_container_types: bool = use_generic_container_types
