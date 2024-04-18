@@ -390,6 +390,7 @@ class Parser(ABC):
         known_third_party: Optional[List[str]] = None,
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -398,6 +399,7 @@ class Parser(ABC):
             use_generic_container_types=use_generic_container_types,
             strict_types=strict_types,
             use_union_operator=use_union_operator,
+            use_pendulum=use_pendulum,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
