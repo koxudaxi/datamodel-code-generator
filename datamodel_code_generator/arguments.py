@@ -172,6 +172,12 @@ model_options.add_argument(
     action='store_true',
     default=None,
 )
+model_options.add_argument(
+    '--use-pendulum',
+    help='use pendulum instead of datetime',
+    action='store_true',
+    default=False,
+)
 
 # ======================================================================================
 # Typing options for generated models

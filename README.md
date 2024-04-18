@@ -405,6 +405,9 @@ Field customization:
                         Fields that have default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-pendulum
+                        Use pendulum instead of `datetime` for `date`, 
+                        `datetime`, and `time` data types
 
 Model customization:
   --allow-extra-fields  Allow to pass extra fields, if this flag is not
