@@ -390,45 +390,52 @@ def test_parse_nested_array():
 
 
 @pytest.mark.parametrize(
-    'schema_type,schema_format,result_type,from_,import_',
+    'schema_type,schema_format,result_type,from_,import_,use_pendulum',
     [
-        ('integer', 'int32', 'int', None, None),
-        ('integer', 'int64', 'int', None, None),
-        ('integer', 'date-time', 'datetime', 'datetime', 'datetime'),
-        ('integer', 'unix-time', 'int', None, None),
-        ('number', 'float', 'float', None, None),
-        ('number', 'double', 'float', None, None),
-        ('number', 'time', 'time', 'datetime', 'time'),
-        ('number', 'date-time', 'datetime', 'datetime', 'datetime'),
-        ('string', None, 'str', None, None),
-        ('string', 'byte', 'str', None, None),
-        ('string', 'binary', 'bytes', None, None),
-        ('boolean', None, 'bool', None, None),
-        ('string', 'date', 'date', 'datetime', 'date'),
-        ('string', 'date-time', 'datetime', 'datetime', 'datetime'),
-        ('string', 'path', 'Path', 'pathlib', 'Path'),
-        ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr'),
-        ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr'),
-        ('string', 'uri', 'AnyUrl', 'pydantic', 'AnyUrl'),
-        ('string', 'uri-reference', 'str', None, None),
-        ('string', 'uuid', 'UUID', 'uuid', 'UUID'),
-        ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1'),
-        ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2'),
-        ('string', 'uuid3', 'UUID3', 'pydantic', 'UUID3'),
-        ('string', 'uuid4', 'UUID4', 'pydantic', 'UUID4'),
-        ('string', 'uuid5', 'UUID5', 'pydantic', 'UUID5'),
-        ('string', 'ipv4', 'IPv4Address', 'ipaddress', 'IPv4Address'),
-        ('string', 'ipv6', 'IPv6Address', 'ipaddress', 'IPv6Address'),
-        ('string', 'unknown-type', 'str', None, None),
+        ('integer', 'int32', 'int', None, None, False),
+        ('integer', 'int64', 'int', None, None, False),
+        ('integer', 'date-time', 'datetime', 'datetime', 'datetime', False),
+        ('integer', 'date-time', 'DateTime', 'pendulum', 'DateTime', True),
+        ('integer', 'unix-time', 'int', None, None, False),
+        ('number', 'float', 'float', None, None, False),
+        ('number', 'double', 'float', None, None, False),
+        ('number', 'time', 'time', 'datetime', 'time', False),
+        ('number', 'time', 'Time', 'pendulum', 'Time', True),
+        ('number', 'date-time', 'datetime', 'datetime', 'datetime', False),
+        ('number', 'date-time', 'DateTime', 'pendulum', 'DateTime', True),
+        ('string', None, 'str', None, None, False),
+        ('string', 'byte', 'str', None, None, False),
+        ('string', 'binary', 'bytes', None, None, False),
+        ('boolean', None, 'bool', None, None, False),
+        ('string', 'date', 'date', 'datetime', 'date', False),
+        ('string', 'date', 'Date', 'pendulum', 'Date', True),
+        ('string', 'date-time', 'datetime', 'datetime', 'datetime', False),
+        ('string', 'date-time', 'DateTime', 'pendulum', 'DateTime', True),
+        ('string', 'path', 'Path', 'pathlib', 'Path', False),
+        ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr', False),
+        ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr', False),
+        ('string', 'uri', 'AnyUrl', 'pydantic', 'AnyUrl', False),
+        ('string', 'uri-reference', 'str', None, None, False),
+        ('string', 'uuid', 'UUID', 'uuid', 'UUID', False),
+        ('string', 'uuid1', 'UUID1', 'pydantic', 'UUID1', False),
+        ('string', 'uuid2', 'UUID2', 'pydantic', 'UUID2', False),
+        ('string', 'uuid3', 'UUID3', 'pydantic', 'UUID3', False),
+        ('string', 'uuid4', 'UUID4', 'pydantic', 'UUID4', False),
+        ('string', 'uuid5', 'UUID5', 'pydantic', 'UUID5', False),
+        ('string', 'ipv4', 'IPv4Address', 'ipaddress', 'IPv4Address', False),
+        ('string', 'ipv6', 'IPv6Address', 'ipaddress', 'IPv6Address', False),
+        ('string', 'unknown-type', 'str', None, None, False),
     ],
 )
-def test_get_data_type(schema_type, schema_format, result_type, from_, import_):
+def test_get_data_type(
+    schema_type, schema_format, result_type, from_, import_, use_pendulum
+):
     if from_ and import_:
         import_: Optional[Import] = Import(from_=from_, import_=import_)
     else:
         import_ = None
 
-    parser = JsonSchemaParser('')
+    parser = JsonSchemaParser('', use_pendulum=use_pendulum)
     assert (
         parser.get_data_type(
             JsonSchemaObject(type=schema_type, format=schema_format)
