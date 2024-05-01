@@ -33,7 +33,7 @@ from datamodel_code_generator.types import chain_as_tuple, get_optional_type
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return bool(field.field) or not (
+    return bool(field.field and field.name == field.original_name) or not (
         field.required
         or (field.represented_default == 'None' and field.strip_default_none)
     )
