@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -216,6 +217,12 @@ class BaseModel(BaseModelBase):
         for data_type in self.all_data_types:
             if data_type.is_custom_type:
                 config_parameters['arbitrary_types_allowed'] = True
+                break
+
+        for field in self.fields:
+            # Check if a regex pattern uses lookarounds
+            if isinstance(field.constraints, Constraints) and field.constraints.pattern and re.search(r'\(\?<?[=!]', field.constraints.pattern):
+                config_parameters['regex_engine'] = '"python-re"'
                 break
 
         if isinstance(self.extra_template_data.get('config'), dict):
