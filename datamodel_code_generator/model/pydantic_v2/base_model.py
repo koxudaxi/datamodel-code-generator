@@ -220,8 +220,12 @@ class BaseModel(BaseModelBase):
                 break
 
         for field in self.fields:
-            # Check if a regex pattern uses lookarounds
-            if isinstance(field.constraints, Constraints) and field.constraints.pattern and re.search(r'\(\?<?[=!]', field.constraints.pattern):
+            # Check if a regex pattern uses lookarounds.
+            # Depending on the generation configuration, the pattern may end up in two different places.
+            pattern = (
+                isinstance(field.constraints, Constraints) and field.constraints.pattern
+            ) or (field.data_type.kwargs or {}).get('pattern')
+            if pattern and re.search(r'\(\?<?[=!]', pattern):
                 config_parameters['regex_engine'] = '"python-re"'
                 break
 

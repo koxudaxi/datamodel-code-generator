@@ -2933,9 +2933,20 @@ def test_main_jsonschema_pattern():
         )
 
 
+@pytest.mark.parametrize(
+    'expected_output, args',
+    [
+        ('main_pattern_with_lookaround_pydantic_v2', []),
+        (
+            'main_pattern_with_lookaround_pydantic_v2_field_constraints',
+            ['--field-constraints'],
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_openapi_pattern_with_lookaround_pydantic_v2():
-    expected_output = 'main_pattern_with_lookaround_pydantic_v2'
+def test_main_openapi_pattern_with_lookaround_pydantic_v2(
+    expected_output: str, args: list[str]
+):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2950,12 +2961,14 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2():
                 '3.9',
                 '--output-model-type',
                 'pydantic_v2.BaseModel',
+                *args,
             ]
         )
         assert return_code == Exit.OK
-        assert output_file.read_text() == (
-            EXPECTED_MAIN_PATH / expected_output / 'output.py'
-        ).read_text()
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        )
 
 
 @freeze_time('2019-07-26')
