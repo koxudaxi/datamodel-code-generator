@@ -2934,6 +2934,31 @@ def test_main_jsonschema_pattern():
 
 
 @freeze_time('2019-07-26')
+def test_main_openapi_pattern_with_lookaround_pydantic_v2():
+    expected_output = 'main_pattern_with_lookaround_pydantic_v2'
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'pattern_lookaround.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--target-python',
+                '3.9',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'output.py'
+        ).read_text()
+
+
+@freeze_time('2019-07-26')
 def test_main_generate():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
