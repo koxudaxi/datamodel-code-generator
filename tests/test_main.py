@@ -6140,6 +6140,33 @@ def test_main_msgspec_struct():
 
 
 @freeze_time('2019-07-26')
+def test_main_msgspec_struct_snake_case():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_ordered_required_fields.yaml'),
+                '--output',
+                str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
+                '--snake-case-field',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_msgspec_struct_snake_case' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
 @pytest.mark.skipif(
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
