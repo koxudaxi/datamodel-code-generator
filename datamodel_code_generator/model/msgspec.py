@@ -33,7 +33,7 @@ from datamodel_code_generator.types import chain_as_tuple, get_optional_type
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return bool(field.field) or not (
+    return not (
         field.required
         or (field.represented_default == 'None' and field.strip_default_none)
     )
@@ -174,6 +174,8 @@ class DataModelField(DataModelFieldBase):
         }
         if self.alias:
             data['name'] = self.alias
+            if not self.required and self.default == UNDEFINED or self.default is None:
+                data['default'] = None
 
         if self.default != UNDEFINED and self.default is not None:
             data['default'] = self.default
