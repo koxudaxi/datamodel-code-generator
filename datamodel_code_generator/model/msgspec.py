@@ -174,11 +174,11 @@ class DataModelField(DataModelFieldBase):
         }
         if self.alias:
             data['name'] = self.alias
-            if not self.required and self.default == UNDEFINED or self.default is None:
-                data['default'] = None
 
         if self.default != UNDEFINED and self.default is not None:
             data['default'] = self.default
+        elif not self.required:
+            data['default'] = None
 
         if self.required:
             data = {

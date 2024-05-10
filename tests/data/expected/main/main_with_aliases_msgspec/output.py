@@ -57,7 +57,7 @@ Apis = List[Api]
 
 
 class Event(Struct):
-    name_: Optional[str] = field(name='name')
+    name_: Optional[str] = field(name='name', default=None)
 
 
 class Result(Struct):

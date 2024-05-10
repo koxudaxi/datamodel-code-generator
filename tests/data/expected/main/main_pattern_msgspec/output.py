@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Annotated, Optional
 
-from msgspec import Meta, Struct
+from msgspec import Meta, Struct, field
 
 
 class Info(Struct):

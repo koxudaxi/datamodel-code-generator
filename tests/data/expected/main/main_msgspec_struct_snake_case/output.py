@@ -43,16 +43,16 @@ class Error(Struct):
 class Api(Struct):
     api_key: Optional[
         Annotated[str, Meta(description='To be used as a dataset parameter value')]
-    ] = field(name='apiKey')
+    ] = field(name='apiKey', default=None)
     api_version_number: Optional[
         Annotated[str, Meta(description='To be used as a version parameter value')]
-    ] = field(name='apiVersionNumber')
+    ] = field(name='apiVersionNumber', default=None)
     api_url: Optional[
         Annotated[str, Meta(description="The URL describing the dataset's fields")]
-    ] = field(name='apiUrl')
+    ] = field(name='apiUrl', default=None)
     api_documentation_url: Optional[
         Annotated[str, Meta(description='A URL to the API console for each API')]
-    ] = field(name='apiDocumentationUrl')
+    ] = field(name='apiDocumentationUrl', default=None)
 
 
 Apis = List[Api]
