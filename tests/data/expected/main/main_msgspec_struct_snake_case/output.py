@@ -13,7 +13,7 @@ from typing_extensions import Annotated
 class Pet(Struct):
     id: int
     name: str
-    z_last: str = field(name='zLast')
+    before_tag: str = field(name='beforeTag')
     tag: Optional[str] = None
 
 
@@ -43,16 +43,16 @@ class Error(Struct):
 class Api(Struct):
     api_key: Optional[
         Annotated[str, Meta(description='To be used as a dataset parameter value')]
-    ] = None
+    ] = field(name='apiKey')
     api_version_number: Optional[
         Annotated[str, Meta(description='To be used as a version parameter value')]
-    ] = None
+    ] = field(name='apiVersionNumber')
     api_url: Optional[
         Annotated[str, Meta(description="The URL describing the dataset's fields")]
-    ] = None
+    ] = field(name='apiUrl')
     api_documentation_url: Optional[
         Annotated[str, Meta(description='A URL to the API console for each API')]
-    ] = None
+    ] = field(name='apiDocumentationUrl')
 
 
 Apis = List[Api]

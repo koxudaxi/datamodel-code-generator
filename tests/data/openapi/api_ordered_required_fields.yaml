@@ -103,7 +103,7 @@ components:
       required:
         - id
         - name
-        - zLast
+        - beforeTag
       properties:
         id:
           type: integer
@@ -111,9 +111,9 @@ components:
           default: 1
         name:
           type: string
-        tag:
+        beforeTag:
           type: string
-        zLast:
+        tag:
           type: string
     Pets:
       type: array
