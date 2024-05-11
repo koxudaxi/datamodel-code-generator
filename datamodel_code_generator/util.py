@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
+import re
 from typing import TYPE_CHECKING, Any, Callable, Dict, TypeVar
 
 import pydantic
@@ -74,6 +75,17 @@ SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
 SafeLoaderTemp.add_constructor(
     'tag:yaml.org,2002:timestamp',
     SafeLoaderTemp.yaml_constructors['tag:yaml.org,2002:str'],
+)
+SafeLoaderTemp.add_implicit_resolver(
+    u'tag:yaml.org,2002:float',
+    re.compile(u'''^(?:
+     [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+    |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+    |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+    |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+    |[-+]?\\.(?:inf|Inf|INF)
+    |\\.(?:nan|NaN|NAN))$''', re.X),
+    list(u'-+0123456789.')
 )
 SafeLoader = SafeLoaderTemp
 
