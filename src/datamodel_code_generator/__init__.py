@@ -30,7 +30,7 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.util import SafeLoader
+from datamodel_code_generator.util import SafeLoader, get_safeloader
 
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
@@ -46,9 +46,14 @@ except ImportError:  # pragma: no cover
 
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
+g_extend_yaml_scientifc_notation: bool = False
+
+def get_safeloader_wrapper(safeloader: type[SafeLoader]) -> type[SafeLoader]:
+    return get_safeloader(safeloader, extend_yaml_scientifc_notation=g_extend_yaml_scientifc_notation)
+
 
 def load_yaml(stream: str | TextIO) -> Any:
-    return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
+    return yaml.load(stream, Loader=get_safeloader_wrapper(SafeLoader))  # noqa: S506
 
 
 def load_yaml_from_path(path: Path, encoding: str) -> Any:
@@ -262,6 +267,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
+    extend_yaml_scientifc_notation: bool = False,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
@@ -288,6 +294,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
 ) -> None:
+    global g_extend_yaml_scientifc_notation
+    g_extend_yaml_scientifc_notation = extend_yaml_scientifc_notation
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
         input_text: str | None = input_

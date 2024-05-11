@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import pydantic
@@ -34,14 +35,30 @@ else:
         with path.open("rb") as f:
             return load_tomllib(f)
 
+def get_safeloader(safeloader: type[SafeLoader], *, extend_yaml_scientifc_notation: bool) -> type[SafeLoader]:
+    safeloadertemp = copy.deepcopy(safeloader)
+    safeloadertemp.yaml_constructors = copy.deepcopy(safeloader.yaml_constructors)
+    safeloadertemp.add_constructor(
+        "tag:yaml.org,2002:timestamp",
+        safeloadertemp.yaml_constructors["tag:yaml.org,2002:str"],
+    )
+    if extend_yaml_scientifc_notation is True:
+        safeloadertemp.add_implicit_resolver(
+            "tag:yaml.org,2002:float",
+            re.compile(
+                r"""^(?:
+            [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+            |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+            |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+            |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+            |[-+]?\\.(?:inf|Inf|INF)
+            |\\.(?:nan|NaN|NAN))$""",
+                re.VERBOSE,
+            ),
+            list("-+0123456789."),
+        )
+    return safeloadertemp
 
-SafeLoaderTemp = copy.deepcopy(SafeLoader)
-SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
-SafeLoaderTemp.add_constructor(
-    "tag:yaml.org,2002:timestamp",
-    SafeLoaderTemp.yaml_constructors["tag:yaml.org,2002:str"],
-)
-SafeLoader = SafeLoaderTemp
 
 Model = TypeVar("Model", bound=_BaseModel)
 

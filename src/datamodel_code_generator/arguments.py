@@ -286,6 +286,12 @@ typing_options.add_argument(
     action="store_true",
     default=None,
 )
+typing_options.add_argument(
+    "--extend-yaml-scientifc-notation",
+    help="Parse scientific floating point as specified by json instead of yaml.",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Customization options for generated model fields
