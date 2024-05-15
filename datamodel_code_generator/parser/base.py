@@ -1263,8 +1263,8 @@ class Parser(ABC):
             self.__collapse_root_models(models, unused_models, imports)
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
-            self.__set_one_literal_on_default(models)
             self.__apply_discriminator_type(models, imports)
+            self.__set_one_literal_on_default(models)
 
             processed_models.append(
                 Processed(module, models, init, imports, scoped_model_resolver)
