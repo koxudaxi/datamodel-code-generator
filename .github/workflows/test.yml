@@ -38,12 +38,12 @@ jobs:
             pydantic-version: 2.4.2
           - os: macos-13
             isort-version: 5.6.4
-            black-version: 23.12.1
+            black-version: 22.1.0
             python-version: 3.7
             pydantic-version: 2.4.2
           - os: macos-13
             isort-version: 5.6.4
-            black-version: 23.12.1
+            black-version: 22.1.0
             python-version: 3.7
             pydantic-version: 1.10.9
         exclude:
