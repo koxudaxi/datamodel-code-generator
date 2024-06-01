@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.4.1'
+    rev: 'v0.4.5'
     hooks:
       - id: ruff
         files: "^datamodel_code_generator|^tests"
@@ -11,7 +11,7 @@ repos:
         exclude: "^tests/data"
   - repo: https://github.com/codespell-project/codespell
     # Configuration for codespell is in pyproject.toml
-    rev: v2.2.6
+    rev: v2.3.0
     hooks:
     - id: codespell
       additional_dependencies:
