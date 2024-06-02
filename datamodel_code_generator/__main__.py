@@ -312,6 +312,7 @@ class Config(BaseModel):
     custom_formatters_kwargs: Optional[TextIOBase] = None
     use_pendulum: bool = False
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None
+    use_exact_imports: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -508,6 +509,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=config.use_pendulum,
             http_query_parameters=config.http_query_parameters,
+            use_exact_imports=config.use_exact_imports,
         )
         return Exit.OK
     except InvalidClassNameError as e:

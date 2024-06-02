@@ -26,11 +26,12 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
     def __str__(self) -> str:
         return self.dump()
 
-    def __init__(self) -> None:
+    def __init__(self, use_exact: bool = False) -> None:
         super().__init__(set)
         self.alias: DefaultDict[Optional[str], Dict[str, str]] = defaultdict(dict)
         self.counter: Dict[Tuple[Optional[str], str], int] = defaultdict(int)
         self.reference_paths: Dict[str, Import] = {}
+        self.use_exact: bool = use_exact
 
     def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
         return [
