@@ -18,12 +18,14 @@ class {{ class_name }}:
     {%- if not field.annotated and field.field %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
     {%- else %}
-    {%- if field.annotated %}
+    {%- if field.annotated and not field.field %}
     {{ field.name }}: {{ field.annotated }}
+    {%- elif field.annotated and field.field %}
+    {{ field.name }}: {{ field.annotated }} = {{ field.field }}
     {%- else %}
     {{ field.name }}: {{ field.type_hint }}
     {%- endif %}
-    {%- if not field.required or field.data_type.is_optional or field.nullable
+    {%- if not field.field and (not field.required or field.data_type.is_optional or field.nullable)
             %} = {{ field.represented_default }}
     {%- endif -%}
     {%- endif %}
