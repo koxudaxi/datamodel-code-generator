@@ -2933,6 +2933,44 @@ def test_main_jsonschema_pattern():
         )
 
 
+@pytest.mark.parametrize(
+    'expected_output, args',
+    [
+        ('main_pattern_with_lookaround_pydantic_v2', []),
+        (
+            'main_pattern_with_lookaround_pydantic_v2_field_constraints',
+            ['--field-constraints'],
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_pattern_with_lookaround_pydantic_v2(
+    expected_output: str, args: list[str]
+):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'pattern_lookaround.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--target-python',
+                '3.9',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                *args,
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        )
+
+
 @freeze_time('2019-07-26')
 def test_main_generate():
     with TemporaryDirectory() as output_dir:
@@ -6136,6 +6174,33 @@ def test_main_msgspec_struct():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_msgspec_struct_snake_case():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_ordered_required_fields.yaml'),
+                '--output',
+                str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
+                '--snake-case-field',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_msgspec_struct_snake_case' / 'output.py'
+            ).read_text()
         )
 
 
