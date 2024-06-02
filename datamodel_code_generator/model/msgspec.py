@@ -33,7 +33,7 @@ from datamodel_code_generator.types import chain_as_tuple, get_optional_type
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return bool(field.field) or not (
+    return not (
         field.required
         or (field.represented_default == 'None' and field.strip_default_none)
     )
@@ -48,7 +48,9 @@ def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]
     @wraps(original_imports.fget)  # type: ignore
     def new_imports(self: DataModelFieldBaseT) -> Tuple[Import, ...]:
         extra_imports = []
-        if self.field:
+        field = self.field
+        # TODO: Improve field detection
+        if field and field.startswith('field('):
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
         if self.field and 'lambda: convert' in self.field:
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
@@ -177,6 +179,8 @@ class DataModelField(DataModelFieldBase):
 
         if self.default != UNDEFINED and self.default is not None:
             data['default'] = self.default
+        elif not self.required:
+            data['default'] = None
 
         if self.required:
             data = {
