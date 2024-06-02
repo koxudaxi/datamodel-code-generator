@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Annotated, List, Optional, Union
 
-from msgspec import Meta, Struct, field
+from msgspec import Meta, Struct
 
 
 class Pet(Struct):

@@ -48,7 +48,9 @@ def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]
     @wraps(original_imports.fget)  # type: ignore
     def new_imports(self: DataModelFieldBaseT) -> Tuple[Import, ...]:
         extra_imports = []
-        if self.field:
+        field = self.field
+        # TODO: Improve field detection
+        if field and field.startswith('field('):
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
         if self.field and 'lambda: convert' in self.field:
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
