@@ -864,7 +864,7 @@ def test_validation_failed(mocker):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output, args',
+    'output_model,expected_output,args',
     [
         ('pydantic.BaseModel', 'main_with_field_constraints', []),
         (
