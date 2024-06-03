@@ -920,6 +920,7 @@ class Parser(ABC):
                             name=model.name,
                             path=model.reference.path + '/reuse',
                         ),
+                        custom_template_dir=model._custom_template_dir,
                     )
                     if cached_model_reference.path in require_update_action_models:
                         require_update_action_models.append(inherited_model.path)
