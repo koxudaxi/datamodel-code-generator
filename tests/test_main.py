@@ -3,6 +3,7 @@ import shutil
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import List
 from unittest.mock import call
 
 import black
@@ -2944,8 +2945,12 @@ def test_main_jsonschema_pattern():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
 def test_main_openapi_pattern_with_lookaround_pydantic_v2(
-    expected_output: str, args: list[str]
+    expected_output: str, args: List[str]
 ):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
