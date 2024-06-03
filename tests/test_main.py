@@ -83,10 +83,10 @@ def test_main_inheritance_forward_ref():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_inheritance_forward_ref' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_inheritance_forward_ref' / 'output.py'
+            ).read_text()
         )
 
 
@@ -107,12 +107,12 @@ def test_main_inheritance_forward_ref_keep_model_order():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_inheritance_forward_ref_keep_model_order'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_inheritance_forward_ref_keep_model_order'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -131,8 +131,8 @@ def test_main():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
 
 
@@ -159,8 +159,8 @@ def test_main_pydantic_basemodel():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
         )
 
 
@@ -181,8 +181,8 @@ def test_main_base_class():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
         )
 
 
@@ -202,8 +202,8 @@ def test_target_python_version():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'target_python_version' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'target_python_version' / 'output.py').read_text()
         )
 
 
@@ -224,8 +224,8 @@ def test_main_autodetect():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
         )
 
 
@@ -266,8 +266,8 @@ def test_main_jsonschema():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
 
 
@@ -278,7 +278,7 @@ def test_main_jsonschema_nested_deep():
         output_init_file: Path = Path(output_dir) / '__init__.py'
         output_nested_file: Path = Path(output_dir) / 'nested/deep.py'
         output_empty_parent_nested_file: Path = (
-                Path(output_dir) / 'empty_parent/nested/deep.py'
+            Path(output_dir) / 'empty_parent/nested/deep.py'
         )
 
         return_code: Exit = main(
@@ -293,30 +293,30 @@ def test_main_jsonschema_nested_deep():
         )
         assert return_code == Exit.OK
         assert (
-                output_init_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_nested_deep' / '__init__.py'
-                ).read_text()
+            output_init_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_nested_deep' / '__init__.py'
+            ).read_text()
         )
 
         assert (
-                output_nested_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_nested_deep'
-                        / 'nested'
-                        / 'deep.py'
-                ).read_text()
+            output_nested_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_nested_deep'
+                / 'nested'
+                / 'deep.py'
+            ).read_text()
         )
         assert (
-                output_empty_parent_nested_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_nested_deep'
-                        / 'empty_parent'
-                        / 'nested'
-                        / 'deep.py'
-                ).read_text()
+            output_empty_parent_nested_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_nested_deep'
+                / 'empty_parent'
+                / 'nested'
+                / 'deep.py'
+            ).read_text()
         )
 
 
@@ -358,10 +358,10 @@ def test_main_jsonschema_external_files():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_external_files' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_external_files' / 'output.py'
+            ).read_text()
         )
 
 
@@ -405,8 +405,8 @@ def test_main_json():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json' / 'output.py').read_text()
         )
 
 
@@ -426,10 +426,10 @@ def test_space_and_special_characters_json():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
+            ).read_text()
         )
 
 
@@ -466,10 +466,10 @@ def test_main_json_array_include_null():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
+            ).read_text()
         )
 
 
@@ -477,12 +477,12 @@ def test_main_json_array_include_null():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_null_and_array',
+            'pydantic.BaseModel',
+            'main_null_and_array',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_null_and_array_v2',
+            'pydantic_v2.BaseModel',
+            'main_null_and_array_v2',
         ),
     ],
 )
@@ -504,8 +504,8 @@ def test_main_null_and_array(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -526,8 +526,8 @@ def test_main_yaml():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
         )
 
 
@@ -589,8 +589,8 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     output_filename = output_directory / 'model.py'
 
     assert (
-            main(['--input', str(input_filename), '--output', str(output_filename)])
-            == Exit.ERROR
+        main(['--input', str(input_filename), '--output', str(output_filename)])
+        == Exit.ERROR
     )
 
 
@@ -604,7 +604,7 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-            captured.out == (EXPECTED_MAIN_PATH / 'main_no_file' / 'output.py').read_text()
+        captured.out == (EXPECTED_MAIN_PATH / 'main_no_file' / 'output.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -613,12 +613,12 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_extra_template_data_config',
+            'pydantic.BaseModel',
+            'main_extra_template_data_config',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_extra_template_data_config_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_extra_template_data_config_pydantic_v2',
         ),
     ],
 )
@@ -627,7 +627,7 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_extra_template_data_config(
-        capsys: CaptureFixture, output_model, expected_output
+    capsys: CaptureFixture, output_model, expected_output
 ) -> None:
     """Test main function with custom config data in extra template."""
 
@@ -648,7 +648,7 @@ def test_main_extra_template_data_config(
 
     captured = capsys.readouterr()
     assert (
-            captured.out == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        captured.out == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -674,8 +674,8 @@ def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-            captured.out
-            == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+        captured.out
+        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -701,8 +701,8 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-            captured.out
-            == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+        captured.out
+        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -747,8 +747,8 @@ def test_pyproject():
             return_code: Exit = main([])
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
             )
 
 
@@ -768,10 +768,10 @@ def test_pyproject_not_found():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py'
+                ).read_text()
             )
 
 
@@ -789,8 +789,8 @@ def test_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
         )
 
 
@@ -835,8 +835,8 @@ def test_validation(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
         )
         mock_prance.assert_called_once()
 
@@ -847,18 +847,18 @@ def test_validation_failed(mocker):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         assert (
-                main(
-                    [
-                        '--input',
-                        str(OPEN_API_DATA_PATH / 'invalid.yaml'),
-                        '--output',
-                        str(output_file),
-                        '--input-file-type',
-                        'openapi',
-                        '--validation',
-                    ]
-                )
-                == Exit.ERROR
+            main(
+                [
+                    '--input',
+                    str(OPEN_API_DATA_PATH / 'invalid.yaml'),
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                    '--validation',
+                ]
+            )
+            == Exit.ERROR
         )
         mock_prance.assert_called_once()
 
@@ -868,32 +868,32 @@ def test_validation_failed(mocker):
     [
         ('pydantic.BaseModel', 'main_with_field_constraints', []),
         (
-                'pydantic.BaseModel',
-                'main_with_field_constraints_use_unique_items_as_set',
-                ['--use-unique-items-as-set'],
+            'pydantic.BaseModel',
+            'main_with_field_constraints_use_unique_items_as_set',
+            ['--use-unique-items-as-set'],
         ),
         ('pydantic_v2.BaseModel', 'main_with_field_constraints_pydantic_v2', []),
         (
-                'pydantic_v2.BaseModel',
-                'main_with_field_constraints_pydantic_v2_use_generic_container_types',
-                ['--use-generic-container-types'],
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_generic_container_types',
+            ['--use-generic-container-types'],
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_with_field_constraints_pydantic_v2_use_generic_container_types_set',
-                ['--use-generic-container-types', '--use-unique-items-as-set'],
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_generic_container_types_set',
+            ['--use-generic-container-types', '--use-unique-items-as-set'],
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_with_field_constraints_pydantic_v2_use_standard_collections',
-                [
-                    '--use-standard-collections',
-                ],
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_standard_collections',
+            [
+                '--use-standard-collections',
+            ],
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_with_field_constraints_pydantic_v2_use_standard_collections_set',
-                ['--use-standard-collections', '--use-unique-items-as-set'],
+            'pydantic_v2.BaseModel',
+            'main_with_field_constraints_pydantic_v2_use_standard_collections_set',
+            ['--use-standard-collections', '--use-unique-items-as-set'],
         ),
     ],
 )
@@ -915,8 +915,8 @@ def test_main_with_field_constraints(output_model, expected_output, args):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -924,12 +924,12 @@ def test_main_with_field_constraints(output_model, expected_output, args):
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_without_field_constraints',
+            'pydantic.BaseModel',
+            'main_without_field_constraints',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_without_field_constraints_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_without_field_constraints_pydantic_v2',
         ),
     ],
 )
@@ -949,8 +949,8 @@ def test_main_without_field_constraints(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -958,12 +958,12 @@ def test_main_without_field_constraints(output_model, expected_output):
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_with_aliases',
+            'pydantic.BaseModel',
+            'main_with_aliases',
         ),
         (
-                'msgspec.Struct',
-                'main_with_aliases_msgspec',
+            'msgspec.Struct',
+            'main_with_aliases_msgspec',
         ),
     ],
 )
@@ -991,8 +991,8 @@ def test_main_with_aliases(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -1060,10 +1060,10 @@ def test_main_with_snake_case_field():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_with_snake_case_field' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_with_snake_case_field' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1083,10 +1083,10 @@ def test_main_with_strip_default_none():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_with_strip_default_none' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_with_strip_default_none' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1104,8 +1104,8 @@ def test_disable_timestamp():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
         )
 
 
@@ -1124,8 +1124,8 @@ def test_enable_version_header():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'enable_version_header' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'enable_version_header' / 'output.py').read_text()
         )
 
 
@@ -1133,12 +1133,12 @@ def test_enable_version_header():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'allow_population_by_field_name',
+            'pydantic.BaseModel',
+            'allow_population_by_field_name',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'allow_population_by_field_name_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'allow_population_by_field_name_pydantic_v2',
         ),
     ],
 )
@@ -1163,8 +1163,8 @@ def test_allow_population_by_field_name(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -1172,12 +1172,12 @@ def test_allow_population_by_field_name(output_model, expected_output):
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'allow_extra_fields',
+            'pydantic.BaseModel',
+            'allow_extra_fields',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'allow_extra_fields_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'allow_extra_fields_pydantic_v2',
         ),
     ],
 )
@@ -1202,8 +1202,8 @@ def test_allow_extra_fields(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -1211,12 +1211,12 @@ def test_allow_extra_fields(output_model, expected_output):
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'enable_faux_immutability',
+            'pydantic.BaseModel',
+            'enable_faux_immutability',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'enable_faux_immutability_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'enable_faux_immutability_pydantic_v2',
         ),
     ],
 )
@@ -1241,8 +1241,8 @@ def test_enable_faux_immutability(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -1262,8 +1262,8 @@ def test_use_default():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'use_default' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'use_default' / 'output.py').read_text()
         )
 
 
@@ -1283,8 +1283,8 @@ def test_force_optional():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
         )
 
 
@@ -1305,8 +1305,8 @@ def test_use_default_pydantic_v2_with_json_schema_const():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'use_default_with_const' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'use_default_with_const' / 'output.py').read_text()
         )
 
 
@@ -1324,8 +1324,8 @@ def test_main_with_exclusive():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_with_exclusive' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_with_exclusive' / 'output.py').read_text()
         )
 
 
@@ -1343,8 +1343,8 @@ def test_main_subclass_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_subclass_enum' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_subclass_enum' / 'output.py').read_text()
         )
 
 
@@ -1353,19 +1353,19 @@ def test_main_subclass_enum():
     'output_model,expected_output,option',
     [
         (
-                'pydantic.BaseModel',
-                'main_complicated_enum_default_member',
-                '--set-default-enum-member',
+            'pydantic.BaseModel',
+            'main_complicated_enum_default_member',
+            '--set-default-enum-member',
         ),
         (
-                'dataclasses.dataclass',
-                'main_complicated_enum_default_member_dataclass',
-                '--set-default-enum-member',
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            '--set-default-enum-member',
         ),
         (
-                'dataclasses.dataclass',
-                'main_complicated_enum_default_member_dataclass',
-                None,
+            'dataclasses.dataclass',
+            'main_complicated_enum_default_member_dataclass',
+            None,
         ),
     ],
 )
@@ -1376,21 +1376,21 @@ def test_main_complicated_enum_default_member(output_model, expected_output, opt
             [
                 a
                 for a in [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
-                '--output',
-                str(output_file),
-                option,
-                '--output-model',
-                output_model,
-            ]
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'complicated_enum.json'),
+                    '--output',
+                    str(output_file),
+                    option,
+                    '--output-model',
+                    output_model,
+                ]
                 if a
             ]
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -1413,10 +1413,10 @@ def test_main_json_reuse_enum_default_member():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_json_reuse_enum_default_member' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_reuse_enum_default_member' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1439,8 +1439,8 @@ def test_main_invalid_model_name_failed(capsys):
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
-                captured.err
-                == "title='with' is invalid class name. You have to set `--class-name` option\n"
+            captured.err
+            == "title='with' is invalid class name. You have to set `--class-name` option\n"
         )
 
 
@@ -1461,8 +1461,8 @@ def test_main_invalid_model_name_converted(capsys):
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
-                captured.err
-                == "title='1Xyz' is invalid class name. You have to set `--class-name` option\n"
+            captured.err
+            == "title='1Xyz' is invalid class name. You have to set `--class-name` option\n"
         )
 
 
@@ -1484,10 +1484,10 @@ def test_main_invalid_model_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_invalid_model_name' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_invalid_model_name' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1512,8 +1512,8 @@ def test_main_root_id_jsonschema_with_local_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_not_called()
 
@@ -1541,8 +1541,8 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -1577,7 +1577,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
         ).read_text().replace(
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
@@ -1606,7 +1606,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_root_id' / 'output.py'
         ).read_text().replace(
             'filename:  root_id.json', 'filename:  root_id_self_ref.json'
         )
@@ -1646,10 +1646,10 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
+            ).read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -1680,10 +1680,10 @@ def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_root_id_absolute_url' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1704,8 +1704,8 @@ def test_main_jsonschema_id():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema_id' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema_id' / 'output.py').read_text()
         )
 
 
@@ -1724,10 +1724,10 @@ def test_main_jsonschema_id_as_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_id_stdin' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_id_stdin' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1773,7 +1773,7 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
             ]
         )
     main_use_standard_collections_dir = (
-            EXPECTED_MAIN_PATH / 'main_use_standard_collections'
+        EXPECTED_MAIN_PATH / 'main_use_standard_collections'
     )
     for path in main_use_standard_collections_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1803,7 +1803,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
             ]
         )
     main_use_generic_container_types_dir = (
-            EXPECTED_MAIN_PATH / 'main_use_generic_container_types'
+        EXPECTED_MAIN_PATH / 'main_use_generic_container_types'
     )
     for path in main_use_generic_container_types_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1818,7 +1818,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
 )
 @pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -1837,7 +1837,7 @@ def test_main_use_generic_container_types_standard_collections(
             ]
         )
     main_use_generic_container_types_standard_collections_dir = (
-            EXPECTED_MAIN_PATH / 'main_use_generic_container_types_standard_collections'
+        EXPECTED_MAIN_PATH / 'main_use_generic_container_types_standard_collections'
     )
     for path in main_use_generic_container_types_standard_collections_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1861,9 +1861,9 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     captured = capsys.readouterr()
     assert return_code == Exit.ERROR
     assert (
-            captured.err == '`--use-generic-container-types` can not be used with '
-                            '`--target-python_version` 3.6.\n '
-                            'The version will be not supported in a future version\n'
+        captured.err == '`--use-generic-container-types` can not be used with '
+        '`--target-python_version` 3.6.\n '
+        'The version will be not supported in a future version\n'
     )
 
 
@@ -1881,8 +1881,8 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
     captured = capsys.readouterr()
     assert return_code == Exit.ERROR
     assert (
-            captured.err
-            == '`--original-field-name-delimiter` can not be used without `--snake-case-field`.\n'
+        captured.err
+        == '`--original-field-name-delimiter` can not be used without `--snake-case-field`.\n'
     )
 
 
@@ -1903,10 +1903,10 @@ def test_main_external_definitions():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_external_definitions' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1930,10 +1930,10 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+            ).read_text()
         )
 
 
@@ -1979,10 +1979,10 @@ def test_main_circular_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_circular_reference' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_circular_reference' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2002,8 +2002,8 @@ def test_main_invalid_enum_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_invalid_enum_name' / 'output.py').read_text()
         )
 
 
@@ -2024,12 +2024,12 @@ def test_main_invalid_enum_name_snake_case_field():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_invalid_enum_name_snake_case_field'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_invalid_enum_name_snake_case_field'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2050,8 +2050,8 @@ def test_main_json_reuse_model():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
         )
 
 
@@ -2072,8 +2072,8 @@ def test_main_json_reuse_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json_reuse_enum' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_reuse_enum' / 'output.py').read_text()
         )
 
 
@@ -2094,10 +2094,10 @@ def test_main_json_capitalise_enum_members():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_json_capitalise_enum_members' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_capitalise_enum_members' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2118,8 +2118,8 @@ def test_main_json_capitalise_enum_members_without_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_autodetect' / 'output.py').read_text()
         )
 
 
@@ -2128,12 +2128,12 @@ def test_main_json_capitalise_enum_members_without_enum():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_openapi_datetime',
+            'pydantic.BaseModel',
+            'main_openapi_datetime',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_openapi_datetime_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_openapi_datetime_pydantic_v2',
         ),
     ],
 )
@@ -2154,8 +2154,8 @@ def test_main_openapi_datetime(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -2175,10 +2175,10 @@ def test_main_similar_nested_array():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_similar_nested_array' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_similar_nested_array' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2198,10 +2198,10 @@ def test_space_and_special_characters_dict():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2209,12 +2209,12 @@ def test_space_and_special_characters_dict():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_require_referenced_field',
+            'pydantic.BaseModel',
+            'main_require_referenced_field',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_require_referenced_field_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_require_referenced_field_pydantic_v2',
         ),
     ],
 )
@@ -2237,10 +2237,10 @@ def test_main_require_referenced_field(output_model, expected_output):
         assert return_code == Exit.OK
 
         assert (output_dir / 'referenced.py').read_text() == (
-                EXPECTED_MAIN_PATH / expected_output / 'referenced.py'
+            EXPECTED_MAIN_PATH / expected_output / 'referenced.py'
         ).read_text()
         assert (output_dir / 'required.py').read_text() == (
-                EXPECTED_MAIN_PATH / expected_output / 'required.py'
+            EXPECTED_MAIN_PATH / expected_output / 'required.py'
         ).read_text()
 
 
@@ -2260,8 +2260,8 @@ def test_csv_file():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
         )
 
 
@@ -2280,8 +2280,8 @@ def test_csv_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
         )
 
 
@@ -2320,8 +2320,8 @@ def test_main_json_pointer():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_json_pointer' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_json_pointer' / 'output.py').read_text()
         )
 
 
@@ -2341,10 +2341,10 @@ def test_main_nested_json_pointer():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_nested_json_pointer' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_nested_json_pointer' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2395,10 +2395,10 @@ def test_main_openapi_enum_models_as_literal_one():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_enum_models_one' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_one' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2427,12 +2427,12 @@ def test_main_openapi_use_one_literal_as_default():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_enum_models_one_literal_as_default'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_enum_models_one_literal_as_default'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2464,10 +2464,10 @@ def test_main_openapi_enum_models_as_literal_all():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2498,12 +2498,12 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
 
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_enum_models_as_literal_py37'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_enum_models_as_literal_py37'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2525,12 +2525,12 @@ def test_main_root_model_with_additional_properties():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2553,12 +2553,12 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties_use_generic_container_types'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_use_generic_container_types'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2581,12 +2581,12 @@ def test_main_root_model_with_additional_properties_use_standard_collections():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties_use_standard_collections'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_use_standard_collections'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2612,12 +2612,12 @@ def test_main_root_model_with_additional_properties_literal():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_root_model_with_additional_properties_literal'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_root_model_with_additional_properties_literal'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2661,10 +2661,10 @@ def test_main_jsonschema_multiple_files_ref_test_json():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
+                ).read_text()
             )
 
 
@@ -2686,10 +2686,10 @@ def test_simple_json_snake_case_field():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
+                ).read_text()
             )
 
 
@@ -2713,12 +2713,12 @@ def test_main_space_field_enum_snake_case_field():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH
-                            / 'main_space_field_enum_snake_case_field'
-                            / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH
+                    / 'main_space_field_enum_snake_case_field'
+                    / 'output.py'
+                ).read_text()
             )
 
 
@@ -2742,8 +2742,8 @@ def test_main_all_of_ref():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'all_of_ref' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'all_of_ref' / 'output.py').read_text()
             )
 
 
@@ -2764,8 +2764,8 @@ def test_main_all_of_with_object():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'all_of_with_object' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'all_of_with_object' / 'output.py').read_text()
             )
 
 
@@ -2790,8 +2790,8 @@ def test_main_combined_array():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (EXPECTED_MAIN_PATH / 'combined_array' / 'output.py').read_text()
+                output_file.read_text()
+                == (EXPECTED_MAIN_PATH / 'combined_array' / 'output.py').read_text()
             )
 
 
@@ -2812,10 +2812,10 @@ def test_main_openapi_all_of_required():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_allof_required' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_allof_required' / 'output.py'
+            ).read_text()
         )
 
 
@@ -2836,8 +2836,8 @@ def test_main_openapi_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_openapi_nullable' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_openapi_nullable' / 'output.py').read_text()
         )
 
 
@@ -2858,12 +2858,12 @@ def test_main_openapi_nullable_strict_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_nullable_strict_nullable'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_nullable_strict_nullable'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -2871,16 +2871,16 @@ def test_main_openapi_nullable_strict_nullable():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_pattern',
+            'pydantic.BaseModel',
+            'main_pattern',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_pattern_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_pattern_pydantic_v2',
         ),
         (
-                'msgspec.Struct',
-                'main_pattern_msgspec',
+            'msgspec.Struct',
+            'main_pattern_msgspec',
         ),
     ],
 )
@@ -2908,7 +2908,7 @@ def test_main_openapi_pattern(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / expected_output / 'output.py'
+            EXPECTED_MAIN_PATH / expected_output / 'output.py'
         ).read_text().replace('pattern.json', 'pattern.yaml')
 
 
@@ -2928,8 +2928,8 @@ def test_main_jsonschema_pattern():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
         )
 
 
@@ -2946,8 +2946,8 @@ def test_main_generate():
         )
 
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
 
 
@@ -3012,19 +3012,19 @@ def test_main_generate_custom_class_name_generator():
         )
 
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py'
         ).read_text().replace('Person', 'CustomPerson')
 
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator_modular(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ):
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     output_path = output_directory / 'model'
     main_modular_custom_class_name_dir = (
-            EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
+        EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
     )
 
     def custom_class_name_generator(name):
@@ -3049,7 +3049,7 @@ def test_main_generate_custom_class_name_generator_modular(
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator_additional_properties(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ):
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -3059,7 +3059,7 @@ def test_main_generate_custom_class_name_generator_additional_properties(
         return f'Custom{name[0].upper() + name[1:]}'
 
     input_ = (
-            JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
+        JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json'
     ).relative_to(Path.cwd())
     assert not input_.is_absolute()
     generate(
@@ -3070,12 +3070,12 @@ def test_main_generate_custom_class_name_generator_additional_properties(
     )
 
     assert (
-            output_file.read_text()
-            == (
-                    EXPECTED_MAIN_PATH
-                    / 'main_root_model_with_additional_properties_custom_class_name'
-                    / 'output.py'
-            ).read_text()
+        output_file.read_text()
+        == (
+            EXPECTED_MAIN_PATH
+            / 'main_root_model_with_additional_properties_custom_class_name'
+            / 'output.py'
+        ).read_text()
     )
 
 
@@ -3115,7 +3115,7 @@ def test_main_http_jsonschema(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
         ).read_text().replace(
             '#   filename:  person.json',
             '#   filename:  https://example.com/external_files_in_directory/person.json',
@@ -3187,28 +3187,28 @@ def test_main_http_jsonschema(mocker):
     'headers_arguments,headers_requests,query_parameters_arguments,query_parameters_requests,http_ignore_tls',
     [
         (
-                ('Authorization: Basic dXNlcjpwYXNz',),
-                [('Authorization', 'Basic dXNlcjpwYXNz')],
-                ('key=value',),
-                [('key', 'value')],
-                False,
+            ('Authorization: Basic dXNlcjpwYXNz',),
+            [('Authorization', 'Basic dXNlcjpwYXNz')],
+            ('key=value',),
+            [('key', 'value')],
+            False,
         ),
         (
-                ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
-                [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
-                ('key=value', 'newkey=newvalue'),
-                [('key', 'value'), ('newkey', 'newvalue')],
-                True,
+            ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
+            [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
+            ('key=value', 'newkey=newvalue'),
+            [('key', 'value'), ('newkey', 'newvalue')],
+            True,
         ),
     ],
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
-        mocker,
-        headers_arguments,
-        headers_requests,
-        query_parameters_arguments,
-        query_parameters_requests,
-        http_ignore_tls,
+    mocker,
+    headers_arguments,
+    headers_requests,
+    query_parameters_arguments,
+    query_parameters_requests,
+    http_ignore_tls,
 ):
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
@@ -3250,7 +3250,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
         return_code: Exit = main(args)
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_external_files_in_directory' / 'output.py'
         ).read_text().replace(
             '#   filename:  person.json',
             '#   filename:  https://example.com/external_files_in_directory/person.json',
@@ -3345,8 +3345,8 @@ def test_main_http_openapi(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_openapi_http_refs' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_openapi_http_refs' / 'output.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -3395,7 +3395,7 @@ def test_main_http_json(mocker):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_json' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_json' / 'output.py'
         ).read_text().replace(
             '#   filename:  pet.json',
             '#   filename:  https://example.com/pet.json',
@@ -3429,8 +3429,8 @@ def test_main_self_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_self_reference' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_self_reference' / 'output.py').read_text()
         )
 
 
@@ -3450,10 +3450,10 @@ def test_main_disable_appending_item_suffix():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_disable_appending_item_suffix' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_disable_appending_item_suffix' / 'output.py'
+            ).read_text()
         )
 
 
@@ -3474,8 +3474,8 @@ def test_main_strict_types():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_strict_types' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_strict_types' / 'output.py').read_text()
         )
 
 
@@ -3505,8 +3505,8 @@ def test_main_strict_types_all():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_strict_types_all' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_strict_types_all' / 'output.py').read_text()
         )
 
 
@@ -3535,12 +3535,12 @@ def test_main_strict_types_all_with_field_constraints():
 
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_strict_types_all_field_constraints'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_strict_types_all_field_constraints'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3560,10 +3560,10 @@ def test_main_jsonschema_special_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_special_enum' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_special_enum' / 'output.py'
+            ).read_text()
         )
 
 
@@ -3585,12 +3585,12 @@ def test_main_jsonschema_special_enum_special_field_name_prefix():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_special_enum_special_field_name_prefix'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_special_enum_special_field_name_prefix'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3612,12 +3612,12 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_special_enum_special_field_name_prefix_keep_private'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_special_enum_special_field_name_prefix_keep_private'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3638,12 +3638,12 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_special_model_remove_special_field_name_prefix'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_special_model_remove_special_field_name_prefix'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3664,10 +3664,10 @@ def test_main_jsonschema_subclass_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_subclass_enum' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_subclass_enum' / 'output.py'
+            ).read_text()
         )
 
 
@@ -3689,12 +3689,12 @@ def test_main_jsonschema_special_enum_empty_enum_field_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_special_enum_empty_enum_field_name'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_special_enum_empty_enum_field_name'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3715,10 +3715,10 @@ def test_main_jsonschema_special_field_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_special_field_name' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_special_field_name' / 'output.py'
+            ).read_text()
         )
 
 
@@ -3738,10 +3738,10 @@ def test_main_jsonschema_complex_one_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_complex_one_of' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_complex_one_of' / 'output.py'
+            ).read_text()
         )
 
 
@@ -3762,10 +3762,10 @@ def test_main_jsonschema_complex_any_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_complex_any_of' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_complex_any_of' / 'output.py'
+            ).read_text()
         )
 
 
@@ -3785,12 +3785,12 @@ def test_main_jsonschema_combine_one_of_object():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_combine_one_of_object'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_combine_one_of_object'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3810,12 +3810,12 @@ def test_main_jsonschema_combine_any_of_object():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_combine_any_of_object'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_combine_any_of_object'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -3837,8 +3837,8 @@ def test_main_jsonschema_field_include_all_keys():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema' / 'output.py').read_text()
         )
 
 
@@ -3847,17 +3847,17 @@ def test_main_jsonschema_field_include_all_keys():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_jsonschema_field_extras_field_include_all_keys',
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_jsonschema_field_extras_field_include_all_keys_v2',
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_include_all_keys_v2',
         ),
     ],
 )
 def test_main_jsonschema_field_extras_field_include_all_keys(
-        output_model, expected_output
+    output_model, expected_output
 ):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -3878,8 +3878,8 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -3888,12 +3888,12 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_jsonschema_field_extras_field_extra_keys',
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_jsonschema_field_extras_field_extra_keys_v2',
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_field_extra_keys_v2',
         ),
     ],
 )
@@ -3919,8 +3919,8 @@ def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_ou
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -3929,12 +3929,12 @@ def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_ou
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_jsonschema_field_extras',
+            'pydantic.BaseModel',
+            'main_jsonschema_field_extras',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_jsonschema_field_extras_v2',
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_field_extras_v2',
         ),
     ],
 )
@@ -3955,8 +3955,8 @@ def test_main_jsonschema_field_extras(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -3968,12 +3968,12 @@ def test_main_jsonschema_field_extras(output_model, expected_output):
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_jsonschema_custom_type_path',
+            'pydantic.BaseModel',
+            'main_jsonschema_custom_type_path',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_jsonschema_custom_type_path_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_jsonschema_custom_type_path_pydantic_v2',
         ),
     ],
 )
@@ -3995,8 +3995,8 @@ def test_main_jsonschema_custom_type_path(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4016,10 +4016,10 @@ def test_main_jsonschema_custom_base_path():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_custom_base_path' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_custom_base_path' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4042,10 +4042,10 @@ def test_main_openapi_body_and_parameters():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_body_and_parameters' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4073,12 +4073,12 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_body_and_parameters_remote_ref'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_remote_ref'
+                / 'output.py'
+            ).read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -4111,12 +4111,12 @@ def test_main_openapi_body_and_parameters_only_paths():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_body_and_parameters_only_paths'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_paths'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4138,12 +4138,12 @@ def test_main_openapi_body_and_parameters_only_schemas():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_body_and_parameters_only_schemas'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_body_and_parameters_only_schemas'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4163,10 +4163,10 @@ def test_main_openapi_content_in_parameters():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_content_in_parameters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_content_in_parameters' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4189,10 +4189,10 @@ def test_main_openapi_oas_response_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_oas_response_reference' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_oas_response_reference' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4212,8 +4212,8 @@ def test_long_description():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_long_description' / 'output.py').read_text()
         )
 
 
@@ -4238,12 +4238,12 @@ def test_long_description_wrap_string_literal():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_long_description_wrap_string_literal'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_long_description_wrap_string_literal'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4272,10 +4272,10 @@ def test_main_openapi_json_pointer():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_json_pointer' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_json_pointer' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4295,10 +4295,10 @@ def test_jsonschema_pattern_properties():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_pattern_properties' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_pattern_properties' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4319,12 +4319,12 @@ def test_jsonschema_pattern_properties_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_pattern_properties_field_constraints'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_pattern_properties_field_constraints'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4344,8 +4344,8 @@ def test_jsonschema_titles():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_jsonschema_titles' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema_titles' / 'output.py').read_text()
         )
 
 
@@ -4366,12 +4366,12 @@ def test_jsonschema_titles_use_title_as_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_titles_use_title_as_name'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_titles_use_title_as_name'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4392,12 +4392,12 @@ def test_jsonschema_without_titles_use_title_as_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_without_titles_use_title_as_name'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_without_titles_use_title_as_name'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4407,8 +4407,8 @@ def test_jsonschema_without_titles_use_title_as_name():
     [
         ('pydantic.BaseModel', 'main_use_annotated_with_field_constraints'),
         (
-                'pydantic_v2.BaseModel',
-                'main_use_annotated_with_field_constraints_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_use_annotated_with_field_constraints_pydantic_v2',
         ),
     ],
 )
@@ -4435,8 +4435,8 @@ def test_main_use_annotated_with_field_constraints(output_model, expected_output
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4457,12 +4457,12 @@ def test_main_use_annotated_with_field_constraints_py38():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_use_annotated_with_field_constraints_py38'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_use_annotated_with_field_constraints_py38'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4482,8 +4482,8 @@ def test_main_nested_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_nested_enum' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_nested_enum' / 'output.py').read_text()
         )
 
 
@@ -4503,8 +4503,8 @@ def test_main_jsonschema_has_default_value():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'has_default_value' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'has_default_value' / 'output.py').read_text()
         )
 
 
@@ -4525,10 +4525,10 @@ def test_openapi_special_yaml_keywords(mocker):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_special_yaml_keywords' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_special_yaml_keywords' / 'output.py'
+            ).read_text()
         )
     mock_prance.assert_called_once()
 
@@ -4549,16 +4549,16 @@ def test_main_jsonschema_boolean_property():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_boolean_property' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_boolean_property' / 'output.py'
+            ).read_text()
         )
 
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_modular_default_enum_member(
-        tmpdir_factory: TempdirFactory,
+    tmpdir_factory: TempdirFactory,
 ) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -4576,7 +4576,7 @@ def test_main_jsonschema_modular_default_enum_member(
             ]
         )
     main_modular_dir = (
-            EXPECTED_MAIN_PATH / 'main_jsonschema_modular_default_enum_member'
+        EXPECTED_MAIN_PATH / 'main_jsonschema_modular_default_enum_member'
     )
     for path in main_modular_dir.rglob('*.py'):
         result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
@@ -4635,12 +4635,12 @@ def test_main_openapi_nullable_use_union_operator():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_nullable_strict_nullable_use_union_operator'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_nullable_strict_nullable_use_union_operator'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4681,10 +4681,10 @@ def test_main_collapse_root_models():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_collapse_root_models' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_collapse_root_models' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4704,12 +4704,12 @@ def test_main_collapse_root_models_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_collapse_root_models_field_constraints'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_collapse_root_models_field_constraints'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4729,12 +4729,12 @@ def test_main_collapse_root_models_with_references_to_flat_types():
 
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_collapse_root_models_with_references_to_flat_types'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_collapse_root_models_with_references_to_flat_types'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4754,10 +4754,10 @@ def test_main_openapi_max_items_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_max_items_enum' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_max_items_enum' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4800,10 +4800,10 @@ def test_main_jsonschema_items_boolean():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_items_boolean' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_items_boolean' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4823,12 +4823,12 @@ def test_main_jsonschema_array_in_additional_properites():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_array_in_additional_properties'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_array_in_additional_properties'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4848,10 +4848,10 @@ def test_main_jsonschema_nullable_object():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_nullable_object' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_nullable_object' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4859,12 +4859,12 @@ def test_main_jsonschema_nullable_object():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_openapi_const',
+            'pydantic.BaseModel',
+            'main_openapi_const',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_openapi_const_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_openapi_const_pydantic_v2',
         ),
     ],
 )
@@ -4886,8 +4886,8 @@ def test_main_openapi_const(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4895,16 +4895,16 @@ def test_main_openapi_const(output_model, expected_output):
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_openapi_const_field',
+            'pydantic.BaseModel',
+            'main_openapi_const_field',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_openapi_const_field_pydantic_v2',
+            'pydantic_v2.BaseModel',
+            'main_openapi_const_field_pydantic_v2',
         ),
         (
-                'msgspec.Struct',
-                'main_openapi_const_field_msgspec',
+            'msgspec.Struct',
+            'main_openapi_const_field_msgspec',
         ),
     ],
 )
@@ -4927,8 +4927,8 @@ def test_main_openapi_const_field(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -4948,10 +4948,10 @@ def test_main_openapi_complex_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_complex_reference' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_complex_reference' / 'output.py'
+            ).read_text()
         )
 
 
@@ -4971,12 +4971,12 @@ def test_main_openapi_reference_to_object_properties():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_reference_to_object_properties'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_reference_to_object_properties'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -4997,12 +4997,12 @@ def test_main_openapi_reference_to_object_properties_collapse_root_models():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_reference_to_object_properties_collapse_root_models'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_reference_to_object_properties_collapse_root_models'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5023,12 +5023,12 @@ def test_main_openapi_override_required_all_of_field():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_override_required_all_of'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_override_required_all_of'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5048,10 +5048,10 @@ def test_main_jsonschema_object_has_one_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_object_has_one_of' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_object_has_one_of' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5071,10 +5071,10 @@ def test_main_jsonschema_json_pointer_array():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_json_pointer_array' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_json_pointer_array' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5095,8 +5095,8 @@ def test_main_use_default_kwarg():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_use_default_kwarg' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_use_default_kwarg' / 'output.py').read_text()
         )
 
 
@@ -5117,10 +5117,10 @@ def test_main_json_snake_case_field():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_json_snake_case_field' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_json_snake_case_field' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5171,12 +5171,12 @@ def test_main_disable_warnings(capsys: CaptureFixture):
     'input,output',
     [
         (
-                'discriminator.yaml',
-                'main_openapi_discriminator',
+            'discriminator.yaml',
+            'main_openapi_discriminator',
         ),
         (
-                'discriminator_without_mapping.yaml',
-                'main_openapi_discriminator_without_mapping',
+            'discriminator_without_mapping.yaml',
+            'main_openapi_discriminator_without_mapping',
         ),
     ],
 )
@@ -5196,8 +5196,8 @@ def test_main_openapi_discriminator(input, output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / output / 'output.py').read_text()
         )
 
 
@@ -5206,14 +5206,14 @@ def test_main_openapi_discriminator(input, output):
     'kind,option, expected',
     [
         (
-                'anyOf',
-                '--collapse-root-models',
-                'main_openapi_discriminator_in_array_collapse_root_models',
+            'anyOf',
+            '--collapse-root-models',
+            'main_openapi_discriminator_in_array_collapse_root_models',
         ),
         (
-                'oneOf',
-                '--collapse-root-models',
-                'main_openapi_discriminator_in_array_collapse_root_models',
+            'oneOf',
+            '--collapse-root-models',
+            'main_openapi_discriminator_in_array_collapse_root_models',
         ),
         ('anyOf', None, 'main_openapi_discriminator_in_array'),
         ('oneOf', None, 'main_openapi_discriminator_in_array'),
@@ -5227,20 +5227,20 @@ def test_main_openapi_discriminator_in_array(kind, option, expected):
             [
                 a
                 for a in [
-                '--input',
-                str(OPEN_API_DATA_PATH / input_file),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'openapi',
-                option,
-            ]
+                    '--input',
+                    str(OPEN_API_DATA_PATH / input_file),
+                    '--output',
+                    str(output_file),
+                    '--input-file-type',
+                    'openapi',
+                    option,
+                ]
                 if a
             ]
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / expected / 'output.py'
+            EXPECTED_MAIN_PATH / expected / 'output.py'
         ).read_text().replace('discriminator_in_array.yaml', input_file)
 
 
@@ -5260,12 +5260,12 @@ def test_main_jsonschema_pattern_properties_by_reference():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_pattern_properties_by_reference'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_pattern_properties_by_reference'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5273,16 +5273,16 @@ def test_main_jsonschema_pattern_properties_by_reference():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_openapi_default_object',
+            'pydantic.BaseModel',
+            'main_openapi_default_object',
         ),
         (
-                'pydantic_v2.BaseModel',
-                'main_openapi_pydantic_v2_default_object',
+            'pydantic_v2.BaseModel',
+            'main_openapi_pydantic_v2_default_object',
         ),
         (
-                'msgspec.Struct',
-                'main_openapi_msgspec_default_object',
+            'msgspec.Struct',
+            'main_openapi_msgspec_default_object',
         ),
     ],
 )
@@ -5334,8 +5334,8 @@ def test_main_dataclass():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_dataclass' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_dataclass' / 'output.py').read_text()
         )
 
 
@@ -5357,10 +5357,10 @@ def test_main_dataclass_base_class():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_dataclass_base_class' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_dataclass_base_class' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5380,8 +5380,8 @@ def test_main_dataclass_field():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py').read_text()
         )
 
 
@@ -5417,10 +5417,10 @@ def test_main_jsonschema_enum_root_literal():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_jsonschema_root_in_enum' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_jsonschema_root_in_enum' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5441,12 +5441,12 @@ def test_main_jsonschema_reference_same_hierarchy_directory():
             )
             assert return_code == Exit.OK
             assert (
-                    output_file.read_text()
-                    == (
-                            EXPECTED_MAIN_PATH
-                            / 'main_jsonschema_reference_same_hierarchy_directory'
-                            / 'output.py'
-                    ).read_text()
+                output_file.read_text()
+                == (
+                    EXPECTED_MAIN_PATH
+                    / 'main_jsonschema_reference_same_hierarchy_directory'
+                    / 'output.py'
+                ).read_text()
             )
 
 
@@ -5465,10 +5465,10 @@ def test_main_multiple_required_any_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_multiple_required_any_of' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_multiple_required_any_of' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5487,8 +5487,8 @@ def test_main_nullable_any_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_nullable_any_of' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_nullable_any_of' / 'output.py').read_text()
         )
 
 
@@ -5508,12 +5508,12 @@ def test_main_nullable_any_of_use_union_operator():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_nullable_any_of_use_union_operator'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_nullable_any_of_use_union_operator'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5531,8 +5531,8 @@ def test_main_nested_all_of():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_nested_all_of' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_nested_all_of' / 'output.py').read_text()
         )
 
 
@@ -5550,8 +5550,8 @@ def test_main_max_min_openapi():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'max_min_number' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'max_min_number' / 'output.py').read_text()
         )
 
 
@@ -5574,10 +5574,10 @@ def test_main_use_operation_id_as_name():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_use_operation_id_as_name' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_use_operation_id_as_name' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5603,9 +5603,9 @@ def test_main_use_operation_id_as_name_not_found_operation_id(capsys):
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
-                captured.err
-                == 'All operations must have an operationId when --use_operation_id_as_name is set.'
-                   'The following path was missing an operationId: pets\n'
+            captured.err
+            == 'All operations must have an operationId when --use_operation_id_as_name is set.'
+            'The following path was missing an operationId: pets\n'
         )
 
 
@@ -5625,10 +5625,10 @@ def test_main_unsorted_optional_fields():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'unsorted_optional_fields' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'unsorted_optional_fields' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5694,8 +5694,8 @@ def test_main_null():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_null' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_null' / 'output.py').read_text()
         )
 
 
@@ -5715,8 +5715,8 @@ def test_main_typed_dict():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_typed_dict' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_typed_dict' / 'output.py').read_text()
         )
 
 
@@ -5738,8 +5738,8 @@ def test_main_typed_dict_py_38():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_typed_dict_py_38' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_typed_dict_py_38' / 'output.py').read_text()
         )
 
 
@@ -5765,12 +5765,12 @@ def test_main_typed_dict_space_and_special_characters():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_typed_dict_space_and_special_characters'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_space_and_special_characters'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5830,12 +5830,12 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_typed_dict_special_field_name_with_inheritance_model'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_special_field_name_with_inheritance_model'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5862,12 +5862,12 @@ def test_main_typed_dict_not_required_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_typed_dict_not_required_nullable'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_not_required_nullable'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5893,10 +5893,10 @@ def test_main_typed_dict_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_typed_dict_nullable' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_typed_dict_nullable' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5923,12 +5923,12 @@ def test_main_typed_dict_nullable_strict_nullable():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_typed_dict_nullable_strict_nullable'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_typed_dict_nullable_strict_nullable'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -5948,10 +5948,10 @@ def test_main_custom_file_header_path():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_custom_file_header' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_custom_file_header' / 'output.py'
+            ).read_text()
         )
 
 
@@ -5975,8 +5975,8 @@ def test_main_custom_file_header_duplicate_options(capsys):
         captured = capsys.readouterr()
         assert return_code == Exit.ERROR
         assert (
-                captured.err
-                == '`--custom_file_header_path` can not be used with `--custom_file_header`.\n'
+            captured.err
+            == '`--custom_file_header_path` can not be used with `--custom_file_header`.\n'
         )
 
 
@@ -5996,8 +5996,8 @@ def test_main_pydantic_v2():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
         )
 
 
@@ -6017,10 +6017,10 @@ def test_main_openapi_custom_id_pydantic_v2():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_custom_id_pydantic_v2' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6046,12 +6046,12 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_custom_id_pydantic_v2_custom_base'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_custom_id_pydantic_v2_custom_base'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -6071,12 +6071,12 @@ def test_main_jsonschema_discriminator_literals():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_jsonschema_discriminator_literals'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_jsonschema_discriminator_literals'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -6108,10 +6108,10 @@ def test_main_openapi_all_of_with_relative_ref():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_all_of_with_relative_ref' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_with_relative_ref' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6134,8 +6134,8 @@ def test_main_msgspec_struct():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
         )
 
 
@@ -6162,12 +6162,12 @@ def test_main_msgspec_use_annotated_with_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_use_annotated_with_msgspec_meta_constraints'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_use_annotated_with_msgspec_meta_constraints'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -6201,14 +6201,14 @@ def test_main_duplicate_field_constraints():
     'collapse_root_models,python_version,expected_output',
     [
         (
-                '--collapse-root-models',
-                '3.8',
-                'duplicate_field_constraints_msgspec_py38_collapse_root_models',
+            '--collapse-root-models',
+            '3.8',
+            'duplicate_field_constraints_msgspec_py38_collapse_root_models',
         ),
         (
-                None,
-                '3.9',
-                'duplicate_field_constraints_msgspec',
+            None,
+            '3.9',
+            'duplicate_field_constraints_msgspec',
         ),
     ],
 )
@@ -6218,7 +6218,7 @@ def test_main_duplicate_field_constraints():
     reason="Installed black doesn't support the old style",
 )
 def test_main_duplicate_field_constraints_msgspec(
-        collapse_root_models, python_version, expected_output
+    collapse_root_models, python_version, expected_output
 ):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
@@ -6226,18 +6226,18 @@ def test_main_duplicate_field_constraints_msgspec(
             [
                 a
                 for a in [
-                '--input',
-                str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
-                '--output',
-                str(output_path),
-                '--input-file-type',
-                'jsonschema',
-                '--output-model-type',
-                'msgspec.Struct',
-                '--target-python-version',
-                python_version,
-                collapse_root_models,
-            ]
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'duplicate_field_constraints'),
+                    '--output',
+                    str(output_path),
+                    '--input-file-type',
+                    'jsonschema',
+                    '--output-model-type',
+                    'msgspec.Struct',
+                    '--target-python-version',
+                    python_version,
+                    collapse_root_models,
+                ]
                 if a
             ]
         )
@@ -6266,7 +6266,7 @@ def test_main_dataclass_field_defs():
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-                EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py'
+            EXPECTED_MAIN_PATH / 'main_dataclass_field' / 'output.py'
         ).read_text().replace('filename:  user.json', 'filename:  user_defs.json')
 
 
@@ -6286,10 +6286,10 @@ def test_main_dataclass_default():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_dataclass_field_default' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_dataclass_field_default' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6309,8 +6309,8 @@ def test_main_all_of_ref_self():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_all_of_ref_self' / 'output.py').read_text()
         )
 
 
@@ -6338,10 +6338,10 @@ def test_main_array_field_constraints():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_array_field_constraints' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6360,10 +6360,10 @@ def test_all_of_use_default():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_all_of_use_default' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_all_of_use_default' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6371,12 +6371,12 @@ def test_all_of_use_default():
     'output_model,expected_output',
     [
         (
-                'pydantic.BaseModel',
-                'main_graphql_simple_star_wars',
+            'pydantic.BaseModel',
+            'main_graphql_simple_star_wars',
         ),
         (
-                'dataclasses.dataclass',
-                'main_graphql_simple_star_wars_dataclass',
+            'dataclasses.dataclass',
+            'main_graphql_simple_star_wars_dataclass',
         ),
     ],
 )
@@ -6402,8 +6402,8 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -6427,12 +6427,12 @@ def test_main_graphql_different_types_of_fields():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_graphql_different_types_of_fields'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_different_types_of_fields'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -6458,10 +6458,10 @@ def test_main_graphql_custom_scalar_types():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_graphql_custom_scalar_types' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_scalar_types' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6487,10 +6487,10 @@ def test_main_graphql_field_aliases():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6514,8 +6514,8 @@ def test_main_graphql_enums():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
         )
 
 
@@ -6539,8 +6539,8 @@ def test_main_graphql_union():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
         )
 
 
@@ -6568,12 +6568,12 @@ def test_main_graphql_additional_imports_isort_4():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_graphql_additional_imports'
-                        / 'output_isort4.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort4.py'
+            ).read_text()
         )
 
 
@@ -6605,12 +6605,12 @@ def test_main_graphql_additional_imports_isort_5():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_graphql_additional_imports'
-                        / 'output_isort5.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_additional_imports'
+                / 'output_isort5.py'
+            ).read_text()
         )
 
 
@@ -6636,10 +6636,10 @@ def test_main_graphql_custom_formatters():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6667,10 +6667,10 @@ def test_main_openapi_discriminator_enum():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_openapi_discriminator_enum' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_discriminator_enum' / 'output.py'
+            ).read_text()
         )
 
 
@@ -6698,12 +6698,12 @@ def test_main_openapi_discriminator_enum_duplicate():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH
-                        / 'main_openapi_discriminator_enum_duplicate'
-                        / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_discriminator_enum_duplicate'
+                / 'output.py'
+            ).read_text()
         )
 
 
@@ -6748,8 +6748,10 @@ def test_one_of_with_sub_schema_array_item():
         )
         assert return_code == Exit.OK
         assert (
-                output_file.read_text()
-                == (
-                        EXPECTED_MAIN_PATH / 'main_one_of_with_sub_schema_array_item' / 'output.py'
-                ).read_text()
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_one_of_with_sub_schema_array_item'
+                / 'output.py'
+            ).read_text()
         )
