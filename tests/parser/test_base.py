@@ -5,7 +5,12 @@ import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
-from datamodel_code_generator.parser.base import Parser, relative, exact_import, sort_data_models
+from datamodel_code_generator.parser.base import (
+    Parser,
+    exact_import,
+    relative,
+    sort_data_models,
+)
 from datamodel_code_generator.reference import Reference, snake_to_upper_camel
 from datamodel_code_generator.types import DataType
 
