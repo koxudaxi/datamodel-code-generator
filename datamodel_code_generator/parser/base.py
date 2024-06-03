@@ -238,6 +238,14 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
+def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
+    if from_ == '.':
+        # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # when our imported module has the same parent
+        return f'.{import_}', short_name
+    return f'{from_}.{import_}', short_name
+
+
 @runtime_checkable
 class Child(Protocol):
     @property
@@ -703,10 +711,9 @@ class Parser(ABC):
                         model.module_name, data_type.full_name
                     )
                     if imports.use_exact:
-                        if from_ == '.':
-                            from_ = ''
-                        from_ = f'{from_}.{import_}'
-                        import_ = data_type.reference.short_name
+                        from_, import_ = exact_import(
+                            from_, import_, data_type.reference.short_name
+                        )
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
