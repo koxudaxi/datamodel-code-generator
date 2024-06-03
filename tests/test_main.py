@@ -3,6 +3,7 @@ import shutil
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import List
 from unittest.mock import call
 
 import black
@@ -864,7 +865,7 @@ def test_validation_failed(mocker):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output,args',
+    'output_model,expected_output, args',
     [
         ('pydantic.BaseModel', 'main_with_field_constraints', []),
         (
@@ -2945,7 +2946,7 @@ def test_main_jsonschema_pattern():
 )
 @freeze_time('2019-07-26')
 def test_main_openapi_pattern_with_lookaround_pydantic_v2(
-    expected_output: str, args: list[str]
+    expected_output: str, args: List[str]
 ):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
