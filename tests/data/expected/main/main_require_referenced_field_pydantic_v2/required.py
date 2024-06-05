@@ -9,6 +9,6 @@ from pydantic import AwareDatetime
 from .referenced import Model as Model_1
 
 
-class Model(Model_1.Model):
+class Model(Model_1):
     some_optional_property: str
     some_optional_typed_property: AwareDatetime
