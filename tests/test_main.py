@@ -3,6 +3,7 @@ import shutil
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import List
 from unittest.mock import call
 
 import black
@@ -2930,6 +2931,48 @@ def test_main_jsonschema_pattern():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
+        )
+
+
+@pytest.mark.parametrize(
+    'expected_output, args',
+    [
+        ('main_pattern_with_lookaround_pydantic_v2', []),
+        (
+            'main_pattern_with_lookaround_pydantic_v2_field_constraints',
+            ['--field-constraints'],
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_openapi_pattern_with_lookaround_pydantic_v2(
+    expected_output: str, args: List[str]
+):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'pattern_lookaround.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--target-python',
+                '3.9',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                *args,
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -6140,6 +6183,33 @@ def test_main_msgspec_struct():
 
 
 @freeze_time('2019-07-26')
+def test_main_msgspec_struct_snake_case():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_ordered_required_fields.yaml'),
+                '--output',
+                str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
+                '--snake-case-field',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_msgspec_struct_snake_case' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
 @pytest.mark.skipif(
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
@@ -6728,3 +6798,30 @@ def test_main_root_one_of():
                 path.relative_to(expected_directory)
             ).read_text()
             assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_one_of_with_sub_schema_array_item():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'one_of_with_sub_schema_array_item.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_one_of_with_sub_schema_array_item'
+                / 'output.py'
+            ).read_text()
+        )
