@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.4.5'
+    rev: 'v0.4.7'
     hooks:
       - id: ruff
         files: "^datamodel_code_generator|^tests"
@@ -16,4 +16,4 @@ repos:
     - id: codespell
       additional_dependencies:
         - tomli
-      exclude: "^tests/"
+      exclude: "^tests/|^CODE_OF_CONDUCT.md"
