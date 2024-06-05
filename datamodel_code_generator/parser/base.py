@@ -721,7 +721,7 @@ class Parser(ABC):
                 if from_ and import_ and alias != name:
                     data_type.alias = (
                         alias
-                        if from_ == '.' and data_type.full_name == import_
+                        if data_type.reference.short_name == import_
                         else f'{alias}.{name}'
                     )
 
