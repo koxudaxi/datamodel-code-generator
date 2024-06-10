@@ -6133,6 +6133,7 @@ def test_main_jsonschema_external_discriminator():
                 str(
                     JSON_SCHEMA_DATA_PATH
                     / 'discriminator_with_external_reference'
+                    / 'inner_folder'
                     / 'schema.json'
                 ),
                 '--output',
