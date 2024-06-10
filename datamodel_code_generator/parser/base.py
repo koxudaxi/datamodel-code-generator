@@ -780,8 +780,11 @@ class Parser(ABC):
                             ):
                                 if '#' in path or discriminator_model.path[
                                     :-1
-                                ] != path.lstrip('./'):
-                                    continue
+                                ] != path.split('/')[-1]:
+                                    t_path = path[str(path).find('/') + 1:]
+                                    t_disc = discriminator_model.path[:str(discriminator_model.path).find('#')].lstrip('../')
+                                    if t_path != t_disc:
+                                        continue
                             type_names.append(name)
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
