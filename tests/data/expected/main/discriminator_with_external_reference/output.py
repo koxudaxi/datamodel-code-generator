@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Union
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -16,15 +16,6 @@ class Type1(BaseModel):
 
 class Type2(BaseModel):
     type_: Literal['b'] = Field('b', title='Type ')
-    ref_type: Optional[Type1] = Field(None, description='A referenced type.')
-
-
-class Type4(BaseModel):
-    type_: Literal['d'] = Field('d', title='Type ')
-
-
-class Type5(BaseModel):
-    type_: Literal['e'] = Field('e', title='Type ')
 
 
 class Type3(BaseModel):
@@ -32,6 +23,4 @@ class Type3(BaseModel):
 
 
 class Response(BaseModel):
-    inner: Union[Type1, Type2, Type3, Type4, Type5] = Field(
-        ..., discriminator='type_', title='Inner'
-    )
+    inner: Union[Type1, Type2, Type3] = Field(..., discriminator='type_', title='Inner')
