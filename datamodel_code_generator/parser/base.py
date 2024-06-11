@@ -788,7 +788,7 @@ class Parser(ABC):
                                     t_disc = discriminator_model.path[
                                         : str(discriminator_model.path).find('#')
                                     ].lstrip('../')
-                                    t_disc_2 = "/".join(t_disc.split('/')[1:])
+                                    t_disc_2 = '/'.join(t_disc.split('/')[1:])
                                     if t_path != t_disc and t_path != t_disc_2:
                                         continue
                             type_names.append(name)
