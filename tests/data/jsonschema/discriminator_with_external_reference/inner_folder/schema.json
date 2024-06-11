@@ -16,21 +16,29 @@
     "inner": {
       "discriminator": {
         "mapping": {
-          "a": "./artificial_folder/type1.json",
-          "b": "./type2.json",
-          "c": "#/$def/Type3"
+          "a": "./artificial_folder/type-1.json",
+          "b": "./type-2.json",
+          "c": "#/$def/Type3",
+          "d": "../type-4.json",
+          "e": "../subfolder/type-5.json"
         },
         "propertyName": "type_"
       },
       "oneOf": [
         {
-          "$ref": "./artificial_folder/type1.json"
+          "$ref": "./artificial_folder/type-1.json"
         },
         {
-          "$ref": "./type2.json"
+          "$ref": "./type-2.json"
         },
         {
           "$ref": "#/$def/Type3"
+        },
+        {
+          "$ref": "../type-4.json"
+        },
+        {
+          "$ref": "../subfolder/type-5.json"
         }
       ],
       "title": "Inner"

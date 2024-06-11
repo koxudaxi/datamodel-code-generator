@@ -700,6 +700,7 @@ class Parser(ABC):
                     from_, import_ = full_path = relative(
                         model.module_name, data_type.full_name
                     )
+                    import_ = import_.replace('-', '_')
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
@@ -778,10 +779,18 @@ class Parser(ABC):
                                 discriminator_model.path.split('#/')[-1]
                                 != path.split('#/')[-1]
                             ):
-                                if '#' in path or discriminator_model.path[
-                                    :-1
-                                ] != path.lstrip('./'):
-                                    continue
+                                if (
+                                    path.startswith('#/')
+                                    or discriminator_model.path[:-1]
+                                    != path.split('/')[-1]
+                                ):
+                                    t_path = path[str(path).find('/') + 1 :]
+                                    t_disc = discriminator_model.path[
+                                        : str(discriminator_model.path).find('#')
+                                    ].lstrip('../')
+                                    t_disc_2 = '/'.join(t_disc.split('/')[1:])
+                                    if t_path != t_disc and t_path != t_disc_2:
+                                        continue
                             type_names.append(name)
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
@@ -1252,6 +1261,7 @@ class Parser(ABC):
                     init = True
                 else:
                     module = (*module[:-1], f'{module[-1]}.py')
+                    module = tuple(part.replace('-', '_') for part in module)
             else:
                 module = ('__init__.py',)
 
