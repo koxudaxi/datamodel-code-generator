@@ -6154,6 +6154,27 @@ def test_main_jsonschema_external_discriminator():
 
 
 @freeze_time('2019-07-26')
+def test_main_jsonschema_external_discriminator_folder():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_with_external_reference'),
+                '--output',
+                str(output_path),
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'discriminator_with_external_references_folder'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
 @pytest.mark.skipif(
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
