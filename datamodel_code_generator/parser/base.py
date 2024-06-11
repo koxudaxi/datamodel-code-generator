@@ -700,7 +700,7 @@ class Parser(ABC):
                     from_, import_ = full_path = relative(
                         model.module_name, data_type.full_name
                     )
-                    import_ = import_.replace("-", "_")
+                    import_ = import_.replace('-', '_')
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
