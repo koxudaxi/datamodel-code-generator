@@ -6166,7 +6166,9 @@ def test_main_jsonschema_external_discriminator_folder():
             ]
         )
         assert return_code == Exit.OK
-        main_modular_dir = EXPECTED_MAIN_PATH / 'discriminator_with_external_references_folder'
+        main_modular_dir = (
+            EXPECTED_MAIN_PATH / 'discriminator_with_external_references_folder'
+        )
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
