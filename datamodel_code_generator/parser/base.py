@@ -1260,6 +1260,7 @@ class Parser(ABC):
                     module = (*module, '__init__.py')
                     init = True
                 else:
+                    module = tuple(part.replace('.', '_') for part in module)
                     module = (*module[:-1], f'{module[-1]}.py')
                     module = tuple(part.replace('-', '_') for part in module)
             else:
@@ -1324,4 +1325,5 @@ class Parser(ABC):
         if [*results] == [('__init__.py',)]:
             return results[('__init__.py',)].body
 
+        results = {tuple(i.replace('-', '_') for i in k): v for k, v in results.items()}
         return results
