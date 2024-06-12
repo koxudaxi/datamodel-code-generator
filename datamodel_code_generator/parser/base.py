@@ -1301,7 +1301,9 @@ class Parser(ABC):
             for model in processed_model.models:
                 processed_model.imports.append(model.imports)
                 if model.extra_template_data.get('config', False):
-                    processed_model.imports.append(Import.from_full_path('pydantic.ConfigDict'))
+                    processed_model.imports.append(
+                        Import.from_full_path('pydantic.ConfigDict')
+                    )
 
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
