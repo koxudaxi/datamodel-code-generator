@@ -249,26 +249,28 @@ class Apis(BaseModel):
 - Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
 
 ## Sponsors
-<div style="display: flex; justify-content: flex-start; align-items: center;">
-  <div style="margin-right: 10px; text-align: center;">
+<table>
+  <tr>
+    <td valign="top" align="center">
     <a href="https://github.com/JetBrainsOfficial">
       <img src="https://avatars.githubusercontent.com/u/60931315?s=100&v=4" alt="JetBrains Logo" style="width: 100px;">
       <p>JetBrains</p>
     </a>
-  </div>
-  <div style="margin-right: 10px; text-align: center;">
+    </td>
+  <td valign="top" align="center">
     <a href="https://github.com/astral-sh">
       <img src="https://avatars.githubusercontent.com/u/115962839?s=200&v=4" alt="Astral Logo" style="width: 100px;">
       <p>Astral</p>
     </a>
-  </div>
-  <div style="text-align: center;">
+  </td>
+  <td valign="top" align="center">
     <a href="https://github.com/DataDog">
       <img src="https://avatars.githubusercontent.com/u/365230?s=200&v=4" alt="Datadog, Inc. Logo" style="width: 100px;">
       <p>Datadog, Inc.</p>
     </a>
-  </div>
-</div>
+  </td>
+  </tr>
+</table>
 
 ## Projects that use datamodel-code-generator
  
