@@ -271,15 +271,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#sponsors" class="md-nav__link">
-    <span class="md-ellipsis">
-      Sponsors
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#quick-installation" class="md-nav__link">
     <span class="md-ellipsis">
       Quick Installation
@@ -298,15 +289,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#projects-that-use-datamodel-code-generator" class="md-nav__link">
-    <span class="md-ellipsis">
-      Projects that use datamodel-code-generator
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#supported-input-types" class="md-nav__link">
     <span class="md-ellipsis">
       Supported input types
@@ -319,6 +301,24 @@
   <a href="#supported-output-types" class="md-nav__link">
     <span class="md-ellipsis">
       Supported output types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sponsors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sponsors
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projects-that-use-datamodel-code-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      Projects that use datamodel-code-generator
     </span>
   </a>
   
@@ -783,15 +783,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#sponsors" class="md-nav__link">
-    <span class="md-ellipsis">
-      Sponsors
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#quick-installation" class="md-nav__link">
     <span class="md-ellipsis">
       Quick Installation
@@ -810,15 +801,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#projects-that-use-datamodel-code-generator" class="md-nav__link">
-    <span class="md-ellipsis">
-      Projects that use datamodel-code-generator
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#supported-input-types" class="md-nav__link">
     <span class="md-ellipsis">
       Supported input types
@@ -831,6 +813,24 @@
   <a href="#supported-output-types" class="md-nav__link">
     <span class="md-ellipsis">
       Supported output types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sponsors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sponsors
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projects-that-use-datamodel-code-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      Projects that use datamodel-code-generator
     </span>
   </a>
   
@@ -976,8 +976,6 @@
 <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" /></a>
 <a href="https://pydantic.dev"><img alt="Pydantic v1" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json" /></a>
 <a href="https://pydantic.dev"><img alt="Pydantic v2" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json" /></a></p>
-<h2 id="sponsors">Sponsors</h2>
-<p><a href="https://github.com/JetBrainsOfficial"><img alt="JetBrains" src="https://avatars.githubusercontent.com/u/60931315?s=200&amp;v=4" /></a></p>
 <h2 id="quick-installation">Quick Installation</h2>
 <p>To install <code>datamodel-code-generator</code>:
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator
@@ -1188,6 +1186,46 @@
 </span></code></pre></div>
 </details>
 
+<h2 id="supported-input-types">Supported input types</h2>
+<ul>
+<li>OpenAPI 3 (YAML/JSON, <a href="https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types">OpenAPI Data Type</a>);</li>
+<li>JSON Schema (<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Core</a>/<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Validation</a>);</li>
+<li>JSON/YAML/CSV Data (it will be converted to JSON Schema);</li>
+<li>Python dictionary (it will be converted to JSON Schema);</li>
+<li>GraphQL schema (<a href="https://graphql.org/learn/schema/">GraphQL Schemas and Types</a>);</li>
+</ul>
+<h2 id="supported-output-types">Supported output types</h2>
+<ul>
+<li><a href="https://docs.pydantic.dev/1.10/">pydantic</a>.BaseModel;</li>
+<li><a href="https://docs.pydantic.dev/2.0/">pydantic_v2</a>.BaseModel;</li>
+<li><a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a>;</li>
+<li><a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a>;</li>
+<li><a href="https://github.com/jcrist/msgspec">msgspec.Struct</a>;</li>
+<li>Custom type from your <a href="https://jinja.palletsprojects.com/en/3.1.x">jinja2</a> template;</li>
+</ul>
+<h2 id="sponsors">Sponsors</h2>
+<table>
+  <tr>
+    <td valign="top" align="center">
+    <a href="https://github.com/JetBrainsOfficial">
+      <img src="https://avatars.githubusercontent.com/u/60931315?s=100&v=4" alt="JetBrains Logo" style="width: 100px;">
+      <p>JetBrains</p>
+    </a>
+    </td>
+  <td valign="top" align="center">
+    <a href="https://github.com/astral-sh">
+      <img src="https://avatars.githubusercontent.com/u/115962839?s=200&v=4" alt="Astral Logo" style="width: 100px;">
+      <p>Astral</p>
+    </a>
+  </td>
+  <td valign="top" align="center">
+    <a href="https://github.com/DataDog">
+      <img src="https://avatars.githubusercontent.com/u/365230?s=200&v=4" alt="Datadog, Inc. Logo" style="width: 100px;">
+      <p>Datadog, Inc.</p>
+    </a>
+  </td>
+  </tr>
+</table>
 <h2 id="projects-that-use-datamodel-code-generator">Projects that use datamodel-code-generator</h2>
 <p>These OSS projects use datamodel-code-generator to generate many models. 
 See the following linked projects for real world examples and inspiration.</p>
@@ -1241,23 +1279,6 @@ See the following linked projects for real world examples and inspiration.</p>
 <li><em><a href="https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh">generate-types.sh</a></em></li>
 </ul>
 </li>
-</ul>
-<h2 id="supported-input-types">Supported input types</h2>
-<ul>
-<li>OpenAPI 3 (YAML/JSON, <a href="https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types">OpenAPI Data Type</a>);</li>
-<li>JSON Schema (<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Core</a>/<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Validation</a>);</li>
-<li>JSON/YAML/CSV Data (it will be converted to JSON Schema);</li>
-<li>Python dictionary (it will be converted to JSON Schema);</li>
-<li>GraphQL schema (<a href="https://graphql.org/learn/schema/">GraphQL Schemas and Types</a>);</li>
-</ul>
-<h2 id="supported-output-types">Supported output types</h2>
-<ul>
-<li><a href="https://docs.pydantic.dev/1.10/">pydantic</a>.BaseModel;</li>
-<li><a href="https://docs.pydantic.dev/2.0/">pydantic_v2</a>.BaseModel;</li>
-<li><a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a>;</li>
-<li><a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a>;</li>
-<li><a href="https://github.com/jcrist/msgspec">msgspec.Struct</a>;</li>
-<li>Custom type from your <a href="https://jinja.palletsprojects.com/en/3.1.x">jinja2</a> template;</li>
 </ul>
 <h2 id="installation">Installation</h2>
 <p>To install <code>datamodel-code-generator</code>:
