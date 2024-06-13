@@ -16,9 +16,6 @@ and [msgspec.Struct](https://github.com/jcrist/msgspec) from an openapi file and
 ## Help
 See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
 
-## Sponsors
-[![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
-
 ## Quick Installation
 
 To install `datamodel-code-generator`:
@@ -236,6 +233,43 @@ class Apis(BaseModel):
 ```
 </details>
 
+## Supported input types
+-  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types));
+-  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
+-  JSON/YAML/CSV Data (it will be converted to JSON Schema);
+-  Python dictionary (it will be converted to JSON Schema);
+-  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
+
+## Supported output types
+- [pydantic](https://docs.pydantic.dev/1.10/).BaseModel;
+- [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel;
+- [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
+- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
+- [msgspec.Struct](https://github.com/jcrist/msgspec);
+- Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
+
+## Sponsors
+<div style="display: flex; justify-content: flex-start; align-items: center;">
+  <div style="margin-right: 10px; text-align: center;">
+    <a href="https://github.com/JetBrainsOfficial">
+      <img src="https://avatars.githubusercontent.com/u/60931315?s=100&v=4" alt="JetBrains Logo" style="width: 100px;">
+      <p>JetBrains</p>
+    </a>
+  </div>
+  <div style="margin-right: 10px; text-align: center;">
+    <a href="https://github.com/astral-sh">
+      <img src="https://avatars.githubusercontent.com/u/115962839?s=200&v=4" alt="Astral Logo" style="width: 100px;">
+      <p>Astral</p>
+    </a>
+  </div>
+  <div style="text-align: center;">
+    <a href="https://github.com/DataDog">
+      <img src="https://avatars.githubusercontent.com/u/365230?s=200&v=4" alt="Datadog, Inc. Logo" style="width: 100px;">
+      <p>Datadog, Inc.</p>
+    </a>
+  </div>
+</div>
+
 ## Projects that use datamodel-code-generator
  
 These OSS projects use datamodel-code-generator to generate many models. 
@@ -266,21 +300,6 @@ See the following linked projects for real world examples and inspiration.
   - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)* 
 - [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
   - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
-
-## Supported input types
--  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types));
--  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
--  JSON/YAML/CSV Data (it will be converted to JSON Schema);
--  Python dictionary (it will be converted to JSON Schema);
--  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
-
-## Supported output types
-- [pydantic](https://docs.pydantic.dev/1.10/).BaseModel;
-- [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel;
-- [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
-- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
-- [msgspec.Struct](https://github.com/jcrist/msgspec);
-- Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
 
 ## Installation
 
@@ -319,6 +338,7 @@ This method needs the [http extra option](#http-extra-option)
 ## All Command Options
 
 The `datamodel-codegen` command:
+
 ```bash
 usage:
   datamodel-codegen [options]
