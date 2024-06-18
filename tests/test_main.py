@@ -1,5 +1,7 @@
+import importlib
 import platform
 import shutil
+import subprocess
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -3763,6 +3765,29 @@ def test_main_jsonschema_special_field_name():
                 EXPECTED_MAIN_PATH / 'main_jsonschema_special_field_name' / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_imports_correct():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'imports_correct'),
+                '--output',
+                str(output_path),
+                '--output-model-type',
+                'pydantic_v2.BaseModel'
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = EXPECTED_MAIN_PATH / 'main_imports_correct'
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
 
 
 @freeze_time('2019-07-26')
