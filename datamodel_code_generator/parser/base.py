@@ -1171,7 +1171,7 @@ class Parser(ABC):
 
     @classmethod
     def __postprocess_result_modules(cls, results):
-        def process(input_tuple) -> tuple[str, ...]:
+        def process(input_tuple) -> Tuple[str, ...]:
             r = []
             for item in input_tuple:
                 p = item.split('.')
