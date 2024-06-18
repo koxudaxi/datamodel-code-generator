@@ -302,6 +302,7 @@ def generate(
     use_pendulum: bool = False,
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     treat_dots_as_module: bool = False,
+    use_exact_imports: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -463,6 +464,7 @@ def generate(
         use_pendulum=use_pendulum,
         http_query_parameters=http_query_parameters,
         treat_dots_as_module=treat_dots_as_module,
+        use_exact_imports=use_exact_imports,
         **kwargs,
     )
 

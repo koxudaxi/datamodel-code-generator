@@ -184,6 +184,13 @@ model_options.add_argument(
     action='store_true',
     default=False,
 )
+model_options.add_argument(
+    '--use-exact-imports',
+    help='import exact types instead of modules, for example: "from .foo import Bar" instead of '
+    '"from . import foo" with "foo.Bar"',
+    action='store_true',
+    default=False,
+)
 
 # ======================================================================================
 # Typing options for generated models

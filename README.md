@@ -457,6 +457,9 @@ Model customization:
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
+  --use-exact-imports   Import exact types instead of modules, for example: 
+                        `from .foo import Bar` instead of 
+                        `from . import foo` with `foo.Bar`
 
 Template customization:
   --aliases ALIASES     Alias mapping file

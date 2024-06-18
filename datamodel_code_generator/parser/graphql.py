@@ -159,6 +159,7 @@ class GraphQLParser(Parser):
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -227,6 +228,7 @@ class GraphQLParser(Parser):
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
             treat_dots_as_module=treat_dots_as_module,
+            use_exact_imports=use_exact_imports,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
