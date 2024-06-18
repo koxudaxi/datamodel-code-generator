@@ -301,6 +301,7 @@ def generate(
     custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
     use_pendulum: bool = False,
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+    treat_dots_as_module: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -461,6 +462,7 @@ def generate(
         custom_formatters_kwargs=custom_formatters_kwargs,
         use_pendulum=use_pendulum,
         http_query_parameters=http_query_parameters,
+        treat_dots_as_module=treat_dots_as_module,
         **kwargs,
     )
 

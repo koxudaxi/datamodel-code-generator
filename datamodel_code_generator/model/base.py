@@ -234,12 +234,11 @@ def get_template(template_file_path: Path) -> Template:
 
 def get_module_path(name: str, file_path: Optional[Path]) -> List[str]:
     if file_path:
-        unsanitized_path_parts = [
+        return [
             *file_path.parts[:-1],
             file_path.stem,
             *name.split('.')[:-1],
         ]
-        return [part.replace('.', '_') for part in unsanitized_path_parts]
     return name.split('.')[:-1]
 
 

@@ -392,6 +392,7 @@ class Parser(ABC):
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -514,6 +515,7 @@ class Parser(ABC):
         self.known_third_party = known_third_party
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
+        self.treat_dots_as_module = treat_dots_as_module
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -666,9 +668,8 @@ class Parser(ABC):
                 model.class_name = duplicate_name
                 model_names[duplicate_name] = model
 
-    @classmethod
     def __change_from_import(
-        cls,
+        self,
         models: List[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
@@ -701,6 +702,13 @@ class Parser(ABC):
                         model.module_name, data_type.full_name
                     )
                     import_ = import_.replace('-', '_')
+                    if (
+                        len(model.module_path) > 1
+                        and model.module_path[-1].count('.') > 0
+                        and not self.treat_dots_as_module
+                    ):
+                        rel_path_depth = model.module_path[-1].count('.')
+                        from_ = from_[rel_path_depth:]
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
@@ -1147,8 +1155,28 @@ class Parser(ABC):
                 if model_field.nullable is not True:  # pragma: no cover
                     model_field.nullable = False
 
+    @classmethod
+    def __postprocess_result_modules(cls, results):
+        def process(input_tuple) -> tuple[str, ...]:
+            r = []
+            for item in input_tuple:
+                p = item.split('.')
+                if len(p) > 1:
+                    r.extend(p[:-1])
+                    r.append(p[-1])
+                else:
+                    r.append(item)
+
+            r = r[:-2] + [f'{r[-2]}.{r[-1]}']
+            return tuple(r)
+
+        results = {process(k): v for k, v in results.items()}
+        print(results.keys())
+        return results
+
+    @classmethod
     def __change_imported_model_name(
-        self,
+        cls,
         models: List[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
@@ -1260,7 +1288,6 @@ class Parser(ABC):
                     module = (*module, '__init__.py')
                     init = True
                 else:
-                    module = tuple(part.replace('.', '_') for part in module)
                     module = (*module[:-1], f'{module[-1]}.py')
                     module = tuple(part.replace('-', '_') for part in module)
             else:
@@ -1326,4 +1353,19 @@ class Parser(ABC):
             return results[('__init__.py',)].body
 
         results = {tuple(i.replace('-', '_') for i in k): v for k, v in results.items()}
+        results = (
+            self.__postprocess_result_modules(results)
+            if self.treat_dots_as_module
+            else {
+                tuple(
+                    (
+                        part[: part.rfind('.')].replace('.', '_')
+                        + part[part.rfind('.') :]
+                    )
+                    for part in k
+                ): v
+                for k, v in results.items()
+            }
+        )
+
         return results
