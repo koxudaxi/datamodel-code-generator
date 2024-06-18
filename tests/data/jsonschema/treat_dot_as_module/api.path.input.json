@@ -1,0 +1,10 @@
+{
+  "properties": {
+    "input": {
+      "default": "input",
+      "title": "Input"
+    }
+  },
+  "title": "Input",
+  "type": "object"
+}
