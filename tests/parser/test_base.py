@@ -5,7 +5,12 @@ import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
-from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
+from datamodel_code_generator.parser.base import (
+    Parser,
+    exact_import,
+    relative,
+    sort_data_models,
+)
 from datamodel_code_generator.reference import Reference, snake_to_upper_camel
 from datamodel_code_generator.types import DataType
 
@@ -181,6 +186,19 @@ def test_sort_data_models_unresolved_raise_recursion_error():
 )
 def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
     assert relative(current_module, reference) == val
+
+
+@pytest.mark.parametrize(
+    'from_,import_,name,val',
+    [
+        ('.', 'mod', 'Foo', ('.mod', 'Foo')),
+        ('.a', 'mod', 'Foo', ('.a.mod', 'Foo')),
+        ('..a', 'mod', 'Foo', ('..a.mod', 'Foo')),
+        ('..a.b', 'mod', 'Foo', ('..a.b.mod', 'Foo')),
+    ],
+)
+def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str]):
+    assert exact_import(from_, import_, name) == val
 
 
 @pytest.mark.parametrize(

@@ -238,6 +238,14 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
+def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
+    if from_ == '.':
+        # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # when our imported module has the same parent
+        return f'.{import_}', short_name
+    return f'{from_}.{import_}', short_name
+
+
 @runtime_checkable
 class Child(Protocol):
     @property
@@ -392,6 +400,7 @@ class Parser(ABC):
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        use_exact_imports: bool = False,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -405,7 +414,8 @@ class Parser(ABC):
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
 
-        self.imports: Imports = Imports()
+        self.imports: Imports = Imports(use_exact_imports)
+        self.use_exact_imports: bool = use_exact_imports
         self._append_additional_imports(additional_imports=additional_imports)
 
         self.base_class: Optional[str] = base_class
@@ -700,6 +710,10 @@ class Parser(ABC):
                     from_, import_ = full_path = relative(
                         model.module_name, data_type.full_name
                     )
+                    if imports.use_exact:
+                        from_, import_ = exact_import(
+                            from_, import_, data_type.reference.short_name
+                        )
                     import_ = import_.replace('-', '_')
 
                 alias = scoped_model_resolver.add(full_path, import_).name
@@ -1250,7 +1264,7 @@ class Parser(ABC):
         processed_models: List[Processed] = []
 
         for module, models in module_models:
-            imports = module_to_import[module] = Imports()
+            imports = module_to_import[module] = Imports(self.use_exact_imports)
             init = False
             if module:
                 parent = (*module[:-1], '__init__.py')
