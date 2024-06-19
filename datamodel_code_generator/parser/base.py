@@ -1195,9 +1195,8 @@ class Parser(ABC):
                 results.update({init_file: init_result})
         return results
 
-    @classmethod
     def __change_imported_model_name(
-        cls,
+        self,
         models: List[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
