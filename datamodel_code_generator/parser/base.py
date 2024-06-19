@@ -1187,7 +1187,7 @@ class Parser(ABC):
         results = {process(k): v for k, v in results.items()}
 
         init_result = [v for k, v in results.items() if k[-1] == '__init__.py'][0]
-        folders = {[t[:-1] if t[-1].endswith('.py') else t for t in results.keys()]}
+        folders = {t[:-1] if t[-1].endswith('.py') else t for t in results.keys()}
         for folder in folders:
             for i in range(len(folder)):
                 subfolder = folder[: i + 1]
