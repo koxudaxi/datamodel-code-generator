@@ -268,20 +268,6 @@ def title_to_class_name(title: str) -> str:
     return classname
 
 
-def process_module_tuple(input_tuple) -> Tuple[str, ...]:
-    r = []
-    for item in input_tuple:
-        p = item.split('.')
-        if len(p) > 1:
-            r.extend(p[:-1])
-            r.append(p[-1])
-        else:
-            r.append(item)
-
-    r = r[:-2] + [f'{r[-2]}.{r[-1]}']
-    return tuple(r)
-
-
 def _find_base_classes(model: DataModel) -> List[DataModel]:
     return [
         b.reference.source
@@ -1185,7 +1171,20 @@ class Parser(ABC):
 
     @classmethod
     def __postprocess_result_modules(cls, results):
-        results = {process_module_tuple(k): v for k, v in results.items()}
+        def process(input_tuple) -> Tuple[str, ...]:
+            r = []
+            for item in input_tuple:
+                p = item.split('.')
+                if len(p) > 1:
+                    r.extend(p[:-1])
+                    r.append(p[-1])
+                else:
+                    r.append(item)
+
+            r = r[:-2] + [f'{r[-2]}.{r[-1]}']
+            return tuple(r)
+
+        results = {process(k): v for k, v in results.items()}
 
         init_result = [v for k, v in results.items() if k[-1] == '__init__.py'][0]
         folders = {t[:-1] if t[-1].endswith('.py') else t for t in results.keys()}
