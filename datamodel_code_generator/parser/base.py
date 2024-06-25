@@ -282,6 +282,18 @@ def process_module_tuple(input_tuple) -> Tuple[str, ...]:
     return tuple(r)
 
 
+def _postprocess_result_modules(results):
+    results = {process_module_tuple(k): v for k, v in results.items()}
+    init_result = [v for k, v in results.items() if k[-1] == '__init__.py'][0]
+    folders = {t[:-1] if t[-1].endswith('.py') else t for t in results.keys()}
+    for folder in folders:
+        for i in range(len(folder)):
+            subfolder = folder[: i + 1]
+            init_file = subfolder + ('__init__.py',)
+            results.update({init_file: init_result})
+    return results
+
+
 def _find_base_classes(model: DataModel) -> List[DataModel]:
     return [
         b.reference.source
@@ -1183,19 +1195,6 @@ class Parser(ABC):
                 if model_field.nullable is not True:  # pragma: no cover
                     model_field.nullable = False
 
-    @classmethod
-    def __postprocess_result_modules(cls, results):
-        results = {process_module_tuple(k): v for k, v in results.items()}
-
-        init_result = [v for k, v in results.items() if k[-1] == '__init__.py'][0]
-        folders = {t[:-1] if t[-1].endswith('.py') else t for t in results.keys()}
-        for folder in folders:
-            for i in range(len(folder)):
-                subfolder = folder[: i + 1]
-                init_file = subfolder + ('__init__.py',)
-                results.update({init_file: init_result})
-        return results
-
     def __change_imported_model_name(
         self,
         models: List[DataModel],
@@ -1375,7 +1374,7 @@ class Parser(ABC):
 
         results = {tuple(i.replace('-', '_') for i in k): v for k, v in results.items()}
         results = (
-            self.__postprocess_result_modules(results)
+            _postprocess_result_modules(results)
             if self.treat_dots_as_module
             else {
                 tuple(
