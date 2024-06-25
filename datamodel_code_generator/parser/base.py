@@ -1307,7 +1307,10 @@ class Parser(ABC):
             for model in processed_model.models:
                 processed_model.imports.append(model.imports)
                 try:
-                    if model.extra_template_data.get('config', False).__name__ == "ConfigDict":
+                    if (
+                        model.extra_template_data.get('config', False).__name__
+                        == 'ConfigDict'
+                    ):
                         processed_model.imports.append(
                             Import.from_full_path('pydantic.ConfigDict')
                         )
