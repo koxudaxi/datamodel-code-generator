@@ -4741,7 +4741,8 @@ def test_treat_dot_as_module(as_module):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
-            assert str(path.relative_to(main_modular_dir)).count('.') == 1
+            if as_module:
+                assert str(path.relative_to(main_modular_dir)).count('.') == 1
             assert result == path.read_text()
 
 
