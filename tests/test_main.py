@@ -3778,7 +3778,7 @@ def test_main_imports_correct():
                 '--output',
                 str(output_path),
                 '--output-model-type',
-                'pydantic_v2.BaseModel'
+                'pydantic_v2.BaseModel',
             ]
         )
         assert return_code == Exit.OK

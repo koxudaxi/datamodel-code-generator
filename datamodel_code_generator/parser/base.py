@@ -24,7 +24,7 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import (
@@ -847,11 +847,17 @@ class Parser(ABC):
                                 required=True,
                             )
                         )
-                    imports.append(
+                    literal = (
                         IMPORT_LITERAL
                         if self.target_python_version.has_literal_type
                         else IMPORT_LITERAL_BACKPORT
                     )
+                    has_imported_literal = False
+                    for import_ in imports:
+                        if literal == import_:
+                            has_imported_literal = True
+                    if has_imported_literal:
+                        imports.append(literal)
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
@@ -1300,10 +1306,16 @@ class Parser(ABC):
         for processed_model in processed_models:
             for model in processed_model.models:
                 processed_model.imports.append(model.imports)
-                if model.extra_template_data.get('config', False):
-                    processed_model.imports.append(
-                        Import.from_full_path('pydantic.ConfigDict')
-                    )
+                try:
+                    if isinstance(
+                        model.extra_template_data.get('config', False),
+                        ConfigDict,
+                    ):
+                        processed_model.imports.append(
+                            Import.from_full_path('pydantic.ConfigDict')
+                        )
+                except TypeError:
+                    continue
 
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
@@ -1311,6 +1323,17 @@ class Parser(ABC):
                 imports = module_to_import[module]
                 imports.remove(unused_model.imports)
                 models.remove(unused_model)
+
+        for processed_model in processed_models:
+            # postprocess imports to remove unused imports.
+            to_del = set()
+            model = '\n'.join([str(m) for m in processed_model.models])
+            for k, v in processed_model.imports.items():
+                for i in v:
+                    if i not in str(model):
+                        to_del.add((k, i))
+            for from_, import_ in to_del:
+                processed_model.imports.remove(Import(from_=from_, import_=import_))
 
         for module, models, init, imports, scoped_model_resolver in processed_models:
             # process after removing unused models
