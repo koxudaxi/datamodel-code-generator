@@ -205,14 +205,14 @@ def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str])
     'word,expected',
     [
         (
-            '_hello',
-            '_Hello',
+                '_hello',
+                '_Hello',
         ),  # In case a name starts with a underline, we should keep it.
         ('hello_again', 'HelloAgain'),  # regular snake case
         ('hello__again', 'HelloAgain'),  # handles double underscores
         (
-            'hello___again_again',
-            'HelloAgainAgain',
+                'hello___again_again',
+                'HelloAgainAgain',
         ),  # handles double and single underscores
         ('hello_again_', 'HelloAgain'),  # handles trailing underscores
         ('hello', 'Hello'),  # no underscores
@@ -250,3 +250,21 @@ def test_no_additional_imports():
         source='',
     )
     assert len(new_parser.imports) == 0
+
+
+@pytest.mark.parametrize("input_data, expected", [
+    (
+            {('folder1', 'module1.py'): 'content1', ('folder1', 'module2.py'): 'content2',
+             ('folder1', '__init__.py'): 'init_content'},
+            {('folder1', 'module1.py'): 'content1', ('folder1', 'module2.py'): 'content2',
+             ('folder1', '__init__.py'): 'init_content'}
+    ),
+    (
+            {('folder1.module', 'file.py'): 'content1', ('folder1.module', '__init__.py'): 'init_content'},
+            {('folder1', 'module', 'file.py'): 'content1', ('folder1', '__init__.py'): 'init_content',
+             ('folder1', 'module', '__init__.py'): 'init_content'}
+    )
+])
+def test_postprocess_result_modules(input_data, expected):
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert result == expected
