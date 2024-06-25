@@ -24,7 +24,7 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.imports import (
@@ -1307,14 +1307,11 @@ class Parser(ABC):
             for model in processed_model.models:
                 processed_model.imports.append(model.imports)
                 try:
-                    if isinstance(
-                        model.extra_template_data.get('config', False),
-                        ConfigDict,
-                    ):
+                    if model.extra_template_data.get('config', False).__name__ == "ConfigDict":
                         processed_model.imports.append(
                             Import.from_full_path('pydantic.ConfigDict')
                         )
-                except TypeError:
+                except AttributeError:
                     continue
 
         for unused_model in unused_models:
