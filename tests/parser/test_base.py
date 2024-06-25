@@ -9,7 +9,7 @@ from datamodel_code_generator.parser.base import (
     Parser,
     exact_import,
     relative,
-    sort_data_models,
+    sort_data_models, process_module_tuple,
 )
 from datamodel_code_generator.reference import Reference, snake_to_upper_camel
 from datamodel_code_generator.types import DataType
@@ -250,3 +250,10 @@ def test_no_additional_imports():
         source='',
     )
     assert len(new_parser.imports) == 0
+
+
+def test_process_module_tuple():
+    t_1 = ("module1", "module2.module3", "module4.py")
+    t_2 = ("module1.module2", "module3.module4.py")
+    assert process_module_tuple(t_1) == ("module1", "module2", "module3", "module4.py")
+    assert process_module_tuple(t_2) == ("module1", "module2", "module3", "module4.py")
