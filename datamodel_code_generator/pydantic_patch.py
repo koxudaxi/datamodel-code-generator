@@ -3,7 +3,7 @@ import sys
 import pydantic.typing
 
 
-def patched_evaluate_forwardref(forward_ref, globalns, localns=None):
+def patched_evaluate_forwardref(forward_ref, globalns, localns=None):  # pragma: no cover
     try:
         return forward_ref._evaluate(
             globalns, localns or None, set()
@@ -15,5 +15,5 @@ def patched_evaluate_forwardref(forward_ref, globalns, localns=None):
         )
 
 
-if '3.12' in sys.version:
+if '3.12' in sys.version:  # pragma: no cover
     pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref
