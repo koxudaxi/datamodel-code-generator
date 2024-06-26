@@ -3,7 +3,9 @@ import sys
 import pydantic.typing
 
 
-def patched_evaluate_forwardref(forward_ref, globalns, localns=None):  # pragma: no cover
+def patched_evaluate_forwardref(
+    forward_ref, globalns, localns=None
+):  # pragma: no cover
     try:
         return forward_ref._evaluate(
             globalns, localns or None, set()
