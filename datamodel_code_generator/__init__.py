@@ -29,6 +29,7 @@ from urllib.parse import ParseResult
 
 import yaml
 
+import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
