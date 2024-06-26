@@ -4731,6 +4731,44 @@ def test_external_relative_ref():
             assert result == path.read_text()
 
 
+@freeze_time('2019-07-26')
+@pytest.mark.parametrize('as_module', [True, False])
+def test_treat_dot_as_module(as_module):
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        if as_module:
+            return_code: Exit = main(
+                [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'treat_dot_as_module'),
+                    '--output',
+                    str(output_path),
+                    '--treat-dot-as-module',
+                ]
+            )
+        else:
+            return_code: Exit = main(
+                [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'treat_dot_as_module'),
+                    '--output',
+                    str(output_path),
+                ]
+            )
+        assert return_code == Exit.OK
+        path_extension = (
+            'treat_dot_as_module' if as_module else 'treat_dot_not_as_module'
+        )
+        main_modular_dir = EXPECTED_MAIN_PATH / path_extension
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            if as_module:
+                assert str(path.relative_to(main_modular_dir)).count('.') == 1
+            assert result == path.read_text()
+
+
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_collapse_root_models():
