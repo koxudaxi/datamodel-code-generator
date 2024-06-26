@@ -39,4 +39,4 @@ jobs:
         uses: CodSpeedHQ/action@v1
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
-          run: poetry run pytest tests/ --codspeed -n auto
+          run: poetry run pytest tests/ --codspeed
