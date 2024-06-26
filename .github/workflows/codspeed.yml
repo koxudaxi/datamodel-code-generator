@@ -32,7 +32,7 @@ jobs:
           path: .venv
           key: venv-${{ runner.os }}-codspeed-3.12-v1-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
 
       - name: Run benchmarks
