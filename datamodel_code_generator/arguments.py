@@ -161,6 +161,12 @@ model_options.add_argument(
     choices=[v.value for v in PythonVersion],
 )
 model_options.add_argument(
+    '--treat-dot-as-module',
+    help='treat dotted module names as modules',
+    action='store_true',
+    default=False,
+)
+model_options.add_argument(
     '--use-schema-description',
     help='Use schema description to populate class docstring',
     action='store_true',

@@ -250,3 +250,36 @@ def test_no_additional_imports():
         source='',
     )
     assert len(new_parser.imports) == 0
+
+
+@pytest.mark.parametrize(
+    'input_data, expected',
+    [
+        (
+            {
+                ('folder1', 'module1.py'): 'content1',
+                ('folder1', 'module2.py'): 'content2',
+                ('folder1', '__init__.py'): 'init_content',
+            },
+            {
+                ('folder1', 'module1.py'): 'content1',
+                ('folder1', 'module2.py'): 'content2',
+                ('folder1', '__init__.py'): 'init_content',
+            },
+        ),
+        (
+            {
+                ('folder1.module', 'file.py'): 'content1',
+                ('folder1.module', '__init__.py'): 'init_content',
+            },
+            {
+                ('folder1', 'module', 'file.py'): 'content1',
+                ('folder1', '__init__.py'): 'init_content',
+                ('folder1', 'module', '__init__.py'): 'init_content',
+            },
+        ),
+    ],
+)
+def test_postprocess_result_modules(input_data, expected):
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert result == expected
