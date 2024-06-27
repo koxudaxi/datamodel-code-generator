@@ -6771,6 +6771,64 @@ def test_main_graphql_custom_formatters():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
+def test_main_graphql_use_standard_collections():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'use-standard-collections.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--use-standard-collections',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_graphql_use_standard_collections'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_use_union_operator():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'use-union-operator.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--use-union-operator',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_graphql_use_union_operator' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_enum():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

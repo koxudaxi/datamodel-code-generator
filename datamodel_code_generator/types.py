@@ -25,12 +25,7 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import (
-    StrictBool,
-    StrictInt,
-    StrictStr,
-    create_model,
-)
+from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (

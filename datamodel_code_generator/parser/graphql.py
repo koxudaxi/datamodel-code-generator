@@ -37,11 +37,7 @@ from datamodel_code_generator.parser.base import (
     escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
-from datamodel_code_generator.types import (
-    DataTypeManager,
-    StrictTypes,
-    Types,
-)
+from datamodel_code_generator.types import DataTypeManager, StrictTypes, Types
 
 try:
     import graphql
@@ -231,6 +227,8 @@ class GraphQLParser(Parser):
 
         self.data_model_scalar_type = data_model_scalar_type
         self.data_model_union_type = data_model_union_type
+        self.use_standard_collections = use_standard_collections
+        self.use_union_operator = use_union_operator
 
     def _get_context_source_path_parts(self) -> Iterator[Tuple[Source, List[str]]]:
         # TODO (denisart): Temporarily this method duplicates
@@ -281,7 +279,11 @@ class GraphQLParser(Parser):
     def _typename_field(self, name: str) -> DataModelFieldBase:
         return self.data_model_field_type(
             name='typename__',
-            data_type=DataType(literals=[name]),
+            data_type=DataType(
+                literals=[name],
+                use_union_operator=self.use_union_operator,
+                use_standard_collections=self.use_standard_collections,
+            ),
             default=name,
             required=False,
             alias='__typename',
@@ -346,7 +348,11 @@ class GraphQLParser(Parser):
         alias: str,
         field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
     ) -> DataModelFieldBase:
-        final_data_type = DataType(is_optional=True)
+        final_data_type = DataType(
+            is_optional=True,
+            use_union_operator=self.use_union_operator,
+            use_standard_collections=self.use_standard_collections,
+        )
         data_type = final_data_type
         obj = field.type
 
@@ -354,7 +360,11 @@ class GraphQLParser(Parser):
             if graphql.is_list_type(obj):
                 data_type.is_list = True
 
-                new_data_type = DataType(is_optional=True)
+                new_data_type = DataType(
+                    is_optional=True,
+                    use_union_operator=self.use_union_operator,
+                    use_standard_collections=self.use_standard_collections,
+                )
                 data_type.data_types = [new_data_type]
 
                 data_type = new_data_type
