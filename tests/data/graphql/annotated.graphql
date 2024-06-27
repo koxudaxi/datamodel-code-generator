@@ -1,0 +1,5 @@
+type A {
+    field: String!
+    listField: [String!]!
+    listListField:[[String!]!]!
+}

@@ -285,6 +285,7 @@ class GraphQLParser(Parser):
                 use_standard_collections=self.use_standard_collections,
             ),
             default=name,
+            use_annotated=self.use_annotated,
             required=False,
             alias='__typename',
             use_one_literal_as_default=True,
