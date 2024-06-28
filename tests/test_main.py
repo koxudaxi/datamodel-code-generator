@@ -595,7 +595,7 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     )
 
 
-def test_main_no_file(capsys: CaptureFixture) -> None:
+def test_main_openapi_no_file(capsys: CaptureFixture) -> None:
     """Test main function on non-modular file with no output name."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
@@ -605,7 +605,7 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-        captured.out == (EXPECTED_MAIN_PATH / 'main_no_file' / 'output.py').read_text()
+        captured.out == (EXPECTED_MAIN_PATH / 'openapi' / 'no_file.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -615,11 +615,11 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     [
         (
             'pydantic.BaseModel',
-            'main_extra_template_data_config',
+            'extra_template_data_config.py',
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_extra_template_data_config_pydantic_v2',
+            'extra_template_data_config_pydantic_v2.py',
         ),
     ],
 )
@@ -627,7 +627,7 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_extra_template_data_config(
+def test_main_openapi_extra_template_data_config(
     capsys: CaptureFixture, output_model, expected_output
 ) -> None:
     """Test main function with custom config data in extra template."""
@@ -649,7 +649,7 @@ def test_main_extra_template_data_config(
 
     captured = capsys.readouterr()
     assert (
-        captured.out == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+        captured.out == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -676,12 +676,12 @@ def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
     captured = capsys.readouterr()
     assert (
         captured.out
-        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+        == (EXPECTED_MAIN_PATH / 'openapi' / 'custom_template_dir.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
+def test_main_openapi_custom_template_dir(capsys: CaptureFixture) -> None:
     """Test main function with custom template directory."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
@@ -703,7 +703,7 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     captured = capsys.readouterr()
     assert (
         captured.out
-        == (EXPECTED_MAIN_PATH / 'main_custom_template_dir' / 'output.py').read_text()
+        == (EXPECTED_MAIN_PATH / 'openapi' / 'custom_template_dir.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -2864,15 +2864,15 @@ def test_main_openapi_nullable_strict_nullable():
     [
         (
             'pydantic.BaseModel',
-            'main_pattern',
+            'general.py',
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_pattern_pydantic_v2',
+            'pydantic_v2.py',
         ),
         (
             'msgspec.Struct',
-            'main_pattern_msgspec',
+            'msgspec.py',
         ),
     ],
 )
@@ -2900,7 +2900,7 @@ def test_main_openapi_pattern(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-            EXPECTED_MAIN_PATH / expected_output / 'output.py'
+            EXPECTED_MAIN_PATH / 'openapi' / 'pattern' / expected_output
         ).read_text().replace('pattern.json', 'pattern.yaml')
 
 
@@ -2928,9 +2928,9 @@ def test_main_jsonschema_pattern():
 @pytest.mark.parametrize(
     'expected_output, args',
     [
-        ('main_pattern_with_lookaround_pydantic_v2', []),
+        ('pattern_with_lookaround_pydantic_v2.py', []),
         (
-            'main_pattern_with_lookaround_pydantic_v2_field_constraints',
+            'pattern_with_lookaround_pydantic_v2_field_constraints.py',
             ['--field-constraints'],
         ),
     ],
@@ -2963,7 +2963,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
         )
 
 
@@ -4554,7 +4554,7 @@ def test_openapi_special_yaml_keywords(mocker):
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_special_yaml_keywords' / 'output.py'
+                EXPECTED_MAIN_PATH / 'openapi' / 'special_yaml_keywords.py'
             ).read_text()
         )
     mock_prance.assert_called_once()
@@ -5153,7 +5153,7 @@ def test_main_use_default_kwarg():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_use_default_kwarg' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'openapi' / 'use_default_kwarg.py').read_text()
         )
 
 
@@ -5482,9 +5482,9 @@ def test_main_jsonschema_enum_root_literal():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_reference_same_hierarchy_directory():
+def test_main_openapi_reference_same_hierarchy_directory():
     with TemporaryDirectory() as output_dir:
-        with chdir(JSON_SCHEMA_DATA_PATH / 'reference_same_hierarchy_directory'):
+        with chdir(OPEN_API_DATA_PATH / 'reference_same_hierarchy_directory'):
             output_file: Path = Path(output_dir) / 'output.py'
             return_code: Exit = main(
                 [
@@ -5501,8 +5501,7 @@ def test_main_jsonschema_reference_same_hierarchy_directory():
                 output_file.read_text()
                 == (
                     EXPECTED_MAIN_PATH
-                    / 'main_jsonschema_reference_same_hierarchy_directory'
-                    / 'output.py'
+                    / 'openapi' / 'reference_same_hierarchy_directory.py'
                 ).read_text()
             )
 
@@ -5594,7 +5593,7 @@ def test_main_nested_all_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_max_min_openapi():
+def test_main_openapi_max_min():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -5608,12 +5607,12 @@ def test_main_max_min_openapi():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'max_min_number' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'openapi' / 'max_min_number.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_use_operation_id_as_name():
+def test_main_openapi_use_operation_id_as_name():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -5633,13 +5632,13 @@ def test_main_use_operation_id_as_name():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_use_operation_id_as_name' / 'output.py'
+                EXPECTED_MAIN_PATH / 'openapi' / 'use_operation_id_as_name.py'
             ).read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_use_operation_id_as_name_not_found_operation_id(capsys):
+def test_main_openapi_use_operation_id_as_name_not_found_operation_id(capsys):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6216,13 +6215,13 @@ def test_main_openapi_all_of_with_relative_ref():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_all_of_with_relative_ref' / 'output.py'
+                EXPECTED_MAIN_PATH / 'openapi' / 'all_of_with_relative_ref.py'
             ).read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_msgspec_struct():
+def test_main_openapi_msgspec_struct():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6241,12 +6240,12 @@ def test_main_msgspec_struct():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_msgspec_struct' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'openapi' / 'msgspec_struct.py').read_text()
         )
 
 
 @freeze_time('2019-07-26')
-def test_main_msgspec_struct_snake_case():
+def test_main_openapi_msgspec_struct_snake_case():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6267,7 +6266,7 @@ def test_main_msgspec_struct_snake_case():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'main_msgspec_struct_snake_case' / 'output.py'
+                EXPECTED_MAIN_PATH / 'openapi' / 'msgspec_struct_snake_case.py'
             ).read_text()
         )
 
@@ -6277,7 +6276,7 @@ def test_main_msgspec_struct_snake_case():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_msgspec_use_annotated_with_field_constraints():
+def test_main_openapi_msgspec_use_annotated_with_field_constraints():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -6298,8 +6297,7 @@ def test_main_msgspec_use_annotated_with_field_constraints():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH
-                / 'main_use_annotated_with_msgspec_meta_constraints'
-                / 'output.py'
+                / 'openapi' / 'msgspec_use_annotated_with_field_constraints.py'
             ).read_text()
         )
 
