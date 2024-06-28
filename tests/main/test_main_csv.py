@@ -11,6 +11,7 @@ from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 MonkeyPatch = pytest.MonkeyPatch
 
 CSV_DATA_PATH: Path = DATA_PATH / 'csv'
+EXPECTED_CSV_PATH: Path = EXPECTED_MAIN_PATH / 'csv'
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +38,7 @@ def test_csv_file():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
+            == (EXPECTED_CSV_PATH / 'csv_file_simple.py').read_text()
         )
 
 
@@ -57,5 +58,5 @@ def test_csv_stdin(monkeypatch):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
+            == (EXPECTED_CSV_PATH / 'csv_stdin_simple.py').read_text()
         )

@@ -36,7 +36,4 @@ def test_main_yaml():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / 'yaml.py').read_text()

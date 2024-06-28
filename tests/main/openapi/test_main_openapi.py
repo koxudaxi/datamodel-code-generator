@@ -31,6 +31,7 @@ CaptureFixture = pytest.CaptureFixture
 MonkeyPatch = pytest.MonkeyPatch
 
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
+EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / 'openapi'
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +57,7 @@ def test_main():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'general.py').read_text()
         )
 
 
@@ -85,9 +86,7 @@ def test_main_openapi_discriminator_enum():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'discriminator' / 'enum.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'discriminator' / 'enum.py').read_text()
         )
 
 
@@ -117,7 +116,7 @@ def test_main_openapi_discriminator_enum_duplicate():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'discriminator' / 'enum_duplicate.py'
+                EXPECTED_OPENAPI_PATH / 'discriminator' / 'enum_duplicate.py'
             ).read_text()
         )
 
@@ -139,7 +138,7 @@ def test_main_pydantic_basemodel():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'general.py').read_text()
         )
 
 
@@ -161,7 +160,7 @@ def test_main_base_class():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_base_class' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'base_class.py').read_text()
         )
 
 
@@ -182,7 +181,7 @@ def test_target_python_version():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'target_python_version' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'target_python_version.py').read_text()
         )
 
 
@@ -197,7 +196,7 @@ def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
 
     with freeze_time(TIMESTAMP):
         main(['--input', str(input_filename), '--output', str(output_path)])
-    main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular'
+    main_modular_dir = EXPECTED_OPENAPI_PATH / 'modular'
     for path in main_modular_dir.rglob('*.py'):
         result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
         assert result == path.read_text()
@@ -221,7 +220,7 @@ def test_main_modular_reuse_model(tmpdir_factory: TempdirFactory) -> None:
                 '--reuse-model',
             ]
         )
-    main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular_reuse_model'
+    main_modular_dir = EXPECTED_OPENAPI_PATH / 'modular_reuse_model'
     for path in main_modular_dir.rglob('*.py'):
         result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
         assert result == path.read_text()
@@ -258,7 +257,7 @@ def test_main_openapi_no_file(capsys: CaptureFixture) -> None:
         main(['--input', str(input_filename)])
 
     captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_MAIN_PATH / 'openapi' / 'no_file.py').read_text()
+    assert captured.out == (EXPECTED_OPENAPI_PATH / 'no_file.py').read_text()
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
@@ -300,9 +299,7 @@ def test_main_openapi_extra_template_data_config(
         )
 
     captured = capsys.readouterr()
-    assert (
-        captured.out == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
-    )
+    assert captured.out == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
@@ -327,8 +324,7 @@ def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-        captured.out
-        == (EXPECTED_MAIN_PATH / 'openapi' / 'custom_template_dir.py').read_text()
+        captured.out == (EXPECTED_OPENAPI_PATH / 'custom_template_dir.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -354,8 +350,7 @@ def test_main_openapi_custom_template_dir(capsys: CaptureFixture) -> None:
 
     captured = capsys.readouterr()
     assert (
-        captured.out
-        == (EXPECTED_MAIN_PATH / 'openapi' / 'custom_template_dir.py').read_text()
+        captured.out == (EXPECTED_OPENAPI_PATH / 'custom_template_dir.py').read_text()
     )
     assert captured.err == inferred_message.format('openapi') + '\n'
 
@@ -401,7 +396,7 @@ def test_pyproject():
             assert return_code == Exit.OK
             assert (
                 output_file.read_text()
-                == (EXPECTED_MAIN_PATH / 'pyproject' / 'output.py').read_text()
+                == (EXPECTED_OPENAPI_PATH / 'pyproject.py').read_text()
             )
 
 
@@ -422,9 +417,7 @@ def test_pyproject_not_found():
             assert return_code == Exit.OK
             assert (
                 output_file.read_text()
-                == (
-                    EXPECTED_MAIN_PATH / 'pyproject_not_found' / 'output.py'
-                ).read_text()
+                == (EXPECTED_OPENAPI_PATH / 'pyproject_not_found.py').read_text()
             )
 
 
@@ -442,8 +435,7 @@ def test_stdin(monkeypatch):
         )
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'stdin' / 'output.py').read_text()
+            output_file.read_text() == (EXPECTED_OPENAPI_PATH / 'stdin.py').read_text()
         )
 
 
@@ -465,7 +457,7 @@ def test_validation(mocker):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'validation' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'validation.py').read_text()
         )
         mock_prance.assert_called_once()
 
@@ -495,33 +487,33 @@ def test_validation_failed(mocker):
 @pytest.mark.parametrize(
     'output_model,expected_output, args',
     [
-        ('pydantic.BaseModel', 'main_with_field_constraints', []),
+        ('pydantic.BaseModel', 'with_field_constraints.py', []),
         (
             'pydantic.BaseModel',
-            'main_with_field_constraints_use_unique_items_as_set',
+            'with_field_constraints_use_unique_items_as_set.py',
             ['--use-unique-items-as-set'],
         ),
-        ('pydantic_v2.BaseModel', 'main_with_field_constraints_pydantic_v2', []),
+        ('pydantic_v2.BaseModel', 'with_field_constraints_pydantic_v2.py', []),
         (
             'pydantic_v2.BaseModel',
-            'main_with_field_constraints_pydantic_v2_use_generic_container_types',
+            'with_field_constraints_pydantic_v2_use_generic_container_types.py',
             ['--use-generic-container-types'],
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_with_field_constraints_pydantic_v2_use_generic_container_types_set',
+            'with_field_constraints_pydantic_v2_use_generic_container_types_set.py',
             ['--use-generic-container-types', '--use-unique-items-as-set'],
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_with_field_constraints_pydantic_v2_use_standard_collections',
+            'with_field_constraints_pydantic_v2_use_standard_collections.py',
             [
                 '--use-standard-collections',
             ],
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_with_field_constraints_pydantic_v2_use_standard_collections_set',
+            'with_field_constraints_pydantic_v2_use_standard_collections_set.py',
             ['--use-standard-collections', '--use-unique-items-as-set'],
         ),
     ],
@@ -545,7 +537,7 @@ def test_main_with_field_constraints(output_model, expected_output, args):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -554,11 +546,11 @@ def test_main_with_field_constraints(output_model, expected_output, args):
     [
         (
             'pydantic.BaseModel',
-            'main_without_field_constraints',
+            'without_field_constraints.py',
         ),
         (
             'pydantic_v2.BaseModel',
-            'main_without_field_constraints_pydantic_v2',
+            'without_field_constraints_pydantic_v2.py',
         ),
     ],
 )
@@ -579,7 +571,7 @@ def test_main_without_field_constraints(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -588,11 +580,11 @@ def test_main_without_field_constraints(output_model, expected_output):
     [
         (
             'pydantic.BaseModel',
-            'main_with_aliases',
+            'with_aliases.py',
         ),
         (
             'msgspec.Struct',
-            'main_with_aliases_msgspec',
+            'with_aliases_msgspec.py',
         ),
     ],
 )
@@ -621,7 +613,7 @@ def test_main_with_aliases(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -690,9 +682,7 @@ def test_main_with_snake_case_field():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_with_snake_case_field' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'with_snake_case_field.py').read_text()
         )
 
 
@@ -713,9 +703,7 @@ def test_main_with_strip_default_none():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_with_strip_default_none' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'with_strip_default_none.py').read_text()
         )
 
 
@@ -734,7 +722,7 @@ def test_disable_timestamp():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'disable_timestamp' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'disable_timestamp.py').read_text()
         )
 
 
@@ -754,7 +742,7 @@ def test_enable_version_header():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'enable_version_header' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'enable_version_header.py').read_text()
         )
 
 
@@ -763,11 +751,11 @@ def test_enable_version_header():
     [
         (
             'pydantic.BaseModel',
-            'allow_population_by_field_name',
+            'allow_population_by_field_name.py',
         ),
         (
             'pydantic_v2.BaseModel',
-            'allow_population_by_field_name_pydantic_v2',
+            'allow_population_by_field_name_pydantic_v2.py',
         ),
     ],
 )
@@ -793,7 +781,7 @@ def test_allow_population_by_field_name(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -802,11 +790,11 @@ def test_allow_population_by_field_name(output_model, expected_output):
     [
         (
             'pydantic.BaseModel',
-            'allow_extra_fields',
+            'allow_extra_fields.py',
         ),
         (
             'pydantic_v2.BaseModel',
-            'allow_extra_fields_pydantic_v2',
+            'allow_extra_fields_pydantic_v2.py',
         ),
     ],
 )
@@ -832,7 +820,7 @@ def test_allow_extra_fields(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -841,11 +829,11 @@ def test_allow_extra_fields(output_model, expected_output):
     [
         (
             'pydantic.BaseModel',
-            'enable_faux_immutability',
+            'enable_faux_immutability.py',
         ),
         (
             'pydantic_v2.BaseModel',
-            'enable_faux_immutability_pydantic_v2',
+            'enable_faux_immutability_pydantic_v2.py',
         ),
     ],
 )
@@ -871,7 +859,7 @@ def test_enable_faux_immutability(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -892,7 +880,7 @@ def test_use_default():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'use_default' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'use_default.py').read_text()
         )
 
 
@@ -913,7 +901,7 @@ def test_force_optional():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'force_optional.py').read_text()
         )
 
 
@@ -932,7 +920,7 @@ def test_main_with_exclusive():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_with_exclusive' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'with_exclusive.py').read_text()
         )
 
 
@@ -951,7 +939,7 @@ def test_main_subclass_enum():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_subclass_enum' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'subclass_enum.py').read_text()
         )
 
 
@@ -972,7 +960,7 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
             ]
         )
     main_use_standard_collections_dir = (
-        EXPECTED_MAIN_PATH / 'main_use_standard_collections'
+        EXPECTED_OPENAPI_PATH / 'use_standard_collections'
     )
     for path in main_use_standard_collections_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1002,7 +990,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
             ]
         )
     main_use_generic_container_types_dir = (
-        EXPECTED_MAIN_PATH / 'main_use_generic_container_types'
+        EXPECTED_OPENAPI_PATH / 'use_generic_container_types'
     )
     for path in main_use_generic_container_types_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1036,7 +1024,7 @@ def test_main_use_generic_container_types_standard_collections(
             ]
         )
     main_use_generic_container_types_standard_collections_dir = (
-        EXPECTED_MAIN_PATH / 'main_use_generic_container_types_standard_collections'
+        EXPECTED_OPENAPI_PATH / 'use_generic_container_types_standard_collections'
     )
     for path in main_use_generic_container_types_standard_collections_dir.rglob('*.py'):
         result = output_path.joinpath(
@@ -1117,7 +1105,7 @@ def test_main_openapi_datetime(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -1165,7 +1153,7 @@ def test_main_openapi_enum_models_as_literal_one():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'enum_models' / 'one.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'enum_models' / 'one.py').read_text()
         )
 
 
@@ -1196,10 +1184,7 @@ def test_main_openapi_use_one_literal_as_default():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'openapi'
-                / 'enum_models'
-                / 'one_literal_as_default.py'
+                EXPECTED_OPENAPI_PATH / 'enum_models' / 'one_literal_as_default.py'
             ).read_text()
         )
 
@@ -1233,7 +1218,7 @@ def test_main_openapi_enum_models_as_literal_all():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'enum_models' / 'all.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'enum_models' / 'all.py').read_text()
         )
 
 
@@ -1266,7 +1251,7 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'enum_models' / 'as_literal_py37.py'
+                EXPECTED_OPENAPI_PATH / 'enum_models' / 'as_literal_py37.py'
             ).read_text()
         )
 
@@ -1289,7 +1274,7 @@ def test_main_openapi_all_of_required():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'allof_required.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'allof_required.py').read_text()
         )
 
 
@@ -1311,7 +1296,7 @@ def test_main_openapi_nullable():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'nullable.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'nullable.py').read_text()
         )
 
 
@@ -1333,9 +1318,7 @@ def test_main_openapi_nullable_strict_nullable():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'nullable_strict_nullable.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'nullable_strict_nullable.py').read_text()
         )
 
 
@@ -1380,7 +1363,7 @@ def test_main_openapi_pattern(output_model, expected_output):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-            EXPECTED_MAIN_PATH / 'openapi' / 'pattern' / expected_output
+            EXPECTED_OPENAPI_PATH / 'pattern' / expected_output
         ).read_text().replace('pattern.json', 'pattern.yaml')
 
 
@@ -1422,7 +1405,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -1434,7 +1417,7 @@ def test_main_generate_custom_class_name_generator_modular(
 
     output_path = output_directory / 'model'
     main_modular_custom_class_name_dir = (
-        EXPECTED_MAIN_PATH / 'main_modular_custom_class_name'
+        EXPECTED_OPENAPI_PATH / 'modular_custom_class_name'
     )
 
     def custom_class_name_generator(name):
@@ -1486,7 +1469,7 @@ def test_main_http_openapi(mocker):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'http_refs.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'http_refs.py').read_text()
         )
         httpx_get_mock.assert_has_calls(
             [
@@ -1525,9 +1508,7 @@ def test_main_disable_appending_item_suffix():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_disable_appending_item_suffix' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'disable_appending_item_suffix.py').read_text()
         )
 
 
@@ -1552,7 +1533,7 @@ def test_main_openapi_body_and_parameters():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'body_and_parameters' / 'general.py'
+                EXPECTED_OPENAPI_PATH / 'body_and_parameters' / 'general.py'
             ).read_text()
         )
 
@@ -1583,7 +1564,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'body_and_parameters' / 'remote_ref.py'
+                EXPECTED_OPENAPI_PATH / 'body_and_parameters' / 'remote_ref.py'
             ).read_text()
         )
         httpx_get_mock.assert_has_calls(
@@ -1619,7 +1600,7 @@ def test_main_openapi_body_and_parameters_only_paths():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'body_and_parameters' / 'only_paths.py'
+                EXPECTED_OPENAPI_PATH / 'body_and_parameters' / 'only_paths.py'
             ).read_text()
         )
 
@@ -1644,10 +1625,7 @@ def test_main_openapi_body_and_parameters_only_schemas():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'openapi'
-                / 'body_and_parameters'
-                / 'only_schemas.py'
+                EXPECTED_OPENAPI_PATH / 'body_and_parameters' / 'only_schemas.py'
             ).read_text()
         )
 
@@ -1669,7 +1647,7 @@ def test_main_openapi_content_in_parameters():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'content_in_parameters.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'content_in_parameters.py').read_text()
         )
 
 
@@ -1693,9 +1671,7 @@ def test_main_openapi_oas_response_reference():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'oas_response_reference.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'oas_response_reference.py').read_text()
         )
 
 
@@ -1716,7 +1692,7 @@ def test_main_openapi_json_pointer():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'json_pointer.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'json_pointer.py').read_text()
         )
 
 
@@ -1724,10 +1700,10 @@ def test_main_openapi_json_pointer():
 @pytest.mark.parametrize(
     'output_model,expected_output',
     [
-        ('pydantic.BaseModel', 'main_use_annotated_with_field_constraints'),
+        ('pydantic.BaseModel', 'use_annotated_with_field_constraints.py'),
         (
             'pydantic_v2.BaseModel',
-            'main_use_annotated_with_field_constraints_pydantic_v2',
+            'use_annotated_with_field_constraints_pydantic_v2.py',
         ),
     ],
 )
@@ -1755,7 +1731,7 @@ def test_main_use_annotated_with_field_constraints(output_model, expected_output
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -1778,9 +1754,7 @@ def test_main_use_annotated_with_field_constraints_py38():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_use_annotated_with_field_constraints_py38'
-                / 'output.py'
+                EXPECTED_OPENAPI_PATH / 'use_annotated_with_field_constraints_py38.py'
             ).read_text()
         )
 
@@ -1802,7 +1776,7 @@ def test_main_nested_enum():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_nested_enum' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'nested_enum.py').read_text()
         )
 
 
@@ -1824,7 +1798,7 @@ def test_openapi_special_yaml_keywords(mocker):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'special_yaml_keywords.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'special_yaml_keywords.py').read_text()
         )
     mock_prance.assert_called_once()
 
@@ -1853,9 +1827,7 @@ def test_main_openapi_nullable_use_union_operator():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'openapi'
-                / 'nullable_strict_nullable_use_union_operator.py'
+                EXPECTED_OPENAPI_PATH / 'nullable_strict_nullable_use_union_operator.py'
             ).read_text()
         )
 
@@ -1873,7 +1845,7 @@ def test_external_relative_ref():
             ]
         )
         assert return_code == Exit.OK
-        main_modular_dir = EXPECTED_MAIN_PATH / 'external_relative_ref'
+        main_modular_dir = EXPECTED_OPENAPI_PATH / 'external_relative_ref'
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
@@ -1898,9 +1870,7 @@ def test_main_collapse_root_models():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_collapse_root_models' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'collapse_root_models.py').read_text()
         )
 
 
@@ -1922,9 +1892,7 @@ def test_main_collapse_root_models_field_constraints():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_collapse_root_models_field_constraints'
-                / 'output.py'
+                EXPECTED_OPENAPI_PATH / 'collapse_root_models_field_constraints.py'
             ).read_text()
         )
 
@@ -1947,9 +1915,8 @@ def test_main_collapse_root_models_with_references_to_flat_types():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_collapse_root_models_with_references_to_flat_types'
-                / 'output.py'
+                EXPECTED_OPENAPI_PATH
+                / 'collapse_root_models_with_references_to_flat_types.py'
             ).read_text()
         )
 
@@ -1971,7 +1938,7 @@ def test_main_openapi_max_items_enum():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'max_items_enum.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'max_items_enum.py').read_text()
         )
 
 
@@ -2007,7 +1974,7 @@ def test_main_openapi_const(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -2048,7 +2015,7 @@ def test_main_openapi_const_field(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / expected_output).read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
 
@@ -2069,7 +2036,7 @@ def test_main_openapi_complex_reference():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'complex_reference.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'complex_reference.py').read_text()
         )
 
 
@@ -2090,9 +2057,7 @@ def test_main_openapi_reference_to_object_properties():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'reference_to_object_properties.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'reference_to_object_properties.py').read_text()
         )
 
 
@@ -2115,8 +2080,7 @@ def test_main_openapi_reference_to_object_properties_collapse_root_models():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'openapi'
+                EXPECTED_OPENAPI_PATH
                 / 'reference_to_object_properties_collapse_root_models.py'
             ).read_text()
         )
@@ -2140,9 +2104,7 @@ def test_main_openapi_override_required_all_of_field():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'override_required_all_of.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'override_required_all_of.py').read_text()
         )
 
 
@@ -2164,7 +2126,7 @@ def test_main_use_default_kwarg():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'use_default_kwarg.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'use_default_kwarg.py').read_text()
         )
 
 
@@ -2198,7 +2160,7 @@ def test_main_openapi_discriminator(input, output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'discriminator' / output).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'discriminator' / output).read_text()
         )
 
 
@@ -2241,7 +2203,7 @@ def test_main_openapi_discriminator_in_array(kind, option, expected):
         )
         assert return_code == Exit.OK
         assert output_file.read_text() == (
-            EXPECTED_MAIN_PATH / 'openapi' / 'discriminator' / expected
+            EXPECTED_OPENAPI_PATH / 'discriminator' / expected
         ).read_text().replace('discriminator_in_array.yaml', input_file)
 
 
@@ -2286,7 +2248,7 @@ def test_main_openapi_default_object(output_model, expected_output):
         )
         assert return_code == Exit.OK
 
-        main_modular_dir = EXPECTED_MAIN_PATH / 'openapi' / expected_output
+        main_modular_dir = EXPECTED_OPENAPI_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
@@ -2311,7 +2273,7 @@ def test_main_dataclass():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_dataclass' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'dataclass.py').read_text()
         )
 
 
@@ -2334,9 +2296,7 @@ def test_main_dataclass_base_class():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_dataclass_base_class' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'dataclass_base_class.py').read_text()
         )
 
 
@@ -2359,9 +2319,7 @@ def test_main_openapi_reference_same_hierarchy_directory():
             assert (
                 output_file.read_text()
                 == (
-                    EXPECTED_MAIN_PATH
-                    / 'openapi'
-                    / 'reference_same_hierarchy_directory.py'
+                    EXPECTED_OPENAPI_PATH / 'reference_same_hierarchy_directory.py'
                 ).read_text()
             )
 
@@ -2382,9 +2340,7 @@ def test_main_multiple_required_any_of():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_multiple_required_any_of' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'multiple_required_any_of.py').read_text()
         )
 
 
@@ -2403,7 +2359,7 @@ def test_main_openapi_max_min():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'max_min_number.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'max_min_number.py').read_text()
         )
 
 
@@ -2427,9 +2383,7 @@ def test_main_openapi_use_operation_id_as_name():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'use_operation_id_as_name.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'use_operation_id_as_name.py').read_text()
         )
 
 
@@ -2478,9 +2432,7 @@ def test_main_unsorted_optional_fields():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'unsorted_optional_fields' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'unsorted_optional_fields.py').read_text()
         )
 
 
@@ -2501,7 +2453,7 @@ def test_main_typed_dict():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_typed_dict' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'typed_dict.py').read_text()
         )
 
 
@@ -2524,7 +2476,7 @@ def test_main_typed_dict_py_38():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_typed_dict_py_38' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'typed_dict_py_38.py').read_text()
         )
 
 
@@ -2553,7 +2505,7 @@ def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
                 '3.11',
             ]
         )
-    main_modular_dir = EXPECTED_MAIN_PATH / 'main_modular_typed_dict'
+    main_modular_dir = EXPECTED_OPENAPI_PATH / 'modular_typed_dict'
     for path in main_modular_dir.rglob('*.py'):
         result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
         assert result == path.read_text()
@@ -2582,9 +2534,7 @@ def test_main_typed_dict_nullable():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_typed_dict_nullable' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'typed_dict_nullable.py').read_text()
         )
 
 
@@ -2613,9 +2563,7 @@ def test_main_typed_dict_nullable_strict_nullable():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_typed_dict_nullable_strict_nullable'
-                / 'output.py'
+                EXPECTED_OPENAPI_PATH / 'typed_dict_nullable_strict_nullable.py'
             ).read_text()
         )
 
@@ -2637,9 +2585,7 @@ def test_main_custom_file_header_path():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_custom_file_header' / 'output.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'custom_file_header.py').read_text()
         )
 
 
@@ -2685,7 +2631,7 @@ def test_main_pydantic_v2():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_pydantic_v2' / 'output.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'pydantic_v2.py').read_text()
         )
 
 
@@ -2706,7 +2652,7 @@ def test_main_openapi_custom_id_pydantic_v2():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'custom_id_pydantic_v2.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'custom_id_pydantic_v2.py').read_text()
         )
 
 
@@ -2734,7 +2680,7 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'custom_id_pydantic_v2_custom_base.py'
+                EXPECTED_OPENAPI_PATH / 'custom_id_pydantic_v2_custom_base.py'
             ).read_text()
         )
 
@@ -2768,9 +2714,7 @@ def test_main_openapi_all_of_with_relative_ref():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'all_of_with_relative_ref.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'all_of_with_relative_ref.py').read_text()
         )
 
 
@@ -2794,7 +2738,7 @@ def test_main_openapi_msgspec_struct():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'openapi' / 'msgspec_struct.py').read_text()
+            == (EXPECTED_OPENAPI_PATH / 'msgspec_struct.py').read_text()
         )
 
 
@@ -2819,9 +2763,7 @@ def test_main_openapi_msgspec_struct_snake_case():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'msgspec_struct_snake_case.py'
-            ).read_text()
+            == (EXPECTED_OPENAPI_PATH / 'msgspec_struct_snake_case.py').read_text()
         )
 
 
@@ -2850,8 +2792,7 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'openapi'
+                EXPECTED_OPENAPI_PATH
                 / 'msgspec_use_annotated_with_field_constraints.py'
             ).read_text()
         )

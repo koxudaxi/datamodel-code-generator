@@ -84,7 +84,5 @@ def test_space_and_special_characters_dict():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'space_and_special_characters_dict.py').read_text()
         )
