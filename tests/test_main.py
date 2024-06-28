@@ -1,3 +1,4 @@
+import json
 import platform
 import shutil
 from argparse import Namespace
@@ -6922,6 +6923,10 @@ def test_one_of_with_sub_schema_array_item():
 def test_main_jsonschema_with_custom_formatters():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
+        formatter_config = {'license_file': str(Path(__file__).parent / 'data/python/custom_formatters/license_example.txt')}
+        formatter_config_path = Path(output_dir, 'formatter_config')
+        with formatter_config_path.open('w') as f:
+            json.dump(formatter_config, f)
         return_code: Exit = main(
             [
                 '--input',
@@ -6931,7 +6936,11 @@ def test_main_jsonschema_with_custom_formatters():
                 '--input-file-type',
                 'jsonschema',
                 '--custom-formatters',
-                'tests.data.python.custom_formatters.add_comment'
+                'tests.data.python.custom_formatters.add_license',
+                '--custom-formatters-kwargs',
+                str(formatter_config_path)
+
+
             ]
         )
         assert return_code == Exit.OK

@@ -86,7 +86,7 @@ class ConstraintsBase(_BaseModel):
         else:
             model_field_constraints = {}
 
-        if not issubclass(constraints_class, ConstraintsBase):
+        if not issubclass(constraints_class, ConstraintsBase):  # pragma: no cover
             return None
 
         return constraints_class.parse_obj(
