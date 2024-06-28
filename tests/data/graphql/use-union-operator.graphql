@@ -4,7 +4,6 @@ type A {
     optionalListOptionalField: [String]
     listOptionalField: [String]!
     listField: [String!]!
-    optionalListOptionalListOptionalField:[[String]]
     optionalListListOptionalField:[[String]!]
     listListOptionalField:[[String]!]!
     listOptionalListOptionalField:[[String]]!

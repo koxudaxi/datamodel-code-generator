@@ -38,7 +38,4 @@ class A(BaseModel):
     optionalListOptionalListField: List[List[String] | None] | None = Field(
         default_factory=list
     )
-    optionalListOptionalListOptionalField: List[
-        List[String | None] | None
-    ] | None = Field(default_factory=list)
     typename__: Literal['A'] | None = Field('A', alias='__typename')
