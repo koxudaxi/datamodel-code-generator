@@ -146,7 +146,7 @@ class DataModelField(DataModelFieldV1):
         self, field_arguments: List[str]
     ) -> List[str]:
         if not self.required or self.const:
-            if self.use_default_kwarg:   # pragma: no cover
+            if self.use_default_kwarg:  # pragma: no cover
                 return [
                     f'default={repr(self.default)}',
                     *field_arguments,
@@ -215,7 +215,7 @@ class BaseModel(BaseModelBase):
                     else self.extra_template_data[from_]
                 )
         for data_type in self.all_data_types:
-            if data_type.is_custom_type:   # pragma: no cover
+            if data_type.is_custom_type:  # pragma: no cover
                 config_parameters['arbitrary_types_allowed'] = True
                 break
 
