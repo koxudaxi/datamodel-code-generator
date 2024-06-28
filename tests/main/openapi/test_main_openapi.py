@@ -1352,7 +1352,7 @@ def test_main_openapi_nullable_strict_nullable():
         ),
         (
             'msgspec.Struct',
-            'msgspec.py',
+            'msgspec_pattern.py',
         ),
     ],
 )
