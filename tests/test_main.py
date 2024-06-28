@@ -6533,11 +6533,11 @@ def test_all_of_use_default():
     [
         (
             'pydantic.BaseModel',
-            'main_graphql_simple_star_wars',
+            'simple_star_wars.py',
         ),
         (
             'dataclasses.dataclass',
-            'main_graphql_simple_star_wars_dataclass',
+            'simple_star_wars_dataclass.py',
         ),
     ],
 )
@@ -6564,7 +6564,7 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / expected_output).read_text()
         )
 
 
@@ -6590,9 +6590,7 @@ def test_main_graphql_different_types_of_fields():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_graphql_different_types_of_fields'
-                / 'output.py'
+                EXPECTED_MAIN_PATH / 'graphql' / 'different_types_of_fields.py'
             ).read_text()
         )
 
@@ -6620,9 +6618,7 @@ def test_main_graphql_custom_scalar_types():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_custom_scalar_types' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'custom_scalar_types.py').read_text()
         )
 
 
@@ -6649,9 +6645,7 @@ def test_main_graphql_field_aliases():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_field_aliases' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'field_aliases.py').read_text()
         )
 
 
@@ -6676,7 +6670,7 @@ def test_main_graphql_enums():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_graphql_enums' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'enums.py').read_text()
         )
 
 
@@ -6701,7 +6695,7 @@ def test_main_graphql_union():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_graphql_union' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'union.py').read_text()
         )
 
 
@@ -6731,9 +6725,7 @@ def test_main_graphql_additional_imports_isort_4():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_graphql_additional_imports'
-                / 'output_isort4.py'
+                EXPECTED_MAIN_PATH / 'graphql' / 'additional_imports_isort4.py'
             ).read_text()
         )
 
@@ -6768,9 +6760,7 @@ def test_main_graphql_additional_imports_isort_5():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_graphql_additional_imports'
-                / 'output_isort5.py'
+                EXPECTED_MAIN_PATH / 'graphql' / 'additional_imports_isort5.py'
             ).read_text()
         )
 
@@ -6798,9 +6788,7 @@ def test_main_graphql_custom_formatters():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'custom_formatters.py').read_text()
         )
 
 
@@ -6827,9 +6815,7 @@ def test_main_graphql_use_standard_collections():
         assert (
             output_file.read_text()
             == (
-                EXPECTED_MAIN_PATH
-                / 'main_graphql_use_standard_collections'
-                / 'output.py'
+                EXPECTED_MAIN_PATH / 'graphql' / 'use_standard_collections.py'
             ).read_text()
         )
 
@@ -6856,9 +6842,7 @@ def test_main_graphql_use_union_operator():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_graphql_use_union_operator' / 'output.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'use_union_operator.py').read_text()
         )
 
 
@@ -6884,7 +6868,7 @@ def test_main_graphql_annotated():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_graphql_annotated' / 'output.py').read_text()
+            == (EXPECTED_MAIN_PATH / 'graphql' / 'annotated.py').read_text()
         )
 
 
