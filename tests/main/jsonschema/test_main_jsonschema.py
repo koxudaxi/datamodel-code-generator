@@ -15,9 +15,9 @@ from datamodel_code_generator import (
     InputFileType,
     chdir,
     generate,
-    snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Exit, main
+from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
 
 try:
     from pytest import TempdirFactory
@@ -28,16 +28,7 @@ CaptureFixture = pytest.CaptureFixture
 FixtureRequest = pytest.FixtureRequest
 MonkeyPatch = pytest.MonkeyPatch
 
-DATA_PATH: Path = Path(__file__).parent / 'data'
-OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / 'jsonschema'
-JSON_DATA_PATH: Path = DATA_PATH / 'json'
-YAML_DATA_PATH: Path = DATA_PATH / 'yaml'
-PYTHON_DATA_PATH: Path = DATA_PATH / 'python'
-CSV_DATA_PATH: Path = DATA_PATH / 'csv'
-EXPECTED_MAIN_PATH = DATA_PATH / 'expected' / 'main'
-
-TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
 
 @pytest.fixture(autouse=True)
@@ -45,22 +36,6 @@ def reset_namespace(monkeypatch: MonkeyPatch):
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
-
-
-def test_debug(mocker) -> None:
-    with pytest.raises(expected_exception=SystemExit):
-        main(['--debug', '--help'])
-
-    mocker.patch('datamodel_code_generator.pysnooper', None)
-    with pytest.raises(expected_exception=SystemExit):
-        main(['--debug', '--help'])
-
-
-@freeze_time('2019-07-26')
-def test_snooper_to_methods_without_pysnooper(mocker) -> None:
-    mocker.patch('datamodel_code_generator.pysnooper', None)
-    mock = mocker.Mock()
-    assert snooper_to_methods()(mock) == mock
 
 
 @pytest.mark.benchmark
@@ -301,90 +276,6 @@ def test_main_jsonschema_multiple_files():
             assert result == path.read_text()
 
 
-@freeze_time('2019-07-26')
-def test_main_json():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'pet.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_json' / 'output.py').read_text()
-        )
-
-
-@freeze_time('2019-07-26')
-def test_space_and_special_characters_json():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'space_and_special_characters.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'space_and_special_characters' / 'output.py'
-            ).read_text()
-        )
-
-
-@freeze_time('2019-07-26')
-def test_main_json_failed():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'broken.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-            ]
-        )
-        assert return_code == Exit.ERROR
-
-
-@freeze_time('2019-07-26')
-def test_main_json_array_include_null():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'array_include_null.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_json_array_include_null' / 'output.py'
-            ).read_text()
-        )
-
-
 @pytest.mark.parametrize(
     'output_model,expected_output',
     [
@@ -419,52 +310,6 @@ def test_main_null_and_array(output_model, expected_output):
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
-
-
-@pytest.mark.benchmark
-@freeze_time('2019-07-26')
-def test_main_yaml():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(YAML_DATA_PATH / 'pet.yaml'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'yaml',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_yaml' / 'output.py').read_text()
-        )
-
-
-@pytest.mark.parametrize(argnames='no_color', argvalues=[False, True])
-def test_show_help(no_color: bool, capsys: CaptureFixture[str]):
-    args = ['--no-color'] if no_color else []
-    args += ['--help']
-
-    with pytest.raises(expected_exception=SystemExit):
-        return_code: Exit = main(args)
-        assert return_code == Exit.OK
-
-    output = capsys.readouterr().out
-    assert ('\x1b' not in output) == no_color
-
-
-def test_show_help_when_no_input(mocker):
-    print_help_mock = mocker.patch(
-        'datamodel_code_generator.__main__.arg_parser.print_help'
-    )
-    isatty_mock = mocker.patch('sys.stdin.isatty', return_value=True)
-    return_code: Exit = main([])
-    assert return_code == Exit.ERROR
-    assert isatty_mock.called
-    assert print_help_mock.called
 
 
 @freeze_time('2019-07-26')
@@ -1045,28 +890,6 @@ def test_main_invalid_enum_name_snake_case_field():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_reuse_model():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'duplicate_models.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-                '--reuse-model',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'main_json_reuse_model' / 'output.py').read_text()
-        )
-
-
-@freeze_time('2019-07-26')
 def test_main_json_reuse_enum():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1157,29 +980,6 @@ def test_main_similar_nested_array():
         )
 
 
-@freeze_time('2019-07-26')
-def test_space_and_special_characters_dict():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(PYTHON_DATA_PATH / 'space_and_special_characters_dict.py'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'dict',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'space_and_special_characters_dict' / 'output.py'
-            ).read_text()
-        )
-
-
 @pytest.mark.parametrize(
     'output_model,expected_output',
     [
@@ -1217,47 +1017,6 @@ def test_main_require_referenced_field(output_model, expected_output):
         assert (output_dir / 'required.py').read_text() == (
             EXPECTED_MAIN_PATH / expected_output / 'required.py'
         ).read_text()
-
-
-@freeze_time('2019-07-26')
-def test_csv_file():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(CSV_DATA_PATH / 'simple.csv'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'csv',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'csv_file_simple' / 'output.py').read_text()
-        )
-
-
-@freeze_time('2019-07-26')
-def test_csv_stdin(monkeypatch):
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        monkeypatch.setattr('sys.stdin', (CSV_DATA_PATH / 'simple.csv').open())
-        return_code: Exit = main(
-            [
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'csv',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'csv_stdin_simple' / 'output.py').read_text()
-        )
 
 
 @freeze_time('2019-07-26')
@@ -1484,31 +1243,6 @@ def test_main_jsonschema_multiple_files_ref_test_json():
                 output_file.read_text()
                 == (
                     EXPECTED_MAIN_PATH / 'multiple_files_self_ref_single' / 'output.py'
-                ).read_text()
-            )
-
-
-@freeze_time('2019-07-26')
-def test_simple_json_snake_case_field():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        with chdir(JSON_DATA_PATH / 'simple.json'):
-            return_code: Exit = main(
-                [
-                    '--input',
-                    'simple.json',
-                    '--output',
-                    str(output_file),
-                    '--input-file-type',
-                    'json',
-                    '--snake-case-field',
-                ]
-            )
-            assert return_code == Exit.OK
-            assert (
-                output_file.read_text()
-                == (
-                    EXPECTED_MAIN_PATH / 'simple_json_snake_case_field' / 'output.py'
                 ).read_text()
             )
 
@@ -1984,51 +1718,6 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
                     params=query_parameters_requests,
-                ),
-            ]
-        )
-
-
-@freeze_time('2019-07-26')
-def test_main_http_json(mocker):
-    def get_mock_response(path: str) -> mocker.Mock:
-        mock = mocker.Mock()
-        mock.text = (JSON_DATA_PATH / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        'httpx.get',
-        side_effect=[
-            get_mock_response('pet.json'),
-        ],
-    )
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--url',
-                'https://example.com/pet.json',
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (
-            EXPECTED_MAIN_PATH / 'main_json' / 'output.py'
-        ).read_text().replace(
-            '#   filename:  pet.json',
-            '#   filename:  https://example.com/pet.json',
-        )
-        httpx_get_mock.assert_has_calls(
-            [
-                call(
-                    'https://example.com/pet.json',
-                    headers=None,
-                    verify=True,
-                    follow_redirects=True,
-                    params=None,
                 ),
             ]
         )
@@ -3082,30 +2771,6 @@ def test_main_jsonschema_json_pointer_array():
         )
 
 
-@freeze_time('2019-07-26')
-def test_main_json_snake_case_field():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'snake_case.json'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'json',
-                '--snake-case-field',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'main_json_snake_case_field' / 'output.py'
-            ).read_text()
-        )
-
-
 @pytest.mark.filterwarnings('error')
 def test_main_disable_warnings_config(capsys: CaptureFixture):
     with TemporaryDirectory() as output_dir:
@@ -3362,37 +3027,6 @@ def test_main_null():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_null' / 'output.py').read_text()
-        )
-
-
-@pytest.mark.skipif(
-    version.parse(black.__version__) < version.parse('23.3.0'),
-    reason='Require Black version 23.3.0 or later ',
-)
-@freeze_time('2019-07-26')
-def test_main_typed_dict_space_and_special_characters():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(JSON_DATA_PATH / 'space_and_special_characters.json'),
-                '--output',
-                str(output_file),
-                '--output-model-type',
-                'typing.TypedDict',
-                '--target-python-version',
-                '3.11',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH
-                / 'main_typed_dict_space_and_special_characters'
-                / 'output.py'
-            ).read_text()
         )
 
 

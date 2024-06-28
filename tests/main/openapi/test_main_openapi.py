@@ -25,9 +25,10 @@ from datamodel_code_generator import (
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit, main
-from tests.test_main import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP, MonkeyPatch
+from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
 
 CaptureFixture = pytest.CaptureFixture
+MonkeyPatch = pytest.MonkeyPatch
 
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
 

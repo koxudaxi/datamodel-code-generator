@@ -8,7 +8,7 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
-from tests.test_main import DATA_PATH, EXPECTED_MAIN_PATH
+from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
 GRAPHQL_DATA_PATH: Path = DATA_PATH / 'graphql'
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / 'graphql'
