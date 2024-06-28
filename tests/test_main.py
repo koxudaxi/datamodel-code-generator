@@ -3,6 +3,7 @@ import shutil
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import List
 from unittest.mock import call
 
 import black
@@ -622,6 +623,10 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
         ),
     ],
 )
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_extra_template_data_config(
     capsys: CaptureFixture, output_model, expected_output
 ) -> None:
@@ -703,6 +708,10 @@ def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_pyproject():
     if platform.system() == 'Windows':
@@ -960,6 +969,10 @@ def test_main_without_field_constraints(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_with_aliases(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1131,6 +1144,10 @@ def test_enable_version_header():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_allow_population_by_field_name(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1166,6 +1183,10 @@ def test_allow_population_by_field_name(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_allow_extra_fields(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1201,6 +1222,10 @@ def test_allow_extra_fields(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_enable_faux_immutability(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -1261,6 +1286,28 @@ def test_force_optional():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'force_optional' / 'output.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_use_default_pydantic_v2_with_json_schema_const():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'use_default_with_const.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--use-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'use_default_with_const' / 'output.py').read_text()
         )
 
 
@@ -1505,6 +1552,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -1570,6 +1618,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -1610,6 +1659,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -1733,6 +1783,10 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -1759,6 +1813,10 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
         assert result == path.read_text()
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
     tmpdir_factory: TempdirFactory,
@@ -2127,6 +2185,45 @@ def test_space_and_special_characters_dict():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'main_require_referenced_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'main_require_referenced_field_pydantic_v2',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_require_referenced_field(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+
+        assert (output_dir / 'referenced.py').read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'referenced.py'
+        ).read_text()
+        assert (output_dir / 'required.py').read_text() == (
+            EXPECTED_MAIN_PATH / expected_output / 'required.py'
+        ).read_text()
+
+
 @freeze_time('2019-07-26')
 def test_csv_file():
     with TemporaryDirectory() as output_dir:
@@ -2323,6 +2420,10 @@ def test_main_openapi_use_one_literal_as_default():
     version.parse(pydantic.VERSION) < version.parse('1.9.0'),
     reason='Require Pydantic version 1.9.0 or later ',
 )
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_main_openapi_enum_models_as_literal_all():
     with TemporaryDirectory() as output_dir:
@@ -2348,6 +2449,43 @@ def test_main_openapi_enum_models_as_literal_all():
                 EXPECTED_MAIN_PATH / 'main_openapi_enum_models_all' / 'output.py'
             ).read_text()
         )
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse('1.9.0'),
+    reason='Require Pydantic version 1.9.0 or later ',
+)
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
+@freeze_time('2019-07-26')
+def test_main_openapi_enum_models_as_literal_py37(capsys):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'enum_models.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--enum-field-as-literal',
+                'all',
+            ]
+        )
+
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_enum_models_as_literal_py37'
+                / 'output.py'
+            ).read_text()
+        )
+
 
 
 @freeze_time('2019-07-26')
@@ -2612,6 +2750,10 @@ def test_main_all_of_with_object():
             )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_main_combined_array():
     with TemporaryDirectory() as output_dir:
@@ -2724,6 +2866,10 @@ def test_main_openapi_nullable_strict_nullable():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_pattern(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -2765,6 +2911,48 @@ def test_main_jsonschema_pattern():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'main_pattern' / 'output.py').read_text()
+        )
+
+
+@pytest.mark.parametrize(
+    'expected_output, args',
+    [
+        ('main_pattern_with_lookaround_pydantic_v2', []),
+        (
+            'main_pattern_with_lookaround_pydantic_v2_field_constraints',
+            ['--field-constraints'],
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] < '22',
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_openapi_pattern_with_lookaround_pydantic_v2(
+    expected_output: str, args: List[str]
+):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'pattern_lookaround.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--target-python',
+                '3.9',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                *args,
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / expected_output / 'output.py').read_text()
         )
 
 
@@ -2927,8 +3115,8 @@ def test_main_http_jsonschema(mocker):
         'httpx.get',
         side_effect=[
             get_mock_response('person.json'),
-            get_mock_response('definitions/pet.json'),
-            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/relative/animal/pet/pet.json'),
+            get_mock_response('definitions/relative/animal/fur.json'),
             get_mock_response('definitions/friends.json'),
             get_mock_response('definitions/food.json'),
             get_mock_response('definitions/machine/robot.json'),
@@ -2962,48 +3150,56 @@ def test_main_http_jsonschema(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -3011,22 +3207,31 @@ def test_main_http_jsonschema(mocker):
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'headers_arguments,headers_requests,http_ignore_tls',
+    'headers_arguments,headers_requests,query_parameters_arguments,query_parameters_requests,http_ignore_tls',
     [
         (
             ('Authorization: Basic dXNlcjpwYXNz',),
             [('Authorization', 'Basic dXNlcjpwYXNz')],
+            ('key=value',),
+            [('key', 'value')],
             False,
         ),
         (
             ('Authorization: Basic dXNlcjpwYXNz', 'X-API-key: abcefg'),
             [('Authorization', 'Basic dXNlcjpwYXNz'), ('X-API-key', 'abcefg')],
+            ('key=value', 'newkey=newvalue'),
+            [('key', 'value'), ('newkey', 'newvalue')],
             True,
         ),
     ],
 )
-def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
-    mocker, headers_arguments, headers_requests, http_ignore_tls
+def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
+    mocker,
+    headers_arguments,
+    headers_requests,
+    query_parameters_arguments,
+    query_parameters_requests,
+    http_ignore_tls,
 ):
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
@@ -3039,8 +3244,8 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
         'httpx.get',
         side_effect=[
             get_mock_response('person.json'),
-            get_mock_response('definitions/pet.json'),
-            get_mock_response('definitions/fur.json'),
+            get_mock_response('definitions/relative/animal/pet/pet.json'),
+            get_mock_response('definitions/relative/animal/fur.json'),
             get_mock_response('definitions/friends.json'),
             get_mock_response('definitions/food.json'),
             get_mock_response('definitions/machine/robot.json'),
@@ -3055,6 +3260,8 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
             'https://example.com/external_files_in_directory/person.json',
             '--http-headers',
             *headers_arguments,
+            '--http-query-parameters',
+            *query_parameters_arguments,
             '--output',
             str(output_file),
             '--input-file-type',
@@ -3078,48 +3285,56 @@ def test_main_http_jsonschema_with_http_headers_and_ignore_tls(
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/pet.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
-                    'https://example.com/external_files_in_directory/definitions/fur.json',
+                    'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=headers_requests,
                     verify=True if not http_ignore_tls else False,
                     follow_redirects=True,
+                    params=query_parameters_requests,
                 ),
             ]
         )
@@ -3163,12 +3378,14 @@ def test_main_http_openapi(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
                 call(
                     'https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml',
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -3213,6 +3430,7 @@ def test_main_http_json(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -3284,6 +3502,10 @@ def test_main_strict_types():
         )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_main_strict_types_all():
     with TemporaryDirectory() as output_dir:
@@ -3888,6 +4110,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
                     headers=None,
                     verify=True,
                     follow_redirects=True,
+                    params=None,
                 ),
             ]
         )
@@ -4018,6 +4241,10 @@ def test_long_description():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_long_description_wrap_string_literal():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -4207,6 +4434,10 @@ def test_jsonschema_without_titles_use_title_as_name():
             'main_use_annotated_with_field_constraints_pydantic_v2',
         ),
     ],
+)
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
 )
 def test_main_use_annotated_with_field_constraints(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
@@ -4454,6 +4685,44 @@ def test_external_relative_ref():
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.parametrize('as_module', [True, False])
+def test_treat_dot_as_module(as_module):
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        if as_module:
+            return_code: Exit = main(
+                [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'treat_dot_as_module'),
+                    '--output',
+                    str(output_path),
+                    '--treat-dot-as-module',
+                ]
+            )
+        else:
+            return_code: Exit = main(
+                [
+                    '--input',
+                    str(JSON_SCHEMA_DATA_PATH / 'treat_dot_as_module'),
+                    '--output',
+                    str(output_path),
+                ]
+            )
+        assert return_code == Exit.OK
+        path_extension = (
+            'treat_dot_as_module' if as_module else 'treat_dot_not_as_module'
+        )
+        main_modular_dir = EXPECTED_MAIN_PATH / path_extension
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            if as_module:
+                assert str(path.relative_to(main_modular_dir)).count('.') == 1
             assert result == path.read_text()
 
 
@@ -5069,12 +5338,20 @@ def test_main_jsonschema_pattern_properties_by_reference():
             'main_openapi_default_object',
         ),
         (
+            'pydantic_v2.BaseModel',
+            'main_openapi_pydantic_v2_default_object',
+        ),
+        (
             'msgspec.Struct',
             'main_openapi_msgspec_default_object',
         ),
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_default_object(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
@@ -5170,6 +5447,10 @@ def test_main_dataclass_field():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_jsonschema_enum_root_literal():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5861,6 +6142,63 @@ def test_main_jsonschema_discriminator_literals():
 
 
 @freeze_time('2019-07-26')
+def test_main_jsonschema_external_discriminator():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(
+                    JSON_SCHEMA_DATA_PATH
+                    / 'discriminator_with_external_reference'
+                    / 'inner_folder'
+                    / 'schema.json'
+                ),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'discriminator_with_external_reference'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_external_discriminator_folder():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_with_external_reference'),
+                '--output',
+                str(output_path),
+            ]
+        )
+        assert return_code == Exit.OK
+        main_modular_dir = (
+            EXPECTED_MAIN_PATH / 'discriminator_with_external_references_folder'
+        )
+        for path in main_modular_dir.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(main_modular_dir)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_all_of_with_relative_ref():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5916,6 +6254,37 @@ def test_main_msgspec_struct():
 
 
 @freeze_time('2019-07-26')
+def test_main_msgspec_struct_snake_case():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'api_ordered_required_fields.yaml'),
+                '--output',
+                str(output_file),
+                # min msgspec python version is 3.8
+                '--target-python-version',
+                '3.8',
+                '--snake-case-field',
+                '--output-model-type',
+                'msgspec.Struct',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_msgspec_struct_snake_case' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_msgspec_use_annotated_with_field_constraints():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -5985,6 +6354,10 @@ def test_main_duplicate_field_constraints():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_duplicate_field_constraints_msgspec(
     collapse_root_models, python_version, expected_output
 ):
@@ -6083,6 +6456,10 @@ def test_main_all_of_ref_self():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_array_field_constraints():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6145,6 +6522,10 @@ def test_all_of_use_default():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_simple_star_wars(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6168,6 +6549,10 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_different_types_of_fields():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6193,6 +6578,10 @@ def test_main_graphql_different_types_of_fields():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_custom_scalar_types():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6218,6 +6607,10 @@ def test_main_graphql_custom_scalar_types():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_field_aliases():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6243,6 +6636,10 @@ def test_main_graphql_field_aliases():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_enums():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6264,6 +6661,10 @@ def test_main_graphql_enums():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_union():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6322,6 +6723,10 @@ def test_main_graphql_additional_imports_isort_4():
     reason='See https://github.com/PyCQA/isort/issues/1600 for example',
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_additional_imports_isort_5():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6351,6 +6756,10 @@ def test_main_graphql_additional_imports_isort_5():
 
 
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_custom_formatters():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -6371,5 +6780,119 @@ def test_main_graphql_custom_formatters():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH / 'main_graphql_custom_formatters' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_enum():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum.yaml'),
+                '--output',
+                str(output_file),
+                '--target-python-version',
+                '3.10',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH / 'main_openapi_discriminator_enum' / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_enum_duplicate():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum_duplicate.yaml'),
+                '--output',
+                str(output_file),
+                '--target-python-version',
+                '3.10',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_openapi_discriminator_enum_duplicate'
+                / 'output.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_root_one_of():
+    with TemporaryDirectory() as output_dir:
+        output_path: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'root_one_of'),
+                '--output',
+                str(output_path),
+                '--input-file-type',
+                'jsonschema',
+            ]
+        )
+        assert return_code == Exit.OK
+        expected_directory = EXPECTED_MAIN_PATH / 'main_root_one_of'
+        for path in expected_directory.rglob('*.py'):
+            result = output_path.joinpath(
+                path.relative_to(expected_directory)
+            ).read_text()
+            assert result == path.read_text()
+
+
+@freeze_time('2019-07-26')
+def test_one_of_with_sub_schema_array_item():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'one_of_with_sub_schema_array_item.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_MAIN_PATH
+                / 'main_one_of_with_sub_schema_array_item'
+                / 'output.py'
             ).read_text()
         )

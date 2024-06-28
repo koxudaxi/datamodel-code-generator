@@ -10,7 +10,7 @@
 {{ decorator }}
 {% endfor -%}
 
-class {{ class_name }}({{ base_class }}[{{get_type_hint(fields)}}]):{% if comment is defined %}  # {{ comment }}{% endif %}
+class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields)}}]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     """
     {{ description | indent(4) }}

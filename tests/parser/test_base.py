@@ -5,7 +5,12 @@ import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
-from datamodel_code_generator.parser.base import Parser, relative, sort_data_models
+from datamodel_code_generator.parser.base import (
+    Parser,
+    exact_import,
+    relative,
+    sort_data_models,
+)
 from datamodel_code_generator.reference import Reference, snake_to_upper_camel
 from datamodel_code_generator.types import DataType
 
@@ -184,6 +189,19 @@ def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
 
 
 @pytest.mark.parametrize(
+    'from_,import_,name,val',
+    [
+        ('.', 'mod', 'Foo', ('.mod', 'Foo')),
+        ('.a', 'mod', 'Foo', ('.a.mod', 'Foo')),
+        ('..a', 'mod', 'Foo', ('..a.mod', 'Foo')),
+        ('..a.b', 'mod', 'Foo', ('..a.b.mod', 'Foo')),
+    ],
+)
+def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str]):
+    assert exact_import(from_, import_, name) == val
+
+
+@pytest.mark.parametrize(
     'word,expected',
     [
         (
@@ -232,3 +250,36 @@ def test_no_additional_imports():
         source='',
     )
     assert len(new_parser.imports) == 0
+
+
+@pytest.mark.parametrize(
+    'input_data, expected',
+    [
+        (
+            {
+                ('folder1', 'module1.py'): 'content1',
+                ('folder1', 'module2.py'): 'content2',
+                ('folder1', '__init__.py'): 'init_content',
+            },
+            {
+                ('folder1', 'module1.py'): 'content1',
+                ('folder1', 'module2.py'): 'content2',
+                ('folder1', '__init__.py'): 'init_content',
+            },
+        ),
+        (
+            {
+                ('folder1.module', 'file.py'): 'content1',
+                ('folder1.module', '__init__.py'): 'init_content',
+            },
+            {
+                ('folder1', 'module', 'file.py'): 'content1',
+                ('folder1', '__init__.py'): 'init_content',
+                ('folder1', 'module', '__init__.py'): 'init_content',
+            },
+        ),
+    ],
+)
+def test_postprocess_result_modules(input_data, expected):
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert result == expected

@@ -18,9 +18,11 @@ class ConfigDict(_BaseModel):
     title: Optional[str] = None
     populate_by_name: Optional[bool] = None
     allow_extra_fields: Optional[bool] = None
+    from_attributes: Optional[bool] = None
     frozen: Optional[bool] = None
     arbitrary_types_allowed: Optional[bool] = None
     protected_namespaces: Optional[Tuple[str, ...]] = None
+    regex_engine: Optional[str] = None
 
 
 __all__ = [

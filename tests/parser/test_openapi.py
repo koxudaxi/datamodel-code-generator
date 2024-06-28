@@ -2,6 +2,7 @@ import platform
 from pathlib import Path
 from typing import List, Optional
 
+import black
 import pydantic
 import pytest
 from packaging import version
@@ -713,6 +714,10 @@ def test_openapi_parser_responses_with_tag():
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] >= '24',
+    reason="Installed black doesn't support the old style",
+)
 def test_openapi_parser_with_query_parameters():
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,

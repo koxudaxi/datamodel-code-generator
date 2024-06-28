@@ -58,6 +58,12 @@ base_options.add_argument(
     help='Set headers in HTTP requests to the remote host. (example: "Authorization: Basic dXNlcjpwYXNz")',
 )
 base_options.add_argument(
+    '--http-query-parameters',
+    nargs='+',
+    metavar='HTTP_QUERY_PARAMETERS',
+    help='Set query parameters in HTTP requests to the remote host. (example: "ref=branch")',
+)
+base_options.add_argument(
     '--http-ignore-tls',
     help="Disable verification of the remote host's TLS certificate",
     action='store_true',
@@ -155,6 +161,12 @@ model_options.add_argument(
     choices=[v.value for v in PythonVersion],
 )
 model_options.add_argument(
+    '--treat-dot-as-module',
+    help='treat dotted module names as modules',
+    action='store_true',
+    default=False,
+)
+model_options.add_argument(
     '--use-schema-description',
     help='Use schema description to populate class docstring',
     action='store_true',
@@ -165,6 +177,19 @@ model_options.add_argument(
     help='use titles as class names of models',
     action='store_true',
     default=None,
+)
+model_options.add_argument(
+    '--use-pendulum',
+    help='use pendulum instead of datetime',
+    action='store_true',
+    default=False,
+)
+model_options.add_argument(
+    '--use-exact-imports',
+    help='import exact types instead of modules, for example: "from .foo import Bar" instead of '
+    '"from . import foo" with "foo.Bar"',
+    action='store_true',
+    default=False,
 )
 
 # ======================================================================================

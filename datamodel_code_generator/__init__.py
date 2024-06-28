@@ -29,6 +29,7 @@ from urllib.parse import ParseResult
 
 import yaml
 
+import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
@@ -58,8 +59,7 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
 
 if TYPE_CHECKING:
 
-    def get_version() -> str:
-        ...
+    def get_version() -> str: ...
 
 else:
 
@@ -300,6 +300,10 @@ def generate(
     custom_file_header_path: Optional[Path] = None,
     custom_formatters: Optional[List[str]] = None,
     custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+    use_pendulum: bool = False,
+    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+    treat_dots_as_module: bool = False,
+    use_exact_imports: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -309,7 +313,9 @@ def generate(
 
         input_text = remote_text_cache.get_or_put(
             input_.geturl(),
-            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls),
+            default_factory=lambda url: get_body(
+                url, http_headers, http_ignore_tls, http_query_parameters
+            ),
         )
     else:
         input_text = None
@@ -456,6 +462,10 @@ def generate(
         known_third_party=data_model_types.known_third_party,
         custom_formatters=custom_formatters,
         custom_formatters_kwargs=custom_formatters_kwargs,
+        use_pendulum=use_pendulum,
+        http_query_parameters=http_query_parameters,
+        treat_dots_as_module=treat_dots_as_module,
+        use_exact_imports=use_exact_imports,
         **kwargs,
     )
 
@@ -525,7 +535,7 @@ def infer_input_type(text: str) -> InputFileType:
 
 
 inferred_message = (
-    'The input file type was determined to be: {}\nThis can be specificied explicitly with the '
+    'The input file type was determined to be: {}\nThis can be specified explicitly with the '
     '`--input-file-type` option.'
 )
 

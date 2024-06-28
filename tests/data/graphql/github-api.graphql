@@ -3398,7 +3398,7 @@ input CheckRunFilter {
   conclusions: [CheckConclusionState!]
 
   """
-  Filters the check runs by this status. Superceded by statuses.
+  Filters the check runs by this status. Superseded by statuses.
   """
   status: CheckStatusState
 
@@ -12265,14 +12265,14 @@ input EnablePullRequestAutoMergeInput {
   clientMutationId: String
 
   """
-  Commit body to use for the commit when the PR is mergable; if omitted, a
+  Commit body to use for the commit when the PR is mergeable; if omitted, a
   default message will be used. NOTE: when merging with a merge queue any input
   value for commit message is ignored.
   """
   commitBody: String
 
   """
-  Commit headline to use for the commit when the PR is mergable; if omitted, a
+  Commit headline to use for the commit when the PR is mergeable; if omitted, a
   default message will be used. NOTE: when merging with a merge queue any input
   value for commit headline is ignored.
   """
@@ -20934,7 +20934,7 @@ type MergeQueueConfiguration {
   minimumEntriesToMerge: Int
 
   """
-  The amount of time in minutes to wait before ignoring the minumum number of
+  The amount of time in minutes to wait before ignoring the minimum number of
   entries in the queue requirement and merging a collection of entries
   """
   minimumEntriesToMergeWaitTime: Int
@@ -21085,7 +21085,7 @@ enum MergeQueueMergingStrategy {
   ALLGREEN
 
   """
-  Failing Entires are allowed to merge if they are with a passing entry.
+  Failing Entries are allowed to merge if they are with a passing entry.
   """
   HEADGREEN
 }
@@ -33912,7 +33912,7 @@ The possible roles of a collaborator on a project.
 """
 enum ProjectV2Roles {
   """
-  The collaborator can view, edit, and maange the settings of the project
+  The collaborator can view, edit, and manage the settings of the project
   """
   ADMIN
 
@@ -39277,7 +39277,7 @@ type ReferencedEvent implements Node {
 }
 
 """
-Any referencable object
+Any referenceable object
 """
 union ReferencedSubject = Issue | PullRequest
 
@@ -54687,12 +54687,12 @@ enum ThreadSubscriptionState {
   IGNORING_THREAD
 
   """
-  The User is not recieving notifications from this thread
+  The User is not receiving notifications from this thread
   """
   NONE
 
   """
-  The User is notified becuase they are watching the list
+  The User is notified because they are watching the list
   """
   SUBSCRIBED_TO_LIST
 

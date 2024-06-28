@@ -87,7 +87,9 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def self_reference(self) -> bool:
-        return isinstance(self.parent, BaseModel) and self.parent.reference.path in {
+        return isinstance(
+            self.parent, BaseModelBase
+        ) and self.parent.reference.path in {
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
 
@@ -111,12 +113,12 @@ class DataModelField(DataModelFieldBase):
                 data_type = data_type.data_types[0]
                 if (
                     data_type.reference
-                    and isinstance(data_type.reference.source, BaseModel)
+                    and isinstance(data_type.reference.source, BaseModelBase)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
                     return f'lambda :[{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}(v) for v in {repr(self.default)}]'
             elif data_type.reference and isinstance(
-                data_type.reference.source, BaseModel
+                data_type.reference.source, BaseModelBase
             ):  # pragma: no cover
                 return f'lambda :{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}({repr(self.default)})'
         return None
@@ -151,7 +153,7 @@ class DataModelField(DataModelFieldBase):
                     )
                     else {
                         k: self._get_strict_field_constraint_value(k, v)
-                        for k, v in self.constraints.dict().items()
+                        for k, v in self.constraints.dict(exclude_unset=True).items()
                     }
                 ),
             }

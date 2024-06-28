@@ -12,6 +12,11 @@ import isort
 
 from datamodel_code_generator.util import load_toml
 
+try:
+    import black.mode
+except ImportError:  # pragma: no cover
+    black.mode = None
+
 
 class PythonVersion(Enum):
     PY_38 = '3.8'
@@ -66,8 +71,7 @@ class PythonVersion(Enum):
 
 if TYPE_CHECKING:
 
-    class _TargetVersion(Enum):
-        ...
+    class _TargetVersion(Enum): ...
 
     BLACK_PYTHON_VERSION: Dict[PythonVersion, _TargetVersion]
 else:
@@ -87,9 +91,8 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
         from typing import Iterable, Tuple, Union
 
         def _find_project_root(
-            srcs: Union[Sequence[str], Iterable[str]]
-        ) -> Union[Tuple[Path, str], Path]:
-            ...
+            srcs: Union[Sequence[str], Iterable[str]],
+        ) -> Union[Tuple[Path, str], Path]: ...
 
     else:
         from black import find_project_root as _find_project_root
@@ -126,9 +129,15 @@ class CodeFormatter:
         if wrap_string_literal is not None:
             experimental_string_processing = wrap_string_literal
         else:
-            experimental_string_processing = config.get(
-                'experimental-string-processing'
-            )
+            if black.__version__ < '24.1.0':  # type: ignore
+                experimental_string_processing = config.get(
+                    'experimental-string-processing'
+                )
+            else:
+                experimental_string_processing = config.get('preview', False) and (
+                    config.get('unstable', False)
+                    or 'string_processing' in config.get('enable-unstable-feature', [])
+                )
 
         if experimental_string_processing is not None:  # pragma: no cover
             if black.__version__.startswith('19.'):  # type: ignore
@@ -136,10 +145,16 @@ class CodeFormatter:
                     f"black doesn't support `experimental-string-processing` option"  # type: ignore
                     f' for wrapping string literal in {black.__version__}'
                 )
-            else:
-                black_kwargs[
-                    'experimental_string_processing'
-                ] = experimental_string_processing
+            elif black.__version__ < '24.1.0':  # type: ignore
+                black_kwargs['experimental_string_processing'] = (
+                    experimental_string_processing
+                )
+            elif experimental_string_processing:
+                black_kwargs['preview'] = True
+                black_kwargs['unstable'] = config.get('unstable', False)
+                black_kwargs['enabled_features'] = {
+                    black.mode.Preview.string_processing
+                }
 
         if TYPE_CHECKING:
             self.black_mode: black.FileMode
@@ -218,8 +233,7 @@ class CodeFormatter:
 
     if TYPE_CHECKING:
 
-        def apply_isort(self, code: str) -> str:
-            ...
+        def apply_isort(self, code: str) -> str: ...
 
     else:
         if isort.__version__.startswith('4.'):

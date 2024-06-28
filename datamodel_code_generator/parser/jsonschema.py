@@ -117,6 +117,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'date-time': Types.date_time,
         'time': Types.time,
         'password': Types.password,
+        'path': Types.path,
         'email': Types.email,
         'idn-email': Types.email,
         'uuid': Types.uuid,
@@ -236,6 +237,7 @@ class JsonSchemaObject(BaseModel):
     allOf: List[JsonSchemaObject] = []
     enum: List[Any] = []
     writeOnly: Optional[bool] = None
+    readOnly: Optional[bool] = None
     properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]] = None
     required: List[str] = []
     ref: Optional[str] = Field(default=None, alias='$ref')
@@ -268,6 +270,8 @@ class JsonSchemaObject(BaseModel):
         def __init__(self, **data: Any) -> None:
             super().__init__(**data)
             self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
+            if 'const' in data.get(self.__extra_key__, {}):
+                self.extras['const'] = data[self.__extra_key__]['const']
 
     @cached_property
     def is_object(self) -> bool:
@@ -346,7 +350,16 @@ DEFAULT_FIELD_KEYS: Set[str] = {
     'default_factory',
 }
 
-EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS) | {
+EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: Set[str] = {
+    'readOnly',
+    'writeOnly',
+}
+
+EXCLUDE_FIELD_KEYS = (
+    set(JsonSchemaObject.get_fields())
+    - DEFAULT_FIELD_KEYS
+    - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
+) | {
     '$id',
     '$ref',
     JsonSchemaObject.__extra_key__,
@@ -356,6 +369,7 @@ EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS) |
 @snooper_to_methods(max_variable_length=None)
 class JsonSchemaParser(Parser):
     SCHEMA_PATHS: ClassVar[List[str]] = ['#/definitions', '#/$defs']
+    SCHEMA_OBJECT_TYPE: ClassVar[Type[JsonSchemaObject]] = JsonSchemaObject
 
     def __init__(
         self,
@@ -423,6 +437,10 @@ class JsonSchemaParser(Parser):
         known_third_party: Optional[List[str]] = None,
         custom_formatters: Optional[List[str]] = None,
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        use_pendulum: bool = False,
+        http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -488,6 +506,10 @@ class JsonSchemaParser(Parser):
             known_third_party=known_third_party,
             custom_formatters=custom_formatters,
             custom_formatters_kwargs=custom_formatters_kwargs,
+            use_pendulum=use_pendulum,
+            http_query_parameters=http_query_parameters,
+            treat_dots_as_module=treat_dots_as_module,
+            use_exact_imports=use_exact_imports,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -501,19 +523,27 @@ class JsonSchemaParser(Parser):
             *self.field_extra_keys_without_x_prefix,
         }
 
+        if self.data_model_field_type.can_have_extra_keys:
+            self.get_field_extra_key: Callable[[str], str] = (
+                lambda key: self.model_resolver.get_valid_field_name_and_alias(key)[0]
+            )
+
+        else:
+            self.get_field_extra_key = lambda key: key
+
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(
+                self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
-                )[0]: v
+                ): v
                 for k, v in obj.extras.items()
             }
         else:
             return {
-                self.model_resolver.get_valid_field_name_and_alias(
+                self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
-                )[0]: v
+                ): v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }
@@ -610,9 +640,9 @@ class JsonSchemaParser(Parser):
 
     def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
         if isinstance(obj.additionalProperties, bool):
-            self.extra_template_data[name][
-                'additionalProperties'
-            ] = obj.additionalProperties
+            self.extra_template_data[name]['additionalProperties'] = (
+                obj.additionalProperties
+            )
 
     def set_title(self, name: str, obj: JsonSchemaObject) -> None:
         if obj.title:
@@ -667,7 +697,7 @@ class JsonSchemaParser(Parser):
                 # }
             else:
                 combined_schemas.append(
-                    JsonSchemaObject.parse_obj(
+                    self.SCHEMA_OBJECT_TYPE.parse_obj(
                         self._deep_merge(
                             base_object,
                             target_attribute.dict(exclude_unset=True, by_alias=True),
@@ -1284,6 +1314,10 @@ class JsonSchemaParser(Parser):
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
             )
+        elif obj.is_array:
+            data_type = self.parse_array_fields(
+                name, obj, get_special_path('array', path)
+            ).data_type
         elif obj.anyOf or obj.oneOf:
             reference = self.model_resolver.add(
                 path, name, loaded=True, class_name=True
@@ -1613,7 +1647,7 @@ class JsonSchemaParser(Parser):
         raw: Dict[str, Any],
         path: List[str],
     ) -> None:
-        self.parse_obj(name, JsonSchemaObject.parse_obj(raw), path)
+        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.parse_obj(raw), path)
 
     def parse_obj(
         self,
@@ -1740,7 +1774,7 @@ class JsonSchemaParser(Parser):
                 # Some jsonschema docs include attribute self to have include version details
                 raw.pop('self', None)
                 # parse $id before parsing $ref
-                root_obj = JsonSchemaObject.parse_obj(raw)
+                root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: Optional[Dict[Any, Any]] = None
                 for schema_path, split_schema_path in self.schema_paths:
@@ -1754,13 +1788,15 @@ class JsonSchemaParser(Parser):
                     definitions = {}
 
                 for key, model in definitions.items():
-                    obj = JsonSchemaObject.parse_obj(model)
+                    obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)
                     self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
-                    self.parse_obj(model_name, JsonSchemaObject.parse_obj(models), path)
+                    self.parse_obj(
+                        model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path
+                    )
                 else:
                     self.parse_obj(obj_name, root_obj, path_parts or ['#'])
                 for key, model in definitions.items():
@@ -1781,7 +1817,7 @@ class JsonSchemaParser(Parser):
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
                         self.parse_obj(
-                            model_name, JsonSchemaObject.parse_obj(models), path
+                            model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path
                         )
                     previous_reserved_refs = reserved_refs
                     reserved_refs = set(self.reserved_refs.get(key) or [])

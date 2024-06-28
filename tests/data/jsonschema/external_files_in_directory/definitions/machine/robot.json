@@ -3,7 +3,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Robot",
   "type": "object",
-  "allOf": [{ "$ref": "../pet.json"}],
+  "allOf": [{ "$ref": "../relative/animal/pet/pet.json"}],
   "properties": {
     "friends": {
      "$ref": "../../person.json"
@@ -15,7 +15,7 @@
       "$ref": "../food.json#/definitions/noodle"
     },
     "pet": {
-      "$ref": "../pet.json"
+      "$ref": "../relative/animal/pet/pet.json"
     }
   }
 }

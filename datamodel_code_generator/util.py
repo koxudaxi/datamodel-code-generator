@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, TypeVar
 
@@ -16,8 +17,12 @@ PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 if TYPE_CHECKING:
     from yaml import SafeLoader
 
-    def load_toml(path: Path) -> Dict[str, Any]:
-        ...
+    Protocol = object
+    runtime_checkable: Callable[..., Any]
+
+    from typing_extensions import Literal
+
+    def load_toml(path: Path) -> Dict[str, Any]: ...
 
 else:
     try:
@@ -39,9 +44,13 @@ else:
             return toml.load(path)
 
 
-SafeLoader.yaml_constructors[
-    'tag:yaml.org,2002:timestamp'
-] = SafeLoader.yaml_constructors['tag:yaml.org,2002:str']
+SafeLoaderTemp = copy.deepcopy(SafeLoader)
+SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
+SafeLoaderTemp.add_constructor(
+    'tag:yaml.org,2002:timestamp',
+    SafeLoaderTemp.yaml_constructors['tag:yaml.org,2002:str'],
+)
+SafeLoader = SafeLoaderTemp
 
 Model = TypeVar('Model', bound=_BaseModel)
 

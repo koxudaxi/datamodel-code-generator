@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import (
     Any,
@@ -59,8 +60,41 @@ class DataModelField(DataModelFieldV1):
         'max_length',
         'pattern',
     }
+    _DEFAULT_FIELD_KEYS: ClassVar[Set[str]] = {
+        'default',
+        'default_factory',
+        'alias',
+        'alias_priority',
+        'validation_alias',
+        'serialization_alias',
+        'title',
+        'description',
+        'examples',
+        'exclude',
+        'discriminator',
+        'json_schema_extra',
+        'frozen',
+        'validate_default',
+        'repr',
+        'init_var',
+        'kw_only',
+        'pattern',
+        'strict',
+        'gt',
+        'ge',
+        'lt',
+        'le',
+        'multiple_of',
+        'allow_inf_nan',
+        'max_digits',
+        'decimal_places',
+        'min_length',
+        'max_length',
+        'union_mode',
+    }
     constraints: Optional[Constraints] = None
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
+    can_have_extra_keys: ClassVar[bool] = False
 
     @field_validator('extras')
     def validate_extras(cls, values: Any) -> Dict[str, Any]:
@@ -79,10 +113,9 @@ class DataModelField(DataModelFieldV1):
         self.const = True
         self.nullable = False
         const = self.extras['const']
-        if self.data_type.type == 'str' and isinstance(
-            const, str
-        ):  # pragma: no cover # Literal supports only str
-            self.data_type = self.data_type.__class__(literals=[const])
+        self.data_type = self.data_type.__class__(literals=[const])
+        if not self.default:
+            self.default = const
 
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
@@ -92,10 +125,19 @@ class DataModelField(DataModelFieldV1):
         # unique_items is not supported in pydantic 2.0
         data.pop('unique_items', None)
 
+        # **extra is not supported in pydantic 2.0
+        json_schema_extra = {
+            k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS
+        }
+        if json_schema_extra:
+            data['json_schema_extra'] = json_schema_extra
+            for key in json_schema_extra.keys():
+                data.pop(key)
+
     def _process_annotated_field_arguments(
         self, field_arguments: List[str]
     ) -> List[str]:
-        if not self.required:
+        if not self.required or self.const:
             if self.use_default_kwarg:
                 return [
                     f'default={repr(self.default)}',
@@ -167,6 +209,16 @@ class BaseModel(BaseModelBase):
         for data_type in self.all_data_types:
             if data_type.is_custom_type:
                 config_parameters['arbitrary_types_allowed'] = True
+                break
+
+        for field in self.fields:
+            # Check if a regex pattern uses lookarounds.
+            # Depending on the generation configuration, the pattern may end up in two different places.
+            pattern = (
+                isinstance(field.constraints, Constraints) and field.constraints.pattern
+            ) or (field.data_type.kwargs or {}).get('pattern')
+            if pattern and re.search(r'\(\?<?[=!]', pattern):
+                config_parameters['regex_engine'] = '"python-re"'
                 break
 
         if isinstance(self.extra_template_data.get('config'), dict):

@@ -14,15 +14,20 @@ class Extras(BaseModel):
         None,
         description='normal key',
         examples=['example'],
-        field_comment='comment',
-        field_exclude=123,
-        field_invalid_key_2='efg',
-        invalid_key_1='abc',
-        key1=123,
-        key2=456,
-        register_='hij',
+        json_schema_extra={
+            'key1': 123,
+            'key2': 456,
+            '$exclude': 123,
+            'invalid-key-1': 'abc',
+            '-invalid+key_2': 'efg',
+            '$comment': 'comment',
+            'register': 'hij',
+            'schema': 'klm',
+            'x-abc': True,
+            'readOnly': True,
+        },
         repr=True,
-        schema_='klm',
-        x_abc=True,
     )
-    age: Optional[int] = Field(None, example=12, examples=[13, 20])
+    age: Optional[int] = Field(
+        None, examples=[13, 20], json_schema_extra={'example': 12, 'writeOnly': True}
+    )

@@ -23107,7 +23107,7 @@ Reactor: TypeAlias = Union[
 ]
 
 
-# Any referencable object
+# Any referenceable object
 ReferencedSubject: TypeAlias = Union[
     'Issue',
     'PullRequest',
