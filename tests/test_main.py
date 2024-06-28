@@ -604,9 +604,7 @@ def test_main_openapi_no_file(capsys: CaptureFixture) -> None:
         main(['--input', str(input_filename)])
 
     captured = capsys.readouterr()
-    assert (
-        captured.out == (EXPECTED_MAIN_PATH / 'openapi' / 'no_file.py').read_text()
-    )
+    assert captured.out == (EXPECTED_MAIN_PATH / 'openapi' / 'no_file.py').read_text()
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
@@ -4553,9 +4551,7 @@ def test_openapi_special_yaml_keywords(mocker):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_MAIN_PATH / 'openapi' / 'special_yaml_keywords.py'
-            ).read_text()
+            == (EXPECTED_MAIN_PATH / 'openapi' / 'special_yaml_keywords.py').read_text()
         )
     mock_prance.assert_called_once()
 
@@ -5501,7 +5497,8 @@ def test_main_openapi_reference_same_hierarchy_directory():
                 output_file.read_text()
                 == (
                     EXPECTED_MAIN_PATH
-                    / 'openapi' / 'reference_same_hierarchy_directory.py'
+                    / 'openapi'
+                    / 'reference_same_hierarchy_directory.py'
                 ).read_text()
             )
 
@@ -6297,7 +6294,8 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints():
             output_file.read_text()
             == (
                 EXPECTED_MAIN_PATH
-                / 'openapi' / 'msgspec_use_annotated_with_field_constraints.py'
+                / 'openapi'
+                / 'msgspec_use_annotated_with_field_constraints.py'
             ).read_text()
         )
 
