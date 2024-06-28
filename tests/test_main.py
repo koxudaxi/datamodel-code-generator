@@ -6916,3 +6916,28 @@ def test_one_of_with_sub_schema_array_item():
                 / 'output.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_jsonschema_with_custom_formatters():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'person.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--custom-formatters',
+                'tests.data.python.custom_formatters.add_comment'
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'main_jsonschema_with_custom_formatters' / 'output.py').read_text()
+        )
+
+
