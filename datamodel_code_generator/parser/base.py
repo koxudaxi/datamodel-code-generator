@@ -1007,7 +1007,7 @@ class Parser(ABC):
                                 root_type_field.constraints, model_field.constraints
                             )
                         if isinstance(  # no: pragma
-                            root_type_field,
+                            root_type_field,  # no: pragma
                             pydantic_model.DataModelField,  # no: pragma
                         ) and not model_field.extras.get('discriminator'):  # no: pragma
                             discriminator = root_type_field.extras.get('discriminator')

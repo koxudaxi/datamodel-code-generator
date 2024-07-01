@@ -1315,7 +1315,7 @@ class JsonSchemaParser(Parser):
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
             )
-        elif obj.is_array:
+        elif obj.is_array:  # no: pragma
             data_type = self.parse_array_fields(
                 name, obj, get_special_path('array', path)
             ).data_type
