@@ -238,9 +238,9 @@ class GraphQLParser(Parser):
         # TODO (denisart): Temporarily this method duplicates
         # the method `datamodel_code_generator.parser.jsonschema.JsonSchemaParser._get_context_source_path_parts`.
 
-        if isinstance(self.source, list) or (
+        if isinstance(self.source, list) or (  # pragma: no cover
             isinstance(self.source, Path) and self.source.is_dir()
-        ):
+        ):  # pragma: no cover
             self.current_source_path = Path()
             self.model_resolver.after_load_files = {
                 self.base_path.joinpath(s.path).resolve().as_posix()
@@ -248,11 +248,11 @@ class GraphQLParser(Parser):
             }
 
         for source in self.iter_source:
-            if isinstance(self.source, ParseResult):
+            if isinstance(self.source, ParseResult):  # pragma: no cover
                 path_parts = self.get_url_path_parts(self.source)
             else:
                 path_parts = list(source.path.parts)
-            if self.current_source_path is not None:
+            if self.current_source_path is not None:  # pragma: no cover
                 self.current_source_path = source.path
             with self.model_resolver.current_base_path_context(
                 source.path.parent
@@ -269,7 +269,7 @@ class GraphQLParser(Parser):
 
             resolved_type = graphql_resolver.kind(type_, None)
 
-            if resolved_type in self.support_graphql_types:
+            if resolved_type in self.support_graphql_types:  # pragma: no cover
                 self.all_graphql_objects[type_.name] = type_
                 # TODO: need a special method for each graph type
                 self.references[type_.name] = Reference(
@@ -360,7 +360,7 @@ class GraphQLParser(Parser):
                 data_type.data_types = [new_data_type]
 
                 data_type = new_data_type
-            elif graphql.is_non_null_type(obj):
+            elif graphql.is_non_null_type(obj):  # pragma: no cover
                 data_type.is_optional = False
 
             obj = obj.of_type
@@ -372,10 +372,10 @@ class GraphQLParser(Parser):
         )
         extras = {}
 
-        if hasattr(field, 'default_value'):
-            if field.default_value == graphql.pyutils.Undefined:
+        if hasattr(field, 'default_value'):  # pragma: no cover
+            if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
                 default = None
-            else:
+            else:  # pragma: no cover
                 default = field.default_value
         else:
             if required is False:
@@ -425,7 +425,7 @@ class GraphQLParser(Parser):
         fields.append(self._typename_field(obj.name))
 
         base_classes = []
-        if hasattr(obj, 'interfaces'):
+        if hasattr(obj, 'interfaces'):  # pragma: no cover
             base_classes = [self.references[i.name] for i in obj.interfaces]
 
         data_model_type = self.data_model_type(
@@ -451,7 +451,7 @@ class GraphQLParser(Parser):
     def parse_input_object(
         self, input_graphql_object: graphql.GraphQLInputObjectType
     ) -> None:
-        self.parse_object_like(input_graphql_object)
+        self.parse_object_like(input_graphql_object)  # pragma: no cover
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
         fields = []

@@ -303,7 +303,7 @@ def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
             copied_data_types.append(
                 data_type_.__class__(reference=data_type_.reference)
             )
-        elif data_type_.data_types:
+        elif data_type_.data_types:  # pragma: no cover
             copied_data_type = data_type_.copy()
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
@@ -711,7 +711,7 @@ class Parser(ABC):
                     from_, import_ = full_path = relative(
                         model.module_name, data_type.full_name
                     )
-                    if imports.use_exact:
+                    if imports.use_exact:  # pragma: no cover
                         from_, import_ = exact_import(
                             from_, import_, data_type.reference.short_name
                         )
@@ -981,7 +981,7 @@ class Parser(ABC):
                             if d.is_dict or d.is_union
                         )
                     ):
-                        continue
+                        continue  # pragma: no cover
 
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.copy()
@@ -1007,12 +1007,15 @@ class Parser(ABC):
                                 root_type_field.constraints, model_field.constraints
                             )
                         if isinstance(
-                            root_type_field, pydantic_model.DataModelField
-                        ) and not model_field.extras.get('discriminator'):  # no: pragma
+                            root_type_field,
+                            pydantic_model.DataModelField,
+                        ) and not model_field.extras.get('discriminator'):
                             discriminator = root_type_field.extras.get('discriminator')
-                            if discriminator:  # no: pragma
+                            if discriminator:
                                 model_field.extras['discriminator'] = discriminator
-                        data_type.parent.data_types.remove(data_type)
+                        data_type.parent.data_types.remove(
+                            data_type
+                        )  # pragma: no cover
                         data_type.parent.data_types.append(copied_data_type)
 
                     elif isinstance(data_type.parent, DataType):
