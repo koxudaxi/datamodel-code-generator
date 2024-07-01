@@ -422,9 +422,9 @@ class Parser(ABC):
         self.base_class: Optional[str] = base_class
         self.target_python_version: PythonVersion = target_python_version
         self.results: List[DataModel] = []
-        self.dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = (
-            dump_resolve_reference_action
-        )
+        self.dump_resolve_reference_action: Optional[
+            Callable[[Iterable[str]], str]
+        ] = dump_resolve_reference_action
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
@@ -447,9 +447,9 @@ class Parser(ABC):
         self.use_generic_container_types: bool = use_generic_container_types
         self.use_union_operator: bool = use_union_operator
         self.enable_faux_immutability: bool = enable_faux_immutability
-        self.custom_class_name_generator: Optional[Callable[[str], str]] = (
-            custom_class_name_generator
-        )
+        self.custom_class_name_generator: Optional[
+            Callable[[str], str]
+        ] = custom_class_name_generator
         self.field_extra_keys: Set[str] = field_extra_keys or set()
         self.field_extra_keys_without_x_prefix: Set[str] = (
             field_extra_keys_without_x_prefix or set()
@@ -504,9 +504,9 @@ class Parser(ABC):
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
         self.http_headers: Optional[Sequence[Tuple[str, str]]] = http_headers
-        self.http_query_parameters: Optional[Sequence[Tuple[str, str]]] = (
-            http_query_parameters
-        )
+        self.http_query_parameters: Optional[
+            Sequence[Tuple[str, str]]
+        ] = http_query_parameters
         self.http_ignore_tls: bool = http_ignore_tls
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
@@ -586,9 +586,9 @@ class Parser(ABC):
 
     def __delete_duplicate_models(self, models: List[DataModel]) -> None:
         model_class_names: Dict[str, DataModel] = {}
-        model_to_duplicate_models: DefaultDict[DataModel, List[DataModel]] = (
-            defaultdict(list)
-        )
+        model_to_duplicate_models: DefaultDict[
+            DataModel, List[DataModel]
+        ] = defaultdict(list)
         for model in models[:]:
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
@@ -1006,7 +1006,7 @@ class Parser(ABC):
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-                        if isinstance(
+                        if isinstance(  # no: pragma
                             root_type_field, pydantic_model.DataModelField
                         ) and not model_field.extras.get('discriminator'):  # no: pragma
                             discriminator = root_type_field.extras.get('discriminator')

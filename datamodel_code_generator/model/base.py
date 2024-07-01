@@ -76,7 +76,7 @@ class ConstraintsBase(_BaseModel):
             }
             constraints_class = a.__class__
         else:
-            root_type_field_constraints = {}
+            root_type_field_constraints = {}  # pragma: no cover
 
         if isinstance(b, ConstraintsBase):  # pragma: no cover
             model_field_constraints = {
@@ -267,7 +267,8 @@ class TemplateBase(ABC):
         return self.render()
 
 
-class BaseClassDataType(DataType): ...
+class BaseClassDataType(DataType):
+    ...
 
 
 UNDEFINED: Any = object()

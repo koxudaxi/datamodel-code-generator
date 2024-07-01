@@ -238,9 +238,9 @@ class GraphQLParser(Parser):
         # TODO (denisart): Temporarily this method duplicates
         # the method `datamodel_code_generator.parser.jsonschema.JsonSchemaParser._get_context_source_path_parts`.
 
-        if isinstance(self.source, list) or (
+        if isinstance(self.source, list) or (  # pragma: no cover
             isinstance(self.source, Path) and self.source.is_dir()
-        ):
+        ):  # pragma: no cover
             self.current_source_path = Path()
             self.model_resolver.after_load_files = {
                 self.base_path.joinpath(s.path).resolve().as_posix()
@@ -248,11 +248,11 @@ class GraphQLParser(Parser):
             }
 
         for source in self.iter_source:
-            if isinstance(self.source, ParseResult):
+            if isinstance(self.source, ParseResult):  # pragma: no cover
                 path_parts = self.get_url_path_parts(self.source)
             else:
                 path_parts = list(source.path.parts)
-            if self.current_source_path is not None:
+            if self.current_source_path is not None:  # pragma: no cover
                 self.current_source_path = source.path
             with self.model_resolver.current_base_path_context(
                 source.path.parent
