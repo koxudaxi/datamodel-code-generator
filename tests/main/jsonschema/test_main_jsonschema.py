@@ -1,5 +1,5 @@
-import shutil
 import json
+import shutil
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -3307,6 +3307,7 @@ def test_one_of_with_sub_schema_array_item():
             ).read_text()
         )
 
+
 @freeze_time('2019-07-26')
 def test_main_jsonschema_with_custom_formatters():
     with TemporaryDirectory() as output_dir:
@@ -3337,8 +3338,5 @@ def test_main_jsonschema_with_custom_formatters():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_JSON_SCHEMA_PATH
-                / 'custom_formatters.py'
-            ).read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / 'custom_formatters.py').read_text()
         )
