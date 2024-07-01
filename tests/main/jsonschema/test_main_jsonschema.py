@@ -3363,5 +3363,3 @@ def test_main_imports_correct():
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
-
-
