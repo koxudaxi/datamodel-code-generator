@@ -278,7 +278,7 @@ These OSS projects use datamodel-code-generator to generate many models.
 See the following linked projects for real world examples and inspiration.
 
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
-  - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
+  - *[Generate Python, Java/Kotlin, and Typescript protocol models](https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin)*
 - [apache/iceberg](https://github.com/apache/iceberg)
   - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)* 
     *[`make generate`](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34)*

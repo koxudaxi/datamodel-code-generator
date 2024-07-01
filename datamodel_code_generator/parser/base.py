@@ -855,11 +855,16 @@ class Parser(ABC):
                                 required=True,
                             )
                         )
-                    imports.append(
+                    literal = (
                         IMPORT_LITERAL
                         if self.target_python_version.has_literal_type
                         else IMPORT_LITERAL_BACKPORT
                     )
+                    has_imported_literal = any(
+                        literal == import_ for import_ in imports
+                    )
+                    if has_imported_literal:  # pragma: no cover
+                        imports.append(literal)
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
@@ -1334,12 +1339,28 @@ class Parser(ABC):
                 Processed(module, models, init, imports, scoped_model_resolver)
             )
 
+        for processed_model in processed_models:
+            for model in processed_model.models:
+                processed_model.imports.append(model.imports)
+
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
             if unused_model in models:  # pragma: no cover
                 imports = module_to_import[module]
                 imports.remove(unused_model.imports)
                 models.remove(unused_model)
+
+        for processed_model in processed_models:
+            # postprocess imports to remove unused imports.
+            model_code = str('\n'.join([str(m) for m in processed_model.models]))
+            unused_imports = [
+                (from_, import_)
+                for from_, imports_ in processed_model.imports.items()
+                for import_ in imports_
+                if import_ not in model_code
+            ]
+            for from_, import_ in unused_imports:
+                processed_model.imports.remove(Import(from_=from_, import_=import_))
 
         for module, models, init, imports, scoped_model_resolver in processed_models:
             # process after removing unused models
