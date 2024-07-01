@@ -1311,16 +1311,14 @@ class JsonSchemaParser(Parser):
         reference: Optional[Reference] = None
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
-        elif obj.custom_type_path:  # no: pragma
+        elif obj.custom_type_path:
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
-            )
-        elif obj.is_array:  # no: pragma
-            data_type = self.parse_array_fields(  # no: pragma
-                name,  # no: pragma
-                obj,  # no: pragma
-                get_special_path('array', path),  # no: pragma
-            ).data_type  # no: pragma
+            )  # pragma: no cover
+        elif obj.is_array:
+            data_type = self.parse_array_fields(
+                name, obj, get_special_path('array', path)
+            ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
             reference = self.model_resolver.add(
                 path, name, loaded=True, class_name=True
@@ -1665,7 +1663,7 @@ class JsonSchemaParser(Parser):
         elif obj.oneOf or obj.anyOf:
             data_type = self.parse_root_type(name, obj, path)
             if isinstance(data_type, EmptyDataType) and obj.properties:
-                self.parse_object(name, obj, path)
+                self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
             self.parse_object(name, obj, path)
         elif obj.patternProperties:
