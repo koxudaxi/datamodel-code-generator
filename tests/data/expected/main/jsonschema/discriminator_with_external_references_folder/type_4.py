@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+from typing_extensions import Literal
 
 
 class Type4(BaseModel):
