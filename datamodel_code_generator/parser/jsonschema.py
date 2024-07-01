@@ -1332,9 +1332,9 @@ class JsonSchemaParser(Parser):
                     name, obj, get_special_path('oneOf', path)
                 )
 
-            if len(data_types) > 1:
+            if len(data_types) > 1:  # pragma: no cover
                 data_type = self.data_type(data_types=data_types)
-            elif not data_types:
+            elif not data_types:  # pragma: no cover
                 return EmptyDataType()
             else:  # pragma: no cover
                 data_type = data_types[0]
