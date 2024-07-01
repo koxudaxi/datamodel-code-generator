@@ -1316,9 +1316,11 @@ class JsonSchemaParser(Parser):
                 obj.custom_type_path, is_custom_type=True
             )
         elif obj.is_array:  # no: pragma
-            data_type = self.parse_array_fields(
-                name, obj, get_special_path('array', path)
-            ).data_type
+            data_type = self.parse_array_fields(  # no: pragma
+                name,
+                obj,
+                get_special_path('array', path),  # no: pragma
+            ).data_type  # no: pragma
         elif obj.anyOf or obj.oneOf:
             reference = self.model_resolver.add(
                 path, name, loaded=True, class_name=True
