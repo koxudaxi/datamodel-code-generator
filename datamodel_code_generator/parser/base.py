@@ -1001,24 +1001,21 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent.is_list:  # no: pragma
+                    elif data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-                        if isinstance(  # no: pragma
-                            root_type_field,  # no: pragma
-                            pydantic_model.DataModelField,  # no: pragma
-                        ):  # no: pragma
-                            if not model_field.extras.get(  # no: pragma
-                                'discriminator'
-                            ):  # no: pragma
-                                discriminator = root_type_field.extras.get(
-                                    'discriminator'
-                                )
-                                if discriminator:  # no: pragma
-                                    model_field.extras['discriminator'] = discriminator
-                        data_type.parent.data_types.remove(data_type)
+                        if isinstance(
+                            root_type_field,
+                            pydantic_model.DataModelField,
+                        ) and not model_field.extras.get('discriminator'):
+                            discriminator = root_type_field.extras.get('discriminator')
+                            if discriminator:
+                                model_field.extras['discriminator'] = discriminator
+                        data_type.parent.data_types.remove(
+                            data_type
+                        )  # pragma: no cover
                         data_type.parent.data_types.append(copied_data_type)
 
                     elif isinstance(data_type.parent, DataType):
