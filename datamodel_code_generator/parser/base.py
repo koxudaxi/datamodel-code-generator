@@ -1009,8 +1009,8 @@ class Parser(ABC):
                         if isinstance(  # no: pragma
                             root_type_field,  # no: pragma
                             pydantic_model.DataModelField,  # no: pragma
-                        ):
-                            if not model_field.extras.get(
+                        ):  # no: pragma
+                            if not model_field.extras.get(  # no: pragma
                                 'discriminator'
                             ):  # no: pragma
                                 discriminator = root_type_field.extras.get(
