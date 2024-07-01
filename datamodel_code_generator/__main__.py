@@ -429,7 +429,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         with config.custom_formatters_kwargs as data:
             try:
                 custom_formatters_kwargs = json.load(data)
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError as e:  # pragma: no cover
                 print(
                     f'Unable to load custom_formatters_kwargs mapping: {e}',
                     file=sys.stderr,
@@ -438,7 +438,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         if not isinstance(custom_formatters_kwargs, dict) or not all(
             isinstance(k, str) and isinstance(v, str)
             for k, v in custom_formatters_kwargs.items()
-        ):
+        ):  # pragma: no cover
             print(
                 'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
                 file=sys.stderr,
