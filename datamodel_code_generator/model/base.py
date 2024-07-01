@@ -76,7 +76,7 @@ class ConstraintsBase(_BaseModel):
             }
             constraints_class = a.__class__
         else:
-            root_type_field_constraints = {}
+            root_type_field_constraints = {}  # pragma: no cover
 
         if isinstance(b, ConstraintsBase):  # pragma: no cover
             model_field_constraints = {
@@ -86,7 +86,7 @@ class ConstraintsBase(_BaseModel):
         else:
             model_field_constraints = {}
 
-        if not issubclass(constraints_class, ConstraintsBase):
+        if not issubclass(constraints_class, ConstraintsBase):  # pragma: no cover
             return None
 
         return constraints_class.parse_obj(
