@@ -1317,8 +1317,8 @@ class JsonSchemaParser(Parser):
             )
         elif obj.is_array:  # no: pragma
             data_type = self.parse_array_fields(  # no: pragma
-                name,
-                obj,
+                name,  # no: pragma
+                obj,  # no: pragma
                 get_special_path('array', path),  # no: pragma
             ).data_type  # no: pragma
         elif obj.anyOf or obj.oneOf:

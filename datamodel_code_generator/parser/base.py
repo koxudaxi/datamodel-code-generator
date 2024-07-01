@@ -1001,7 +1001,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent.is_list:
+                    elif data_type.parent.is_list:  # no: pragma
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
