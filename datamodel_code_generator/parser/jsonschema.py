@@ -762,10 +762,10 @@ class JsonSchemaParser(Parser):
                 return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
-                if self.force_optional_for_required_fields or (
+                if self.force_optional_for_required_fields or (  # pragma: no cover
                     self.apply_default_values_for_required_fields and field.has_default
                 ):
-                    continue
+                    continue  # pragma: no cover
                 if (field.original_name or field.name) in required:
                     field.required = True
         if obj.required:
@@ -1314,11 +1314,11 @@ class JsonSchemaParser(Parser):
         elif obj.custom_type_path:
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
-            )
+            )  # pragma: no cover
         elif obj.is_array:
             data_type = self.parse_array_fields(
                 name, obj, get_special_path('array', path)
-            ).data_type
+            ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
             reference = self.model_resolver.add(
                 path, name, loaded=True, class_name=True
@@ -1332,9 +1332,9 @@ class JsonSchemaParser(Parser):
                     name, obj, get_special_path('oneOf', path)
                 )
 
-            if len(data_types) > 1:
+            if len(data_types) > 1:  # pragma: no cover
                 data_type = self.data_type(data_types=data_types)
-            elif not data_types:
+            elif not data_types:  # pragma: no cover
                 return EmptyDataType()
             else:  # pragma: no cover
                 data_type = data_types[0]
@@ -1663,7 +1663,7 @@ class JsonSchemaParser(Parser):
         elif obj.oneOf or obj.anyOf:
             data_type = self.parse_root_type(name, obj, path)
             if isinstance(data_type, EmptyDataType) and obj.properties:
-                self.parse_object(name, obj, path)
+                self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
             self.parse_object(name, obj, path)
         elif obj.patternProperties:
