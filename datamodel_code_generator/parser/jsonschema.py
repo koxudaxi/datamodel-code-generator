@@ -1311,7 +1311,7 @@ class JsonSchemaParser(Parser):
         reference: Optional[Reference] = None
         if obj.ref:
             data_type: DataType = self.get_ref_data_type(obj.ref)
-        elif obj.custom_type_path:
+        elif obj.custom_type_path:  # no: pragma
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
             )
