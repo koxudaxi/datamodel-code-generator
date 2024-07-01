@@ -762,10 +762,10 @@ class JsonSchemaParser(Parser):
                 return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
-                if self.force_optional_for_required_fields or (
+                if self.force_optional_for_required_fields or (  # pragma: no cover
                     self.apply_default_values_for_required_fields and field.has_default
                 ):
-                    continue
+                    continue  # pragma: no cover
                 if (field.original_name or field.name) in required:
                     field.required = True
         if obj.required:

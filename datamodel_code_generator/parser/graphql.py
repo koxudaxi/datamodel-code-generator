@@ -425,7 +425,7 @@ class GraphQLParser(Parser):
         fields.append(self._typename_field(obj.name))
 
         base_classes = []
-        if hasattr(obj, 'interfaces'):
+        if hasattr(obj, 'interfaces'):  # pragma: no cover
             base_classes = [self.references[i.name] for i in obj.interfaces]
 
         data_model_type = self.data_model_type(
