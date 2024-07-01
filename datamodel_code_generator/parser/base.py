@@ -1009,10 +1009,15 @@ class Parser(ABC):
                         if isinstance(  # no: pragma
                             root_type_field,  # no: pragma
                             pydantic_model.DataModelField,  # no: pragma
-                        ) and not model_field.extras.get('discriminator'):  # no: pragma
-                            discriminator = root_type_field.extras.get('discriminator')
-                            if discriminator:  # no: pragma
-                                model_field.extras['discriminator'] = discriminator
+                        ):
+                            if not model_field.extras.get(
+                                'discriminator'
+                            ):  # no: pragma
+                                discriminator = root_type_field.extras.get(
+                                    'discriminator'
+                                )
+                                if discriminator:  # no: pragma
+                                    model_field.extras['discriminator'] = discriminator
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
 
