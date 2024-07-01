@@ -860,11 +860,10 @@ class Parser(ABC):
                         if self.target_python_version.has_literal_type
                         else IMPORT_LITERAL_BACKPORT
                     )
-                    has_imported_literal = False
-                    for import_ in imports:
-                        if literal == import_:
-                            has_imported_literal = True
-                    if has_imported_literal:
+                    has_imported_literal = any(
+                        literal == import_ for import_ in imports
+                    )
+                    if has_imported_literal:  # pragma: no cover
                         imports.append(literal)
 
     @classmethod
@@ -1340,16 +1339,6 @@ class Parser(ABC):
         for processed_model in processed_models:
             for model in processed_model.models:
                 processed_model.imports.append(model.imports)
-                try:
-                    if (
-                        model.extra_template_data.get('config', False).__name__
-                        == 'ConfigDict'
-                    ):
-                        processed_model.imports.append(
-                            Import.from_full_path('pydantic.ConfigDict')
-                        )
-                except AttributeError:
-                    continue
 
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
@@ -1360,13 +1349,14 @@ class Parser(ABC):
 
         for processed_model in processed_models:
             # postprocess imports to remove unused imports.
-            to_del = set()
-            model = '\n'.join([str(m) for m in processed_model.models])
-            for k, v in processed_model.imports.items():
-                for i in v:
-                    if i not in str(model):
-                        to_del.add((k, i))
-            for from_, import_ in to_del:
+            model_code = str('\n'.join([str(m) for m in processed_model.models]))
+            unused_imports = [
+                (from_, import_)
+                for from_, imports_ in processed_model.imports.items()
+                for import_ in imports_
+                if import_ not in model_code
+            ]
+            for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))
 
         for module, models, init, imports, scoped_model_resolver in processed_models:
