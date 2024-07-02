@@ -6,6 +6,7 @@ Main function.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import signal
 import sys
@@ -330,7 +331,14 @@ class Config(BaseModel):
 
         parsed_args = Config.parse_obj(set_args)
         for field_name in set_args:
-            setattr(self, field_name, getattr(parsed_args, field_name))
+            arg_value = getattr(parsed_args, field_name)
+            config_value = getattr(self, field_name, dataclasses.MISSING)
+            if config_value is not dataclasses.MISSING:
+                if isinstance(config_value, Sequence):
+                    arg_value = config_value + arg_value
+                elif isinstance(config_value, dict):
+                    arg_value.update(config_value)
+            setattr(self, field_name, arg_value)
 
 
 def main(args: Optional[Sequence[str]] = None) -> Exit:
