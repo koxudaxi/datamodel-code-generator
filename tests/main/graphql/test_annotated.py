@@ -123,6 +123,7 @@ def test_annotated_use_union_operator():
             == (EXPECTED_GRAPHQL_PATH / 'annotated_use_union_operator.py').read_text()
         )
 
+
 @freeze_time('2019-07-26')
 def test_annotated_field_aliases():
     with TemporaryDirectory() as output_dir:
