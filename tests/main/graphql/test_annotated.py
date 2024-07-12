@@ -122,3 +122,28 @@ def test_annotated_use_union_operator():
             output_file.read_text()
             == (EXPECTED_GRAPHQL_PATH / 'annotated_use_union_operator.py').read_text()
         )
+
+@freeze_time('2019-07-26')
+def test_annotated_field_aliases():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(GRAPHQL_DATA_PATH / 'field-aliases.graphql'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'graphql',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--use-annotated',
+                '--aliases',
+                str(GRAPHQL_DATA_PATH / 'field-aliases.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_GRAPHQL_PATH / 'annotated_field_aliases.py').read_text()
+        )

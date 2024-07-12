@@ -146,17 +146,7 @@ class DataModelField(DataModelFieldV1):
         self,
         field_arguments: List[str],
     ) -> List[str]:
-        if self.required and not self.const or self.use_annotated:
-            return field_arguments
-
-        if self.use_default_kwarg:  # pragma: no cover
-            return [
-                f'default={repr(self.default)}',
-                *field_arguments,
-            ]
-
-        # TODO: Allow '=' style default for v1?
-        return [f'{repr(self.default)}', *field_arguments]
+        return field_arguments
 
 
 class ConfigAttribute(NamedTuple):
