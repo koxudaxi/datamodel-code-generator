@@ -345,6 +345,8 @@ def test_main_graphql_annotated():
                 str(output_file),
                 '--input-file-type',
                 'graphql',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
                 '--use-annotated',
             ]
         )

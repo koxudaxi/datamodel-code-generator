@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 
 class MyObjItem(BaseModel):
-    items: Optional[List[Any]] = None
+    items: Optional[List[Any]]
 
 
 class Model(BaseModel):
