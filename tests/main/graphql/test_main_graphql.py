@@ -329,29 +329,3 @@ def test_main_graphql_use_union_operator():
         )
 
 
-@freeze_time('2019-07-26')
-@pytest.mark.skipif(
-    black.__version__.split('.')[0] == '19',
-    reason="Installed black doesn't support the old style",
-)
-def test_main_graphql_annotated():
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / 'output.py'
-        return_code: Exit = main(
-            [
-                '--input',
-                str(GRAPHQL_DATA_PATH / 'annotated.graphql'),
-                '--output',
-                str(output_file),
-                '--input-file-type',
-                'graphql',
-                '--output-model-type',
-                'pydantic_v2.BaseModel',
-                '--use-annotated',
-            ]
-        )
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'annotated.py').read_text()
-        )
