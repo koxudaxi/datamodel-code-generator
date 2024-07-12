@@ -327,5 +327,3 @@ def test_main_graphql_use_union_operator():
             output_file.read_text()
             == (EXPECTED_GRAPHQL_PATH / 'use_union_operator.py').read_text()
         )
-
-

@@ -42,6 +42,7 @@ def test_annotated():
             == (EXPECTED_GRAPHQL_PATH / 'annotated.py').read_text()
         )
 
+
 @freeze_time('2019-07-26')
 def test_annotated_use_standard_collections():
     with TemporaryDirectory() as output_dir:
@@ -63,8 +64,11 @@ def test_annotated_use_standard_collections():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'annotated_use_standard_collections.py').read_text()
+            == (
+                EXPECTED_GRAPHQL_PATH / 'annotated_use_standard_collections.py'
+            ).read_text()
         )
+
 
 @freeze_time('2019-07-26')
 def test_annotated_use_standard_collections_use_union_operator():
@@ -88,8 +92,12 @@ def test_annotated_use_standard_collections_use_union_operator():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'annotated_use_standard_collections_use_union_operator.py').read_text()
+            == (
+                EXPECTED_GRAPHQL_PATH
+                / 'annotated_use_standard_collections_use_union_operator.py'
+            ).read_text()
         )
+
 
 @freeze_time('2019-07-26')
 def test_annotated_use_union_operator():
@@ -114,4 +122,3 @@ def test_annotated_use_union_operator():
             output_file.read_text()
             == (EXPECTED_GRAPHQL_PATH / 'annotated_use_union_operator.py').read_text()
         )
-
