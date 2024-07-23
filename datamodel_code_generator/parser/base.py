@@ -664,7 +664,7 @@ class Parser(ABC):
         for model in models:
             class_name: str = model.class_name
             generated_name: str = scoped_model_resolver.add(
-                model.path, class_name, unique=True, class_name=True
+                [model.path], class_name, unique=True, class_name=True
             ).name
             if class_name != generated_name:
                 model.class_name = generated_name
@@ -686,7 +686,7 @@ class Parser(ABC):
         init: bool,
     ) -> None:
         for model in models:
-            scoped_model_resolver.add(model.path, model.class_name)
+            scoped_model_resolver.add([model.path], model.class_name)
         for model in models:
             before_import = model.imports
             imports.append(before_import)
