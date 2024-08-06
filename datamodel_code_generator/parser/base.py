@@ -556,6 +556,8 @@ class Parser(ABC):
             additional_imports = []
 
         for additional_import_string in additional_imports:
+            if additional_import_string is None:
+                continue
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
 
