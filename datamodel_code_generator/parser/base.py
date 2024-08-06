@@ -556,6 +556,8 @@ class Parser(ABC):
             additional_imports = []
 
         for additional_import_string in additional_imports:
+            if additional_import_string is None:
+                continue
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
 
@@ -664,7 +666,7 @@ class Parser(ABC):
         for model in models:
             class_name: str = model.class_name
             generated_name: str = scoped_model_resolver.add(
-                model.path, class_name, unique=True, class_name=True
+                [model.path], class_name, unique=True, class_name=True
             ).name
             if class_name != generated_name:
                 model.class_name = generated_name
@@ -686,7 +688,7 @@ class Parser(ABC):
         init: bool,
     ) -> None:
         for model in models:
-            scoped_model_resolver.add(model.path, model.class_name)
+            scoped_model_resolver.add([model.path], model.class_name)
         for model in models:
             before_import = model.imports
             imports.append(before_import)
@@ -958,7 +960,11 @@ class Parser(ABC):
             models.remove(duplicate)
 
     def __collapse_root_models(
-        self, models: List[DataModel], unused_models: List[DataModel], imports: Imports
+        self,
+        models: List[DataModel],
+        unused_models: List[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
     ) -> None:
         if not self.collapse_root_models:
             return None
@@ -1033,6 +1039,31 @@ class Parser(ABC):
                         ]
                     else:  # pragma: no cover
                         continue
+
+                    for d in root_type_field.data_type.data_types:
+                        if d.reference is None:
+                            continue
+                        from_, import_ = full_path = relative(
+                            model.module_name, d.full_name
+                        )
+                        if from_ and import_:
+                            alias = scoped_model_resolver.add(full_path, import_)
+                            d.alias = (
+                                alias.name
+                                if d.reference.short_name == import_
+                                else f'{alias.name}.{d.reference.short_name}'
+                            )
+                            imports.append(
+                                [
+                                    Import(
+                                        from_=from_,
+                                        import_=import_,
+                                        alias=alias.name,
+                                        reference_path=d.reference.path,
+                                    )
+                                ]
+                            )
+
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
@@ -1261,9 +1292,12 @@ class Parser(ABC):
         def module_key(data_model: DataModel) -> Tuple[str, ...]:
             return tuple(data_model.module_path)
 
+        def sort_key(data_model: DataModel) -> Tuple[int, Tuple[str, ...]]:
+            return (len(data_model.module_path), tuple(data_model.module_path))
+
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
-            sorted(sorted_data_models.values(), key=module_key, reverse=True),
+            sorted(sorted_data_models.values(), key=sort_key, reverse=True),
             key=module_key,
         )
 
@@ -1329,7 +1363,9 @@ class Parser(ABC):
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
-            self.__collapse_root_models(models, unused_models, imports)
+            self.__collapse_root_models(
+                models, unused_models, imports, scoped_model_resolver
+            )
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
             self.__set_one_literal_on_default(models)
@@ -1368,22 +1404,24 @@ class Parser(ABC):
 
         for module, models, init, imports, scoped_model_resolver in processed_models:
             result: List[str] = []
-            if with_import:
-                result += [str(self.imports), str(imports), '\n']
+            if models:
+                if with_import:
+                    result += [str(self.imports), str(imports), '\n']
 
-            code = dump_templates(models)
-            result += [code]
+                code = dump_templates(models)
+                result += [code]
 
-            if self.dump_resolve_reference_action is not None:
-                result += [
-                    '\n',
-                    self.dump_resolve_reference_action(
-                        m.reference.short_name
-                        for m in models
-                        if m.path in require_update_action_models
-                    ),
-                ]
-
+                if self.dump_resolve_reference_action is not None:
+                    result += [
+                        '\n',
+                        self.dump_resolve_reference_action(
+                            m.reference.short_name
+                            for m in models
+                            if m.path in require_update_action_models
+                        ),
+                    ]
+            if not result and not init:
+                continue
             body = '\n'.join(result)
             if code_formatter:
                 body = code_formatter.format_code(body)

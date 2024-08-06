@@ -432,7 +432,7 @@ Model customization:
                         Set class name of root model
   --collapse-root-models
                         Models generated with a root-type field will be
-                        mergedinto the models using that root-type model
+                        merged into the models using that root-type model
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an
                         array

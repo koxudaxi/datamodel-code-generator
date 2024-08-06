@@ -218,16 +218,12 @@ class Config(BaseModel):
     def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('additional_imports') is not None:
             values['additional_imports'] = values.get('additional_imports').split(',')
-        else:
-            values['additional_imports'] = []
         return values
 
     @model_validator(mode='before')
     def validate_custom_formatters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('custom_formatters') is not None:
             values['custom_formatters'] = values.get('custom_formatters').split(',')
-        else:
-            values['custom_formatters'] = []
         return values
 
     if PYDANTIC_V2:
