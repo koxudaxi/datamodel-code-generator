@@ -1,7 +1,10 @@
 name: Test
 
 on:
-  pull_request: {}
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   test:
@@ -21,6 +24,31 @@ jobs:
             black-version: default
             python-version: 3.8
             pydantic-version: 1.8.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 19.10b0
+            python-version: 3.9
+            pydantic-version: 1.8.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 24.1.0
+            python-version: 3.12
+            pydantic-version: 2.4.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 23.12.1
+            python-version: 3.12
+            pydantic-version: 2.4.2
+          - os: macos-13
+            isort-version: 5.6.4
+            black-version: 22.1.0
+            python-version: 3.7
+            pydantic-version: 2.4.2
+          - os: macos-13
+            isort-version: 5.6.4
+            black-version: 22.1.0
+            python-version: 3.7
+            pydantic-version: 1.10.9
         exclude:
           - os: windows-latest
             black-version: 22.1.0
@@ -30,6 +58,8 @@ jobs:
             isort-version: 4.3.21
           - os: macos-latest
             isort-version: 4.3.21
+          - os: macos-latest
+            python-version: 3.7
           - os: windows-latest
             pydantic-version: 1.5.1
           - os: macos-latest
@@ -50,7 +80,7 @@ jobs:
       PYTHON: ${{ matrix.python-version }}
       ISORT: ${{ matrix.isort-version }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
@@ -91,10 +121,10 @@ jobs:
       if: matrix.pydantic-version != 'default'
       run: |
         poetry run pip install pydantic=="${{ matrix.pydantic-version }}"
-    - name: Install Black 22.1.0
-      if: matrix.black-version == '22.1.0'
+    - name: Install Black ${{ matrix.black-version }}
+      if: matrix.black-version != 'default'
       run: |
-         poetry run pip install black=="22.1.0"
+         poetry run pip install black=="${{ matrix.black-version }}"
     - name: Lint
       if: matrix.pydantic-version == 'default'
       run: |
@@ -106,10 +136,11 @@ jobs:
          ./scripts/test.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.pydantic-version != '1.5.1'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests
         file: ./coverage.xml
         fail_ci_if_error: true
         env_vars: OS,PYTHON,ISORT
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

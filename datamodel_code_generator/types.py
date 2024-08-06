@@ -25,12 +25,7 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import (
-    StrictBool,
-    StrictInt,
-    StrictStr,
-    create_model,
-)
+from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -548,6 +543,7 @@ class Types(Enum):
     date = auto()
     date_time = auto()
     password = auto()
+    path = auto()
     email = auto()
     uuid = auto()
     uuid1 = auto()
@@ -577,6 +573,7 @@ class DataTypeManager(ABC):
         strict_types: Optional[Sequence[StrictTypes]] = None,
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
+        use_pendulum: bool = False,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
@@ -586,6 +583,7 @@ class DataTypeManager(ABC):
             use_non_positive_negative_number_constrained_types
         )
         self.use_union_operator: bool = use_union_operator
+        self.use_pendulum: bool = use_pendulum
 
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36

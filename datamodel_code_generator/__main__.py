@@ -94,8 +94,7 @@ class Config(BaseModel):
         if TYPE_CHECKING:
 
             @classmethod
-            def get_fields(cls) -> Dict[str, Any]:
-                ...
+            def get_fields(cls) -> Dict[str, Any]: ...
 
         else:
 
@@ -198,20 +197,33 @@ class Config(BaseModel):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
+    @field_validator('http_query_parameters', mode='before')
+    def validate_http_query_parameters(
+        cls, value: Any
+    ) -> Optional[List[Tuple[str, str]]]:
+        def validate_each_item(each_item: Any) -> Tuple[str, str]:
+            if isinstance(each_item, str):  # pragma: no cover
+                try:
+                    field_name, field_value = each_item.split('=', maxsplit=1)  # type: str, str
+                    return field_name, field_value.lstrip()
+                except ValueError:
+                    raise Error(f'Invalid http query parameter: {each_item!r}')
+            return each_item  # pragma: no cover
+
+        if isinstance(value, list):
+            return [validate_each_item(each_item) for each_item in value]
+        return value  # pragma: no cover
+
     @model_validator(mode='before')
     def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('additional_imports') is not None:
             values['additional_imports'] = values.get('additional_imports').split(',')
-        else:
-            values['additional_imports'] = []
         return values
 
     @model_validator(mode='before')
     def validate_custom_formatters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('custom_formatters') is not None:
             values['custom_formatters'] = values.get('custom_formatters').split(',')
-        else:
-            values['custom_formatters'] = []
         return values
 
     if PYDANTIC_V2:
@@ -294,6 +306,10 @@ class Config(BaseModel):
     custom_file_header_path: Optional[Path] = None
     custom_formatters: Optional[List[str]] = None
     custom_formatters_kwargs: Optional[TextIOBase] = None
+    use_pendulum: bool = False
+    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None
+    treat_dot_as_module: bool = False
+    use_exact_imports: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -409,7 +425,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         with config.custom_formatters_kwargs as data:
             try:
                 custom_formatters_kwargs = json.load(data)
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError as e:  # pragma: no cover
                 print(
                     f'Unable to load custom_formatters_kwargs mapping: {e}',
                     file=sys.stderr,
@@ -418,7 +434,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         if not isinstance(custom_formatters_kwargs, dict) or not all(
             isinstance(k, str) and isinstance(v, str)
             for k, v in custom_formatters_kwargs.items()
-        ):
+        ):  # pragma: no cover
             print(
                 'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
                 file=sys.stderr,
@@ -488,6 +504,10 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             custom_file_header_path=config.custom_file_header_path,
             custom_formatters=config.custom_formatters,
             custom_formatters_kwargs=custom_formatters_kwargs,
+            use_pendulum=config.use_pendulum,
+            http_query_parameters=config.http_query_parameters,
+            treat_dots_as_module=config.treat_dot_as_module,
+            use_exact_imports=config.use_exact_imports,
         )
         return Exit.OK
     except InvalidClassNameError as e:

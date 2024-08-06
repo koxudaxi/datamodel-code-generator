@@ -63,7 +63,7 @@ class ConstraintsBase(_BaseModel):
 
     @cached_property
     def has_constraints(self) -> bool:
-        return any(v for v in self.dict().values() if v is not None)
+        return any(v is not None for v in self.dict().values())
 
     @staticmethod
     def merge_constraints(
@@ -76,7 +76,7 @@ class ConstraintsBase(_BaseModel):
             }
             constraints_class = a.__class__
         else:
-            root_type_field_constraints = {}
+            root_type_field_constraints = {}  # pragma: no cover
 
         if isinstance(b, ConstraintsBase):  # pragma: no cover
             model_field_constraints = {
@@ -86,7 +86,7 @@ class ConstraintsBase(_BaseModel):
         else:
             model_field_constraints = {}
 
-        if not issubclass(constraints_class, ConstraintsBase):
+        if not issubclass(constraints_class, ConstraintsBase):  # pragma: no cover
             return None
 
         return constraints_class.parse_obj(
@@ -117,6 +117,7 @@ class DataModelFieldBase(_BaseModel):
     use_one_literal_as_default: bool = False
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
+    can_have_extra_keys: ClassVar[bool] = True
 
     if not TYPE_CHECKING:
 
@@ -266,8 +267,7 @@ class TemplateBase(ABC):
         return self.render()
 
 
-class BaseClassDataType(DataType):
-    ...
+class BaseClassDataType(DataType): ...
 
 
 UNDEFINED: Any = object()

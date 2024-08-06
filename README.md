@@ -16,9 +16,6 @@ and [msgspec.Struct](https://github.com/jcrist/msgspec) from an openapi file and
 ## Help
 See [documentation](https://koxudaxi.github.io/datamodel-code-generator) for more details.
 
-## Sponsors
-[![JetBrains](https://avatars.githubusercontent.com/u/60931315?s=200&v=4)](https://github.com/JetBrainsOfficial)
-
 ## Quick Installation
 
 To install `datamodel-code-generator`:
@@ -236,13 +233,52 @@ class Apis(BaseModel):
 ```
 </details>
 
+## Supported input types
+-  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types));
+-  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
+-  JSON/YAML/CSV Data (it will be converted to JSON Schema);
+-  Python dictionary (it will be converted to JSON Schema);
+-  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
+
+## Supported output types
+- [pydantic](https://docs.pydantic.dev/1.10/).BaseModel;
+- [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel;
+- [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
+- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
+- [msgspec.Struct](https://github.com/jcrist/msgspec);
+- Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
+
+## Sponsors
+<table>
+  <tr>
+    <td valign="top" align="center">
+    <a href="https://github.com/JetBrainsOfficial">
+      <img src="https://avatars.githubusercontent.com/u/60931315?s=100&v=4" alt="JetBrains Logo" style="width: 100px;">
+      <p>JetBrains</p>
+    </a>
+    </td>
+  <td valign="top" align="center">
+    <a href="https://github.com/astral-sh">
+      <img src="https://avatars.githubusercontent.com/u/115962839?s=200&v=4" alt="Astral Logo" style="width: 100px;">
+      <p>Astral</p>
+    </a>
+  </td>
+  <td valign="top" align="center">
+    <a href="https://github.com/DataDog">
+      <img src="https://avatars.githubusercontent.com/u/365230?s=200&v=4" alt="Datadog, Inc. Logo" style="width: 100px;">
+      <p>Datadog, Inc.</p>
+    </a>
+  </td>
+  </tr>
+</table>
+
 ## Projects that use datamodel-code-generator
  
 These OSS projects use datamodel-code-generator to generate many models. 
 See the following linked projects for real world examples and inspiration.
 
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
-  - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
+  - *[Generate Python, Java/Kotlin, and Typescript protocol models](https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin)*
 - [apache/iceberg](https://github.com/apache/iceberg)
   - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)* 
     *[`make generate`](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34)*
@@ -266,21 +302,6 @@ See the following linked projects for real world examples and inspiration.
   - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)* 
 - [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
   - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
-
-## Supported input types
--  OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.2.md#data-types));
--  JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html)/[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
--  JSON/YAML/CSV Data (it will be converted to JSON Schema);
--  Python dictionary (it will be converted to JSON Schema);
--  GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
-
-## Supported output types
-- [pydantic](https://docs.pydantic.dev/1.10/).BaseModel;
-- [pydantic_v2](https://docs.pydantic.dev/2.0/).BaseModel;
-- [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
-- [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
-- [msgspec.Struct](https://github.com/jcrist/msgspec);
-- Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
 
 ## Installation
 
@@ -319,6 +340,7 @@ This method needs the [http extra option](#http-extra-option)
 ## All Command Options
 
 The `datamodel-codegen` command:
+
 ```bash
 usage:
   datamodel-codegen [options]
@@ -329,10 +351,13 @@ Options:
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
-  --http-ignore-tls     Disable verification of the remote host's TLS
+  --http-ignore-tls     Disable verification of the remote host''s TLS
                         certificate
+  --http-query-parameters QUERY_PARAMETER [QUERY_PARAMETER ...]
+                        Set query parameters in HTTP requests to the remote host.
+                        (example: "ref=branch")
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv}
+  --input-file-type {auto,openapi,graphql,jsonschema,json,yaml,dict,csv}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
@@ -394,7 +419,7 @@ Field customization:
                         e.g. underscores
   --snake-case-field    Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
-                        Set field name prefix when first character can't be
+                        Set field name prefix when first character can''t be
                         used as Python field name (default: `field`)
   --strip-default-none  Strip default None on fields
   --use-default         Use default value even if a field is required
@@ -402,6 +427,9 @@ Field customization:
                         Fields that have default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-pendulum
+                        Use pendulum instead of `datetime` for `date`, 
+                        `datetime`, and `time` data types
 
 Model customization:
   --allow-extra-fields  Allow to pass extra fields, if this flag is not
@@ -412,7 +440,7 @@ Model customization:
                         Set class name of root model
   --collapse-root-models
                         Models generated with a root-type field will be
-                        mergedinto the models using that root-type model
+                        merged into the models using that root-type model
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an
                         array
@@ -421,14 +449,17 @@ Model customization:
                         Enable faux immutability
   --enable-version-header
                         Enable package version on file headers
-  --keep-model-order    Keep generated models' order
-  --reuse-model         Re-use models on the field when a module has the model
+  --keep-model-order    Keep generated models'' order
+  --reuse-model         Reuse models on the field when a module has the model
                         with the same content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
                         target python version (default: 3.7)
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
+  --use-exact-imports   Import exact types instead of modules, for example: 
+                        `from .foo import Bar` instead of 
+                        `from . import foo` with `foo.Bar`
 
 Template customization:
   --aliases ALIASES     Alias mapping file

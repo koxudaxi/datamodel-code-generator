@@ -21,7 +21,7 @@
       "type": "array",
       "items": [
         {
-          "$ref": "definitions/pet.json#"
+          "$ref": "definitions/relative/animal/pet/pet.json#"
         }
       ]
     },
