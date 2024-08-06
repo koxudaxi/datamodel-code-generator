@@ -246,6 +246,32 @@ def test_main_jsonschema_external_files():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
+def test_main_jsonschema_collapsed_external_references():
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir) / 'output'
+        output_dir.mkdir()
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'external_reference'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (output_dir / 'ref0.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / 'external_ref0.py'
+        ).read_text()
+        assert (output_dir / 'other/ref2.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / 'external_other_ref2.py'
+        ).read_text()
+
+
+@pytest.mark.benchmark
+@freeze_time('2019-07-26')
 def test_main_jsonschema_multiple_files():
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
@@ -266,6 +292,28 @@ def test_main_jsonschema_multiple_files():
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
+
+
+@pytest.mark.benchmark
+@freeze_time('2019-07-26')
+def test_main_jsonschema_no_empty_collapsed_external_model():
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir) / 'output'
+        output_dir.mkdir()
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'external_collapse'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--collapse-root-models',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert not (output_dir / 'child.py').exists()
+        assert (output_dir / '__init__.py').exists()
 
 
 @pytest.mark.parametrize(
