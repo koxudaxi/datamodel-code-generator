@@ -1404,22 +1404,24 @@ class Parser(ABC):
 
         for module, models, init, imports, scoped_model_resolver in processed_models:
             result: List[str] = []
-            if with_import:
-                result += [str(self.imports), str(imports), '\n']
+            if models:
+                if with_import:
+                    result += [str(self.imports), str(imports), '\n']
 
-            code = dump_templates(models)
-            result += [code]
+                code = dump_templates(models)
+                result += [code]
 
-            if self.dump_resolve_reference_action is not None:
-                result += [
-                    '\n',
-                    self.dump_resolve_reference_action(
-                        m.reference.short_name
-                        for m in models
-                        if m.path in require_update_action_models
-                    ),
-                ]
-
+                if self.dump_resolve_reference_action is not None:
+                    result += [
+                        '\n',
+                        self.dump_resolve_reference_action(
+                            m.reference.short_name
+                            for m in models
+                            if m.path in require_update_action_models
+                        ),
+                    ]
+            if not result and not init:
+                continue
             body = '\n'.join(result)
             if code_formatter:
                 body = code_formatter.format_code(body)
