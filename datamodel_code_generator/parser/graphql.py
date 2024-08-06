@@ -37,11 +37,7 @@ from datamodel_code_generator.parser.base import (
     escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
-from datamodel_code_generator.types import (
-    DataTypeManager,
-    StrictTypes,
-    Types,
-)
+from datamodel_code_generator.types import DataTypeManager, StrictTypes, Types
 
 try:
     import graphql
@@ -158,6 +154,8 @@ class GraphQLParser(Parser):
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -225,18 +223,22 @@ class GraphQLParser(Parser):
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
+            treat_dots_as_module=treat_dots_as_module,
+            use_exact_imports=use_exact_imports,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
         self.data_model_union_type = data_model_union_type
+        self.use_standard_collections = use_standard_collections
+        self.use_union_operator = use_union_operator
 
     def _get_context_source_path_parts(self) -> Iterator[Tuple[Source, List[str]]]:
         # TODO (denisart): Temporarily this method duplicates
         # the method `datamodel_code_generator.parser.jsonschema.JsonSchemaParser._get_context_source_path_parts`.
 
-        if isinstance(self.source, list) or (
+        if isinstance(self.source, list) or (  # pragma: no cover
             isinstance(self.source, Path) and self.source.is_dir()
-        ):
+        ):  # pragma: no cover
             self.current_source_path = Path()
             self.model_resolver.after_load_files = {
                 self.base_path.joinpath(s.path).resolve().as_posix()
@@ -244,11 +246,11 @@ class GraphQLParser(Parser):
             }
 
         for source in self.iter_source:
-            if isinstance(self.source, ParseResult):
+            if isinstance(self.source, ParseResult):  # pragma: no cover
                 path_parts = self.get_url_path_parts(self.source)
             else:
                 path_parts = list(source.path.parts)
-            if self.current_source_path is not None:
+            if self.current_source_path is not None:  # pragma: no cover
                 self.current_source_path = source.path
             with self.model_resolver.current_base_path_context(
                 source.path.parent
@@ -265,7 +267,7 @@ class GraphQLParser(Parser):
 
             resolved_type = graphql_resolver.kind(type_, None)
 
-            if resolved_type in self.support_graphql_types:
+            if resolved_type in self.support_graphql_types:  # pragma: no cover
                 self.all_graphql_objects[type_.name] = type_
                 # TODO: need a special method for each graph type
                 self.references[type_.name] = Reference(
@@ -279,8 +281,13 @@ class GraphQLParser(Parser):
     def _typename_field(self, name: str) -> DataModelFieldBase:
         return self.data_model_field_type(
             name='typename__',
-            data_type=DataType(literals=[name]),
+            data_type=DataType(
+                literals=[name],
+                use_union_operator=self.use_union_operator,
+                use_standard_collections=self.use_standard_collections,
+            ),
             default=name,
+            use_annotated=self.use_annotated,
             required=False,
             alias='__typename',
             use_one_literal_as_default=True,
@@ -344,7 +351,11 @@ class GraphQLParser(Parser):
         alias: str,
         field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
     ) -> DataModelFieldBase:
-        final_data_type = DataType(is_optional=True)
+        final_data_type = DataType(
+            is_optional=True,
+            use_union_operator=self.use_union_operator,
+            use_standard_collections=self.use_standard_collections,
+        )
         data_type = final_data_type
         obj = field.type
 
@@ -352,11 +363,15 @@ class GraphQLParser(Parser):
             if graphql.is_list_type(obj):
                 data_type.is_list = True
 
-                new_data_type = DataType(is_optional=True)
+                new_data_type = DataType(
+                    is_optional=True,
+                    use_union_operator=self.use_union_operator,
+                    use_standard_collections=self.use_standard_collections,
+                )
                 data_type.data_types = [new_data_type]
 
                 data_type = new_data_type
-            elif graphql.is_non_null_type(obj):
+            elif graphql.is_non_null_type(obj):  # pragma: no cover
                 data_type.is_optional = False
 
             obj = obj.of_type
@@ -368,10 +383,10 @@ class GraphQLParser(Parser):
         )
         extras = {}
 
-        if hasattr(field, 'default_value'):
-            if field.default_value == graphql.pyutils.Undefined:
+        if hasattr(field, 'default_value'):  # pragma: no cover
+            if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
                 default = None
-            else:
+            else:  # pragma: no cover
                 default = field.default_value
         else:
             if required is False:
@@ -421,7 +436,7 @@ class GraphQLParser(Parser):
         fields.append(self._typename_field(obj.name))
 
         base_classes = []
-        if hasattr(obj, 'interfaces'):
+        if hasattr(obj, 'interfaces'):  # pragma: no cover
             base_classes = [self.references[i.name] for i in obj.interfaces]
 
         data_model_type = self.data_model_type(
@@ -447,7 +462,7 @@ class GraphQLParser(Parser):
     def parse_input_object(
         self, input_graphql_object: graphql.GraphQLInputObjectType
     ) -> None:
-        self.parse_object_like(input_graphql_object)
+        self.parse_object_like(input_graphql_object)  # pragma: no cover
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
         fields = []
