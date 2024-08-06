@@ -47,9 +47,9 @@ class BlackCodeFormatter(BaseCodeFormatter):
                     f' for wrapping string literal in {black.__version__}'
                 )
             else:
-                black_kwargs[
-                    'experimental_string_processing'
-                ] = experimental_string_processing
+                black_kwargs['experimental_string_processing'] = (
+                    experimental_string_processing
+                )
 
         if TYPE_CHECKING:
             self.black_mode: black.FileMode
