@@ -351,7 +351,7 @@ Options:
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
-  --http-ignore-tls     Disable verification of the remote host's TLS
+  --http-ignore-tls     Disable verification of the remote host''s TLS
                         certificate
   --http-query-parameters QUERY_PARAMETER [QUERY_PARAMETER ...]
                         Set query parameters in HTTP requests to the remote host.
@@ -419,7 +419,7 @@ Field customization:
                         e.g. underscores
   --snake-case-field    Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
-                        Set field name prefix when first character can't be
+                        Set field name prefix when first character can''t be
                         used as Python field name (default: `field`)
   --strip-default-none  Strip default None on fields
   --use-default         Use default value even if a field is required
@@ -440,7 +440,7 @@ Model customization:
                         Set class name of root model
   --collapse-root-models
                         Models generated with a root-type field will be
-                        mergedinto the models using that root-type model
+                        merged into the models using that root-type model
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an
                         array
@@ -449,7 +449,7 @@ Model customization:
                         Enable faux immutability
   --enable-version-header
                         Enable package version on file headers
-  --keep-model-order    Keep generated models' order
+  --keep-model-order    Keep generated models'' order
   --reuse-model         Reuse models on the field when a module has the model
                         with the same content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
