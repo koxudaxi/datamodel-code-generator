@@ -22,11 +22,11 @@ def test_infer_input_type():
     for file in (DATA_PATH / 'jsonschema').rglob('*'):
         if str(file).endswith(('external_child.json', 'external_child.yaml')):
             continue
-        if 'reference_same_hierarchy_directory' in str(file):
-            continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / 'openapi').rglob('*'):
         if 'all_of_with_relative_ref' in str(file):
+            continue
+        if 'reference_same_hierarchy_directory' in str(file):
             continue
         if str(file).endswith(
             (
