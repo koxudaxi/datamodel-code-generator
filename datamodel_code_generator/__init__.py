@@ -66,14 +66,9 @@ else:
     def get_version() -> str:
         package = 'datamodel-code-generator'
 
-        try:
-            from importlib.metadata import version
+        from importlib.metadata import version
 
-            return version(package)
-        except ImportError:
-            import pkg_resources
-
-            return pkg_resources.get_distribution(package).version
+        return version(package)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
