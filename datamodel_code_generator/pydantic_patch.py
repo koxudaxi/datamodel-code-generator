@@ -1,5 +1,3 @@
-import sys
-
 import pydantic.typing
 
 
@@ -17,5 +15,4 @@ def patched_evaluate_forwardref(
         )
 
 
-if '3.12' in sys.version:  # pragma: no cover
-    pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref
+pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref

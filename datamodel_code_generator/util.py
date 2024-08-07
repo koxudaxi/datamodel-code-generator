@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 import copy
+from functools import cached_property  # noqa: F401
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, TypeVar
+from typing import (  # noqa: F401
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Protocol,
+    TypeVar,
+    runtime_checkable,
+)
 
 import pydantic
 from packaging import version
@@ -15,13 +24,8 @@ PYDANTIC_VERSION = version.parse(
 PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 
 if TYPE_CHECKING:
-    cached_property = property
-    from yaml import SafeLoader
-
-    Protocol = object
-    runtime_checkable: Callable[..., Any]
-
     from typing_extensions import Literal
+    from yaml import SafeLoader
 
     def load_toml(path: Path) -> Dict[str, Any]: ...
 
