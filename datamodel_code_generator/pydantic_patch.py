@@ -1,3 +1,5 @@
+import sys
+
 import pydantic.typing
 
 
@@ -15,4 +17,6 @@ def patched_evaluate_forwardref(
         )
 
 
-pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref
+# Patch only Python3.12
+if sys.version_info >= (3, 12):
+    pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref
