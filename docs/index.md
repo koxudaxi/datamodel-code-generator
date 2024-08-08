@@ -467,7 +467,7 @@ Template customization:
                         A file with kwargs for custom formatters.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
-  --encoding ENCODING   The encoding of input and output (default: UTF-8)
+  --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
   --use-double-quotes   Model generated with double quotes. Single quotes or your black
