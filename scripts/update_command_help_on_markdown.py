@@ -49,6 +49,7 @@ def inject_help(markdown_text: str, help_text: str) -> str:
 
 
 def main() -> Exit:
+    help_text = get_help()
     arg_parser.add_argument(
         '--validate',
         action='store_true',
@@ -56,7 +57,7 @@ def main() -> Exit:
     )
     args = arg_parser.parse_args()
     validate: bool = args.validate
-    help_text = get_help()
+
     for file_path in TARGET_MARKDOWN_FILES:
         with file_path.open('r') as f:
             markdown_text = f.read()
