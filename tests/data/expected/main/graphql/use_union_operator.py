@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, List, TypeAlias
+from typing import List, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 

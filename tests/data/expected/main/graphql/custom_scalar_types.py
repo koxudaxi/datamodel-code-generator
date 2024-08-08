@@ -8,7 +8,6 @@ from typing import Literal, Optional, TypeAlias
 
 from pydantic import BaseModel, Field
 
-
 Boolean: TypeAlias = bool
 """
 The `Boolean` scalar type represents `true` or `false`.

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Literal, List, Optional, TypeAlias, Union
+from typing import List, Literal, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, Field
 
