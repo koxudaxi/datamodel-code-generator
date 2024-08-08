@@ -6,7 +6,7 @@ from pathlib import Path
 
 from datamodel_code_generator.__main__ import Exit, arg_parser
 
-os.environ['COLUMNS'] = '120'
+os.environ['COLUMNS'] = '94'
 os.environ['LINES'] = '24'
 
 START_MARK: str = '<!-- start command help -->'
