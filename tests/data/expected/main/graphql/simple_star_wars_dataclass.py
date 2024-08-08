@@ -5,9 +5,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, TypeAlias
+from typing import Literal, List, Optional, TypeAlias
 
-from typing_extensions import Literal
 
 Boolean: TypeAlias = bool
 """
