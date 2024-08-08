@@ -23,14 +23,17 @@ TARGET_MARKDOWN_FILES: list[Path] = [
     PROJECT_DIR / 'README.md',
 ]
 
+REPLACE_MAP = {'(default: UTF-8)': '(default: utf-8)', "'": r"''"}
+
 
 def get_help():
     with io.StringIO() as f:
         arg_parser.print_help(file=f)
-        raw_output = f.getvalue()
-    escaped_single_quote_output = raw_output.replace("'", r"''")
+        output = f.getvalue()
+    for k, v in REPLACE_MAP.items():
+        output = output.replace(k, v)
     # Remove any terminal codes
-    return re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', escaped_single_quote_output)
+    return re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', output)
 
 
 def inject_help(markdown_text: str, help_text: str) -> str:
