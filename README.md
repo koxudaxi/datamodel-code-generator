@@ -341,26 +341,34 @@ This method needs the [http extra option](#http-extra-option)
 
 The `datamodel-codegen` command:
 
+<!-- start command help -->
 ```bash
-usage:
+usage: 
   datamodel-codegen [options]
 
 Generate Python data models from schema definitions or structured data
 
 Options:
+  --additional-imports ADDITIONAL_IMPORTS
+                        Custom imports for output (delimited list input). For
+                        example "datetime.date,datetime.datetime"
+  --custom-formatters CUSTOM_FORMATTERS
+                        List of modules with custom formatter (delimited list
+                        input).
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host.
                         (example: "Authorization: Basic dXNlcjpwYXNz")
-  --http-ignore-tls     Disable verification of the remote host''s TLS
+  --http-ignore-tls     Disable verification of the remote host's TLS
                         certificate
-  --http-query-parameters QUERY_PARAMETER [QUERY_PARAMETER ...]
-                        Set query parameters in HTTP requests to the remote host.
-                        (example: "ref=branch")
+  --http-query-parameters HTTP_QUERY_PARAMETERS [HTTP_QUERY_PARAMETERS ...]
+                        Set query parameters in HTTP requests to the remote
+                        host. (example: "ref=branch")
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,graphql,jsonschema,json,yaml,dict,csv}
+  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv,graphql}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
+                        Output model type (default: pydantic.BaseModel)
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used
 
@@ -419,7 +427,7 @@ Field customization:
                         e.g. underscores
   --snake-case-field    Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
-                        Set field name prefix when first character can''t be
+                        Set field name prefix when first character can't be
                         used as Python field name (default: `field`)
   --strip-default-none  Strip default None on fields
   --use-default         Use default value even if a field is required
@@ -427,9 +435,6 @@ Field customization:
                         Fields that have default values.
   --use-field-description
                         Use schema description to populate field docstring
-  --use-pendulum
-                        Use pendulum instead of `datetime` for `date`, 
-                        `datetime`, and `time` data types
 
 Model customization:
   --allow-extra-fields  Allow to pass extra fields, if this flag is not
@@ -439,8 +444,8 @@ Model customization:
   --class-name CLASS_NAME
                         Set class name of root model
   --collapse-root-models
-                        Models generated with a root-type field will be
-                        merged into the models using that root-type model
+                        Models generated with a root-type field will be merged
+                        into the models using that root-type model
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an
                         array
@@ -449,17 +454,20 @@ Model customization:
                         Enable faux immutability
   --enable-version-header
                         Enable package version on file headers
-  --keep-model-order    Keep generated models'' order
+  --keep-model-order    Keep generated models' order
   --reuse-model         Reuse models on the field when a module has the model
                         with the same content
-  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
-                        target python version (default: 3.7)
+  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}
+                        target python version (default: 3.8)
+  --treat-dot-as-module
+                        treat dotted module names as modules
+  --use-exact-imports   import exact types instead of modules, for example:
+                        "from .foo import Bar" instead of "from . import foo"
+                        with "foo.Bar"
+  --use-pendulum        use pendulum instead of datetime
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
-  --use-exact-imports   Import exact types instead of modules, for example: 
-                        `from .foo import Bar` instead of 
-                        `from . import foo` with `foo.Bar`
 
 Template customization:
   --aliases ALIASES     Alias mapping file
@@ -467,9 +475,11 @@ Template customization:
                         Custom file header
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
+  --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
+                        A file with kwargs for custom formatters.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
-  --encoding ENCODING   The encoding of input and output (default: UTF-8)
+  --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
   --use-double-quotes   Model generated with double quotes. Single quotes or
@@ -479,10 +489,6 @@ Template customization:
                         Wrap string literal by using black `experimental-
                         string-processing` option (require black 20.8b0 or
                         later)
-  --additional-imports  Custom imports for output (delimited list input).
-                        For example "datetime.date,datetime.datetime"
-  --custom-formatters   List of modules with custom formatter (delimited list input).
-  --custom-formatters-kwargs A file with kwargs for custom formatters.
 
 OpenAPI-only options:
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
@@ -496,12 +502,14 @@ OpenAPI-only options:
                         releases
 
 General options:
-  --debug               show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
+  --debug               show debug message (require "debug". `$ pip install
+                        'datamodel-code-generator[debug]'`)
   --disable-warnings    disable warnings
   --no-color            disable colorized output
   --version             show version
   -h, --help            show this help message and exit
 ```
+<!-- end command help -->
 
 ## Related projects
 ### fastapi-code-generator
