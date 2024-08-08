@@ -29,17 +29,11 @@ class A(BaseModel):
     listOptionalListField: List[Optional[List[String]]]
     listOptionalListOptionalField: List[Optional[List[Optional[String]]]]
     optionalField: Optional[String] = None
-    optionalListListField: Optional[List[List[String]]] = Field(default_factory=list)
-    optionalListListOptionalField: Optional[List[List[Optional[String]]]] = Field(
-        default_factory=list
-    )
-    optionalListOptionalField: Optional[List[Optional[String]]] = Field(
-        default_factory=list
-    )
-    optionalListOptionalListField: Optional[List[Optional[List[String]]]] = Field(
-        default_factory=list
-    )
+    optionalListListField: Optional[List[List[String]]] = None
+    optionalListListOptionalField: Optional[List[List[Optional[String]]]] = None
+    optionalListOptionalField: Optional[List[Optional[String]]] = None
+    optionalListOptionalListField: Optional[List[Optional[List[String]]]] = None
     optionalListOptionalListOptionalField: Optional[
         List[Optional[List[Optional[String]]]]
-    ] = Field(default_factory=list)
+    ] = None
     typename__: Optional[Literal['A']] = Field('A', alias='__typename')
