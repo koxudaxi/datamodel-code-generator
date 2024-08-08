@@ -151,7 +151,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     '--reuse-model',
-    help='Reuse models on the field when a module has the model with the same content',
+    help='Re-use models on the field when a module has the model with the same content',
     action='store_true',
     default=None,
 )
