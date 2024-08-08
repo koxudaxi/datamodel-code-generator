@@ -132,8 +132,6 @@ norecursedirs = "tests/data/*"
 [tool.coverage.run]
 source = ["datamodel_code_generator"]
 branch = true
-omit = ["scripts/*"]
-
 
 [tool.coverage.report]
 ignore_errors = true
