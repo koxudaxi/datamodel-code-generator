@@ -341,61 +341,64 @@ This method needs the [http extra option](#http-extra-option)
 
 The `datamodel-codegen` command:
 
+<!-- start command help -->
 ```bash
-usage:
+usage: 
   datamodel-codegen [options]
 
 Generate Python data models from schema definitions or structured data
 
 Options:
+  --additional-imports ADDITIONAL_IMPORTS
+                        Custom imports for output (delimited list input). For example
+                        "datetime.date,datetime.datetime"
+  --custom-formatters CUSTOM_FORMATTERS
+                        List of modules with custom formatter (delimited list input).
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
-                        Set headers in HTTP requests to the remote host.
-                        (example: "Authorization: Basic dXNlcjpwYXNz")
-  --http-ignore-tls     Disable verification of the remote host''s TLS
-                        certificate
-  --http-query-parameters QUERY_PARAMETER [QUERY_PARAMETER ...]
-                        Set query parameters in HTTP requests to the remote host.
-                        (example: "ref=branch")
+                        Set headers in HTTP requests to the remote host. (example:
+                        "Authorization: Basic dXNlcjpwYXNz")
+  --http-ignore-tls     Disable verification of the remote host''s TLS certificate
+  --http-query-parameters HTTP_QUERY_PARAMETERS [HTTP_QUERY_PARAMETERS ...]
+                        Set query parameters in HTTP requests to the remote host. (example:
+                        "ref=branch")
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,graphql,jsonschema,json,yaml,dict,csv}
+  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv,graphql}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
-  --url URL             Input file URL. `--input` is ignored when `--url` is
-                        used
+                        Output model type (default: pydantic.BaseModel)
+  --url URL             Input file URL. `--input` is ignored when `--url` is used
 
 Typing customization:
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
   --enum-field-as-literal {all,one}
-                        Parse enum field as literal. all: all enum field type
-                        are Literal. one: field type is Literal when an enum
-                        has only one possible value
+                        Parse enum field as literal. all: all enum field type are Literal.
+                        one: field type is Literal when an enum has only one possible value
   --field-constraints   Use field constraints and not con* annotations
   --set-default-enum-member
                         Set enum members as default values for enum field
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
                         Use strict types
-  --use-annotated       Use typing.Annotated for Field(). Also, `--field-
-                        constraints` option will be enabled.
+  --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
+                        will be enabled.
   --use-generic-container-types
-                        Use generic container types for type hinting
-                        (typing.Sequence, typing.Mapping). If `--use-standard-
-                        collections` option is set, then import from
-                        collections.abc instead of typing
+                        Use generic container types for type hinting (typing.Sequence,
+                        typing.Mapping). If `--use-standard-collections` option is set, then
+                        import from collections.abc instead of typing
   --use-non-positive-negative-number-constrained-types
-                        Use the Non{Positive,Negative}{FloatInt} types instead
-                        of the corresponding con* constrained types.
+                        Use the Non{Positive,Negative}{FloatInt} types instead of the
+                        corresponding con* constrained types.
   --use-one-literal-as-default
                         Use one literal as default value for one literal field
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
-  --use-subclass-enum   Define Enum class as subclass with field type when
-                        enum has type (int, float, bytes, str)
+  --use-subclass-enum   Define Enum class as subclass with field type when enum has type
+                        (int, float, bytes, str)
   --use-union-operator  Use | operator for Union type (PEP 604).
   --use-unique-items-as-set
-                        define field type as `set` when the field attribute
-                        has `uniqueItems`
+                        define field type as `set` when the field attribute has
+                        `uniqueItems`
 
 Field customization:
   --capitalise-enum-members, --capitalize-enum-members
@@ -405,61 +408,58 @@ Field customization:
   --field-extra-keys FIELD_EXTRA_KEYS [FIELD_EXTRA_KEYS ...]
                         Add extra keys to field parameters
   --field-extra-keys-without-x-prefix FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX [FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX ...]
-                        Add extra keys with `x-` prefix to field parameters.
-                        The extra keys are stripped of the `x-` prefix.
+                        Add extra keys with `x-` prefix to field parameters. The extra keys
+                        are stripped of the `x-` prefix.
   --field-include-all-keys
                         Add all keys to field parameters
   --force-optional      Force optional for required fields
   --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER
-                        Set delimiter to convert to snake case. This option
-                        only can be used with --snake-case-field (default: `_`
-                        )
+                        Set delimiter to convert to snake case. This option only can be used
+                        with --snake-case-field (default: `_` )
   --remove-special-field-name-prefix
-                        Remove field name prefix if it has a special meaning
-                        e.g. underscores
+                        Remove field name prefix if it has a special meaning e.g.
+                        underscores
   --snake-case-field    Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
-                        Set field name prefix when first character can''t be
-                        used as Python field name (default: `field`)
+                        Set field name prefix when first character can''t be used as Python
+                        field name (default: `field`)
   --strip-default-none  Strip default None on fields
   --use-default         Use default value even if a field is required
-  --use-default-kwarg   Use `default=` instead of a positional argument for
-                        Fields that have default values.
+  --use-default-kwarg   Use `default=` instead of a positional argument for Fields that have
+                        default values.
   --use-field-description
                         Use schema description to populate field docstring
-  --use-pendulum
-                        Use pendulum instead of `datetime` for `date`, 
-                        `datetime`, and `time` data types
 
 Model customization:
-  --allow-extra-fields  Allow to pass extra fields, if this flag is not
-                        passed, extra fields are forbidden.
+  --allow-extra-fields  Allow to pass extra fields, if this flag is not passed, extra fields
+                        are forbidden.
   --allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
                         Set class name of root model
   --collapse-root-models
-                        Models generated with a root-type field will be
-                        merged into the models using that root-type model
+                        Models generated with a root-type field will be merged into the
+                        models using that root-type model
   --disable-appending-item-suffix
-                        Disable appending `Item` suffix to model name in an
-                        array
+                        Disable appending `Item` suffix to model name in an array
   --disable-timestamp   Disable timestamp on file headers
   --enable-faux-immutability
                         Enable faux immutability
   --enable-version-header
                         Enable package version on file headers
   --keep-model-order    Keep generated models'' order
-  --reuse-model         Reuse models on the field when a module has the model
-                        with the same content
-  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11}
-                        target python version (default: 3.7)
+  --reuse-model         Reuse models on the field when a module has the model with the same
+                        content
+  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}
+                        target python version (default: 3.8)
+  --treat-dot-as-module
+                        treat dotted module names as modules
+  --use-exact-imports   import exact types instead of modules, for example: "from .foo
+                        import Bar" instead of "from . import foo" with "foo.Bar"
+  --use-pendulum        use pendulum instead of datetime
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
-  --use-exact-imports   Import exact types instead of modules, for example: 
-                        `from .foo import Bar` instead of 
-                        `from . import foo` with `foo.Bar`
 
 Template customization:
   --aliases ALIASES     Alias mapping file
@@ -467,41 +467,38 @@ Template customization:
                         Custom file header
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
                         Custom file header file path
+  --custom-formatters-kwargs CUSTOM_FORMATTERS_KWARGS
+                        A file with kwargs for custom formatters.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
-  --encoding ENCODING   The encoding of input and output (default: UTF-8)
+  --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
-  --use-double-quotes   Model generated with double quotes. Single quotes or
-                        your black config skip_string_normalization value will
-                        be used without this option.
+  --use-double-quotes   Model generated with double quotes. Single quotes or your black
+                        config skip_string_normalization value will be used without this
+                        option.
   --wrap-string-literal
-                        Wrap string literal by using black `experimental-
-                        string-processing` option (require black 20.8b0 or
-                        later)
-  --additional-imports  Custom imports for output (delimited list input).
-                        For example "datetime.date,datetime.datetime"
-  --custom-formatters   List of modules with custom formatter (delimited list input).
-  --custom-formatters-kwargs A file with kwargs for custom formatters.
+                        Wrap string literal by using black `experimental-string-processing`
+                        option (require black 20.8b0 or later)
 
 OpenAPI-only options:
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
-  --strict-nullable     Treat default field as a non-nullable field (Only
-                        OpenAPI)
+  --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
   --use-operation-id-as-name
                         use operation id of OpenAPI as class names of models
-  --validation          Deprecated: Enable validation (Only OpenAPI). this
-                        option is deprecated. it will be removed in future
-                        releases
+  --validation          Deprecated: Enable validation (Only OpenAPI). this option is
+                        deprecated. it will be removed in future releases
 
 General options:
-  --debug               show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
+  --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
+                        generator[debug]''`)
   --disable-warnings    disable warnings
   --no-color            disable colorized output
   --version             show version
   -h, --help            show this help message and exit
 ```
+<!-- end command help -->
 
 ## Related projects
 ### fastapi-code-generator
