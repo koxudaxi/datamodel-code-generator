@@ -31,6 +31,7 @@ import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
 from datamodel_code_generator.types import StrictTypes
@@ -299,6 +300,7 @@ def generate(
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     treat_dots_as_module: bool = False,
     use_exact_imports: bool = False,
+    union_mode: Optional[UnionMode] = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -386,6 +388,13 @@ def generate(
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
 
+    if union_mode is not None:
+        if output_model_type == DataModelType.PydanticV2BaseModel:
+            default_field_extras = {'union_mode': union_mode}
+        else:  # pragma: no cover
+            raise Error('union_mode is only supported for pydantic_v2.BaseModel')
+    else:
+        default_field_extras = None
     from datamodel_code_generator.model import get_data_model_types
 
     data_model_types = get_data_model_types(output_model_type, target_python_version)
@@ -461,6 +470,7 @@ def generate(
         http_query_parameters=http_query_parameters,
         treat_dots_as_module=treat_dots_as_module,
         use_exact_imports=use_exact_imports,
+        default_field_extras=default_field_extras,
         **kwargs,
     )
 

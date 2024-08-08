@@ -156,6 +156,7 @@ class GraphQLParser(Parser):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -225,6 +226,7 @@ class GraphQLParser(Parser):
             http_query_parameters=http_query_parameters,
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
@@ -381,7 +383,11 @@ class GraphQLParser(Parser):
         required = (not self.force_optional_for_required_fields) and (
             not final_data_type.is_optional
         )
-        extras = {}
+        extras = (
+            {}
+            if self.default_field_extras is None
+            else self.default_field_extras.copy()
+        )
 
         if hasattr(field, 'default_value'):  # pragma: no cover
             if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
@@ -392,7 +398,7 @@ class GraphQLParser(Parser):
             if required is False:
                 if final_data_type.is_list:
                     default = 'list'
-                    extras = {'default_factory': 'list'}
+                    extras['default_factory'] = 'list'
                 else:
                     default = None
             else:

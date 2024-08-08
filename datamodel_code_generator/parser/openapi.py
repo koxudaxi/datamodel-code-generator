@@ -224,6 +224,7 @@ class OpenAPIParser(JsonSchemaParser):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             source=source,
@@ -293,6 +294,7 @@ class OpenAPIParser(JsonSchemaParser):
             http_query_parameters=http_query_parameters,
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

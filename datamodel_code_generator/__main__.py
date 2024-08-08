@@ -33,6 +33,8 @@ import argcomplete
 import black
 from pydantic import BaseModel
 
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
+
 if TYPE_CHECKING:
     from argparse import Namespace
 
@@ -310,6 +312,7 @@ class Config(BaseModel):
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
+    union_mode: Optional[UnionMode] = None
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -508,6 +511,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             http_query_parameters=config.http_query_parameters,
             treat_dots_as_module=config.treat_dot_as_module,
             use_exact_imports=config.use_exact_imports,
+            union_mode=config.union_mode,
         )
         return Exit.OK
     except InvalidClassNameError as e:

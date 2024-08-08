@@ -442,6 +442,7 @@ class JsonSchemaParser(Parser):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -511,6 +512,7 @@ class JsonSchemaParser(Parser):
             http_query_parameters=http_query_parameters,
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -534,20 +536,23 @@ class JsonSchemaParser(Parser):
 
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
-            return {
+            extras = {
                 self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
                 ): v
                 for k, v in obj.extras.items()
             }
         else:
-            return {
+            extras = {
                 self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
                 ): v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }
+        if self.default_field_extras:
+            extras.update(self.default_field_extras)
+        return extras
 
     @cached_property
     def schema_paths(self) -> List[Tuple[str, List[str]]]:
