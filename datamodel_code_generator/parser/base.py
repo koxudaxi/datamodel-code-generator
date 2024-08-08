@@ -402,6 +402,7 @@ class Parser(ABC):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -526,6 +527,7 @@ class Parser(ABC):
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
         self.treat_dots_as_module = treat_dots_as_module
+        self.default_field_extras: Optional[Dict[str, Any]] = default_field_extras
 
     @property
     def iter_source(self) -> Iterator[Source]:

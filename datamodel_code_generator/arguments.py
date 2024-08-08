@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
 from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
 
@@ -361,6 +362,12 @@ field_options.add_argument(
     action='store_true',
     default=None,
 )
+field_options.add_argument(
+    '--union-mode',
+    help='Union mode for only pydantic v2 field',
+    choices=[u.value for u in UnionMode],
+    default=None,
+)
 
 # ======================================================================================
 # Options for templating output
@@ -491,7 +498,6 @@ general_options.add_argument(
     action='store_true',
     help='show version',
 )
-
 
 __all__ = [
     'arg_parser',
