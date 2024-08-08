@@ -1,8 +1,9 @@
 import io
 import re
+import sys
 from pathlib import Path
 
-from datamodel_code_generator.__main__ import arg_parser
+from datamodel_code_generator.__main__ import Exit, arg_parser
 
 START_MARK: str = '<!-- start command help -->'
 END_MARK: str = '<!-- end command help -->'
@@ -47,15 +48,29 @@ def inject_help(markdown_text: str, help_text: str) -> str:
     )
 
 
-def main():
+def main() -> Exit:
+    arg_parser.add_argument(
+        '--validate',
+        action='store_true',
+        help='Validate the file content is up to date',
+    )
+    args = arg_parser.parse_args()
+    validate: bool = args.validate
     help_text = get_help()
     for file_path in TARGET_MARKDOWN_FILES:
         with file_path.open('r') as f:
             markdown_text = f.read()
         new_markdown_text = inject_help(markdown_text, help_text)
+        if validate:
+            if new_markdown_text != markdown_text:
+                raise ValueError(
+                    f'{file_path} is not up to date. Run `python update_command_help_on_markdown.py`'
+                )
+            return Exit.ERROR
         with file_path.open('w') as f:
             f.write(new_markdown_text)
+    return Exit.OK
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
