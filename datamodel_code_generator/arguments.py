@@ -157,7 +157,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     '--target-python-version',
-    help='target python version (default: 3.7)',
+    help='target python version (default: 3.8)',
     choices=[v.value for v in PythonVersion],
 )
 model_options.add_argument(

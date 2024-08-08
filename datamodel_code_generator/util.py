@@ -24,7 +24,8 @@ PYDANTIC_VERSION = version.parse(
 PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 
 if TYPE_CHECKING:
-    from typing_extensions import Literal
+    from typing import Literal
+
     from yaml import SafeLoader
 
     def load_toml(path: Path) -> Dict[str, Any]: ...

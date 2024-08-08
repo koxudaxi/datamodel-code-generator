@@ -248,7 +248,7 @@ class Config(BaseModel):
     output: Optional[Path] = None
     debug: bool = False
     disable_warnings: bool = False
-    target_python_version: PythonVersion = PythonVersion.PY_37
+    target_python_version: PythonVersion = PythonVersion.PY_38
     base_class: str = ''
     additional_imports: Optional[List[str]] = (None,)
     custom_template_dir: Optional[Path] = None

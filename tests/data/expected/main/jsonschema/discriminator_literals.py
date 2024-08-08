@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import Literal
 
 
 class Type1(BaseModel):

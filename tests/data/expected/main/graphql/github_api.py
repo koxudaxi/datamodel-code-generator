@@ -6,10 +6,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import List, Optional, TypeAlias, Union
+from typing import List, Literal, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import Literal
 
 Base64String: TypeAlias = str
 """

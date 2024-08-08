@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 from mymodule.myclass import MyCustomPythonClass
 from pydantic import BaseModel, Field
-from typing_extensions import Literal
 
 Boolean: TypeAlias = bool
 """
