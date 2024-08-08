@@ -2072,6 +2072,10 @@ def test_main_jsonschema_combine_one_of_object():
         )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 @pytest.mark.parametrize(
     'union_mode,output_model,expected_output',
     [
