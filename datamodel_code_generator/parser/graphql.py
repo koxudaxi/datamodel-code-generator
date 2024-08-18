@@ -404,6 +404,9 @@ class GraphQLParser(Parser):
             else:
                 default = None
 
+        if field.description is not None:
+            extras['description'] = field.description
+
         return self.data_model_field_type(
             name=field_name,
             default=default,
