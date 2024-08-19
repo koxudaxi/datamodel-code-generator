@@ -416,7 +416,7 @@ class GraphQLParser(Parser):
             alias=alias,
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
-            use_field_description=field.description is not None,
+            use_field_description=self.use_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=field_name,
             has_default=default is not None,
