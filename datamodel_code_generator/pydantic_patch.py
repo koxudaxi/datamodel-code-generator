@@ -17,5 +17,6 @@ def patched_evaluate_forwardref(
         )
 
 
-if '3.12' in sys.version:  # pragma: no cover
+# Patch only Python3.12
+if sys.version_info >= (3, 12):
     pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref

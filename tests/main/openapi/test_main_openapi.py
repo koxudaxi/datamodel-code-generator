@@ -1244,6 +1244,8 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
                 'openapi',
                 '--enum-field-as-literal',
                 'all',
+                '--target-python-version',
+                '3.7',
             ]
         )
 

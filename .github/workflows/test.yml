@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         os: [ubuntu-latest, windows-latest, macos-latest]
         isort-version: [4.3.21, 5.6.4]
         black-version: [22.1.0, default]
@@ -39,16 +39,6 @@ jobs:
             black-version: 23.12.1
             python-version: 3.12
             pydantic-version: 2.4.2
-          - os: macos-13
-            isort-version: 5.6.4
-            black-version: 22.1.0
-            python-version: 3.7
-            pydantic-version: 2.4.2
-          - os: macos-13
-            isort-version: 5.6.4
-            black-version: 22.1.0
-            python-version: 3.7
-            pydantic-version: 1.10.9
         exclude:
           - os: windows-latest
             black-version: 22.1.0
@@ -58,8 +48,6 @@ jobs:
             isort-version: 4.3.21
           - os: macos-latest
             isort-version: 4.3.21
-          - os: macos-latest
-            python-version: 3.7
           - os: windows-latest
             pydantic-version: 1.5.1
           - os: macos-latest
@@ -85,18 +73,8 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install old Poetry
-      uses: snok/install-poetry@v1
-      if: matrix.python-version == '3.7'
-      with:
-        version: 1.4.2
-        virtualenvs-path: .venv
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-        installer-parallel: true
     - name: Install Poetry
       uses: snok/install-poetry@v1
-      if: matrix.python-version != '3.7'
       with:
         version: 1.7.1
         virtualenvs-path: .venv

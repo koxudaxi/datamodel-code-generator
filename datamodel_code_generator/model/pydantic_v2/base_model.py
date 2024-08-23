@@ -1,7 +1,7 @@
 import re
+from enum import Enum
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Any,
     ClassVar,
     DefaultDict,
@@ -13,6 +13,7 @@ from typing import (
 )
 
 from pydantic import Field
+from typing_extensions import Literal
 
 from datamodel_code_generator.model.base import UNDEFINED, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (
@@ -28,13 +29,10 @@ from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DIC
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.util import field_validator, model_validator
 
-if TYPE_CHECKING:
-    from typing_extensions import Literal
-else:
-    try:
-        from typing import Literal
-    except ImportError:  # pragma: no cover
-        from typing_extensions import Literal
+
+class UnionMode(Enum):
+    smart = 'smart'
+    left_to_right = 'left_to_right'
 
 
 class Constraints(_Constraints):
@@ -132,6 +130,12 @@ class DataModelField(DataModelFieldV1):
 
         # unique_items is not supported in pydantic 2.0
         data.pop('unique_items', None)
+
+        if 'union_mode' in data:
+            if self.data_type.is_union:
+                data['union_mode'] = data.pop('union_mode').value
+            else:
+                data.pop('union_mode')
 
         # **extra is not supported in pydantic 2.0
         json_schema_extra = {
