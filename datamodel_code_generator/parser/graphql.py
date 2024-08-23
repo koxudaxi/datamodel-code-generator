@@ -412,6 +412,7 @@ class GraphQLParser(Parser):
             default=default,
             data_type=final_data_type,
             required=required,
+            extras=extras,
             alias=alias,
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
