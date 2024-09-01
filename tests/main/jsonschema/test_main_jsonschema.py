@@ -3099,7 +3099,7 @@ def test_main_jsonschema_discriminator_literals(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_JSON_SCHEMA_PATH / expected_output ).read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
         )
 
 
@@ -3140,9 +3140,7 @@ def test_main_jsonschema_external_discriminator(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_JSON_SCHEMA_PATH / expected_output
-            ).read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
         )
 
 
@@ -3176,9 +3174,7 @@ def test_main_jsonschema_external_discriminator_folder(output_model, expected_ou
             ]
         )
         assert return_code == Exit.OK
-        main_modular_dir = (
-            EXPECTED_JSON_SCHEMA_PATH / expected_output
-        )
+        main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)

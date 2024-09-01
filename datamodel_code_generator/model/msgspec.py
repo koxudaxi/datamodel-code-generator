@@ -57,7 +57,7 @@ def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if self.annotated:
             extra_imports.append(IMPORT_MSGSPEC_META)
-        if self.extras.get("is_classvar"):
+        if self.extras.get('is_classvar'):
             extra_imports.append(IMPORT_CLASSVAR)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # type: ignore
 
@@ -104,10 +104,10 @@ class Struct(DataModel):
             default=default,
             nullable=nullable,
         )
-        self.extra_template_data.setdefault("base_class_kwargs", {})
+        self.extra_template_data.setdefault('base_class_kwargs', {})
 
     def add_base_class_kwarg(self, name: str, value):
-        self.extra_template_data["base_class_kwargs"][name] = value
+        self.extra_template_data['base_class_kwargs'][name] = value
 
 
 class Constraints(_Constraints):
@@ -246,15 +246,14 @@ class DataModelField(DataModelFieldBase):
 
         meta = f'Meta({", ".join(meta_arguments)})'
 
-
-        if not self.required and not self.extras.get("is_classvar"):
+        if not self.required and not self.extras.get('is_classvar'):
             type_hint = self.data_type.type_hint
             annotated_type = f'Annotated[{type_hint}, {meta}]'
             return get_optional_type(annotated_type, self.data_type.use_union_operator)
 
         annotated_type = f'Annotated[{self.type_hint}, {meta}]'
-        if self.extras.get("is_classvar"):
-            annotated_type = f"ClassVar[{annotated_type}]"
+        if self.extras.get('is_classvar'):
+            annotated_type = f'ClassVar[{annotated_type}]'
 
         return annotated_type
 
