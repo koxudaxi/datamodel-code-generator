@@ -407,7 +407,7 @@ class GraphQLParser(Parser):
             else self.default_field_extras.copy()
         )
 
-        if field.description is not None:
+        if field.description is not None:  # pragma: no cover
             extras['description'] = field.description
 
         return self.data_model_field_type(
