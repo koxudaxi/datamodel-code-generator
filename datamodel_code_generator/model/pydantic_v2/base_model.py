@@ -147,17 +147,9 @@ class DataModelField(DataModelFieldV1):
                 data.pop(key)
 
     def _process_annotated_field_arguments(
-        self, field_arguments: List[str]
+        self,
+        field_arguments: List[str],
     ) -> List[str]:
-        if not self.required or self.const:
-            if self.use_default_kwarg:  # pragma: no cover
-                return [
-                    f'default={repr(self.default)}',
-                    *field_arguments,
-                ]
-            else:
-                # TODO: Allow '=' style default for v1?
-                return [f'{repr(self.default)}', *field_arguments]
         return field_arguments
 
 

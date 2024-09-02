@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
@@ -23,10 +23,10 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class A(BaseModel):
     field: String
-    listField: List[String]
-    listListField: List[List[String]]
-    listOptionalField: List[Optional[String]]
+    listField: list[String]
+    listListField: list[list[String]]
+    listOptionalField: list[Optional[String]]
     optionalField: Optional[String] = None
-    optionalListField: Optional[List[String]] = None
-    optionalListOptionalField: Optional[List[Optional[String]]] = None
+    optionalListField: Optional[list[String]] = None
+    optionalListOptionalField: Optional[list[Optional[String]]] = None
     typename__: Annotated[Optional[Literal['A']], Field(alias='__typename')] = 'A'

@@ -63,7 +63,7 @@ pyyaml = ">=6.0.1"
 graphql-core = {version = "^3.2.3", optional = true}
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">6.0"
+pytest = ">6.1"
 pytest-benchmark = "*"
 pytest-cov = ">=2.12.1"
 pytest-mock = "*"

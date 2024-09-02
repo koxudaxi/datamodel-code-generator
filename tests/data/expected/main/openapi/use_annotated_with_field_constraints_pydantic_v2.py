@@ -12,7 +12,7 @@ from pydantic import AnyUrl, BaseModel, Field, RootModel
 class Pet(BaseModel):
     id: Annotated[int, Field(ge=0, le=9223372036854775807)]
     name: Annotated[str, Field(max_length=256)]
-    tag: Annotated[Optional[str], Field(None, max_length=64)]
+    tag: Annotated[Optional[str], Field(max_length=64)] = None
 
 
 class Pets(RootModel[List[Pet]]):
@@ -34,14 +34,14 @@ class FaxItem(RootModel[str]):
 class User(BaseModel):
     id: Annotated[int, Field(ge=0)]
     name: Annotated[str, Field(max_length=256)]
-    tag: Annotated[Optional[str], Field(None, max_length=64)]
+    tag: Annotated[Optional[str], Field(max_length=64)] = None
     uid: UID
-    phones: Annotated[Optional[List[Phone]], Field(None, max_length=10)]
+    phones: Annotated[Optional[List[Phone]], Field(max_length=10)] = None
     fax: Optional[List[FaxItem]] = None
-    height: Annotated[Optional[Union[int, float]], Field(None, ge=1.0, le=300.0)]
-    weight: Annotated[Optional[Union[float, int]], Field(None, ge=1.0, le=1000.0)]
-    age: Annotated[Optional[int], Field(None, gt=0, le=200)]
-    rating: Annotated[Optional[float], Field(None, gt=0.0, le=5.0)]
+    height: Annotated[Optional[Union[int, float]], Field(ge=1.0, le=300.0)] = None
+    weight: Annotated[Optional[Union[float, int]], Field(ge=1.0, le=1000.0)] = None
+    age: Annotated[Optional[int], Field(gt=0, le=200)] = None
+    rating: Annotated[Optional[float], Field(gt=0.0, le=5.0)] = None
 
 
 class Users(RootModel[List[User]]):
@@ -63,21 +63,17 @@ class Error(BaseModel):
 
 class Api(BaseModel):
     apiKey: Annotated[
-        Optional[str],
-        Field(None, description='To be used as a dataset parameter value'),
-    ]
+        Optional[str], Field(description='To be used as a dataset parameter value')
+    ] = None
     apiVersionNumber: Annotated[
-        Optional[str],
-        Field(None, description='To be used as a version parameter value'),
-    ]
+        Optional[str], Field(description='To be used as a version parameter value')
+    ] = None
     apiUrl: Annotated[
-        Optional[AnyUrl],
-        Field(None, description="The URL describing the dataset's fields"),
-    ]
+        Optional[AnyUrl], Field(description="The URL describing the dataset's fields")
+    ] = None
     apiDocumentationUrl: Annotated[
-        Optional[AnyUrl],
-        Field(None, description='A URL to the API console for each API'),
-    ]
+        Optional[AnyUrl], Field(description='A URL to the API console for each API')
+    ] = None
 
 
 class Apis(RootModel[List[Api]]):
