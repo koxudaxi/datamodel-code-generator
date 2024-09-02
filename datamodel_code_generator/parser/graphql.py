@@ -296,6 +296,22 @@ class GraphQLParser(Parser):
             has_default=True,
         )
 
+    def _get_default(
+        self,
+        field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
+        final_data_type: DataType,
+        required: bool,
+    ) -> Any:
+        if isinstance(field, graphql.GraphQLInputField):  # pragma: no cover
+            if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
+                return None
+            return field.default_value
+        if required is False:
+            if final_data_type.is_list:
+                return None
+
+        return None
+
     def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:
         self.results.append(
             self.data_model_scalar_type(
@@ -383,26 +399,16 @@ class GraphQLParser(Parser):
         required = (not self.force_optional_for_required_fields) and (
             not final_data_type.is_optional
         )
+
+        default = self._get_default(field, final_data_type, required)
         extras = (
             {}
             if self.default_field_extras is None
             else self.default_field_extras.copy()
         )
 
-        if hasattr(field, 'default_value'):  # pragma: no cover
-            if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
-                default = None
-            else:  # pragma: no cover
-                default = field.default_value
-        else:
-            if required is False:
-                if final_data_type.is_list:
-                    default = 'list'
-                    extras['default_factory'] = 'list'
-                else:
-                    default = None
-            else:
-                default = None
+        if field.description is not None:  # pragma: no cover
+            extras['description'] = field.description
 
         return self.data_model_field_type(
             name=field_name,
@@ -413,7 +419,7 @@ class GraphQLParser(Parser):
             alias=alias,
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
-            use_field_description=field.description is not None,
+            use_field_description=self.use_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=field_name,
             has_default=default is not None,
