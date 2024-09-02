@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypeAlias
+from typing import List, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
@@ -25,8 +25,8 @@ class A(BaseModel):
     field: String
     listField: List[String]
     listListField: List[List[String]]
-    listOptionalField: List[Optional[String]]
-    optionalField: Optional[String] = None
-    optionalListField: Optional[List[String]] = None
-    optionalListOptionalField: Optional[List[Optional[String]]] = None
-    typename__: Annotated[Optional[Literal['A']], Field(alias='__typename')] = 'A'
+    listOptionalField: List[String | None]
+    optionalField: String | None = None
+    optionalListField: List[String] | None = None
+    optionalListOptionalField: List[String | None] | None = None
+    typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
