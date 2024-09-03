@@ -3432,3 +3432,39 @@ def test_main_imports_correct():
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
+
+
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic_v2.BaseModel',
+            'duration_pydantic_v2.py',
+        ),
+        (
+            'msgspec.Struct',
+            'duration_msgspec.py',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_jsonschema_duration(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'duration.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                output_model,
+                '--target-python',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+        )
