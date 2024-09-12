@@ -411,6 +411,8 @@ def test_parse_nested_array():
         ('string', 'date', 'Date', 'pendulum', 'Date', True),
         ('string', 'date-time', 'datetime', 'datetime', 'datetime', False),
         ('string', 'date-time', 'DateTime', 'pendulum', 'DateTime', True),
+        ('string', 'duration', 'timedelta', 'datetime', 'timedelta', False),
+        ('string', 'duration', 'Duration', 'pendulum', 'Duration', True),
         ('string', 'path', 'Path', 'pathlib', 'Path', False),
         ('string', 'password', 'SecretStr', 'pydantic', 'SecretStr', False),
         ('string', 'email', 'EmailStr', 'pydantic', 'EmailStr', False),
