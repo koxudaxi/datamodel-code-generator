@@ -2818,7 +2818,6 @@ def test_main_openapi_discriminator_one_literal_as_default(input, output):
             ]
         )
         assert return_code == Exit.OK
-        breakpoint()
         assert (
             output_file.read_text()
             == (
