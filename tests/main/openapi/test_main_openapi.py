@@ -2814,7 +2814,7 @@ def test_main_openapi_discriminator_one_literal_as_default(input, output):
                 'openapi',
                 '--output-model-type',
                 'pydantic_v2.BaseModel',
-                '--use-one-literal-as-default'
+                '--use-one-literal-as-default',
             ]
         )
         assert return_code == Exit.OK
@@ -2823,6 +2823,7 @@ def test_main_openapi_discriminator_one_literal_as_default(input, output):
             output_file.read_text()
             == (
                 EXPECTED_OPENAPI_PATH
-                / 'discriminator' / 'enum_one_literal_as_default.py'
+                / 'discriminator'
+                / 'enum_one_literal_as_default.py'
             ).read_text()
         )
