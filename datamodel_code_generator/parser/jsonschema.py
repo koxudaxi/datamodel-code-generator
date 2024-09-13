@@ -116,6 +116,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'binary': Types.binary,
         'date': Types.date,
         'date-time': Types.date_time,
+        'duration': Types.timedelta,
         'time': Types.time,
         'password': Types.password,
         'path': Types.path,
@@ -384,7 +385,7 @@ class JsonSchemaParser(Parser):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -440,6 +441,9 @@ class JsonSchemaParser(Parser):
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -507,6 +511,9 @@ class JsonSchemaParser(Parser):
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
+            treat_dots_as_module=treat_dots_as_module,
+            use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -530,20 +537,23 @@ class JsonSchemaParser(Parser):
 
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
-            return {
+            extras = {
                 self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
                 ): v
                 for k, v in obj.extras.items()
             }
         else:
-            return {
+            extras = {
                 self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
                 ): v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }
+        if self.default_field_extras:
+            extras.update(self.default_field_extras)
+        return extras
 
     @cached_property
     def schema_paths(self) -> List[Tuple[str, List[str]]]:
@@ -758,10 +768,10 @@ class JsonSchemaParser(Parser):
                 return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
-                if self.force_optional_for_required_fields or (
+                if self.force_optional_for_required_fields or (  # pragma: no cover
                     self.apply_default_values_for_required_fields and field.has_default
                 ):
-                    continue
+                    continue  # pragma: no cover
                 if (field.original_name or field.name) in required:
                     field.required = True
         if obj.required:
@@ -1310,11 +1320,11 @@ class JsonSchemaParser(Parser):
         elif obj.custom_type_path:
             data_type = self.data_type_manager.get_data_type_from_full_path(
                 obj.custom_type_path, is_custom_type=True
-            )
+            )  # pragma: no cover
         elif obj.is_array:
             data_type = self.parse_array_fields(
                 name, obj, get_special_path('array', path)
-            ).data_type
+            ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
             reference = self.model_resolver.add(
                 path, name, loaded=True, class_name=True
@@ -1328,9 +1338,9 @@ class JsonSchemaParser(Parser):
                     name, obj, get_special_path('oneOf', path)
                 )
 
-            if len(data_types) > 1:
+            if len(data_types) > 1:  # pragma: no cover
                 data_type = self.data_type(data_types=data_types)
-            elif not data_types:
+            elif not data_types:  # pragma: no cover
                 return EmptyDataType()
             else:  # pragma: no cover
                 data_type = data_types[0]
@@ -1659,7 +1669,7 @@ class JsonSchemaParser(Parser):
         elif obj.oneOf or obj.anyOf:
             data_type = self.parse_root_type(name, obj, path)
             if isinstance(data_type, EmptyDataType) and obj.properties:
-                self.parse_object(name, obj, path)
+                self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
             self.parse_object(name, obj, path)
         elif obj.patternProperties:

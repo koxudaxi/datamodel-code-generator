@@ -165,7 +165,7 @@ class OpenAPIParser(JsonSchemaParser):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -222,6 +222,9 @@ class OpenAPIParser(JsonSchemaParser):
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             source=source,
@@ -289,6 +292,9 @@ class OpenAPIParser(JsonSchemaParser):
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
+            treat_dots_as_module=treat_dots_as_module,
+            use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

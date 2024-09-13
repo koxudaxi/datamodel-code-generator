@@ -1,7 +1,11 @@
 from typing import Any, Dict, Optional, Sequence, Type
 
 from datamodel_code_generator import PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL
+from datamodel_code_generator.imports import (
+    IMPORT_ANY,
+    IMPORT_DECIMAL,
+    IMPORT_TIMEDELTA,
+)
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
@@ -27,6 +31,7 @@ def type_map_factory(
         Types.binary: data_type(type='bytes'),
         Types.date: data_type_str,
         Types.date_time: data_type_str,
+        Types.timedelta: data_type.from_import(IMPORT_TIMEDELTA),
         Types.password: data_type_str,
         Types.email: data_type_str,
         Types.uuid: data_type_str,
@@ -52,7 +57,7 @@ def type_map_factory(
 class DataTypeManager(_DataTypeManager):
     def __init__(
         self,
-        python_version: PythonVersion = PythonVersion.PY_37,
+        python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,

@@ -25,12 +25,7 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import (
-    StrictBool,
-    StrictInt,
-    StrictStr,
-    create_model,
-)
+from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
@@ -266,7 +261,7 @@ class DataType(_BaseModel):
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]] = None
     import_: Optional[Import] = None
-    python_version: PythonVersion = PythonVersion.PY_37
+    python_version: PythonVersion = PythonVersion.PY_38
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
@@ -547,6 +542,7 @@ class Types(Enum):
     binary = auto()
     date = auto()
     date_time = auto()
+    timedelta = auto()
     password = auto()
     path = auto()
     email = auto()
@@ -572,7 +568,7 @@ class Types(Enum):
 class DataTypeManager(ABC):
     def __init__(
         self,
-        python_version: PythonVersion = PythonVersion.PY_37,
+        python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,

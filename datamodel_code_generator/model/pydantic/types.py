@@ -12,8 +12,10 @@ from datamodel_code_generator.imports import (
     IMPORT_PATH,
     IMPORT_PENDULUM_DATE,
     IMPORT_PENDULUM_DATETIME,
+    IMPORT_PENDULUM_DURATION,
     IMPORT_PENDULUM_TIME,
     IMPORT_TIME,
+    IMPORT_TIMEDELTA,
     IMPORT_UUID,
 )
 from datamodel_code_generator.model.pydantic.imports import (
@@ -75,6 +77,7 @@ def type_map_factory(
         Types.binary: data_type(type='bytes'),
         Types.date: data_type.from_import(IMPORT_DATE),
         Types.date_time: data_type.from_import(IMPORT_DATETIME),
+        Types.timedelta: data_type.from_import(IMPORT_TIMEDELTA),
         Types.path: data_type.from_import(IMPORT_PATH),
         Types.password: data_type.from_import(IMPORT_SECRET_STR),
         Types.email: data_type.from_import(IMPORT_EMAIL_STR),
@@ -108,6 +111,7 @@ def type_map_factory(
         result[Types.date] = data_type.from_import(IMPORT_PENDULUM_DATE)
         result[Types.date_time] = data_type.from_import(IMPORT_PENDULUM_DATETIME)
         result[Types.time] = data_type.from_import(IMPORT_PENDULUM_TIME)
+        result[Types.timedelta] = data_type.from_import(IMPORT_PENDULUM_DURATION)
 
     return result
 
@@ -151,7 +155,7 @@ class DataTypeManager(_DataTypeManager):
 
     def __init__(
         self,
-        python_version: PythonVersion = PythonVersion.PY_37,
+        python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,

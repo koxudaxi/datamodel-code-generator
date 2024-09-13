@@ -26,11 +26,12 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
     def __str__(self) -> str:
         return self.dump()
 
-    def __init__(self) -> None:
+    def __init__(self, use_exact: bool = False) -> None:
         super().__init__(set)
         self.alias: DefaultDict[Optional[str], Dict[str, str]] = defaultdict(dict)
         self.counter: Dict[Tuple[Optional[str], str], int] = defaultdict(int)
         self.reference_paths: Dict[str, Import] = {}
+        self.use_exact: bool = use_exact
 
     def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
         return [
@@ -116,9 +117,11 @@ IMPORT_DICT = Import.from_full_path('typing.Dict')
 IMPORT_DECIMAL = Import.from_full_path('decimal.Decimal')
 IMPORT_DATE = Import.from_full_path('datetime.date')
 IMPORT_DATETIME = Import.from_full_path('datetime.datetime')
+IMPORT_TIMEDELTA = Import.from_full_path('datetime.timedelta')
 IMPORT_PATH = Import.from_full_path('pathlib.Path')
 IMPORT_TIME = Import.from_full_path('datetime.time')
 IMPORT_UUID = Import.from_full_path('uuid.UUID')
 IMPORT_PENDULUM_DATE = Import.from_full_path('pendulum.Date')
 IMPORT_PENDULUM_DATETIME = Import.from_full_path('pendulum.DateTime')
+IMPORT_PENDULUM_DURATION = Import.from_full_path('pendulum.Duration')
 IMPORT_PENDULUM_TIME = Import.from_full_path('pendulum.Time')

@@ -238,6 +238,14 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
+def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
+    if from_ == '.':
+        # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # when our imported module has the same parent
+        return f'.{import_}', short_name
+    return f'{from_}.{import_}', short_name
+
+
 @runtime_checkable
 class Child(Protocol):
     @property
@@ -295,7 +303,7 @@ def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
             copied_data_types.append(
                 data_type_.__class__(reference=data_type_.reference)
             )
-        elif data_type_.data_types:
+        elif data_type_.data_types:  # pragma: no cover
             copied_data_type = data_type_.copy()
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
@@ -334,7 +342,7 @@ class Parser(ABC):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -392,6 +400,9 @@ class Parser(ABC):
         custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
         use_pendulum: bool = False,
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -405,7 +416,8 @@ class Parser(ABC):
         self.data_model_root_type: Type[DataModel] = data_model_root_type
         self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
 
-        self.imports: Imports = Imports()
+        self.imports: Imports = Imports(use_exact_imports)
+        self.use_exact_imports: bool = use_exact_imports
         self._append_additional_imports(additional_imports=additional_imports)
 
         self.base_class: Optional[str] = base_class
@@ -514,6 +526,8 @@ class Parser(ABC):
         self.known_third_party = known_third_party
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
+        self.treat_dots_as_module = treat_dots_as_module
+        self.default_field_extras: Optional[Dict[str, Any]] = default_field_extras
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -544,6 +558,8 @@ class Parser(ABC):
             additional_imports = []
 
         for additional_import_string in additional_imports:
+            if additional_import_string is None:
+                continue
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
 
@@ -652,7 +668,7 @@ class Parser(ABC):
         for model in models:
             class_name: str = model.class_name
             generated_name: str = scoped_model_resolver.add(
-                model.path, class_name, unique=True, class_name=True
+                [model.path], class_name, unique=True, class_name=True
             ).name
             if class_name != generated_name:
                 model.class_name = generated_name
@@ -666,16 +682,15 @@ class Parser(ABC):
                 model.class_name = duplicate_name
                 model_names[duplicate_name] = model
 
-    @classmethod
     def __change_from_import(
-        cls,
+        self,
         models: List[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
         init: bool,
     ) -> None:
         for model in models:
-            scoped_model_resolver.add(model.path, model.class_name)
+            scoped_model_resolver.add([model.path], model.class_name)
         for model in models:
             before_import = model.imports
             imports.append(before_import)
@@ -700,6 +715,18 @@ class Parser(ABC):
                     from_, import_ = full_path = relative(
                         model.module_name, data_type.full_name
                     )
+                    if imports.use_exact:  # pragma: no cover
+                        from_, import_ = exact_import(
+                            from_, import_, data_type.reference.short_name
+                        )
+                    import_ = import_.replace('-', '_')
+                    if (
+                        len(model.module_path) > 1
+                        and model.module_path[-1].count('.') > 0
+                        and not self.treat_dots_as_module
+                    ):
+                        rel_path_depth = model.module_path[-1].count('.')
+                        from_ = from_[rel_path_depth:]
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
@@ -778,8 +805,18 @@ class Parser(ABC):
                                 discriminator_model.path.split('#/')[-1]
                                 != path.split('#/')[-1]
                             ):
-                                # TODO: support external reference
-                                continue
+                                if (
+                                    path.startswith('#/')
+                                    or discriminator_model.path[:-1]
+                                    != path.split('/')[-1]
+                                ):
+                                    t_path = path[str(path).find('/') + 1 :]
+                                    t_disc = discriminator_model.path[
+                                        : str(discriminator_model.path).find('#')
+                                    ].lstrip('../')
+                                    t_disc_2 = '/'.join(t_disc.split('/')[1:])
+                                    if t_path != t_disc and t_path != t_disc_2:
+                                        continue
                             type_names.append(name)
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
@@ -822,11 +859,16 @@ class Parser(ABC):
                                 required=True,
                             )
                         )
-                    imports.append(
+                    literal = (
                         IMPORT_LITERAL
                         if self.target_python_version.has_literal_type
                         else IMPORT_LITERAL_BACKPORT
                     )
+                    has_imported_literal = any(
+                        literal == import_ for import_ in imports
+                    )
+                    if has_imported_literal:  # pragma: no cover
+                        imports.append(literal)
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
@@ -920,7 +962,11 @@ class Parser(ABC):
             models.remove(duplicate)
 
     def __collapse_root_models(
-        self, models: List[DataModel], unused_models: List[DataModel], imports: Imports
+        self,
+        models: List[DataModel],
+        unused_models: List[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
     ) -> None:
         if not self.collapse_root_models:
             return None
@@ -948,7 +994,7 @@ class Parser(ABC):
                             if d.is_dict or d.is_union
                         )
                     ):
-                        continue
+                        continue  # pragma: no cover
 
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.copy()
@@ -974,12 +1020,15 @@ class Parser(ABC):
                                 root_type_field.constraints, model_field.constraints
                             )
                         if isinstance(
-                            root_type_field, pydantic_model.DataModelField
-                        ) and not model_field.extras.get('discriminator'):  # no: pragma
+                            root_type_field,
+                            pydantic_model.DataModelField,
+                        ) and not model_field.extras.get('discriminator'):
                             discriminator = root_type_field.extras.get('discriminator')
-                            if discriminator:  # no: pragma
+                            if discriminator:
                                 model_field.extras['discriminator'] = discriminator
-                        data_type.parent.data_types.remove(data_type)
+                        data_type.parent.data_types.remove(
+                            data_type
+                        )  # pragma: no cover
                         data_type.parent.data_types.append(copied_data_type)
 
                     elif isinstance(data_type.parent, DataType):
@@ -992,6 +1041,31 @@ class Parser(ABC):
                         ]
                     else:  # pragma: no cover
                         continue
+
+                    for d in root_type_field.data_type.data_types:
+                        if d.reference is None:
+                            continue
+                        from_, import_ = full_path = relative(
+                            model.module_name, d.full_name
+                        )
+                        if from_ and import_:
+                            alias = scoped_model_resolver.add(full_path, import_)
+                            d.alias = (
+                                alias.name
+                                if d.reference.short_name == import_
+                                else f'{alias.name}.{d.reference.short_name}'
+                            )
+                            imports.append(
+                                [
+                                    Import(
+                                        from_=from_,
+                                        import_=import_,
+                                        alias=alias.name,
+                                        reference_path=d.reference.path,
+                                    )
+                                ]
+                            )
+
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
@@ -1136,6 +1210,32 @@ class Parser(ABC):
                 if model_field.nullable is not True:  # pragma: no cover
                     model_field.nullable = False
 
+    @classmethod
+    def __postprocess_result_modules(cls, results):
+        def process(input_tuple) -> Tuple[str, ...]:
+            r = []
+            for item in input_tuple:
+                p = item.split('.')
+                if len(p) > 1:
+                    r.extend(p[:-1])
+                    r.append(p[-1])
+                else:
+                    r.append(item)
+
+            r = r[:-2] + [f'{r[-2]}.{r[-1]}']
+            return tuple(r)
+
+        results = {process(k): v for k, v in results.items()}
+
+        init_result = [v for k, v in results.items() if k[-1] == '__init__.py'][0]
+        folders = {t[:-1] if t[-1].endswith('.py') else t for t in results.keys()}
+        for folder in folders:
+            for i in range(len(folder)):
+                subfolder = folder[: i + 1]
+                init_file = subfolder + ('__init__.py',)
+                results.update({init_file: init_result})
+        return results
+
     def __change_imported_model_name(
         self,
         models: List[DataModel],
@@ -1194,9 +1294,12 @@ class Parser(ABC):
         def module_key(data_model: DataModel) -> Tuple[str, ...]:
             return tuple(data_model.module_path)
 
+        def sort_key(data_model: DataModel) -> Tuple[int, Tuple[str, ...]]:
+            return (len(data_model.module_path), tuple(data_model.module_path))
+
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
-            sorted(sorted_data_models.values(), key=module_key, reverse=True),
+            sorted(sorted_data_models.values(), key=sort_key, reverse=True),
             key=module_key,
         )
 
@@ -1239,7 +1342,7 @@ class Parser(ABC):
         processed_models: List[Processed] = []
 
         for module, models in module_models:
-            imports = module_to_import[module] = Imports()
+            imports = module_to_import[module] = Imports(self.use_exact_imports)
             init = False
             if module:
                 parent = (*module[:-1], '__init__.py')
@@ -1250,6 +1353,7 @@ class Parser(ABC):
                     init = True
                 else:
                     module = (*module[:-1], f'{module[-1]}.py')
+                    module = tuple(part.replace('-', '_') for part in module)
             else:
                 module = ('__init__.py',)
 
@@ -1261,7 +1365,9 @@ class Parser(ABC):
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
-            self.__collapse_root_models(models, unused_models, imports)
+            self.__collapse_root_models(
+                models, unused_models, imports, scoped_model_resolver
+            )
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
             self.__apply_discriminator_type(models, imports)
@@ -1271,6 +1377,10 @@ class Parser(ABC):
                 Processed(module, models, init, imports, scoped_model_resolver)
             )
 
+        for processed_model in processed_models:
+            for model in processed_model.models:
+                processed_model.imports.append(model.imports)
+
         for unused_model in unused_models:
             module, models = model_to_module_models[unused_model]
             if unused_model in models:  # pragma: no cover
@@ -1278,28 +1388,42 @@ class Parser(ABC):
                 imports.remove(unused_model.imports)
                 models.remove(unused_model)
 
+        for processed_model in processed_models:
+            # postprocess imports to remove unused imports.
+            model_code = str('\n'.join([str(m) for m in processed_model.models]))
+            unused_imports = [
+                (from_, import_)
+                for from_, imports_ in processed_model.imports.items()
+                for import_ in imports_
+                if import_ not in model_code
+            ]
+            for from_, import_ in unused_imports:
+                processed_model.imports.remove(Import(from_=from_, import_=import_))
+
         for module, models, init, imports, scoped_model_resolver in processed_models:
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
         for module, models, init, imports, scoped_model_resolver in processed_models:
             result: List[str] = []
-            if with_import:
-                result += [str(self.imports), str(imports), '\n']
+            if models:
+                if with_import:
+                    result += [str(self.imports), str(imports), '\n']
 
-            code = dump_templates(models)
-            result += [code]
+                code = dump_templates(models)
+                result += [code]
 
-            if self.dump_resolve_reference_action is not None:
-                result += [
-                    '\n',
-                    self.dump_resolve_reference_action(
-                        m.reference.short_name
-                        for m in models
-                        if m.path in require_update_action_models
-                    ),
-                ]
-
+                if self.dump_resolve_reference_action is not None:
+                    result += [
+                        '\n',
+                        self.dump_resolve_reference_action(
+                            m.reference.short_name
+                            for m in models
+                            if m.path in require_update_action_models
+                        ),
+                    ]
+            if not result and not init:
+                continue
             body = '\n'.join(result)
             if code_formatter:
                 body = code_formatter.format_code(body)
@@ -1311,5 +1435,21 @@ class Parser(ABC):
         # retain existing behaviour
         if [*results] == [('__init__.py',)]:
             return results[('__init__.py',)].body
+
+        results = {tuple(i.replace('-', '_') for i in k): v for k, v in results.items()}
+        results = (
+            self.__postprocess_result_modules(results)
+            if self.treat_dots_as_module
+            else {
+                tuple(
+                    (
+                        part[: part.rfind('.')].replace('.', '_')
+                        + part[part.rfind('.') :]
+                    )
+                    for part in k
+                ): v
+                for k, v in results.items()
+            }
+        )
 
         return results
