@@ -49,7 +49,7 @@ pydantic =  [
 ]
 argcomplete = ">=1.10,<4.0"
 jinja2 = ">=2.10.1,<4.0"
-inflect = ">=4.1.0,<6.0"
+inflect = ">=6.2,<7"
 black = ">=19.10b0"
 isort = ">=4.3.21,<6.0"
 genson = ">=1.2.1,<2.0"
