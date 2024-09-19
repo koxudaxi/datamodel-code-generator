@@ -238,9 +238,6 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
     return left, right
 
 
-# def absolute()
-
-
 def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
     if from_ == len(from_) * '.':
         # Prevents "from . import foo" becoming "from ..foo import Foo"
