@@ -239,10 +239,11 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
-    if from_ == '.':
+    if from_ == len(from_) * '.':
         # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # or "from .. import foo" becoming "from ...foo import Foo"
         # when our imported module has the same parent
-        return f'.{import_}', short_name
+        return f'{from_}{import_}', short_name
     return f'{from_}.{import_}', short_name
 
 
