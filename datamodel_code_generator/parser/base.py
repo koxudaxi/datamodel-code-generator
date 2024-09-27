@@ -239,10 +239,11 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
-    if from_ == '.':
+    if from_ == len(from_) * '.':
         # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # or "from .. import foo" becoming "from ...foo import Foo"
         # when our imported module has the same parent
-        return f'.{import_}', short_name
+        return f'{from_}{import_}', short_name
     return f'{from_}.{import_}', short_name
 
 
@@ -1370,8 +1371,8 @@ class Parser(ABC):
             )
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
-            self.__set_one_literal_on_default(models)
             self.__apply_discriminator_type(models, imports)
+            self.__set_one_literal_on_default(models)
 
             processed_models.append(
                 Processed(module, models, init, imports, scoped_model_resolver)
