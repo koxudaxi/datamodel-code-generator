@@ -1084,6 +1084,7 @@ def test_main_require_referenced_field_naivedatetime(output_model, expected_outp
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
 
+
 @pytest.mark.parametrize(
     'output_model,expected_output',
     [
