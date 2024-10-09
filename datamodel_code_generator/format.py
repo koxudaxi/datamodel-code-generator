@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover
 class DatetimeClassType(Enum):
     Datetime = 'datetime'
     Awaredatetime = 'AwareDatetime'
-    Naivedatetime = 'NaveDatetime'
+    Naivedatetime = 'NaiveDatetime'
 
 
 class PythonVersion(Enum):

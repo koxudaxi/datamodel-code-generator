@@ -194,7 +194,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     '--output-datetime-class',
-    help='Datetime class, only pydantic v2 field, default `datetime` if --use-pendulum  is set override this option',
+    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime, default: "datetime"',
     choices=[i.value for i in DatetimeClassType],
 )
 

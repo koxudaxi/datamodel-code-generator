@@ -462,6 +462,8 @@ Model customization:
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
+  
+  ----output-datetime-class Choose Datetime class between AwareDatetime, NaiveDatetime or datetime, default: "datetime"
 
 Template customization:
   --aliases ALIASES     Alias mapping file
