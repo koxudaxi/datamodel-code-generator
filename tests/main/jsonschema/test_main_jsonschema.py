@@ -1028,6 +1028,8 @@ def test_main_require_referenced_field(output_model, expected_output):
                 str(output_dir),
                 '--input-file-type',
                 'jsonschema',
+                '--output-datetime-class',
+                'AwareDatetime',
                 '--output-model-type',
                 output_model,
             ]
@@ -1041,6 +1043,43 @@ def test_main_require_referenced_field(output_model, expected_output):
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'require_referenced_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'require_referenced_field',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_require_referenced_field(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+
+        assert (output_dir / 'referenced.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / expected_output / 'referenced.py'
+        ).read_text()
+        assert (output_dir / 'required.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
+        ).read_text()
 
 @freeze_time('2019-07-26')
 def test_main_json_pointer():

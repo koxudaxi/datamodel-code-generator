@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+import yaml
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -27,10 +28,8 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-import yaml
-
 import datamodel_code_generator.pydantic_patch  # noqa: F401
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import PythonVersion, DatetimeClassType
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
@@ -60,7 +59,8 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
 
 if TYPE_CHECKING:
 
-    def get_version() -> str: ...
+    def get_version() -> str:
+        ...
 
 else:
 
@@ -82,15 +82,15 @@ def enable_debug_message() -> None:  # pragma: no cover
 
 
 def snooper_to_methods(  # type: ignore
-    output=None,
-    watch=(),
-    watch_explode=(),
-    depth=1,
-    prefix='',
-    overwrite=False,
-    thread_info=False,
-    custom_repr=(),
-    max_variable_length=100,
+        output=None,
+        watch=(),
+        watch_explode=(),
+        depth=1,
+        prefix='',
+        overwrite=False,
+        thread_info=False,
+        custom_repr=(),
+        max_variable_length=100,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         if not pysnooper:
@@ -147,18 +147,18 @@ def is_schema(text: str) -> bool:
         return False
     schema = data.get('$schema')
     if isinstance(schema, str) and any(
-        schema.startswith(u) for u in JSON_SCHEMA_URLS
+            schema.startswith(u) for u in JSON_SCHEMA_URLS
     ):  # pragma: no cover
         return True
     if isinstance(data.get('type'), str):
         return True
     if any(
-        isinstance(data.get(o), list)
-        for o in (
-            'allOf',
-            'anyOf',
-            'oneOf',
-        )
+            isinstance(data.get(o), list)
+            for o in (
+                    'allOf',
+                    'anyOf',
+                    'oneOf',
+            )
     ):
         return True
     if isinstance(data.get('properties'), dict):
@@ -231,76 +231,77 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
 
 
 def generate(
-    input_: Union[Path, str, ParseResult],
-    *,
-    input_filename: Optional[str] = None,
-    input_file_type: InputFileType = InputFileType.Auto,
-    output: Optional[Path] = None,
-    output_model_type: DataModelType = DataModelType.PydanticBaseModel,
-    target_python_version: PythonVersion = PythonVersion.PY_38,
-    base_class: str = '',
-    additional_imports: Optional[List[str]] = None,
-    custom_template_dir: Optional[Path] = None,
-    extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-    validation: bool = False,
-    field_constraints: bool = False,
-    snake_case_field: bool = False,
-    strip_default_none: bool = False,
-    aliases: Optional[Mapping[str, str]] = None,
-    disable_timestamp: bool = False,
-    enable_version_header: bool = False,
-    allow_population_by_field_name: bool = False,
-    allow_extra_fields: bool = False,
-    apply_default_values_for_required_fields: bool = False,
-    force_optional_for_required_fields: bool = False,
-    class_name: Optional[str] = None,
-    use_standard_collections: bool = False,
-    use_schema_description: bool = False,
-    use_field_description: bool = False,
-    use_default_kwarg: bool = False,
-    reuse_model: bool = False,
-    encoding: str = 'utf-8',
-    enum_field_as_literal: Optional[LiteralType] = None,
-    use_one_literal_as_default: bool = False,
-    set_default_enum_member: bool = False,
-    use_subclass_enum: bool = False,
-    strict_nullable: bool = False,
-    use_generic_container_types: bool = False,
-    enable_faux_immutability: bool = False,
-    disable_appending_item_suffix: bool = False,
-    strict_types: Optional[Sequence[StrictTypes]] = None,
-    empty_enum_field_name: Optional[str] = None,
-    custom_class_name_generator: Optional[Callable[[str], str]] = None,
-    field_extra_keys: Optional[Set[str]] = None,
-    field_include_all_keys: bool = False,
-    field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
-    openapi_scopes: Optional[List[OpenAPIScope]] = None,
-    graphql_scopes: Optional[List[GraphQLScope]] = None,
-    wrap_string_literal: Optional[bool] = None,
-    use_title_as_name: bool = False,
-    use_operation_id_as_name: bool = False,
-    use_unique_items_as_set: bool = False,
-    http_headers: Optional[Sequence[Tuple[str, str]]] = None,
-    http_ignore_tls: bool = False,
-    use_annotated: bool = False,
-    use_non_positive_negative_number_constrained_types: bool = False,
-    original_field_name_delimiter: Optional[str] = None,
-    use_double_quotes: bool = False,
-    use_union_operator: bool = False,
-    collapse_root_models: bool = False,
-    special_field_name_prefix: Optional[str] = None,
-    remove_special_field_name_prefix: bool = False,
-    capitalise_enum_members: bool = False,
-    keep_model_order: bool = False,
-    custom_file_header: Optional[str] = None,
-    custom_file_header_path: Optional[Path] = None,
-    custom_formatters: Optional[List[str]] = None,
-    custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
-    use_pendulum: bool = False,
-    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
-    treat_dots_as_module: bool = False,
-    use_exact_imports: bool = False,
-    union_mode: Optional[UnionMode] = None,
+        input_: Union[Path, str, ParseResult],
+        *,
+        input_filename: Optional[str] = None,
+        input_file_type: InputFileType = InputFileType.Auto,
+        output: Optional[Path] = None,
+        output_model_type: DataModelType = DataModelType.PydanticBaseModel,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
+        base_class: str = '',
+        additional_imports: Optional[List[str]] = None,
+        custom_template_dir: Optional[Path] = None,
+        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+        validation: bool = False,
+        field_constraints: bool = False,
+        snake_case_field: bool = False,
+        strip_default_none: bool = False,
+        aliases: Optional[Mapping[str, str]] = None,
+        disable_timestamp: bool = False,
+        enable_version_header: bool = False,
+        allow_population_by_field_name: bool = False,
+        allow_extra_fields: bool = False,
+        apply_default_values_for_required_fields: bool = False,
+        force_optional_for_required_fields: bool = False,
+        class_name: Optional[str] = None,
+        use_standard_collections: bool = False,
+        use_schema_description: bool = False,
+        use_field_description: bool = False,
+        use_default_kwarg: bool = False,
+        reuse_model: bool = False,
+        encoding: str = 'utf-8',
+        enum_field_as_literal: Optional[LiteralType] = None,
+        use_one_literal_as_default: bool = False,
+        set_default_enum_member: bool = False,
+        use_subclass_enum: bool = False,
+        strict_nullable: bool = False,
+        use_generic_container_types: bool = False,
+        enable_faux_immutability: bool = False,
+        disable_appending_item_suffix: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
+        empty_enum_field_name: Optional[str] = None,
+        custom_class_name_generator: Optional[Callable[[str], str]] = None,
+        field_extra_keys: Optional[Set[str]] = None,
+        field_include_all_keys: bool = False,
+        field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
+        openapi_scopes: Optional[List[OpenAPIScope]] = None,
+        graphql_scopes: Optional[List[GraphQLScope]] = None,
+        wrap_string_literal: Optional[bool] = None,
+        use_title_as_name: bool = False,
+        use_operation_id_as_name: bool = False,
+        use_unique_items_as_set: bool = False,
+        http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        http_ignore_tls: bool = False,
+        use_annotated: bool = False,
+        use_non_positive_negative_number_constrained_types: bool = False,
+        original_field_name_delimiter: Optional[str] = None,
+        use_double_quotes: bool = False,
+        use_union_operator: bool = False,
+        collapse_root_models: bool = False,
+        special_field_name_prefix: Optional[str] = None,
+        remove_special_field_name_prefix: bool = False,
+        capitalise_enum_members: bool = False,
+        keep_model_order: bool = False,
+        custom_file_header: Optional[str] = None,
+        custom_file_header_path: Optional[Path] = None,
+        custom_formatters: Optional[List[str]] = None,
+        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        use_pendulum: bool = False,
+        http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        treat_dots_as_module: bool = False,
+        use_exact_imports: bool = False,
+        union_mode: Optional[UnionMode] = None,
+        output_datetime_class: DataModelType = DatetimeClassType.Datetime
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -360,7 +361,8 @@ def generate(
 
                     def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
-                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))  # type: ignore
+                        return dict(
+                            zip(csv_reader.fieldnames, next(csv_reader)))  # type: ignore
 
                     if isinstance(input_, Path):
                         with input_.open(encoding=encoding) as f:
@@ -395,9 +397,12 @@ def generate(
             raise Error('union_mode is only supported for pydantic_v2.BaseModel')
     else:
         default_field_extras = None
+
+
     from datamodel_code_generator.model import get_data_model_types
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version)
+    data_model_types = get_data_model_types(output_model_type, target_python_version,
+                                            output_datetime_class)
     parser = parser_class(
         source=input_text or input_,
         data_model_type=data_model_types.data_model,
@@ -471,6 +476,7 @@ def generate(
         treat_dots_as_module=treat_dots_as_module,
         use_exact_imports=use_exact_imports,
         default_field_extras=default_field_extras,
+        target_datetime_class=output_datetime_class,
         **kwargs,
     )
 
