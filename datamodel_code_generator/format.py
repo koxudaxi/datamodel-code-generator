@@ -22,6 +22,7 @@ class DatetimeClassType(Enum):
     Awaredatetime = 'AwareDatetime'
     Naivedatetime = 'NaveDatetime'
 
+
 class PythonVersion(Enum):
     PY_36 = '3.6'
     PY_37 = '3.7'

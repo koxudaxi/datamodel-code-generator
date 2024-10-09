@@ -73,6 +73,7 @@ if PYDANTIC_V2:
 
 from datamodel_code_generator.format import DatetimeClassType
 
+
 def get_model_by_path(
     schema: Union[Dict[str, Any], List[Any]], keys: Union[List[str], List[int]]
 ) -> Dict[Any, Any]:
@@ -445,7 +446,7 @@ class JsonSchemaParser(Parser):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
-        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ) -> None:
         super().__init__(
             source=source,
@@ -516,7 +517,7 @@ class JsonSchemaParser(Parser):
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
-            target_datetime_class=target_datetime_class
+            target_datetime_class=target_datetime_class,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()

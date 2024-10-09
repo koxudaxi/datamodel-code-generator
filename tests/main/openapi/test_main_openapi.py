@@ -1110,6 +1110,7 @@ def test_main_openapi_aware_datetime(output_model, expected_output):
             == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
 
+
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
     'output_model,expected_output',
@@ -1142,8 +1143,9 @@ def test_main_openapi_datetime(output_model, expected_output):
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_OPENAPI_PATH / expected_output ).read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
         )
+
 
 @freeze_time('2019-07-26')
 def test_main_models_not_found(capsys):

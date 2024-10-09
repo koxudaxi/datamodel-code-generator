@@ -1043,6 +1043,7 @@ def test_main_require_referenced_field(output_model, expected_output):
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
 
+
 @pytest.mark.parametrize(
     'output_model,expected_output',
     [
@@ -1080,6 +1081,7 @@ def test_main_require_referenced_field(output_model, expected_output):
         assert (output_dir / 'required.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
+
 
 @freeze_time('2019-07-26')
 def test_main_json_pointer():

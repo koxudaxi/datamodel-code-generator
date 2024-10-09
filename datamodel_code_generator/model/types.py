@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, Sequence, Type
 
-from datamodel_code_generator import PythonVersion, DatetimeClassType
+from datamodel_code_generator import DatetimeClassType, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DECIMAL,
@@ -10,9 +10,7 @@ from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
 
-def type_map_factory(
-        data_type: Type[DataType]
-) -> Dict[Types, DataType]:
+def type_map_factory(data_type: Type[DataType]) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
     data_type_str = data_type(type='str')
@@ -74,16 +72,14 @@ class DataTypeManager(_DataTypeManager):
             use_non_positive_negative_number_constrained_types,
             use_union_operator,
             use_pendulum,
-            target_datetime_class
+            target_datetime_class,
         )
 
-        self.type_map: Dict[Types, DataType] = type_map_factory(
-            self.data_type
-        )
+        self.type_map: Dict[Types, DataType] = type_map_factory(self.data_type)
 
     def get_data_type(
-            self,
-            types: Types,
-            **_: Any,
+        self,
+        types: Types,
+        **_: Any,
     ) -> DataType:
         return self.type_map[types]

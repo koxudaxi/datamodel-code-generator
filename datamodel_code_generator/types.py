@@ -1,11 +1,8 @@
-import pydantic
 import re
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
-from packaging import version
-from pydantic import StrictBool, StrictInt, StrictStr, create_model
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,7 +23,11 @@ from typing import (
     Union,
 )
 
-from datamodel_code_generator.format import PythonVersion, DatetimeClassType
+import pydantic
+from packaging import version
+from pydantic import StrictBool, StrictInt, StrictStr, create_model
+
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -111,7 +112,7 @@ class UnionIntFloat:
 
     @classmethod
     def __get_pydantic_core_schema__(
-            cls, _source_type: Any, _handler: 'GetCoreSchemaHandler'
+        cls, _source_type: Any, _handler: 'GetCoreSchemaHandler'
     ) -> 'core_schema.CoreSchema':
         from_int_schema = core_schema.chain_schema(
             [
@@ -162,7 +163,7 @@ def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
 
 @lru_cache()
 def _remove_none_from_type(
-        type_: str, split_pattern: Pattern[str], delimiter: str
+    type_: str, split_pattern: Pattern[str], delimiter: str
 ) -> List[str]:
     types: List[str] = []
     split_type: str = ''
@@ -198,7 +199,7 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
     if not type_.startswith(UNION_PREFIX):
         return type_
     inner_types = _remove_none_from_type(
-        type_[len(UNION_PREFIX):][:-1], UNION_PATTERN, UNION_DELIMITER
+        type_[len(UNION_PREFIX) :][:-1], UNION_PATTERN, UNION_DELIMITER
     )
 
     if len(inner_types) == 1:
@@ -241,6 +242,7 @@ class DataType(_BaseModel):
         )
     else:
         if not TYPE_CHECKING:
+
             @classmethod
             def model_rebuild(cls) -> None:
                 cls.update_forward_refs()
@@ -280,16 +282,16 @@ class DataType(_BaseModel):
 
     @classmethod
     def from_import(
-            cls: Type['DataTypeT'],
-            import_: Import,
-            *,
-            is_optional: bool = False,
-            is_dict: bool = False,
-            is_list: bool = False,
-            is_set: bool = False,
-            is_custom_type: bool = False,
-            strict: bool = False,
-            kwargs: Optional[Dict[str, Any]] = None,
+        cls: Type['DataTypeT'],
+        import_: Import,
+        *,
+        is_optional: bool = False,
+        is_dict: bool = False,
+        is_list: bool = False,
+        is_set: bool = False,
+        is_custom_type: bool = False,
+        strict: bool = False,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> 'DataTypeT':
         return cls(
             type=import_.import_,
@@ -565,15 +567,15 @@ class Types(Enum):
 
 class DataTypeManager(ABC):
     def __init__(
-            self,
-            python_version: PythonVersion = PythonVersion.PY_38,
-            use_standard_collections: bool = False,
-            use_generic_container_types: bool = False,
-            strict_types: Optional[Sequence[StrictTypes]] = None,
-            use_non_positive_negative_number_constrained_types: bool = False,
-            use_union_operator: bool = False,
-            use_pendulum: bool = False,
-            target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        self,
+        python_version: PythonVersion = PythonVersion.PY_38,
+        use_standard_collections: bool = False,
+        use_generic_container_types: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
+        use_non_positive_negative_number_constrained_types: bool = False,
+        use_union_operator: bool = False,
+        use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
@@ -587,7 +589,7 @@ class DataTypeManager(ABC):
         self.target_datetime_class: DatetimeClassType = target_datetime_class
 
         if (
-                use_generic_container_types and python_version == PythonVersion.PY_36
+            use_generic_container_types and python_version == PythonVersion.PY_36
         ):  # pragma: no cover
             raise Exception(
                 'use_generic_container_types can not be used with target_python_version 3.6.\n'
@@ -611,7 +613,7 @@ class DataTypeManager(ABC):
         raise NotImplementedError
 
     def get_data_type_from_full_path(
-            self, full_path: str, is_custom_type: bool
+        self, full_path: str, is_custom_type: bool
     ) -> DataType:
         return self.data_type.from_import(
             Import.from_full_path(full_path), is_custom_type=is_custom_type

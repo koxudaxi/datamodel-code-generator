@@ -6,7 +6,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
-from datamodel_code_generator.format import PythonVersion, DatetimeClassType
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
@@ -118,7 +118,7 @@ model_options.add_argument(
     action='store_true',
     default=None,
     help='Models generated with a root-type field will be merged '
-         'into the models using that root-type model',
+    'into the models using that root-type model',
 )
 model_options.add_argument(
     '--disable-appending-item-suffix',
@@ -188,7 +188,7 @@ model_options.add_argument(
 model_options.add_argument(
     '--use-exact-imports',
     help='import exact types instead of modules, for example: "from .foo import Bar" instead of '
-         '"from . import foo" with "foo.Bar"',
+    '"from . import foo" with "foo.Bar"',
     action='store_true',
     default=False,
 )
@@ -209,8 +209,8 @@ typing_options.add_argument(
 typing_options.add_argument(
     '--enum-field-as-literal',
     help='Parse enum field as literal. '
-         'all: all enum field type are Literal. '
-         'one: field type is Literal when an enum has only one possible value',
+    'all: all enum field type are Literal. '
+    'one: field type is Literal when an enum has only one possible value',
     choices=[lt.value for lt in LiteralType],
     default=None,
 )
@@ -241,7 +241,7 @@ typing_options.add_argument(
 typing_options.add_argument(
     '--use-generic-container-types',
     help='Use generic container types for type hinting (typing.Sequence, typing.Mapping). '
-         'If `--use-standard-collections` option is set, then import from collections.abc instead of typing',
+    'If `--use-standard-collections` option is set, then import from collections.abc instead of typing',
     action='store_true',
     default=None,
 )
@@ -414,7 +414,7 @@ template_options.add_argument(
     action='store_true',
     default=None,
     help='Model generated with double quotes. Single quotes or '
-         'your black config skip_string_normalization value will be used without this option.',
+    'your black config skip_string_normalization value will be used without this option.',
 )
 template_options.add_argument(
     '--wrap-string-literal',
@@ -465,7 +465,7 @@ openapi_options.add_argument(
 openapi_options.add_argument(
     '--validation',
     help='Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future '
-         'releases',
+    'releases',
     action='store_true',
     default=None,
 )

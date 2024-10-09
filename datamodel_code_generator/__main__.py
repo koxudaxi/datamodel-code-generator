@@ -6,8 +6,6 @@ Main function.
 
 from __future__ import annotations
 
-import argcomplete
-import black
 import json
 import signal
 import sys
@@ -16,7 +14,6 @@ from collections import defaultdict
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from pydantic import BaseModel
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -31,6 +28,10 @@ from typing import (
     cast,
 )
 from urllib.parse import ParseResult, urlparse
+
+import argcomplete
+import black
+from pydantic import BaseModel
 
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 
@@ -50,10 +51,10 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.format import (
+    DatetimeClassType,
     PythonVersion,
     black_find_project_root,
     is_supported_in_black,
-    DatetimeClassType
 )
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.reference import is_url
@@ -96,8 +97,7 @@ class Config(BaseModel):
         if TYPE_CHECKING:
 
             @classmethod
-            def get_fields(cls) -> Dict[str, Any]:
-                ...
+            def get_fields(cls) -> Dict[str, Any]: ...
 
         else:
 
@@ -117,6 +117,7 @@ class Config(BaseModel):
             arbitrary_types_allowed = (TextIOBase,)
 
         if not TYPE_CHECKING:
+
             @classmethod
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
@@ -153,7 +154,7 @@ class Config(BaseModel):
 
     @model_validator(mode='after')
     def validate_use_generic_container_types(
-            cls, values: Dict[str, Any]
+        cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
         if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
@@ -166,7 +167,7 @@ class Config(BaseModel):
 
     @model_validator(mode='after')
     def validate_original_field_name_delimiter(
-            cls, values: Dict[str, Any]
+        cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
         if values.get('original_field_name_delimiter') is not None:
             if not values.get('snake_case_field'):
@@ -189,8 +190,7 @@ class Config(BaseModel):
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split(':',
-                                                              maxsplit=1)  # type: str, str
+                    field_name, field_value = each_item.split(':', maxsplit=1)  # type: str, str
                     return field_name, field_value.lstrip()
                 except ValueError:
                     raise Error(f'Invalid http header: {each_item!r}')
@@ -202,13 +202,12 @@ class Config(BaseModel):
 
     @field_validator('http_query_parameters', mode='before')
     def validate_http_query_parameters(
-            cls, value: Any
+        cls, value: Any
     ) -> Optional[List[Tuple[str, str]]]:
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split('=',
-                                                              maxsplit=1)  # type: str, str
+                    field_name, field_value = each_item.split('=', maxsplit=1)  # type: str, str
                     return field_name, field_value.lstrip()
                 except ValueError:
                     raise Error(f'Invalid http query parameter: {each_item!r}')
@@ -417,7 +416,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                 print(f'Unable to load alias mapping: {e}', file=sys.stderr)
                 return Exit.ERROR
         if not isinstance(aliases, dict) or not all(
-                isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+            isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
             print(
                 'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
@@ -438,8 +437,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                 )
                 return Exit.ERROR
         if not isinstance(custom_formatters_kwargs, dict) or not all(
-                isinstance(k, str) and isinstance(v, str)
-                for k, v in custom_formatters_kwargs.items()
+            isinstance(k, str) and isinstance(v, str)
+            for k, v in custom_formatters_kwargs.items()
         ):  # pragma: no cover
             print(
                 'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
@@ -515,7 +514,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             treat_dots_as_module=config.treat_dot_as_module,
             use_exact_imports=config.use_exact_imports,
             union_mode=config.union_mode,
-            output_datetime_class=config.output_datetime_class
+            output_datetime_class=config.output_datetime_class,
         )
         return Exit.OK
     except InvalidClassNameError as e:

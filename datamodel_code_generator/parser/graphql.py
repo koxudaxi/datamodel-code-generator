@@ -158,7 +158,7 @@ class GraphQLParser(Parser):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
-        target_datetime_class: DatetimeClassType =DatetimeClassType.Datetime
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ) -> None:
         super().__init__(
             source=source,
@@ -229,7 +229,7 @@ class GraphQLParser(Parser):
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
-            target_datetime_class=target_datetime_class
+            target_datetime_class=target_datetime_class,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

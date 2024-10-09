@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any, ClassVar, Dict, Optional, Sequence, Set, Type
 
-from datamodel_code_generator.format import PythonVersion,DatetimeClassType
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,
@@ -55,11 +55,11 @@ from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
 
 def type_map_factory(
-        data_type: Type[DataType],
-        strict_types: Sequence[StrictTypes],
-        pattern_key: str,
-        use_pendulum: bool,
-        target_datetime_class: DatetimeClassType
+    data_type: Type[DataType],
+    strict_types: Sequence[StrictTypes],
+    pattern_key: str,
+    use_pendulum: bool,
+    target_datetime_class: DatetimeClassType,
 ) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
@@ -155,15 +155,15 @@ class DataTypeManager(_DataTypeManager):
     PATTERN_KEY: ClassVar[str] = 'regex'
 
     def __init__(
-            self,
-            python_version: PythonVersion = PythonVersion.PY_38,
-            use_standard_collections: bool = False,
-            use_generic_container_types: bool = False,
-            strict_types: Optional[Sequence[StrictTypes]] = None,
-            use_non_positive_negative_number_constrained_types: bool = False,
-            use_union_operator: bool = False,
-            use_pendulum: bool = False,
-            target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime
+        self,
+        python_version: PythonVersion = PythonVersion.PY_38,
+        use_standard_collections: bool = False,
+        use_generic_container_types: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
+        use_non_positive_negative_number_constrained_types: bool = False,
+        use_union_operator: bool = False,
+        use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ):
         super().__init__(
             python_version,
@@ -180,7 +180,7 @@ class DataTypeManager(_DataTypeManager):
             self.data_type,
             strict_types=self.strict_types,
             pattern_key=self.PATTERN_KEY,
-            target_datetime_class=target_datetime_class
+            target_datetime_class=target_datetime_class,
         )
         self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
             self.data_type,
@@ -200,17 +200,22 @@ class DataTypeManager(_DataTypeManager):
         }
 
     def type_map_factory(
-            self,
-            data_type: Type[DataType],
-            strict_types: Sequence[StrictTypes],
-            pattern_key: str,
-            target_datetime_class: DatetimeClassType
+        self,
+        data_type: Type[DataType],
+        strict_types: Sequence[StrictTypes],
+        pattern_key: str,
+        target_datetime_class: DatetimeClassType,
     ) -> Dict[Types, DataType]:
         return type_map_factory(
-            data_type, strict_types, pattern_key, self.use_pendulum, self.target_datetime_class)
+            data_type,
+            strict_types,
+            pattern_key,
+            self.use_pendulum,
+            self.target_datetime_class,
+        )
 
     def transform_kwargs(
-            self, kwargs: Dict[str, Any], filter_: Set[str]
+        self, kwargs: Dict[str, Any], filter_: Set[str]
     ) -> Dict[str, str]:
         return {
             self.kwargs_schema_to_model.get(k, k): v
@@ -219,9 +224,9 @@ class DataTypeManager(_DataTypeManager):
         }
 
     def get_data_int_type(
-            self,
-            types: Types,
-            **kwargs: Any,
+        self,
+        types: Types,
+        **kwargs: Any,
     ) -> DataType:
         data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.int in self.strict_types
@@ -232,13 +237,13 @@ class DataTypeManager(_DataTypeManager):
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_INT)
                 if (
-                        data_type_kwargs == {'ge': 0}
-                        and self.use_non_positive_negative_number_constrained_types
+                    data_type_kwargs == {'ge': 0}
+                    and self.use_non_positive_negative_number_constrained_types
                 ):
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
                 if (
-                        data_type_kwargs == {'le': 0}
-                        and self.use_non_positive_negative_number_constrained_types
+                    data_type_kwargs == {'le': 0}
+                    and self.use_non_positive_negative_number_constrained_types
                 ):
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
             kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
@@ -250,9 +255,9 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_float_type(
-            self,
-            types: Types,
-            **kwargs: Any,
+        self,
+        types: Types,
+        **kwargs: Any,
     ) -> DataType:
         data_type_kwargs = self.transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.float in self.strict_types
@@ -263,13 +268,13 @@ class DataTypeManager(_DataTypeManager):
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_FLOAT)
                 if (
-                        data_type_kwargs == {'ge': 0}
-                        and self.use_non_positive_negative_number_constrained_types
+                    data_type_kwargs == {'ge': 0}
+                    and self.use_non_positive_negative_number_constrained_types
                 ):
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_FLOAT)
                 if (
-                        data_type_kwargs == {'le': 0}
-                        and self.use_non_positive_negative_number_constrained_types
+                    data_type_kwargs == {'le': 0}
+                    and self.use_non_positive_negative_number_constrained_types
                 ):
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_FLOAT)
             kwargs = {k: float(v) for k, v in data_type_kwargs.items()}
@@ -327,9 +332,9 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_type(
-            self,
-            types: Types,
-            **kwargs: Any,
+        self,
+        types: Types,
+        **kwargs: Any,
     ) -> DataType:
         if types == Types.string:
             return self.get_data_str_type(types, **kwargs)
