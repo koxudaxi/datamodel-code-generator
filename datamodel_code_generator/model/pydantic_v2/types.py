@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import ClassVar, Dict, Sequence, Type
 
+from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model.pydantic import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.pydantic.imports import IMPORT_CONSTR
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_AWARE_DATETIME
+from datamodel_code_generator.model.pydantic_v2.imports import (
+    IMPORT_AWARE_DATETIME,
+    IMPORT_NAIVE_DATETIME,
+)
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 
 
@@ -16,9 +20,12 @@ class DataTypeManager(_DataTypeManager):
         data_type: Type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
+        target_datetime_class: DatetimeClassType,
     ) -> Dict[Types, DataType]:
-        return {
-            **super().type_map_factory(data_type, strict_types, pattern_key),
+        result = {
+            **super().type_map_factory(
+                data_type, strict_types, pattern_key, target_datetime_class
+            ),
             Types.hostname: self.data_type.from_import(
                 IMPORT_CONSTR,
                 strict=StrictTypes.str in strict_types,
@@ -28,5 +35,9 @@ class DataTypeManager(_DataTypeManager):
                     **({'strict': True} if StrictTypes.str in strict_types else {}),
                 },
             ),
-            Types.date_time: data_type.from_import(IMPORT_AWARE_DATETIME),
         }
+        if target_datetime_class == DatetimeClassType.Awaredatetime:
+            result[Types.date_time] = data_type.from_import(IMPORT_AWARE_DATETIME)
+        if target_datetime_class == DatetimeClassType.Naivedatetime:
+            result[Types.date_time] = data_type.from_import(IMPORT_NAIVE_DATETIME)
+        return result

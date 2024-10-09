@@ -30,7 +30,7 @@ from urllib.parse import ParseResult
 import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
@@ -301,6 +301,7 @@ def generate(
     treat_dots_as_module: bool = False,
     use_exact_imports: bool = False,
     union_mode: Optional[UnionMode] = None,
+    output_datetime_class: DataModelType = DatetimeClassType.Datetime,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -395,9 +396,12 @@ def generate(
             raise Error('union_mode is only supported for pydantic_v2.BaseModel')
     else:
         default_field_extras = None
+
     from datamodel_code_generator.model import get_data_model_types
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version)
+    data_model_types = get_data_model_types(
+        output_model_type, target_python_version, output_datetime_class
+    )
     parser = parser_class(
         source=input_text or input_,
         data_model_type=data_model_types.data_model,
@@ -471,6 +475,7 @@ def generate(
         treat_dots_as_module=treat_dots_as_module,
         use_exact_imports=use_exact_imports,
         default_field_extras=default_field_extras,
+        target_datetime_class=output_datetime_class,
         **kwargs,
     )
 

@@ -36,6 +36,7 @@ from datamodel_code_generator import (
     load_yaml,
     snooper_to_methods,
 )
+from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.parser.base import get_special_path
@@ -225,6 +226,7 @@ class OpenAPIParser(JsonSchemaParser):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ):
         super().__init__(
             source=source,
@@ -295,6 +297,7 @@ class OpenAPIParser(JsonSchemaParser):
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
+            target_datetime_class=target_datetime_class,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas

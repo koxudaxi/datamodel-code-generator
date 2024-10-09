@@ -1087,6 +1087,44 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
         ),
     ],
 )
+def test_main_openapi_aware_datetime(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'datetime.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-datetime-class',
+                'AwareDatetime',
+                '--output-model',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'datetime.py',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'datetime_v2.py',
+        ),
+    ],
+)
 def test_main_openapi_datetime(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

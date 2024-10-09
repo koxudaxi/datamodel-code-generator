@@ -17,6 +17,12 @@ except ImportError:  # pragma: no cover
     black.mode = None
 
 
+class DatetimeClassType(Enum):
+    Datetime = 'datetime'
+    Awaredatetime = 'AwareDatetime'
+    Naivedatetime = 'NaiveDatetime'
+
+
 class PythonVersion(Enum):
     PY_36 = '3.6'
     PY_37 = '3.7'

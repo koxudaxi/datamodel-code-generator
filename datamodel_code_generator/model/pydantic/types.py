@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any, ClassVar, Dict, Optional, Sequence, Set, Type
 
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,
@@ -59,6 +59,7 @@ def type_map_factory(
     strict_types: Sequence[StrictTypes],
     pattern_key: str,
     use_pendulum: bool,
+    target_datetime_class: DatetimeClassType,
 ) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
@@ -162,6 +163,7 @@ class DataTypeManager(_DataTypeManager):
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
         use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ):
         super().__init__(
             python_version,
@@ -171,12 +173,14 @@ class DataTypeManager(_DataTypeManager):
             use_non_positive_negative_number_constrained_types,
             use_union_operator,
             use_pendulum,
+            target_datetime_class,
         )
 
         self.type_map: Dict[Types, DataType] = self.type_map_factory(
             self.data_type,
             strict_types=self.strict_types,
             pattern_key=self.PATTERN_KEY,
+            target_datetime_class=target_datetime_class,
         )
         self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
             self.data_type,
@@ -200,8 +204,15 @@ class DataTypeManager(_DataTypeManager):
         data_type: Type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
+        target_datetime_class: DatetimeClassType,
     ) -> Dict[Types, DataType]:
-        return type_map_factory(data_type, strict_types, pattern_key, self.use_pendulum)
+        return type_map_factory(
+            data_type,
+            strict_types,
+            pattern_key,
+            self.use_pendulum,
+            self.target_datetime_class,
+        )
 
     def transform_kwargs(
         self, kwargs: Dict[str, Any], filter_: Set[str]

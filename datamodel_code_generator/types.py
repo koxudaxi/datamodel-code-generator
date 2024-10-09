@@ -27,7 +27,7 @@ import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -575,6 +575,7 @@ class DataTypeManager(ABC):
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
         use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
@@ -585,6 +586,7 @@ class DataTypeManager(ABC):
         )
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
+        self.target_datetime_class: DatetimeClassType = target_datetime_class
 
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36

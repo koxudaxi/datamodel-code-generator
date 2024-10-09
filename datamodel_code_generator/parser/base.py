@@ -26,7 +26,11 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.format import (
+    CodeFormatter,
+    DatetimeClassType,
+    PythonVersion,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
@@ -404,6 +408,7 @@ class Parser(ABC):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ) -> None:
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -412,6 +417,7 @@ class Parser(ABC):
             strict_types=strict_types,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
+            target_datetime_class=target_datetime_class,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
