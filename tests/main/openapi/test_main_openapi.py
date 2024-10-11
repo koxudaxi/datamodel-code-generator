@@ -2864,3 +2864,31 @@ def test_main_openapi_discriminator_one_literal_as_default():
                 / 'enum_one_literal_as_default.py'
             ).read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_discriminator_one_literal_as_default_dataclass():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'dataclasses.dataclass',
+                '--use-one-literal-as-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH
+                / 'discriminator'
+                / 'dataclass_enum_one_literal_as_default.py'
+            ).read_text()
+        )

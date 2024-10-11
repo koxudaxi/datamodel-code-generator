@@ -38,6 +38,7 @@ from datamodel_code_generator.imports import (
     Import,
     Imports,
 )
+from datamodel_code_generator.model import dataclass as dataclass_model
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
@@ -802,7 +803,11 @@ class Parser(ABC):
                     discriminator_model = data_type.reference.source
                     if not isinstance(  # pragma: no cover
                         discriminator_model,
-                        (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+                        (
+                            pydantic_model.BaseModel,
+                            pydantic_model_v2.BaseModel,
+                            dataclass_model.DataClass,
+                        ),
                     ):
                         continue  # pragma: no cover
                     type_names = []
