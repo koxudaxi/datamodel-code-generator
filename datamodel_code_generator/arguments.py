@@ -151,6 +151,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    '--keyword-only',
+    help='Defined models as keyword only (for example dataclass(kw_only=True)).',
+    action='store_true',
+    default=None,
+)
+model_options.add_argument(
     '--reuse-model',
     help='Reuse models on the field when a module has the model with the same content',
     action='store_true',

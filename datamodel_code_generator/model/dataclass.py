@@ -36,6 +36,7 @@ class DataClass(DataModel):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -50,6 +51,7 @@ class DataClass(DataModel):
             description=description,
             default=default,
             nullable=nullable,
+            keyword_only=keyword_only,
         )
 
 

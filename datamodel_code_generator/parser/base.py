@@ -410,7 +410,9 @@ class Parser(ABC):
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
     ) -> None:
+        self.keyword_only = keyword_only
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
             use_standard_collections=use_standard_collections,

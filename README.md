@@ -450,6 +450,8 @@ Model customization:
   --enable-version-header
                         Enable package version on file headers
   --keep-model-order    Keep generated models'' order
+  --keyword-only        Defined models as keyword only (for example
+                        dataclass(kw_only=True)).
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}
