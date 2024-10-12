@@ -200,8 +200,10 @@ model_options.add_argument(
 )
 model_options.add_argument(
     '--output-datetime-class',
-    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime, default: "datetime"',
+    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime. '
+    'Each output model has its default mapping (for example pydantic: datetime, dataclass: str, ...)',
     choices=[i.value for i in DatetimeClassType],
+    default=None,
 )
 
 # ======================================================================================

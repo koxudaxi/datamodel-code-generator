@@ -193,6 +193,22 @@ class Config(BaseModel):
             )
         return values
 
+    @model_validator(mode='after')
+    def validate_output_datetime_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        datetime_class_type: Optional[DatetimeClassType] = values.get(
+            'output_datetime_class'
+        )
+        if (
+            datetime_class_type
+            and datetime_class_type is not DatetimeClassType.Datetime
+            and values.get('output_model_type') == DataModelType.DataclassesDataclass
+        ):
+            raise Error(
+                '`--output-datetime-class` only allows "datetime" for '
+                f'`--output-model-type` {DataModelType.DataclassesDataclass.value}'
+            )
+        return values
+
     # Pydantic 1.5.1 doesn't support each_item=True correctly
     @field_validator('http_headers', mode='before')
     def validate_http_headers(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
@@ -323,7 +339,7 @@ class Config(BaseModel):
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
     union_mode: Optional[UnionMode] = None
-    output_datetime_class: DatetimeClassType = DatetimeClassType.Datetime
+    output_datetime_class: Optional[DatetimeClassType] = None
     keyword_only: bool = False
 
     def merge_args(self, args: Namespace) -> None:

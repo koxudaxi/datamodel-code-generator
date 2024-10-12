@@ -575,7 +575,7 @@ class DataTypeManager(ABC):
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
         use_pendulum: bool = False,
-        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        target_datetime_class: Optional[DatetimeClassType] = None,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections

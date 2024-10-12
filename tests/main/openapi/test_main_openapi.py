@@ -1075,19 +1075,14 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    'output_model,expected_output,date_type',
     [
-        (
-            'pydantic.BaseModel',
-            'datetime.py',
-        ),
-        (
-            'pydantic_v2.BaseModel',
-            'datetime_pydantic_v2.py',
-        ),
+        ('pydantic.BaseModel', 'datetime.py', 'AwareDatetime'),
+        ('pydantic_v2.BaseModel', 'datetime_pydantic_v2.py', 'AwareDatetime'),
+        ('dataclasses.dataclass', 'datetime_dataclass.py', 'datetime'),
     ],
 )
-def test_main_openapi_aware_datetime(output_model, expected_output):
+def test_main_openapi_aware_datetime(output_model, expected_output, date_type):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1099,7 +1094,7 @@ def test_main_openapi_aware_datetime(output_model, expected_output):
                 '--input-file-type',
                 'openapi',
                 '--output-datetime-class',
-                'AwareDatetime',
+                date_type,
                 '--output-model',
                 output_model,
             ]
