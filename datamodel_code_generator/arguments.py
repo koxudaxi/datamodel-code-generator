@@ -6,7 +6,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
@@ -191,6 +191,11 @@ model_options.add_argument(
     '"from . import foo" with "foo.Bar"',
     action='store_true',
     default=False,
+)
+model_options.add_argument(
+    '--output-datetime-class',
+    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime, default: "datetime"',
+    choices=[i.value for i in DatetimeClassType],
 )
 
 # ======================================================================================

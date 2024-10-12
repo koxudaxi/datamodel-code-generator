@@ -51,6 +51,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.format import (
+    DatetimeClassType,
     PythonVersion,
     black_find_project_root,
     is_supported_in_black,
@@ -313,6 +314,7 @@ class Config(BaseModel):
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
     union_mode: Optional[UnionMode] = None
+    output_datetime_class: DatetimeClassType = DatetimeClassType.Datetime
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -512,6 +514,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             treat_dots_as_module=config.treat_dot_as_module,
             use_exact_imports=config.use_exact_imports,
             union_mode=config.union_mode,
+            output_datetime_class=config.output_datetime_class,
         )
         return Exit.OK
     except InvalidClassNameError as e:

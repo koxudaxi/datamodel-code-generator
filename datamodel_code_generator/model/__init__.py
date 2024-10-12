@@ -6,7 +6,7 @@ from ..types import DataTypeManager as DataTypeManagerABC
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
-    from .. import DataModelType, PythonVersion
+    from .. import DataModelType, DatetimeClassType, PythonVersion
 
 
 class DataModelSet(NamedTuple):
@@ -19,7 +19,9 @@ class DataModelSet(NamedTuple):
 
 
 def get_data_model_types(
-    data_model_type: DataModelType, target_python_version: PythonVersion
+    data_model_type: DataModelType,
+    target_python_version: PythonVersion,
+    target_datetime_class: DatetimeClassType,
 ) -> DataModelSet:
     from .. import DataModelType
     from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict
