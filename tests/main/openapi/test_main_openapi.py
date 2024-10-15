@@ -2913,3 +2913,50 @@ def test_main_openapi_keyword_only_dataclass():
             output_file.read_text()
             == (EXPECTED_OPENAPI_PATH / 'dataclass_keyword_only.py').read_text()
         )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: CaptureFixture):
+    return_code = main(
+        [
+            '--input',
+            str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+            '--input-file-type',
+            'openapi',
+            '--output-model-type',
+            'dataclasses.dataclass',
+            '--keyword-only',
+            '--target-python-version',
+            '3.9',
+        ]
+    )
+    assert return_code == Exit.ERROR
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert (
+        captured.err
+        == '`--keyword-only` requires `--target-python-version` 3.10 or higher.\n'
+    )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_dataclass_with_NaiveDatetime(capsys: CaptureFixture):
+    return_code = main(
+        [
+            '--input',
+            str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+            '--input-file-type',
+            'openapi',
+            '--output-model-type',
+            'dataclasses.dataclass',
+            '--output-datetime-class',
+            'NaiveDatetime',
+        ]
+    )
+    assert return_code == Exit.ERROR
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert (
+        captured.err
+        == '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass\n'
+    )
