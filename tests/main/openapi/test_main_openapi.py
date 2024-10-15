@@ -2905,7 +2905,7 @@ def test_main_openapi_keyword_only_dataclass():
                 'dataclasses.dataclass',
                 '--keyword-only',
                 '--target-python-version',
-                '3.10'
+                '3.10',
             ]
         )
         assert return_code == Exit.OK
