@@ -1049,7 +1049,7 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     assert return_code == Exit.ERROR
     assert (
         captured.err == '`--use-generic-container-types` can not be used with '
-        '`--target-python_version` 3.6.\n '
+        '`--target-python-version` 3.6.\n '
         'The version will be not supported in a future version\n'
     )
 
@@ -2904,6 +2904,8 @@ def test_main_openapi_keyword_only_dataclass():
                 '--output-model-type',
                 'dataclasses.dataclass',
                 '--keyword-only',
+                '--target-python-version',
+                '3.10'
             ]
         )
         assert return_code == Exit.OK

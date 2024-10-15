@@ -160,7 +160,7 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
+                    f'`--use-generic-container-types` can not be used with `--target-python-version` {target_python_version.PY_36.value}.\n'
                     ' The version will be not supported in a future version'
                 )
         return values
@@ -189,7 +189,7 @@ class Config(BaseModel):
         python_target: PythonVersion = values.get('target_python_version')
         if values.get('keyword_only') and not python_target.has_kw_only_dataclass:
             raise Error(
-                f'`--keyword-only` requires `--target-python_version` {PythonVersion.PY_310.value} or higher.'
+                f'`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher.'
             )
         return values
 
