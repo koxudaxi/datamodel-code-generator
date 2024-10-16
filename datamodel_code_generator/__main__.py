@@ -160,7 +160,7 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
+                    f'`--use-generic-container-types` can not be used with `--target-python-version` {target_python_version.PY_36.value}.\n'
                     ' The version will be not supported in a future version'
                 )
         return values
@@ -182,6 +182,31 @@ class Config(BaseModel):
             raise Error(
                 '`--custom_file_header_path` can not be used with `--custom_file_header`.'
             )  # pragma: no cover
+        return values
+
+    @model_validator(mode='after')
+    def validate_keyword_only(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        python_target: PythonVersion = values.get('target_python_version')
+        if values.get('keyword_only') and not python_target.has_kw_only_dataclass:
+            raise Error(
+                f'`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher.'
+            )
+        return values
+
+    @model_validator(mode='after')
+    def validate_output_datetime_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        datetime_class_type: Optional[DatetimeClassType] = values.get(
+            'output_datetime_class'
+        )
+        if (
+            datetime_class_type
+            and datetime_class_type is not DatetimeClassType.Datetime
+            and values.get('output_model_type') == DataModelType.DataclassesDataclass
+        ):
+            raise Error(
+                '`--output-datetime-class` only allows "datetime" for '
+                f'`--output-model-type` {DataModelType.DataclassesDataclass.value}'
+            )
         return values
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
@@ -314,7 +339,8 @@ class Config(BaseModel):
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
     union_mode: Optional[UnionMode] = None
-    output_datetime_class: DatetimeClassType = DatetimeClassType.Datetime
+    output_datetime_class: Optional[DatetimeClassType] = None
+    keyword_only: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -515,6 +541,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             use_exact_imports=config.use_exact_imports,
             union_mode=config.union_mode,
             output_datetime_class=config.output_datetime_class,
+            keyword_only=config.keyword_only,
         )
         return Exit.OK
     except InvalidClassNameError as e:
