@@ -17,6 +17,12 @@ except ImportError:  # pragma: no cover
     black.mode = None
 
 
+class DatetimeClassType(Enum):
+    Datetime = 'datetime'
+    Awaredatetime = 'AwareDatetime'
+    Naivedatetime = 'NaiveDatetime'
+
+
 class PythonVersion(Enum):
     PY_36 = '3.6'
     PY_37 = '3.7'
@@ -72,6 +78,10 @@ class PythonVersion(Enum):
     @property
     def has_typed_dict_non_required(self) -> bool:
         return self._is_py_311_or_later
+
+    @property
+    def has_kw_only_dataclass(self) -> bool:
+        return self._is_py_310_or_later
 
 
 if TYPE_CHECKING:

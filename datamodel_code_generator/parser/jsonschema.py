@@ -71,6 +71,8 @@ from datamodel_code_generator.util import (
 if PYDANTIC_V2:
     from pydantic import ConfigDict
 
+from datamodel_code_generator.format import DatetimeClassType
+
 
 def get_model_by_path(
     schema: Union[Dict[str, Any], List[Any]], keys: Union[List[str], List[int]]
@@ -116,6 +118,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'binary': Types.binary,
         'date': Types.date,
         'date-time': Types.date_time,
+        'duration': Types.timedelta,
         'time': Types.time,
         'password': Types.password,
         'path': Types.path,
@@ -443,6 +446,8 @@ class JsonSchemaParser(Parser):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -513,6 +518,8 @@ class JsonSchemaParser(Parser):
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
+            target_datetime_class=target_datetime_class,
+            keyword_only=keyword_only,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -803,6 +810,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            keyword_only=self.keyword_only,
         )
         self.results.append(data_model_type)
 
@@ -1046,6 +1054,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
             nullable=obj.type_has_null,
+            keyword_only=self.keyword_only,
         )
         self.results.append(data_model_type)
         return self.data_type(reference=reference)

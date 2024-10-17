@@ -26,7 +26,11 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.format import (
+    CodeFormatter,
+    DatetimeClassType,
+    PythonVersion,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
@@ -34,6 +38,7 @@ from datamodel_code_generator.imports import (
     Import,
     Imports,
 )
+from datamodel_code_generator.model import dataclass as dataclass_model
 from datamodel_code_generator.model import msgspec as msgspec_model
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
@@ -240,10 +245,11 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
-    if from_ == '.':
+    if from_ == len(from_) * '.':
         # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # or "from .. import foo" becoming "from ...foo import Foo"
         # when our imported module has the same parent
-        return f'.{import_}', short_name
+        return f'{from_}{import_}', short_name
     return f'{from_}.{import_}', short_name
 
 
@@ -404,7 +410,10 @@ class Parser(ABC):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
     ) -> None:
+        self.keyword_only = keyword_only
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
             use_standard_collections=use_standard_collections,
@@ -412,6 +421,7 @@ class Parser(ABC):
             strict_types=strict_types,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
+            target_datetime_class=target_datetime_class,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
@@ -799,6 +809,7 @@ class Parser(ABC):
                         (
                             pydantic_model.BaseModel,
                             pydantic_model_v2.BaseModel,
+                            dataclass_model.DataClass,
                             msgspec_model.Struct,
                         ),
                     ):
@@ -1385,8 +1396,8 @@ class Parser(ABC):
             )
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
-            self.__set_one_literal_on_default(models)
             self.__apply_discriminator_type(models, imports)
+            self.__set_one_literal_on_default(models)
 
             processed_models.append(
                 Processed(module, models, init, imports, scoped_model_resolver)

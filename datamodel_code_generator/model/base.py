@@ -293,7 +293,9 @@ class DataModel(TemplateBase, Nullable, ABC):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ) -> None:
+        self.keyword_only = keyword_only
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
 
@@ -452,6 +454,7 @@ class DataModel(TemplateBase, Nullable, ABC):
             base_class=self.base_class,
             methods=self.methods,
             description=self.description,
+            keyword_only=self.keyword_only,
             **self.extra_template_data,
         )
         return response

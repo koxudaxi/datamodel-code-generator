@@ -192,6 +192,7 @@ def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
     'from_,import_,name,val',
     [
         ('.', 'mod', 'Foo', ('.mod', 'Foo')),
+        ('..', 'mod', 'Foo', ('..mod', 'Foo')),
         ('.a', 'mod', 'Foo', ('.a.mod', 'Foo')),
         ('..a', 'mod', 'Foo', ('..a.mod', 'Foo')),
         ('..a.b', 'mod', 'Foo', ('..a.b.mod', 'Foo')),

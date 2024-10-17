@@ -46,6 +46,7 @@ class DataTypeScalar(DataModel):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ):
         extra_template_data = extra_template_data or defaultdict(dict)
 
@@ -75,4 +76,5 @@ class DataTypeScalar(DataModel):
             description=description,
             default=default,
             nullable=nullable,
+            keyword_only=keyword_only,
         )
