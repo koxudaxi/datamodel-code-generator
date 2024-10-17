@@ -151,6 +151,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    '--keyword-only',
+    help='Defined models as keyword only (for example dataclass(kw_only=True)).',
+    action='store_true',
+    default=None,
+)
+model_options.add_argument(
     '--reuse-model',
     help='Reuse models on the field when a module has the model with the same content',
     action='store_true',
@@ -194,8 +200,10 @@ model_options.add_argument(
 )
 model_options.add_argument(
     '--output-datetime-class',
-    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime, default: "datetime"',
+    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime. '
+    'Each output model has its default mapping (for example pydantic: datetime, dataclass: str, ...)',
     choices=[i.value for i in DatetimeClassType],
+    default=None,
 )
 
 # ======================================================================================

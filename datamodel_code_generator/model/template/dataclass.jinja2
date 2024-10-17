@@ -1,7 +1,7 @@
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
-@dataclass
+@dataclass{%- if keyword_only -%}(kw_only=True){%- endif %}
 {%- if base_class %}
 class {{ class_name }}({{ base_class }}):
 {%- else %}

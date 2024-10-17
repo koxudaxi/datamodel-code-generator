@@ -47,6 +47,7 @@ class Enum(DataModel):
         type_: Optional[Types] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ):
         super().__init__(
             reference=reference,
@@ -61,6 +62,7 @@ class Enum(DataModel):
             description=description,
             default=default,
             nullable=nullable,
+            keyword_only=keyword_only,
         )
 
         if not base_classes and type_:
