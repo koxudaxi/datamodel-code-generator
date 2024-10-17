@@ -616,14 +616,17 @@ files = [
 
 [[package]]
 name = "graphql-core"
-version = "3.2.4"
+version = "3.2.5"
 description = "GraphQL implementation for Python, a port of GraphQL.js, the JavaScript reference implementation for GraphQL."
 optional = true
 python-versions = "<4,>=3.6"
 files = [
-    {file = "graphql-core-3.2.4.tar.gz", hash = "sha256:acbe2e800980d0e39b4685dd058c2f4042660b89ebca38af83020fd872ff1264"},
-    {file = "graphql_core-3.2.4-py3-none-any.whl", hash = "sha256:1604f2042edc5f3114f49cac9d77e25863be51b23a54a61a23245cf32f6476f0"},
+    {file = "graphql_core-3.2.5-py3-none-any.whl", hash = "sha256:2f150d5096448aa4f8ab26268567bbfeef823769893b39c1a2e1409590939c8a"},
+    {file = "graphql_core-3.2.5.tar.gz", hash = "sha256:e671b90ed653c808715645e3998b7ab67d382d55467b7e2978549111bbabf8d5"},
 ]
+
+[package.dependencies]
+typing-extensions = {version = ">=4,<5", markers = "python_version < \"3.10\""}
 
 [[package]]
 name = "h11"
