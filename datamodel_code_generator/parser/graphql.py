@@ -46,6 +46,7 @@ except ImportError:  # pragma: no cover
         "Please run `$pip install 'datamodel-code-generator[graphql]`' to generate data-model from a GraphQL schema."
     )
 
+from datamodel_code_generator.format import DatetimeClassType
 
 graphql_resolver = graphql.type.introspection.TypeResolvers()
 
@@ -157,6 +158,8 @@ class GraphQLParser(Parser):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -227,6 +230,8 @@ class GraphQLParser(Parser):
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
+            target_datetime_class=target_datetime_class,
+            keyword_only=keyword_only,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
@@ -460,6 +465,7 @@ class GraphQLParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description,
+            keyword_only=self.keyword_only,
         )
         self.results.append(data_model_type)
 

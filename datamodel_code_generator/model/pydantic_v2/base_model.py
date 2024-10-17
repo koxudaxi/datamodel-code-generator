@@ -183,6 +183,7 @@ class BaseModel(BaseModelBase):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -196,6 +197,7 @@ class BaseModel(BaseModelBase):
             description=description,
             default=default,
             nullable=nullable,
+            keyword_only=keyword_only,
         )
         config_parameters: Dict[str, Any] = {}
 
