@@ -48,7 +48,7 @@ def get_data_model_types(
             data_model=dataclass.DataClass,
             root_model=rootmodel.RootModel,
             field_model=dataclass.DataModelField,
-            data_type_manager=DataTypeManager,
+            data_type_manager=dataclass.DataTypeManager,
             dump_resolve_reference_action=None,
         )
     elif data_model_type == DataModelType.TypingTypedDict:
