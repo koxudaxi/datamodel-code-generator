@@ -2993,3 +2993,33 @@ def test_main_openapi_dataclass_with_NaiveDatetime(capsys: CaptureFixture):
         captured.err
         == '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass\n'
     )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_keyword_only_msgspec():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only.py').read_text()
+        )
