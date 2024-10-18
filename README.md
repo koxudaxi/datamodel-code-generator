@@ -450,6 +450,12 @@ Model customization:
   --enable-version-header
                         Enable package version on file headers
   --keep-model-order    Keep generated models'' order
+  --keyword-only        Defined models as keyword only (for example
+                        dataclass(kw_only=True)).
+  --output-datetime-class {datetime,AwareDatetime,NaiveDatetime}
+                        Choose Datetime class between AwareDatetime, NaiveDatetime or
+                        datetime. Each output model has its default mapping, and only
+                        pydantic and dataclass support this override"
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}
@@ -462,8 +468,6 @@ Model customization:
   --use-schema-description
                         Use schema description to populate class docstring
   --use-title-as-name   use titles as class names of models
-  
-  ----output-datetime-class Choose Datetime class between AwareDatetime, NaiveDatetime or datetime, default: "datetime"
 
 Template customization:
   --aliases ALIASES     Alias mapping file

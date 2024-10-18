@@ -163,7 +163,7 @@ class DataTypeManager(_DataTypeManager):
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
         use_pendulum: bool = False,
-        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        target_datetime_class: Optional[DatetimeClassType] = None,
     ):
         super().__init__(
             python_version,
