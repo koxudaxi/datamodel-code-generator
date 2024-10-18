@@ -3216,14 +3216,14 @@ def test_main_jsonschema_external_discriminator(output_model, expected_output):
                 '--output-model-type',
                 output_model,
                 '--target-python',
-                '3.9',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
             == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
-        )
+        ), EXPECTED_JSON_SCHEMA_PATH / expected_output
 
 
 @pytest.mark.parametrize(
@@ -3252,7 +3252,7 @@ def test_main_jsonschema_external_discriminator_folder(output_model, expected_ou
                 '--output-model-type',
                 output_model,
                 '--target-python',
-                '3.9',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
@@ -3261,7 +3261,7 @@ def test_main_jsonschema_external_discriminator_folder(output_model, expected_ou
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
-            assert result == path.read_text()
+            assert result == path.read_text(), path
 
 
 @freeze_time('2019-07-26')

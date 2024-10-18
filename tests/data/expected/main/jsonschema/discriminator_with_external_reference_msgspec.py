@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Optional, Union
+from typing import ClassVar, Literal, Optional, Union
 
 from msgspec import Meta, Struct
+from typing_extensions import Annotated
 
 
 class Type1(Struct, tag_field='type_', tag='a'):
