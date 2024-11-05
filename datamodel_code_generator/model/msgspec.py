@@ -7,6 +7,7 @@ from typing import (
     Dict,
     List,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -15,7 +16,14 @@ from typing import (
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator.imports import (
+    IMPORT_DATE,
+    IMPORT_DATETIME,
+    IMPORT_TIME,
+    IMPORT_TIMEDELTA,
+    Import,
+)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
@@ -28,8 +36,16 @@ from datamodel_code_generator.model.pydantic.base_model import (
     Constraints as _Constraints,
 )
 from datamodel_code_generator.model.rootmodel import RootModel as _RootModel
+from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
+from datamodel_code_generator.model.types import type_map_factory
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple, get_optional_type
+from datamodel_code_generator.types import (
+    DataType,
+    StrictTypes,
+    Types,
+    chain_as_tuple,
+    get_optional_type,
+)
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -267,3 +283,43 @@ class DataModelField(DataModelFieldBase):
             elif data_type.reference and isinstance(data_type.reference.source, Struct):
                 return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type={data_type.alias or data_type.reference.source.class_name})'
         return None
+
+
+class DataTypeManager(_DataTypeManager):
+    def __init__(
+        self,
+        python_version: PythonVersion = PythonVersion.PY_38,
+        use_standard_collections: bool = False,
+        use_generic_container_types: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
+        use_non_positive_negative_number_constrained_types: bool = False,
+        use_union_operator: bool = False,
+        use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+    ):
+        super().__init__(
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            strict_types,
+            use_non_positive_negative_number_constrained_types,
+            use_union_operator,
+            use_pendulum,
+            target_datetime_class,
+        )
+
+        datetime_map = (
+            {
+                Types.time: self.data_type.from_import(IMPORT_TIME),
+                Types.date: self.data_type.from_import(IMPORT_DATE),
+                Types.date_time: self.data_type.from_import(IMPORT_DATETIME),
+                Types.timedelta: self.data_type.from_import(IMPORT_TIMEDELTA),
+            }
+            if target_datetime_class is DatetimeClassType.Datetime
+            else {}
+        )
+
+        self.type_map: Dict[Types, DataType] = {
+            **type_map_factory(self.data_type),
+            **datetime_map,
+        }
