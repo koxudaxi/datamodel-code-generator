@@ -814,7 +814,7 @@ class Parser(ABC):
                     ):
                         continue  # pragma: no cover
 
-                    type_names: list[str] = []
+                    type_names: List[str] = []
 
                     def check_paths(
                         model: Union[
@@ -822,8 +822,8 @@ class Parser(ABC):
                             pydantic_model_v2.BaseModel,
                             Reference,
                         ],
-                        mapping: dict[str, str],
-                        type_names: list[str] = type_names,
+                        mapping: Dict[str, str],
+                        type_names: List[str] = type_names,
                     ) -> None:
                         """Helper function to validate paths for a given model."""
                         for name, path in mapping.items():
