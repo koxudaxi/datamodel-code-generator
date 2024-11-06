@@ -449,7 +449,7 @@ Model customization:
   --output-datetime-class {datetime,AwareDatetime,NaiveDatetime}
                         Choose Datetime class between AwareDatetime, NaiveDatetime or
                         datetime. Each output model has its default mapping, and only
-                        pydantic and dataclass support this override"
+                        pydantic, dataclass, and msgspec support this override"
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}

@@ -68,7 +68,7 @@ def get_data_model_types(
             data_model=msgspec.Struct,
             root_model=msgspec.RootModel,
             field_model=msgspec.DataModelField,
-            data_type_manager=DataTypeManager,
+            data_type_manager=msgspec.DataTypeManager,
             dump_resolve_reference_action=None,
             known_third_party=['msgspec'],
         )
