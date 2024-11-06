@@ -1957,13 +1957,13 @@ files = [
 
 [[package]]
 name = "types-setuptools"
-version = "69.5.0.20240522"
+version = "75.3.0.20241105"
 description = "Typing stubs for setuptools"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-setuptools-69.5.0.20240522.tar.gz", hash = "sha256:c5a97601b2d040d3b9fcd0633730f0a8c86ebef208552525c97301427f261549"},
-    {file = "types_setuptools-69.5.0.20240522-py3-none-any.whl", hash = "sha256:e27231cbc80648cfaee4921d2f1150107fdf8d33666958abf2aba0191a82688b"},
+    {file = "types-setuptools-75.3.0.20241105.tar.gz", hash = "sha256:080883032fb26dfb91c748f69e4efbb202aeeb3f9e95e68bf7352b7ab215069f"},
+    {file = "types_setuptools-75.3.0.20241105-py3-none-any.whl", hash = "sha256:c5a98b3308fea29d26228978bd83f6ea262d2fd4d967e34e8e49d04708bb3022"},
 ]
 
 [[package]]
@@ -2053,5 +2053,4 @@ validation = ["openapi-spec-validator", "prance"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "100e4c19bd2aef114c50ef8b73189d526cf1c2787ce7c99379bdad8481c1c79b"
-
+content-hash = "71e2d19ea75c8f35c2dfa472297dbfa35613a456b141cd8405403e2eeb84c825"
