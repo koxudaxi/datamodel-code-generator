@@ -23,6 +23,7 @@ class ConfigDict(_BaseModel):
     arbitrary_types_allowed: Optional[bool] = None
     protected_namespaces: Optional[Tuple[str, ...]] = None
     regex_engine: Optional[str] = None
+    use_enum_values: Optional[bool] = None
 
 
 __all__ = [
