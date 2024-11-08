@@ -849,8 +849,7 @@ class Parser(ABC):
                         # Check the base_classes if they exist
                         if len(type_names) == 0:
                             for base_class in discriminator_model.base_classes:
-                                if base_class.reference:
-                                    check_paths(base_class.reference, mapping)
+                                check_paths(base_class.reference, mapping)
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
                     if not type_names:  # pragma: no cover
