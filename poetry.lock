@@ -2053,5 +2053,4 @@ validation = ["openapi-spec-validator", "prance"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "100e4c19bd2aef114c50ef8b73189d526cf1c2787ce7c99379bdad8481c1c79b"
-
+content-hash = "d5ab8dcdc7d561db1c3de2c9ad014cbca2bcf232b031cfddb1b0e6e5c0a80066"
