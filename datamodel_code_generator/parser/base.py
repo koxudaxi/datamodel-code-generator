@@ -39,6 +39,7 @@ from datamodel_code_generator.imports import (
     Imports,
 )
 from datamodel_code_generator.model import dataclass as dataclass_model
+from datamodel_code_generator.model import msgspec as msgspec_model
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
@@ -810,6 +811,7 @@ class Parser(ABC):
                             pydantic_model.BaseModel,
                             pydantic_model_v2.BaseModel,
                             dataclass_model.DataClass,
+                            msgspec_model.Struct,
                         ),
                     ):
                         continue  # pragma: no cover
@@ -870,6 +872,16 @@ class Parser(ABC):
                             else None
                         ):
                             has_one_literal = True
+                            if isinstance(
+                                discriminator_model, msgspec_model.Struct
+                            ):  # pragma: no cover
+                                discriminator_model.add_base_class_kwarg(
+                                    'tag_field', f"'{property_name}'"
+                                )
+                                discriminator_model.add_base_class_kwarg(
+                                    'tag', discriminator_field.represented_default
+                                )
+                                discriminator_field.extras['is_classvar'] = True
                             continue
                         for (
                             field_data_type
