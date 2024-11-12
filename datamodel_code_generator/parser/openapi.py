@@ -513,6 +513,7 @@ class OpenAPIParser(JsonSchemaParser):
                     fields=fields,
                     reference=reference,
                     custom_base_class=self.base_class,
+                    custom_template_dir=self.custom_template_dir,
                     keyword_only=self.keyword_only,
                 )
             )
