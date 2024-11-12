@@ -380,13 +380,13 @@ def generate(
                         else input_text
                     )
                 elif input_file_type == InputFileType.Json:
-                    if isinstance(input_, Path):
-                        with input_.open(encoding=encoding) as f:
-                            obj = json.load(f)
-                    else:
-                        obj = json.loads(input_text)
+                    obj = json.loads(
+                        input_.read_text(encoding=encoding)  # type: ignore
+                        if isinstance(input_, Path)
+                        else input_text
+                    )
                 elif input_file_type == InputFileType.Dict:
-                    obj = input_ # type: ignore
+                    obj = input_  # type: ignore
                 else:
                     # InputFileType.GraphQL is also a member of RAW_DATA_TYPES but it is already handled separately,
                     # so there's nothing left to be handled
