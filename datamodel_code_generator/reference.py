@@ -386,8 +386,10 @@ class ModelResolver:
                 original_delimiter=original_field_name_delimiter,
                 special_field_name_prefix=special_field_name_prefix,
                 remove_special_field_name_prefix=remove_special_field_name_prefix,
-                capitalise_enum_members=capitalise_enum_members,
-                no_alias=no_alias if k == ModelType.ENUM else False,
+                capitalise_enum_members=capitalise_enum_members
+                if k == ModelType.ENUM
+                else False,
+                no_alias=no_alias,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }
