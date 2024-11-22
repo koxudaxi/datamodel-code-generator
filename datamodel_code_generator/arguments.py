@@ -385,7 +385,6 @@ field_options.add_argument(
     '--no-alias',
     help="""Do not add a field alias. E.g., if --snake-case-field is used along with a base class, which has an 
             alias_generator""",
-    choices=[u.value for u in UnionMode],
     default=None,
 )
 
