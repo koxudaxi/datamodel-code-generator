@@ -448,6 +448,7 @@ class JsonSchemaParser(Parser):
         default_field_extras: Optional[Dict[str, Any]] = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        no_alias: bool = False
     ) -> None:
         super().__init__(
             source=source,
@@ -520,6 +521,7 @@ class JsonSchemaParser(Parser):
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
+            no_alias=no_alias
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
