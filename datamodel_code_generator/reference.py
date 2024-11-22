@@ -276,7 +276,10 @@ class FieldNameResolver:
         if field_name in self.aliases:
             return self.aliases[field_name], field_name
         valid_name = self.get_valid_name(field_name, excludes=excludes)
-        return valid_name, None if self.no_alias or field_name == valid_name else field_name
+        return (
+            valid_name,
+            None if self.no_alias or field_name == valid_name else field_name,
+        )
 
 
 class PydanticFieldNameResolver(FieldNameResolver):
@@ -384,9 +387,7 @@ class ModelResolver:
                 special_field_name_prefix=special_field_name_prefix,
                 remove_special_field_name_prefix=remove_special_field_name_prefix,
                 capitalise_enum_members=capitalise_enum_members,
-                no_alias=no_alias
-                if k == ModelType.ENUM
-                else False,
+                no_alias=no_alias if k == ModelType.ENUM else False,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }
