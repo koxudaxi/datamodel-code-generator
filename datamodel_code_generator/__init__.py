@@ -303,6 +303,7 @@ def generate(
     union_mode: Optional[UnionMode] = None,
     output_datetime_class: Optional[DatetimeClassType] = None,
     keyword_only: bool = False,
+    no_alias: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -478,6 +479,7 @@ def generate(
         default_field_extras=default_field_extras,
         target_datetime_class=output_datetime_class,
         keyword_only=keyword_only,
+        no_alias=no_alias,
         **kwargs,
     )
 
