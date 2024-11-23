@@ -573,11 +573,13 @@ class ModelResolver:
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
             original_name = Path(
-                split_ref[0][:-1] if self.is_external_root_ref(path) else split_ref[0]
+                split_ref[0].rstrip('#')
+                if self.is_external_root_ref(path)
+                else split_ref[0]
             ).stem
         else:
             original_name = (
-                Path(split_ref[1][:-1]).stem
+                Path(split_ref[1].rstrip('#')).stem
                 if self.is_external_root_ref(path)
                 else split_ref[1]
             )
