@@ -2,7 +2,7 @@ from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 
-from datamodel_code_generator.reference import get_relative_path, ModelResolver
+from datamodel_code_generator.reference import ModelResolver, get_relative_path
 
 
 @pytest.mark.parametrize(
@@ -48,15 +48,20 @@ def test_get_relative_path_windows(
         get_relative_path(PureWindowsPath(base_path), PureWindowsPath(target_path))
     ) == PureWindowsPath(expected)
 
+
 def test_model_resolver_add_ref_with_hash():
     model_resolver = ModelResolver()
-    reference = model_resolver.add_ref('https://json-schema.org/draft/2020-12/meta/core#')
+    reference = model_resolver.add_ref(
+        'https://json-schema.org/draft/2020-12/meta/core#'
+    )
     assert reference.original_name == 'core'
+
 
 def test_model_resolver_add_ref_without_hash():
     model_resolver = ModelResolver()
     reference = model_resolver.add_ref('meta/core')
     assert reference.original_name == 'core'
+
 
 def test_model_resolver_add_ref_unevaluated():
     model_resolver = ModelResolver()
