@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.7.2'
+  rev: 'v0.7.4'
   hooks:
   - id: ruff
     files: "^datamodel_code_generator|^tests"
@@ -18,9 +18,6 @@ repos:
     - tomli
     exclude: "^tests/|^CODE_OF_CONDUCT.md"
 - repo: https://github.com/python-poetry/poetry
-  rev: 1.8.3
+  rev: 1.8.0
   hooks:
   - id: poetry-check
-  - id: poetry-lock
-    args:
-    - --no-update
