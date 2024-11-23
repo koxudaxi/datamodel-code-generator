@@ -1717,6 +1717,9 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             self.raw_obj = load_yaml(source.text)
+            if self.raw_obj is None:  # pragma: no cover
+                warn(f'{source.path} is empty. Skipping this file')
+                continue
             if self.custom_class_name_generator:
                 obj_name = self.raw_obj.get('title', 'Model')
             else:
