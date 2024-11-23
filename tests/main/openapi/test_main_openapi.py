@@ -122,6 +122,34 @@ def test_main_openapi_discriminator_enum_duplicate():
 
 
 @freeze_time('2019-07-26')
+def test_main_openapi_discriminator_with_properties():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_with_properties.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+
+        print(output_file.read_text())
+
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH
+                / 'discriminator'
+                / 'discriminator_with_properties.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
 def test_main_pydantic_basemodel():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'

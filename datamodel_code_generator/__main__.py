@@ -341,6 +341,7 @@ class Config(BaseModel):
     union_mode: Optional[UnionMode] = None
     output_datetime_class: Optional[DatetimeClassType] = None
     keyword_only: bool = False
+    no_alias: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -542,6 +543,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             union_mode=config.union_mode,
             output_datetime_class=config.output_datetime_class,
             keyword_only=config.keyword_only,
+            no_alias=config.no_alias,
         )
         return Exit.OK
     except InvalidClassNameError as e:

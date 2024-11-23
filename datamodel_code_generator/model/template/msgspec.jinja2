@@ -2,7 +2,9 @@
 {{ decorator }}
 {% endfor -%}
 {%- if base_class %}
-class {{ class_name }}({{ base_class }}):
+class {{ class_name }}({{ base_class }}{%- for key, value in (base_class_kwargs|default({})).items() -%}
+, {{ key }}={{ value }}
+{%- endfor -%}):
 {%- else %}
 class {{ class_name }}:
 {%- endif %}

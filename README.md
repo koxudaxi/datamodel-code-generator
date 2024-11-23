@@ -413,6 +413,8 @@ Field customization:
   --field-include-all-keys
                         Add all keys to field parameters
   --force-optional      Force optional for required fields
+  --no-alias            Do not add a field alias. E.g., if --snake-case-field is used along
+                        with a base class, which has an alias_generator
   --original-field-name-delimiter ORIGINAL_FIELD_NAME_DELIMITER
                         Set delimiter to convert to snake case. This option only can be used
                         with --snake-case-field (default: `_` )
@@ -454,8 +456,8 @@ Model customization:
                         dataclass(kw_only=True)).
   --output-datetime-class {datetime,AwareDatetime,NaiveDatetime}
                         Choose Datetime class between AwareDatetime, NaiveDatetime or
-                        datetime. Each output model has its default mapping, and only
-                        pydantic, dataclass, and msgspec support this override"
+                        datetime. Each output model has its default mapping (for example
+                        pydantic: datetime, dataclass: str, ...)
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
   --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}
