@@ -1096,6 +1096,10 @@ def test_main_require_referenced_field_naivedatetime(output_model, expected_outp
             'pydantic_v2.BaseModel',
             'require_referenced_field',
         ),
+        (
+            'msgspec.Struct',
+            'require_referenced_field_msgspec',
+        ),
     ],
 )
 @freeze_time('2019-07-26')

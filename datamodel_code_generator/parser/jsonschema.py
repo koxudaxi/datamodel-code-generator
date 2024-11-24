@@ -448,6 +448,7 @@ class JsonSchemaParser(Parser):
         default_field_extras: Optional[Dict[str, Any]] = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        no_alias: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -520,6 +521,7 @@ class JsonSchemaParser(Parser):
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
+            no_alias=no_alias,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -1715,6 +1717,9 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             self.raw_obj = load_yaml(source.text)
+            if self.raw_obj is None:  # pragma: no cover
+                warn(f'{source.path} is empty. Skipping this file')
+                continue
             if self.custom_class_name_generator:
                 obj_name = self.raw_obj.get('title', 'Model')
             else:

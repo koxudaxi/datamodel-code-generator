@@ -228,6 +228,7 @@ class OpenAPIParser(JsonSchemaParser):
         default_field_extras: Optional[Dict[str, Any]] = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        no_alias: bool = False,
     ):
         super().__init__(
             source=source,
@@ -300,6 +301,7 @@ class OpenAPIParser(JsonSchemaParser):
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
+            no_alias=no_alias,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -513,6 +515,7 @@ class OpenAPIParser(JsonSchemaParser):
                     fields=fields,
                     reference=reference,
                     custom_base_class=self.base_class,
+                    custom_template_dir=self.custom_template_dir,
                     keyword_only=self.keyword_only,
                 )
             )
