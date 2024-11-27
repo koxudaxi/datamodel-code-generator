@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, Callable, Iterable, List, NamedTuple, Optional, Type
 
+from .. import DatetimeClassType, PythonVersion
 from ..types import DataTypeManager as DataTypeManagerABC
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
-    from .. import DataModelType, DatetimeClassType, PythonVersion
+    from .. import DataModelType
+
+DEFAULT_TARGET_DATETIME_CLASS = DatetimeClassType.Datetime
+DEFAULT_TARGET_PYTHON_VERSION = PythonVersion(
+    f'{sys.version_info.major}.{sys.version_info.minor}'
+)
 
 
 class DataModelSet(NamedTuple):
@@ -20,8 +27,8 @@ class DataModelSet(NamedTuple):
 
 def get_data_model_types(
     data_model_type: DataModelType,
-    target_python_version: PythonVersion,
-    target_datetime_class: DatetimeClassType,
+    target_python_version: PythonVersion = DEFAULT_TARGET_PYTHON_VERSION,
+    target_datetime_class: DatetimeClassType = DEFAULT_TARGET_DATETIME_CLASS,
 ) -> DataModelSet:
     from .. import DataModelType
     from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict
@@ -53,13 +60,17 @@ def get_data_model_types(
         )
     elif data_model_type == DataModelType.TypingTypedDict:
         return DataModelSet(
-            data_model=typed_dict.TypedDict
-            if target_python_version.has_typed_dict
-            else typed_dict.TypedDictBackport,
+            data_model=(
+                typed_dict.TypedDict
+                if target_python_version.has_typed_dict
+                else typed_dict.TypedDictBackport
+            ),
             root_model=rootmodel.RootModel,
-            field_model=typed_dict.DataModelField
-            if target_python_version.has_typed_dict_non_required
-            else typed_dict.DataModelFieldBackport,
+            field_model=(
+                typed_dict.DataModelField
+                if target_python_version.has_typed_dict_non_required
+                else typed_dict.DataModelFieldBackport
+            ),
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,
         )
