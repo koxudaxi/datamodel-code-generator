@@ -21,7 +21,7 @@ class DataModelSet(NamedTuple):
 def get_data_model_types(
     data_model_type: DataModelType,
     target_python_version: PythonVersion,
-    target_datetime_class: Optional[DatetimeClassType] = None,
+    target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
 ) -> DataModelSet:
     from .. import DataModelType
     from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict
