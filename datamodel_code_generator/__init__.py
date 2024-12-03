@@ -387,7 +387,13 @@ def generate(
                         else input_text
                     )
                 elif input_file_type == InputFileType.Dict:
-                    obj = input_  # type: ignore
+                    import ast
+                    # Input can be a dict object stored in a python file
+                    obj = ast.literal_eval(
+                        input_.read_text(encoding=encoding)  # type: ignore
+                        if isinstance(input_, Path)
+                        else input_
+                    )
                 else:
                     # InputFileType.GraphQL is also a member of RAW_DATA_TYPES but it is already handled separately,
                     # so there's nothing left to be handled
