@@ -388,6 +388,7 @@ def generate(
                     )
                 elif input_file_type == InputFileType.Dict:
                     import ast
+
                     # Input can be a dict object stored in a python file
                     obj = ast.literal_eval(
                         input_.read_text(encoding=encoding)  # type: ignore
