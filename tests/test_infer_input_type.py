@@ -20,7 +20,13 @@ def test_infer_input_type():
             continue
         assert_infer_input_type(file, InputFileType.Json)
     for file in (DATA_PATH / 'jsonschema').rglob('*'):
-        if str(file).endswith(('external_child.json', 'external_child.yaml')):
+        if str(file).endswith(
+            (
+                'external_child.json',
+                'external_child.yaml',
+                'extra_data_msgspec.json',
+            )
+        ):
             continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / 'openapi').rglob('*'):
@@ -32,6 +38,7 @@ def test_infer_input_type():
             (
                 'aliases.json',
                 'extra_data.json',
+                'extra_data_msgspec.json',
                 'invalid.yaml',
                 'list.json',
                 'empty_data.json',

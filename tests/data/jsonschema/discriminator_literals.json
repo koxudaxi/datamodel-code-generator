@@ -21,6 +21,17 @@
       },
       "title": "Type2",
       "type": "object"
+    },
+    "UnrelatedType": {
+      "properties": {
+        "info": {
+          "default": "Unrelated type, not involved in the discriminated union",
+          "title": "A way to check for side effects",
+          "type": "string"
+        }
+      },
+      "title": "UnrelatedType",
+      "type": "object"
     }
   },
   "properties": {
