@@ -2631,6 +2631,7 @@ def test_main_typed_dict_nullable_strict_nullable():
             ).read_text()
         )
 
+
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
 def test_main_openapi_nullable_31():
@@ -2649,7 +2650,7 @@ def test_main_openapi_nullable_31():
                 # '--force-optional',
                 '--strip-default-none',
                 # '--use-default',
-                '--use-union-operator'
+                '--use-union-operator',
             ]
         )
         assert return_code == Exit.OK

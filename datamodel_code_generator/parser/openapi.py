@@ -508,7 +508,9 @@ class OpenAPIParser(JsonSchemaParser):
                         has_default=object_schema.has_default
                         if object_schema
                         else False,
-                        type_has_null=object_schema.type_has_null if object_schema else None
+                        type_has_null=object_schema.type_has_null
+                        if object_schema
+                        else None,
                     )
                 )
 
