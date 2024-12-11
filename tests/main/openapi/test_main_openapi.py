@@ -2631,6 +2631,33 @@ def test_main_typed_dict_nullable_strict_nullable():
             ).read_text()
         )
 
+@pytest.mark.benchmark
+@freeze_time('2019-07-26')
+def test_main_openapi_nullable_31():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable_31.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                # '--force-optional',
+                '--strip-default-none',
+                # '--use-default',
+                '--use-union-operator'
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / 'nullable_31.py').read_text()
+        )
+
 
 @freeze_time('2019-07-26')
 def test_main_custom_file_header_path():
