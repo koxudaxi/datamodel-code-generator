@@ -2647,9 +2647,7 @@ def test_main_openapi_nullable_31():
                 'openapi',
                 '--output-model-type',
                 'pydantic_v2.BaseModel',
-                # '--force-optional',
                 '--strip-default-none',
-                # '--use-default',
                 '--use-union-operator',
             ]
         )
