@@ -15,8 +15,8 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        isort-version: [5.6.4]
-        black-version: [22.1.0, default]
+        isort-version: [default]
+        black-version: [default]
         pydantic-version: [1.10.9, 2.10.3]
         include:
           - os: ubuntu-latest
@@ -44,13 +44,16 @@ jobs:
             black-version: 23.12.1
             python-version: 3.12
             pydantic-version: 2.4.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 22.1.0
+            python-version: 3.12
+            pydantic-version: 2.4.2
         exclude:
           - os: windows-latest
             black-version: 22.1.0
           - os: macos-latest
             black-version: 22.1.0
-          - os: windows-latest
-            isort-version: 4.3.21
           - os: macos-latest
             isort-version: 4.3.21
           - isort-version: 5.6.4
@@ -87,7 +90,7 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction -E http -E graphql
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
-      if: runner.os != 'Windows'
+      if: runner.os != 'Windows' || matrix.isort-version != 'default'
       run: |
          poetry run pip install isort=="$ISORT"
     - name: Install Pydantic ${{ matrix.pydantic-version }}
