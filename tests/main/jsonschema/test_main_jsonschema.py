@@ -3169,6 +3169,10 @@ def test_main_typed_dict_not_required_nullable():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
 def test_main_jsonschema_discriminator_literals(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -3603,8 +3607,8 @@ def test_main_jsonschema_duration(output_model, expected_output):
 
 @freeze_time('2019-07-26')
 @pytest.mark.skipif(
-    black.__version__.split('.')[0] == '19',
-    reason="Installed black doesn't support the old style",
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_keyword_only_msgspec() -> None:
     with TemporaryDirectory() as output_dir:
@@ -3636,8 +3640,8 @@ def test_main_jsonschema_keyword_only_msgspec() -> None:
 
 @freeze_time('2019-07-26')
 @pytest.mark.skipif(
-    black.__version__.split('.')[0] == '19',
-    reason="Installed black doesn't support the old style",
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_keyword_only_msgspec_with_extra_data() -> None:
     with TemporaryDirectory() as output_dir:
@@ -3671,8 +3675,8 @@ def test_main_jsonschema_keyword_only_msgspec_with_extra_data() -> None:
 
 @freeze_time('2019-07-26')
 @pytest.mark.skipif(
-    black.__version__.split('.')[0] == '19',
-    reason="Installed black doesn't support the old style",
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data() -> None:
     extra_data = json.loads(
