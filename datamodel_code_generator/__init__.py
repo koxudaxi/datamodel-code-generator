@@ -30,7 +30,8 @@ from urllib.parse import ParseResult
 import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import Parser
 from datamodel_code_generator.types import StrictTypes
@@ -66,14 +67,9 @@ else:
     def get_version() -> str:
         package = 'datamodel-code-generator'
 
-        try:
-            from importlib.metadata import version
+        from importlib.metadata import version
 
-            return version(package)
-        except ImportError:
-            import pkg_resources
-
-            return pkg_resources.get_distribution(package).version
+        return version(package)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
@@ -241,7 +237,7 @@ def generate(
     input_file_type: InputFileType = InputFileType.Auto,
     output: Optional[Path] = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
-    target_python_version: PythonVersion = PythonVersion.PY_37,
+    target_python_version: PythonVersion = PythonVersion.PY_38,
     base_class: str = '',
     additional_imports: Optional[List[str]] = None,
     custom_template_dir: Optional[Path] = None,
@@ -304,6 +300,10 @@ def generate(
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
     treat_dots_as_module: bool = False,
     use_exact_imports: bool = False,
+    union_mode: Optional[UnionMode] = None,
+    output_datetime_class: Optional[DatetimeClassType] = None,
+    keyword_only: bool = False,
+    no_alias: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -391,9 +391,19 @@ def generate(
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
 
+    if union_mode is not None:
+        if output_model_type == DataModelType.PydanticV2BaseModel:
+            default_field_extras = {'union_mode': union_mode}
+        else:  # pragma: no cover
+            raise Error('union_mode is only supported for pydantic_v2.BaseModel')
+    else:
+        default_field_extras = None
+
     from datamodel_code_generator.model import get_data_model_types
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version)
+    data_model_types = get_data_model_types(
+        output_model_type, target_python_version, output_datetime_class
+    )
     parser = parser_class(
         source=input_text or input_,
         data_model_type=data_model_types.data_model,
@@ -466,6 +476,10 @@ def generate(
         http_query_parameters=http_query_parameters,
         treat_dots_as_module=treat_dots_as_module,
         use_exact_imports=use_exact_imports,
+        default_field_extras=default_field_extras,
+        target_datetime_class=output_datetime_class,
+        keyword_only=keyword_only,
+        no_alias=no_alias,
         **kwargs,
     )
 

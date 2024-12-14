@@ -36,6 +36,7 @@ from datamodel_code_generator import (
     load_yaml,
     snooper_to_methods,
 )
+from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.parser.base import get_special_path
@@ -165,7 +166,7 @@ class OpenAPIParser(JsonSchemaParser):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -224,6 +225,10 @@ class OpenAPIParser(JsonSchemaParser):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
+        no_alias: bool = False,
     ):
         super().__init__(
             source=source,
@@ -293,6 +298,10 @@ class OpenAPIParser(JsonSchemaParser):
             http_query_parameters=http_query_parameters,
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
+            target_datetime_class=target_datetime_class,
+            keyword_only=keyword_only,
+            no_alias=no_alias,
         )
         self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
             OpenAPIScope.Schemas
@@ -506,6 +515,8 @@ class OpenAPIParser(JsonSchemaParser):
                     fields=fields,
                     reference=reference,
                     custom_base_class=self.base_class,
+                    custom_template_dir=self.custom_template_dir,
+                    keyword_only=self.keyword_only,
                 )
             )
 

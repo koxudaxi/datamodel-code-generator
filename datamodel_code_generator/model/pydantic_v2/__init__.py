@@ -4,7 +4,7 @@ from typing import Iterable, Optional, Tuple
 
 from pydantic import BaseModel as _BaseModel
 
-from .base_model import BaseModel, DataModelField
+from .base_model import BaseModel, DataModelField, UnionMode
 from .root_model import RootModel
 from .types import DataTypeManager
 
@@ -23,6 +23,7 @@ class ConfigDict(_BaseModel):
     arbitrary_types_allowed: Optional[bool] = None
     protected_namespaces: Optional[Tuple[str, ...]] = None
     regex_engine: Optional[str] = None
+    use_enum_values: Optional[bool] = None
 
 
 __all__ = [
@@ -31,4 +32,5 @@ __all__ = [
     'RootModel',
     'dump_resolve_reference_action',
     'DataTypeManager',
+    'UnionMode',
 ]

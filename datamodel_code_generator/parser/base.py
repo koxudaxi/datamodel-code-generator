@@ -26,7 +26,11 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.format import (
+    CodeFormatter,
+    DatetimeClassType,
+    PythonVersion,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
@@ -34,6 +38,8 @@ from datamodel_code_generator.imports import (
     Import,
     Imports,
 )
+from datamodel_code_generator.model import dataclass as dataclass_model
+from datamodel_code_generator.model import msgspec as msgspec_model
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
@@ -239,10 +245,11 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
-    if from_ == '.':
+    if from_ == len(from_) * '.':
         # Prevents "from . import foo" becoming "from ..foo import Foo"
+        # or "from .. import foo" becoming "from ...foo import Foo"
         # when our imported module has the same parent
-        return f'.{import_}', short_name
+        return f'{from_}{import_}', short_name
     return f'{from_}.{import_}', short_name
 
 
@@ -342,7 +349,7 @@ class Parser(ABC):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -402,7 +409,12 @@ class Parser(ABC):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
+        no_alias: bool = False,
     ) -> None:
+        self.keyword_only = keyword_only
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
             use_standard_collections=use_standard_collections,
@@ -410,6 +422,7 @@ class Parser(ABC):
             strict_types=strict_types,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
+            target_datetime_class=target_datetime_class,
         )
         self.data_model_type: Type[DataModel] = data_model_type
         self.data_model_root_type: Type[DataModel] = data_model_root_type
@@ -500,6 +513,7 @@ class Parser(ABC):
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
+            no_alias=no_alias,
         )
         self.class_name: Optional[str] = class_name
         self.wrap_string_literal: Optional[bool] = wrap_string_literal
@@ -526,6 +540,7 @@ class Parser(ABC):
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
         self.treat_dots_as_module = treat_dots_as_module
+        self.default_field_extras: Optional[Dict[str, Any]] = default_field_extras
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -791,31 +806,54 @@ class Parser(ABC):
                     if not data_type.reference:  # pragma: no cover
                         continue
                     discriminator_model = data_type.reference.source
+
                     if not isinstance(  # pragma: no cover
                         discriminator_model,
-                        (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+                        (
+                            pydantic_model.BaseModel,
+                            pydantic_model_v2.BaseModel,
+                            dataclass_model.DataClass,
+                            msgspec_model.Struct,
+                        ),
                     ):
                         continue  # pragma: no cover
-                    type_names = []
-                    if mapping:
+
+                    type_names: List[str] = []
+
+                    def check_paths(
+                        model: Union[
+                            pydantic_model.BaseModel,
+                            pydantic_model_v2.BaseModel,
+                            Reference,
+                        ],
+                        mapping: Dict[str, str],
+                        type_names: List[str] = type_names,
+                    ) -> None:
+                        """Helper function to validate paths for a given model."""
                         for name, path in mapping.items():
                             if (
-                                discriminator_model.path.split('#/')[-1]
-                                != path.split('#/')[-1]
+                                model.path.split('#/')[-1] != path.split('#/')[-1]
+                            ) and (
+                                path.startswith('#/')
+                                or model.path[:-1] != path.split('/')[-1]
                             ):
-                                if (
-                                    path.startswith('#/')
-                                    or discriminator_model.path[:-1]
-                                    != path.split('/')[-1]
-                                ):
-                                    t_path = path[str(path).find('/') + 1 :]
-                                    t_disc = discriminator_model.path[
-                                        : str(discriminator_model.path).find('#')
-                                    ].lstrip('../')
-                                    t_disc_2 = '/'.join(t_disc.split('/')[1:])
-                                    if t_path != t_disc and t_path != t_disc_2:
-                                        continue
+                                t_path = path[str(path).find('/') + 1 :]
+                                t_disc = model.path[: str(model.path).find('#')].lstrip(
+                                    '../'
+                                )
+                                t_disc_2 = '/'.join(t_disc.split('/')[1:])
+                                if t_path != t_disc and t_path != t_disc_2:
+                                    continue
                             type_names.append(name)
+
+                    # Check the main discriminator model path
+                    if mapping:
+                        check_paths(discriminator_model, mapping)
+
+                        # Check the base_classes if they exist
+                        if len(type_names) == 0:
+                            for base_class in discriminator_model.base_classes:
+                                check_paths(base_class.reference, mapping)
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
                     if not type_names:  # pragma: no cover
@@ -830,13 +868,22 @@ class Parser(ABC):
                         ) != property_name:
                             continue
                         literals = discriminator_field.data_type.literals
-                        if (
-                            len(literals) == 1 and literals[0] == type_names[0]
-                            if type_names
-                            else None
+                        if len(literals) == 1 and literals[0] == (
+                            type_names[0] if type_names else None
                         ):
                             has_one_literal = True
-                            continue
+                            if isinstance(
+                                discriminator_model, msgspec_model.Struct
+                            ):  # pragma: no cover
+                                discriminator_model.add_base_class_kwarg(
+                                    'tag_field', f"'{property_name}'"
+                                )
+                                discriminator_model.add_base_class_kwarg(
+                                    'tag', discriminator_field.represented_default
+                                )
+                                discriminator_field.extras['is_classvar'] = True
+                            # Found the discriminator field, no need to keep looking
+                            break
                         for (
                             field_data_type
                         ) in discriminator_field.data_type.all_data_types:
@@ -863,7 +910,8 @@ class Parser(ABC):
                         else IMPORT_LITERAL_BACKPORT
                     )
                     has_imported_literal = any(
-                        literal == import_ for import_ in imports
+                        literal == import_  # type: ignore [comparison-overlap]
+                        for import_ in imports
                     )
                     if has_imported_literal:  # pragma: no cover
                         imports.append(literal)
@@ -1368,8 +1416,8 @@ class Parser(ABC):
             )
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
-            self.__set_one_literal_on_default(models)
             self.__apply_discriminator_type(models, imports)
+            self.__set_one_literal_on_default(models)
 
             processed_models.append(
                 Processed(module, models, init, imports, scoped_model_resolver)

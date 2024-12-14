@@ -17,6 +17,12 @@ except ImportError:  # pragma: no cover
     black.mode = None
 
 
+class DatetimeClassType(Enum):
+    Datetime = 'datetime'
+    Awaredatetime = 'AwareDatetime'
+    Naivedatetime = 'NaiveDatetime'
+
+
 class PythonVersion(Enum):
     PY_36 = '3.6'
     PY_37 = '3.7'
@@ -25,6 +31,7 @@ class PythonVersion(Enum):
     PY_310 = '3.10'
     PY_311 = '3.11'
     PY_312 = '3.12'
+    PY_313 = '3.13'
 
     @cached_property
     def _is_py_38_or_later(self) -> bool:  # pragma: no cover
@@ -72,6 +79,10 @@ class PythonVersion(Enum):
     @property
     def has_typed_dict_non_required(self) -> bool:
         return self._is_py_311_or_later
+
+    @property
+    def has_kw_only_dataclass(self) -> bool:
+        return self._is_py_310_or_later
 
 
 if TYPE_CHECKING:
@@ -139,7 +150,9 @@ class CodeFormatter:
                     'experimental-string-processing'
                 )
             else:
-                experimental_string_processing = config.get('preview', False) and (
+                experimental_string_processing = config.get(
+                    'preview', False
+                ) and (  # pragma: no cover
                     config.get('unstable', False)
                     or 'string_processing' in config.get('enable-unstable-feature', [])
                 )

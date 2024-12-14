@@ -6,7 +6,8 @@ from operator import attrgetter
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
 
@@ -150,14 +151,20 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    '--keyword-only',
+    help='Defined models as keyword only (for example dataclass(kw_only=True)).',
+    action='store_true',
+    default=None,
+)
+model_options.add_argument(
     '--reuse-model',
-    help='Re-use models on the field when a module has the model with the same content',
+    help='Reuse models on the field when a module has the model with the same content',
     action='store_true',
     default=None,
 )
 model_options.add_argument(
     '--target-python-version',
-    help='target python version (default: 3.7)',
+    help='target python version (default: 3.8)',
     choices=[v.value for v in PythonVersion],
 )
 model_options.add_argument(
@@ -190,6 +197,13 @@ model_options.add_argument(
     '"from . import foo" with "foo.Bar"',
     action='store_true',
     default=False,
+)
+model_options.add_argument(
+    '--output-datetime-class',
+    help='Choose Datetime class between AwareDatetime, NaiveDatetime or datetime. '
+    'Each output model has its default mapping (for example pydantic: datetime, dataclass: str, ...)',
+    choices=[i.value for i in DatetimeClassType],
+    default=None,
 )
 
 # ======================================================================================
@@ -361,6 +375,19 @@ field_options.add_argument(
     action='store_true',
     default=None,
 )
+field_options.add_argument(
+    '--union-mode',
+    help='Union mode for only pydantic v2 field',
+    choices=[u.value for u in UnionMode],
+    default=None,
+)
+field_options.add_argument(
+    '--no-alias',
+    help="""Do not add a field alias. E.g., if --snake-case-field is used along with a base class, which has an 
+            alias_generator""",
+    action='store_true',
+    default=None,
+)
 
 # ======================================================================================
 # Options for templating output
@@ -491,7 +518,6 @@ general_options.add_argument(
     action='store_true',
     help='show version',
 )
-
 
 __all__ = [
     'arg_parser',

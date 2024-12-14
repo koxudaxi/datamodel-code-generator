@@ -71,6 +71,8 @@ from datamodel_code_generator.util import (
 if PYDANTIC_V2:
     from pydantic import ConfigDict
 
+from datamodel_code_generator.format import DatetimeClassType
+
 
 def get_model_by_path(
     schema: Union[Dict[str, Any], List[Any]], keys: Union[List[str], List[int]]
@@ -116,6 +118,7 @@ json_schema_data_formats: Dict[str, Dict[str, Types]] = {
         'binary': Types.binary,
         'date': Types.date,
         'date-time': Types.date_time,
+        'duration': Types.timedelta,
         'time': Types.time,
         'password': Types.password,
         'path': Types.path,
@@ -384,7 +387,7 @@ class JsonSchemaParser(Parser):
         additional_imports: Optional[List[str]] = None,
         custom_template_dir: Optional[Path] = None,
         extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        target_python_version: PythonVersion = PythonVersion.PY_37,
+        target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -442,6 +445,10 @@ class JsonSchemaParser(Parser):
         http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
+        default_field_extras: Optional[Dict[str, Any]] = None,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        keyword_only: bool = False,
+        no_alias: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -511,6 +518,10 @@ class JsonSchemaParser(Parser):
             http_query_parameters=http_query_parameters,
             treat_dots_as_module=treat_dots_as_module,
             use_exact_imports=use_exact_imports,
+            default_field_extras=default_field_extras,
+            target_datetime_class=target_datetime_class,
+            keyword_only=keyword_only,
+            no_alias=no_alias,
         )
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
@@ -534,20 +545,23 @@ class JsonSchemaParser(Parser):
 
     def get_field_extras(self, obj: JsonSchemaObject) -> Dict[str, Any]:
         if self.field_include_all_keys:
-            return {
+            extras = {
                 self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
                 ): v
                 for k, v in obj.extras.items()
             }
         else:
-            return {
+            extras = {
                 self.get_field_extra_key(
                     k.lstrip('x-') if k in self.field_extra_keys_without_x_prefix else k
                 ): v
                 for k, v in obj.extras.items()
                 if k in self.field_keys
             }
+        if self.default_field_extras:
+            extras.update(self.default_field_extras)
+        return extras
 
     @cached_property
     def schema_paths(self) -> List[Tuple[str, List[str]]]:
@@ -798,6 +812,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
+            keyword_only=self.keyword_only,
         )
         self.results.append(data_model_type)
 
@@ -1041,6 +1056,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
             nullable=obj.type_has_null,
+            keyword_only=self.keyword_only,
         )
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
@@ -1701,6 +1717,9 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         for source, path_parts in self._get_context_source_path_parts():
             self.raw_obj = load_yaml(source.text)
+            if self.raw_obj is None:  # pragma: no cover
+                warn(f'{source.path} is empty. Skipping this file')
+                continue
             if self.custom_class_name_generator:
                 obj_name = self.raw_obj.get('title', 'Model')
             else:

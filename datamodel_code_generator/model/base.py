@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import (
@@ -293,7 +294,9 @@ class DataModel(TemplateBase, Nullable, ABC):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ) -> None:
+        self.keyword_only = keyword_only
         if not self.TEMPLATE_FILE_PATH:
             raise Exception('TEMPLATE_FILE_PATH is undefined')
 
@@ -314,6 +317,8 @@ class DataModel(TemplateBase, Nullable, ABC):
         self.reference.source = self
 
         self.extra_template_data = (
+            # The supplied defaultdict will either create a new entry,
+            # or already contain a predefined entry for this type
             extra_template_data[self.name]
             if extra_template_data is not None
             else defaultdict(dict)
@@ -325,10 +330,12 @@ class DataModel(TemplateBase, Nullable, ABC):
             if base_class.reference:
                 base_class.reference.children.append(self)
 
-        if extra_template_data:
+        if extra_template_data is not None:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
             if all_model_extra_template_data:
-                self.extra_template_data.update(all_model_extra_template_data)
+                # The deepcopy is needed here to ensure that different models don't
+                # end up inadvertently sharing state (such as "base_class_kwargs")
+                self.extra_template_data.update(deepcopy(all_model_extra_template_data))
 
         self.methods: List[str] = methods or []
 
@@ -452,6 +459,7 @@ class DataModel(TemplateBase, Nullable, ABC):
             base_class=self.base_class,
             methods=self.methods,
             description=self.description,
+            keyword_only=self.keyword_only,
             **self.extra_template_data,
         )
         return response

@@ -1,6 +1,7 @@
 import json
 import shutil
 from argparse import Namespace
+from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
@@ -14,6 +15,7 @@ from packaging import version
 from datamodel_code_generator import (
     DataModelType,
     InputFileType,
+    PythonVersion,
     chdir,
     generate,
 )
@@ -1018,6 +1020,92 @@ def test_main_similar_nested_array():
 )
 @freeze_time('2019-07-26')
 def test_main_require_referenced_field(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--output-datetime-class',
+                'AwareDatetime',
+                '--output-model-type',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+
+        assert (output_dir / 'referenced.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / expected_output / 'referenced.py'
+        ).read_text()
+        assert (output_dir / 'required.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
+        ).read_text()
+
+
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'require_referenced_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'require_referenced_field_naivedatetime',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_require_referenced_field_naivedatetime(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_dir: Path = Path(output_dir)
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
+                '--output',
+                str(output_dir),
+                '--input-file-type',
+                'jsonschema',
+                '--output-datetime-class',
+                'NaiveDatetime',
+                '--output-model-type',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+
+        assert (output_dir / 'referenced.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / expected_output / 'referenced.py'
+        ).read_text()
+        assert (output_dir / 'required.py').read_text() == (
+            EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
+        ).read_text()
+
+
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'require_referenced_field',
+        ),
+        (
+            'pydantic_v2.BaseModel',
+            'require_referenced_field',
+        ),
+        (
+            'msgspec.Struct',
+            'require_referenced_field_msgspec',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_require_referenced_field_datetime(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_dir: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2072,8 +2160,26 @@ def test_main_jsonschema_combine_one_of_object():
         )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+@pytest.mark.parametrize(
+    'union_mode,output_model,expected_output',
+    [
+        (None, 'pydantic.BaseModel', 'combine_any_of_object.py'),
+        (None, 'pydantic_v2.BaseModel', 'combine_any_of_object_v2.py'),
+        (
+            'left_to_right',
+            'pydantic_v2.BaseModel',
+            'combine_any_of_object_left_to_right.py',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_combine_any_of_object():
+def test_main_jsonschema_combine_any_of_object(
+    union_mode, output_model, expected_output
+):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2084,12 +2190,15 @@ def test_main_jsonschema_combine_any_of_object():
                 str(output_file),
                 '--input-file-type',
                 'jsonschema',
+                '--output-model',
+                output_model,
             ]
+            + ([] if union_mode is None else ['--union-mode', union_mode])
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_JSON_SCHEMA_PATH / 'combine_any_of_object.py').read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
         )
 
 
@@ -3046,8 +3155,25 @@ def test_main_typed_dict_not_required_nullable():
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic_v2.BaseModel',
+            'discriminator_literals.py',
+        ),
+        (
+            'msgspec.Struct',
+            'discriminator_literals_msgspec.py',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_discriminator_literals():
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_discriminator_literals(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3057,18 +3183,33 @@ def test_main_jsonschema_discriminator_literals():
                 '--output',
                 str(output_file),
                 '--output-model-type',
-                'pydantic_v2.BaseModel',
+                output_model,
+                '--target-python',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (EXPECTED_JSON_SCHEMA_PATH / 'discriminator_literals.py').read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
         )
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic_v2.BaseModel',
+            'discriminator_with_external_reference.py',
+        ),
+        (
+            'msgspec.Struct',
+            'discriminator_with_external_reference_msgspec.py',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_discriminator():
+def test_main_jsonschema_external_discriminator(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3083,20 +3224,33 @@ def test_main_jsonschema_external_discriminator():
                 '--output',
                 str(output_file),
                 '--output-model-type',
-                'pydantic_v2.BaseModel',
+                output_model,
+                '--target-python',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_JSON_SCHEMA_PATH / 'discriminator_with_external_reference.py'
-            ).read_text()
-        )
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+        ), EXPECTED_JSON_SCHEMA_PATH / expected_output
 
 
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic.BaseModel',
+            'discriminator_with_external_references_folder',
+        ),
+        (
+            'msgspec.Struct',
+            'discriminator_with_external_references_folder_msgspec',
+        ),
+    ],
+)
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_discriminator_folder():
+def test_main_jsonschema_external_discriminator_folder(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -3105,17 +3259,19 @@ def test_main_jsonschema_external_discriminator_folder():
                 str(JSON_SCHEMA_DATA_PATH / 'discriminator_with_external_reference'),
                 '--output',
                 str(output_path),
+                '--output-model-type',
+                output_model,
+                '--target-python',
+                '3.8',
             ]
         )
         assert return_code == Exit.OK
-        main_modular_dir = (
-            EXPECTED_JSON_SCHEMA_PATH / 'discriminator_with_external_references_folder'
-        )
+        main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / expected_output
         for path in main_modular_dir.rglob('*.py'):
             result = output_path.joinpath(
                 path.relative_to(main_modular_dir)
             ).read_text()
-            assert result == path.read_text()
+            assert result == path.read_text(), path
 
 
 @freeze_time('2019-07-26')
@@ -3411,3 +3567,139 @@ def test_main_imports_correct():
                 path.relative_to(main_modular_dir)
             ).read_text()
             assert result == path.read_text()
+
+
+@pytest.mark.parametrize(
+    'output_model,expected_output',
+    [
+        (
+            'pydantic_v2.BaseModel',
+            'duration_pydantic_v2.py',
+        ),
+        (
+            'msgspec.Struct',
+            'duration_msgspec.py',
+        ),
+    ],
+)
+@freeze_time('2019-07-26')
+def test_main_jsonschema_duration(output_model, expected_output):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'duration.json'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                output_model,
+                '--target-python',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_keyword_only_msgspec() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_JSON_SCHEMA_PATH
+                / 'discriminator_literals_msgspec_keyword_only.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_keyword_only_msgspec_with_extra_data() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+                '--extra-template-data',
+                str(JSON_SCHEMA_DATA_PATH / 'extra_data_msgspec.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_JSON_SCHEMA_PATH
+                / 'discriminator_literals_msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data() -> None:
+    extra_data = json.loads(
+        (JSON_SCHEMA_DATA_PATH / 'extra_data_msgspec.json').read_text()
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        generate(
+            input_=JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json',
+            output=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            keyword_only=True,
+            target_python_version=PythonVersion.PY_38,
+            extra_template_data=defaultdict(dict, extra_data),
+            # Following values are implied by `msgspec.Struct` in the CLI
+            use_annotated=True,
+            field_constraints=True,
+        )
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_JSON_SCHEMA_PATH
+                / 'discriminator_literals_msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
+        )

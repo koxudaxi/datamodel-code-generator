@@ -1,6 +1,8 @@
+import json
 import platform
 import shutil
 from argparse import Namespace
+from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List
@@ -19,7 +21,10 @@ except ImportError:
     from _pytest.tmpdir import TempdirFactory
 
 from datamodel_code_generator import (
+    DataModelType,
     InputFileType,
+    OpenAPIScope,
+    PythonVersion,
     chdir,
     generate,
     inferred_message,
@@ -117,6 +122,34 @@ def test_main_openapi_discriminator_enum_duplicate():
             output_file.read_text()
             == (
                 EXPECTED_OPENAPI_PATH / 'discriminator' / 'enum_duplicate.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_discriminator_with_properties():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_with_properties.yaml'),
+                '--output',
+                str(output_file),
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+            ]
+        )
+        assert return_code == Exit.OK
+
+        print(output_file.read_text())
+
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH
+                / 'discriminator'
+                / 'discriminator_with_properties.py'
             ).read_text()
         )
 
@@ -1049,7 +1082,7 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     assert return_code == Exit.ERROR
     assert (
         captured.err == '`--use-generic-container-types` can not be used with '
-        '`--target-python_version` 3.6.\n '
+        '`--target-python-version` 3.6.\n '
         'The version will be not supported in a future version\n'
     )
 
@@ -1075,6 +1108,40 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
+    'output_model,expected_output,date_type',
+    [
+        ('pydantic.BaseModel', 'datetime.py', 'AwareDatetime'),
+        ('pydantic_v2.BaseModel', 'datetime_pydantic_v2.py', 'AwareDatetime'),
+        ('dataclasses.dataclass', 'datetime_dataclass.py', 'datetime'),
+        ('msgspec.Struct', 'datetime_msgspec.py', 'datetime'),
+    ],
+)
+def test_main_openapi_aware_datetime(output_model, expected_output, date_type):
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'datetime.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-datetime-class',
+                date_type,
+                '--output-model',
+                output_model,
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.parametrize(
     'output_model,expected_output',
     [
         (
@@ -1083,7 +1150,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
         ),
         (
             'pydantic_v2.BaseModel',
-            'datetime_pydantic_v2.py',
+            'datetime_v2.py',
         ),
     ],
 )
@@ -1244,6 +1311,8 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
                 'openapi',
                 '--enum-field-as-literal',
                 'all',
+                '--target-python-version',
+                '3.7',
             ]
         )
 
@@ -2794,5 +2863,235 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints():
             == (
                 EXPECTED_OPENAPI_PATH
                 / 'msgspec_use_annotated_with_field_constraints.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_discriminator_one_literal_as_default():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--use-one-literal-as-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH
+                / 'discriminator'
+                / 'enum_one_literal_as_default.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_discriminator_one_literal_as_default_dataclass():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'discriminator_enum.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'dataclasses.dataclass',
+                '--use-one-literal-as-default',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH
+                / 'discriminator'
+                / 'dataclass_enum_one_literal_as_default.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_keyword_only_dataclass():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'dataclasses.dataclass',
+                '--keyword-only',
+                '--target-python-version',
+                '3.10',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / 'dataclass_keyword_only.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: CaptureFixture):
+    return_code = main(
+        [
+            '--input',
+            str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+            '--input-file-type',
+            'openapi',
+            '--output-model-type',
+            'dataclasses.dataclass',
+            '--keyword-only',
+            '--target-python-version',
+            '3.9',
+        ]
+    )
+    assert return_code == Exit.ERROR
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert (
+        captured.err
+        == '`--keyword-only` requires `--target-python-version` 3.10 or higher.\n'
+    )
+
+
+@freeze_time('2019-07-26')
+def test_main_openapi_dataclass_with_NaiveDatetime(capsys: CaptureFixture):
+    return_code = main(
+        [
+            '--input',
+            str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+            '--input-file-type',
+            'openapi',
+            '--output-model-type',
+            'dataclasses.dataclass',
+            '--output-datetime-class',
+            'NaiveDatetime',
+        ]
+    )
+    assert return_code == Exit.ERROR
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert (
+        captured.err
+        == '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass\n'
+    )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_keyword_only_msgspec():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_keyword_only_msgspec_with_extra_data() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+                '--extra-template-data',
+                str(OPEN_API_DATA_PATH / 'extra_data_msgspec.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_generate_openapi_keyword_only_msgspec_with_extra_data() -> None:
+    extra_data = json.loads(
+        (OPEN_API_DATA_PATH / 'extra_data_msgspec.json').read_text()
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        generate(
+            input_=OPEN_API_DATA_PATH / 'inheritance.yaml',
+            output=output_file,
+            input_file_type=InputFileType.OpenAPI,
+            output_model_type=DataModelType.MsgspecStruct,
+            keyword_only=True,
+            target_python_version=PythonVersion.PY_38,
+            extra_template_data=defaultdict(dict, extra_data),
+            # Following values are defaults in the CLI, but not in the API
+            openapi_scopes=[OpenAPIScope.Schemas],
+            # Following values are implied by `msgspec.Struct` in the CLI
+            use_annotated=True,
+            field_constraints=True,
+        )
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only_omit_defaults.py'
             ).read_text()
         )

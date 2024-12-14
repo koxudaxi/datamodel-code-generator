@@ -7,6 +7,7 @@ from typing import (
     Dict,
     List,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -15,21 +16,36 @@ from typing import (
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator.imports import (
+    IMPORT_DATE,
+    IMPORT_DATETIME,
+    IMPORT_TIME,
+    IMPORT_TIMEDELTA,
+    Import,
+)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
+    IMPORT_CLASSVAR,
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
     IMPORT_MSGSPEC_META,
-    IMPORT_MSGSPEC_STRUCT,
 )
 from datamodel_code_generator.model.pydantic.base_model import (
     Constraints as _Constraints,
 )
 from datamodel_code_generator.model.rootmodel import RootModel as _RootModel
+from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
+from datamodel_code_generator.model.types import type_map_factory
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import chain_as_tuple, get_optional_type
+from datamodel_code_generator.types import (
+    DataType,
+    StrictTypes,
+    Types,
+    chain_as_tuple,
+    get_optional_type,
+)
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -56,6 +72,8 @@ def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if self.annotated:
             extra_imports.append(IMPORT_MSGSPEC_META)
+        if self.extras.get('is_classvar'):
+            extra_imports.append(IMPORT_CLASSVAR)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # type: ignore
 
     setattr(cls, 'imports', property(new_imports))
@@ -69,7 +87,7 @@ class RootModel(_RootModel):
 class Struct(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = 'msgspec.jinja2'
     BASE_CLASS: ClassVar[str] = 'msgspec.Struct'
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_MSGSPEC_STRUCT,)
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()
 
     def __init__(
         self,
@@ -86,6 +104,7 @@ class Struct(DataModel):
         description: Optional[str] = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
+        keyword_only: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -100,7 +119,14 @@ class Struct(DataModel):
             description=description,
             default=default,
             nullable=nullable,
+            keyword_only=keyword_only,
         )
+        self.extra_template_data.setdefault('base_class_kwargs', {})
+        if self.keyword_only:
+            self.add_base_class_kwarg('kw_only', 'True')
+
+    def add_base_class_kwarg(self, name: str, value):
+        self.extra_template_data['base_class_kwargs'][name] = value
 
 
 class Constraints(_Constraints):
@@ -239,11 +265,16 @@ class DataModelField(DataModelFieldBase):
 
         meta = f'Meta({", ".join(meta_arguments)})'
 
-        if not self.required:
+        if not self.required and not self.extras.get('is_classvar'):
             type_hint = self.data_type.type_hint
             annotated_type = f'Annotated[{type_hint}, {meta}]'
             return get_optional_type(annotated_type, self.data_type.use_union_operator)
-        return f'Annotated[{self.type_hint}, {meta}]'
+
+        annotated_type = f'Annotated[{self.type_hint}, {meta}]'
+        if self.extras.get('is_classvar'):
+            annotated_type = f'ClassVar[{annotated_type}]'
+
+        return annotated_type
 
     def _get_default_as_struct_model(self) -> Optional[str]:
         for data_type in self.data_type.data_types or (self.data_type,):
@@ -265,3 +296,43 @@ class DataModelField(DataModelFieldBase):
             elif data_type.reference and isinstance(data_type.reference.source, Struct):
                 return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type={data_type.alias or data_type.reference.source.class_name})'
         return None
+
+
+class DataTypeManager(_DataTypeManager):
+    def __init__(
+        self,
+        python_version: PythonVersion = PythonVersion.PY_38,
+        use_standard_collections: bool = False,
+        use_generic_container_types: bool = False,
+        strict_types: Optional[Sequence[StrictTypes]] = None,
+        use_non_positive_negative_number_constrained_types: bool = False,
+        use_union_operator: bool = False,
+        use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+    ):
+        super().__init__(
+            python_version,
+            use_standard_collections,
+            use_generic_container_types,
+            strict_types,
+            use_non_positive_negative_number_constrained_types,
+            use_union_operator,
+            use_pendulum,
+            target_datetime_class,
+        )
+
+        datetime_map = (
+            {
+                Types.time: self.data_type.from_import(IMPORT_TIME),
+                Types.date: self.data_type.from_import(IMPORT_DATE),
+                Types.date_time: self.data_type.from_import(IMPORT_DATETIME),
+                Types.timedelta: self.data_type.from_import(IMPORT_TIMEDELTA),
+            }
+            if target_datetime_class is DatetimeClassType.Datetime
+            else {}
+        )
+
+        self.type_map: Dict[Types, DataType] = {
+            **type_map_factory(self.data_type),
+            **datetime_map,
+        }

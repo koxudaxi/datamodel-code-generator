@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import List, TypeAlias
+from typing import List, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
-from typing_extensions import Literal
 
 Boolean: TypeAlias = bool
 """
@@ -30,12 +29,8 @@ class A(BaseModel):
     listOptionalListField: List[List[String] | None]
     listOptionalListOptionalField: List[List[String | None] | None]
     optionalField: String | None = None
-    optionalListListField: List[List[String]] | None = Field(default_factory=list)
-    optionalListListOptionalField: List[List[String | None]] | None = Field(
-        default_factory=list
-    )
-    optionalListOptionalField: List[String | None] | None = Field(default_factory=list)
-    optionalListOptionalListField: List[List[String] | None] | None = Field(
-        default_factory=list
-    )
+    optionalListListField: List[List[String]] | None = None
+    optionalListListOptionalField: List[List[String | None]] | None = None
+    optionalListOptionalField: List[String | None] | None = None
+    optionalListOptionalListField: List[List[String] | None] | None = None
     typename__: Literal['A'] | None = Field('A', alias='__typename')

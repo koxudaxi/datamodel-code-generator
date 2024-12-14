@@ -1,14 +1,16 @@
 from typing import Any, Dict, Optional, Sequence, Type
 
-from datamodel_code_generator import PythonVersion
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL
+from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator.imports import (
+    IMPORT_ANY,
+    IMPORT_DECIMAL,
+    IMPORT_TIMEDELTA,
+)
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
 
-def type_map_factory(
-    data_type: Type[DataType],
-) -> Dict[Types, DataType]:
+def type_map_factory(data_type: Type[DataType]) -> Dict[Types, DataType]:
     data_type_int = data_type(type='int')
     data_type_float = data_type(type='float')
     data_type_str = data_type(type='str')
@@ -27,6 +29,7 @@ def type_map_factory(
         Types.binary: data_type(type='bytes'),
         Types.date: data_type_str,
         Types.date_time: data_type_str,
+        Types.timedelta: data_type.from_import(IMPORT_TIMEDELTA),
         Types.password: data_type_str,
         Types.email: data_type_str,
         Types.uuid: data_type_str,
@@ -52,13 +55,14 @@ def type_map_factory(
 class DataTypeManager(_DataTypeManager):
     def __init__(
         self,
-        python_version: PythonVersion = PythonVersion.PY_37,
+        python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,
         use_generic_container_types: bool = False,
         strict_types: Optional[Sequence[StrictTypes]] = None,
         use_non_positive_negative_number_constrained_types: bool = False,
         use_union_operator: bool = False,
         use_pendulum: bool = False,
+        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
     ):
         super().__init__(
             python_version,
@@ -68,11 +72,10 @@ class DataTypeManager(_DataTypeManager):
             use_non_positive_negative_number_constrained_types,
             use_union_operator,
             use_pendulum,
+            target_datetime_class,
         )
 
-        self.type_map: Dict[Types, DataType] = type_map_factory(
-            self.data_type,
-        )
+        self.type_map: Dict[Types, DataType] = type_map_factory(self.data_type)
 
     def get_data_type(
         self,

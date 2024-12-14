@@ -22,7 +22,7 @@ $ cd datamodel-code-generator
 $ curl -sSL https://install.python-poetry.org | python3 - 
 
 ## 3. Install dependencies
-$ poetry install
+$ poetry install --all-extras
 
 ## 4. Create new branch and rewrite code.
 $ git checkout -b new-branch

@@ -198,6 +198,7 @@ class FieldNameResolver:
         special_field_name_prefix: Optional[str] = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
+        no_alias: bool = False,
     ):
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self.empty_field_name: str = empty_field_name or '_'
@@ -208,6 +209,7 @@ class FieldNameResolver:
         )
         self.remove_special_field_name_prefix: bool = remove_special_field_name_prefix
         self.capitalise_enum_members: bool = capitalise_enum_members
+        self.no_alias = no_alias
 
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
@@ -274,7 +276,10 @@ class FieldNameResolver:
         if field_name in self.aliases:
             return self.aliases[field_name], field_name
         valid_name = self.get_valid_name(field_name, excludes=excludes)
-        return valid_name, None if field_name == valid_name else field_name
+        return (
+            valid_name,
+            None if self.no_alias or field_name == valid_name else field_name,
+        )
 
 
 class PydanticFieldNameResolver(FieldNameResolver):
@@ -354,6 +359,7 @@ class ModelResolver:
         special_field_name_prefix: Optional[str] = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
+        no_alias: bool = False,
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -383,6 +389,7 @@ class ModelResolver:
                 capitalise_enum_members=capitalise_enum_members
                 if k == ModelType.ENUM
                 else False,
+                no_alias=no_alias,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }
@@ -566,11 +573,13 @@ class ModelResolver:
         split_ref = ref.rsplit('/', 1)
         if len(split_ref) == 1:
             original_name = Path(
-                split_ref[0][:-1] if self.is_external_root_ref(path) else split_ref[0]
+                split_ref[0].rstrip('#')
+                if self.is_external_root_ref(path)
+                else split_ref[0]
             ).stem
         else:
             original_name = (
-                Path(split_ref[1][:-1]).stem
+                Path(split_ref[1].rstrip('#')).stem
                 if self.is_external_root_ref(path)
                 else split_ref[1]
             )

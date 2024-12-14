@@ -33,7 +33,7 @@ def test_format_code_with_skip_string_normalization(
     skip_string_normalization: bool, expected_output: str
 ) -> None:
     formatter = CodeFormatter(
-        PythonVersion.PY_37, skip_string_normalization=skip_string_normalization
+        PythonVersion.PY_38, skip_string_normalization=skip_string_normalization
     )
 
     formatted_code = formatter.format_code("a = 'b'")
@@ -44,7 +44,7 @@ def test_format_code_with_skip_string_normalization(
 def test_format_code_un_exist_custom_formatter():
     with pytest.raises(ModuleNotFoundError):
         _ = CodeFormatter(
-            PythonVersion.PY_37,
+            PythonVersion.PY_38,
             custom_formatters=[UN_EXIST_FORMATTER],
         )
 
@@ -52,7 +52,7 @@ def test_format_code_un_exist_custom_formatter():
 def test_format_code_invalid_formatter_name():
     with pytest.raises(NameError):
         _ = CodeFormatter(
-            PythonVersion.PY_37,
+            PythonVersion.PY_38,
             custom_formatters=[WRONG_FORMATTER],
         )
 
@@ -60,14 +60,14 @@ def test_format_code_invalid_formatter_name():
 def test_format_code_is_not_subclass():
     with pytest.raises(TypeError):
         _ = CodeFormatter(
-            PythonVersion.PY_37,
+            PythonVersion.PY_38,
             custom_formatters=[NOT_SUBCLASS_FORMATTER],
         )
 
 
 def test_format_code_with_custom_formatter_without_kwargs():
     formatter = CodeFormatter(
-        PythonVersion.PY_37,
+        PythonVersion.PY_38,
         custom_formatters=[ADD_COMMENT_FORMATTER],
     )
 
@@ -78,7 +78,7 @@ def test_format_code_with_custom_formatter_without_kwargs():
 
 def test_format_code_with_custom_formatter_with_kwargs():
     formatter = CodeFormatter(
-        PythonVersion.PY_37,
+        PythonVersion.PY_38,
         custom_formatters=[ADD_LICENSE_FORMATTER],
         custom_formatters_kwargs={'license_file': EXAMPLE_LICENSE_FILE},
     )
@@ -99,7 +99,7 @@ y = 2
 
 def test_format_code_with_two_custom_formatters():
     formatter = CodeFormatter(
-        PythonVersion.PY_37,
+        PythonVersion.PY_38,
         custom_formatters=[
             ADD_COMMENT_FORMATTER,
             ADD_LICENSE_FORMATTER,

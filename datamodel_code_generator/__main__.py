@@ -33,6 +33,8 @@ import argcomplete
 import black
 from pydantic import BaseModel
 
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
+
 if TYPE_CHECKING:
     from argparse import Namespace
 
@@ -49,6 +51,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.format import (
+    DatetimeClassType,
     PythonVersion,
     black_find_project_root,
     is_supported_in_black,
@@ -157,7 +160,7 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
                 raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python_version` {target_python_version.PY_36.value}.\n'
+                    f'`--use-generic-container-types` can not be used with `--target-python-version` {target_python_version.PY_36.value}.\n'
                     ' The version will be not supported in a future version'
                 )
         return values
@@ -179,6 +182,36 @@ class Config(BaseModel):
             raise Error(
                 '`--custom_file_header_path` can not be used with `--custom_file_header`.'
             )  # pragma: no cover
+        return values
+
+    @model_validator(mode='after')
+    def validate_keyword_only(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        output_model_type: DataModelType = values.get('output_model_type')
+        python_target: PythonVersion = values.get('target_python_version')
+        if (
+            values.get('keyword_only')
+            and output_model_type == DataModelType.DataclassesDataclass
+            and not python_target.has_kw_only_dataclass
+        ):
+            raise Error(
+                f'`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher.'
+            )
+        return values
+
+    @model_validator(mode='after')
+    def validate_output_datetime_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        datetime_class_type: Optional[DatetimeClassType] = values.get(
+            'output_datetime_class'
+        )
+        if (
+            datetime_class_type
+            and datetime_class_type is not DatetimeClassType.Datetime
+            and values.get('output_model_type') == DataModelType.DataclassesDataclass
+        ):
+            raise Error(
+                '`--output-datetime-class` only allows "datetime" for '
+                f'`--output-model-type` {DataModelType.DataclassesDataclass.value}'
+            )
         return values
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
@@ -248,7 +281,7 @@ class Config(BaseModel):
     output: Optional[Path] = None
     debug: bool = False
     disable_warnings: bool = False
-    target_python_version: PythonVersion = PythonVersion.PY_37
+    target_python_version: PythonVersion = PythonVersion.PY_38
     base_class: str = ''
     additional_imports: Optional[List[str]] = (None,)
     custom_template_dir: Optional[Path] = None
@@ -310,6 +343,10 @@ class Config(BaseModel):
     http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
+    union_mode: Optional[UnionMode] = None
+    output_datetime_class: Optional[DatetimeClassType] = None
+    keyword_only: bool = False
+    no_alias: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {
@@ -508,6 +545,10 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             http_query_parameters=config.http_query_parameters,
             treat_dots_as_module=config.treat_dot_as_module,
             use_exact_imports=config.use_exact_imports,
+            union_mode=config.union_mode,
+            output_datetime_class=config.output_datetime_class,
+            keyword_only=config.keyword_only,
+            no_alias=config.no_alias,
         )
         return Exit.OK
     except InvalidClassNameError as e:
