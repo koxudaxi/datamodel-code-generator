@@ -74,6 +74,10 @@ jobs:
             python-version: 3.11
           - os: macos-latest
             python-version: 3.11
+          - os: windows-latest
+            python-version: 3.12
+          - os: macos-latest
+            python-version: 3.12
           - os: macos-latest
             isort-version: 4.3.21
           - isort-version: 5.6.4
