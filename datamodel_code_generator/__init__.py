@@ -390,12 +390,14 @@ def generate(
                     import ast
 
                     # Input can be a dict object stored in a python file
-                    obj = ast.literal_eval(
-                        input_.read_text(encoding=encoding)  # type: ignore
+                    obj = (
+                        ast.literal_eval(
+                            input_.read_text(encoding=encoding)  # type: ignore
+                        )
                         if isinstance(input_, Path)
                         else input_
                     )
-                else:
+                else:  # noqa
                     # InputFileType.GraphQL is also a member of RAW_DATA_TYPES but it is already handled separately,
                     # so there's nothing left to be handled
                     raise Error('Invalid file format')
@@ -510,6 +512,9 @@ def generate(
             input_filename = '<stdin>'
         elif isinstance(input_, ParseResult):
             input_filename = input_.geturl()
+        elif input_file_type == InputFileType.Dict:
+            # input_ might be a dict object provided directly, and missing a name field
+            input_filename = getattr(input_, 'name', '<dict>')
         else:
             input_filename = input_.name
     if not results:
