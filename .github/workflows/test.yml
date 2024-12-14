@@ -90,7 +90,7 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction -E http -E graphql
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
-      if: runner.os != 'Windows' || matrix.isort-version != 'default'
+      if: "runner.os != 'Windows' && matrix.isort-version != 'default'"
       run: |
          poetry run pip install isort==${{ matrix.isort-version }}
     - name: Install Pydantic ${{ matrix.pydantic-version }}
