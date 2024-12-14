@@ -33,6 +33,7 @@ Below are the data types and features recognized by datamodel-code-generator for
 - ipv6
 - hostname
 - decimal
+- uri
 
 ### Other schema
 - enum (as enum.Enum or typing.Literal)
