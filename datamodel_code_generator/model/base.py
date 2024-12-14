@@ -119,6 +119,7 @@ class DataModelFieldBase(_BaseModel):
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
     can_have_extra_keys: ClassVar[bool] = True
+    type_has_null: Optional[bool] = None
 
     if not TYPE_CHECKING:
 
@@ -151,6 +152,8 @@ class DataModelFieldBase(_BaseModel):
                 return get_optional_type(type_hint, self.data_type.use_union_operator)
             return type_hint
         elif self.required:
+            if self.type_has_null:
+                return get_optional_type(type_hint, self.data_type.use_union_operator)
             return type_hint
         elif self.fall_back_to_nullable:
             return get_optional_type(type_hint, self.data_type.use_union_operator)
