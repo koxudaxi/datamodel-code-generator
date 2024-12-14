@@ -137,7 +137,7 @@ jobs:
          source $VENV
          ./scripts/test.sh
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-24.04' && matrix.pydantic-version != '1.5.1'
+      if: matrix.os == 'ubuntu-24.04'
       uses: codecov/codecov-action@v5
       with:
         flags: unittests
