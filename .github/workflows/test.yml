@@ -54,6 +54,10 @@ jobs:
             black-version: 22.1.0
           - os: macos-latest
             black-version: 22.1.0
+          - os: windows-latest
+            pydantic-version: 1.10.9
+          - os: macos-latest
+            pydantic-version: 1.10.9
           - os: macos-latest
             isort-version: 4.3.21
           - isort-version: 5.6.4
