@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import (
@@ -118,6 +119,7 @@ class DataModelFieldBase(_BaseModel):
     _exclude_fields: ClassVar[Set[str]] = {'parent'}
     _pass_fields: ClassVar[Set[str]] = {'parent', 'data_type'}
     can_have_extra_keys: ClassVar[bool] = True
+    type_has_null: Optional[bool] = None
 
     if not TYPE_CHECKING:
 
@@ -150,6 +152,8 @@ class DataModelFieldBase(_BaseModel):
                 return get_optional_type(type_hint, self.data_type.use_union_operator)
             return type_hint
         elif self.required:
+            if self.type_has_null:
+                return get_optional_type(type_hint, self.data_type.use_union_operator)
             return type_hint
         elif self.fall_back_to_nullable:
             return get_optional_type(type_hint, self.data_type.use_union_operator)
@@ -316,6 +320,8 @@ class DataModel(TemplateBase, Nullable, ABC):
         self.reference.source = self
 
         self.extra_template_data = (
+            # The supplied defaultdict will either create a new entry,
+            # or already contain a predefined entry for this type
             extra_template_data[self.name]
             if extra_template_data is not None
             else defaultdict(dict)
@@ -327,10 +333,12 @@ class DataModel(TemplateBase, Nullable, ABC):
             if base_class.reference:
                 base_class.reference.children.append(self)
 
-        if extra_template_data:
+        if extra_template_data is not None:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
             if all_model_extra_template_data:
-                self.extra_template_data.update(all_model_extra_template_data)
+                # The deepcopy is needed here to ensure that different models don't
+                # end up inadvertently sharing state (such as "base_class_kwargs")
+                self.extra_template_data.update(deepcopy(all_model_extra_template_data))
 
         self.methods: List[str] = methods or []
 

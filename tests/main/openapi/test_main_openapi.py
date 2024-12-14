@@ -1,6 +1,8 @@
+import json
 import platform
 import shutil
 from argparse import Namespace
+from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List
@@ -19,7 +21,10 @@ except ImportError:
     from _pytest.tmpdir import TempdirFactory
 
 from datamodel_code_generator import (
+    DataModelType,
     InputFileType,
+    OpenAPIScope,
+    PythonVersion,
     chdir,
     generate,
     inferred_message,
@@ -2632,6 +2637,32 @@ def test_main_typed_dict_nullable_strict_nullable():
         )
 
 
+@pytest.mark.benchmark
+@freeze_time('2019-07-26')
+def test_main_openapi_nullable_31():
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'nullable_31.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'pydantic_v2.BaseModel',
+                '--strip-default-none',
+                '--use-union-operator',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (EXPECTED_OPENAPI_PATH / 'nullable_31.py').read_text()
+        )
+
+
 @freeze_time('2019-07-26')
 def test_main_custom_file_header_path():
     with TemporaryDirectory() as output_dir:
@@ -3022,4 +3053,71 @@ def test_main_openapi_keyword_only_msgspec():
         assert (
             output_file.read_text()
             == (EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only.py').read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_keyword_only_msgspec_with_extra_data() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(OPEN_API_DATA_PATH / 'inheritance.yaml'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+                '--extra-template-data',
+                str(OPEN_API_DATA_PATH / 'extra_data_msgspec.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+def test_main_generate_openapi_keyword_only_msgspec_with_extra_data() -> None:
+    extra_data = json.loads(
+        (OPEN_API_DATA_PATH / 'extra_data_msgspec.json').read_text()
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        generate(
+            input_=OPEN_API_DATA_PATH / 'inheritance.yaml',
+            output=output_file,
+            input_file_type=InputFileType.OpenAPI,
+            output_model_type=DataModelType.MsgspecStruct,
+            keyword_only=True,
+            target_python_version=PythonVersion.PY_38,
+            extra_template_data=defaultdict(dict, extra_data),
+            # Following values are defaults in the CLI, but not in the API
+            openapi_scopes=[OpenAPIScope.Schemas],
+            # Following values are implied by `msgspec.Struct` in the CLI
+            use_annotated=True,
+            field_constraints=True,
+        )
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_OPENAPI_PATH / 'msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
         )
