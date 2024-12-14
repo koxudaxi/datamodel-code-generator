@@ -13,12 +13,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        isort-version: [4.3.21, 5.6.4]
-        black-version: [22.1.0, default]
-        pydantic-version: [1.5.1, 1.10.9, 2.4.2]
+        isort-version: [default]
+        black-version: [default]
+        pydantic-version: [1.10.9, 2.10.3]
         include:
+          - os: ubuntu-latest
+            isort-version: 4.3.21
+            black-version: default
+            python-version: 3.8
+            pydantic-version: 1.5.1
           - os: ubuntu-latest
             isort-version: 5.6.4
             black-version: default
@@ -39,27 +44,44 @@ jobs:
             black-version: 23.12.1
             python-version: 3.12
             pydantic-version: 2.4.2
+          - os: ubuntu-latest
+            isort-version: 5.6.4
+            black-version: 22.1.0
+            python-version: 3.12
+            pydantic-version: 2.4.2
         exclude:
           - os: windows-latest
             black-version: 22.1.0
           - os: macos-latest
             black-version: 22.1.0
           - os: windows-latest
-            isort-version: 4.3.21
+            pydantic-version: 1.10.9
           - os: macos-latest
-            isort-version: 4.3.21
+            pydantic-version: 1.10.9
           - os: windows-latest
-            pydantic-version: 1.5.1
+            python-version: 3.8
           - os: macos-latest
-            pydantic-version: 1.5.1
-          - python-version: 3.9
-            pydantic-version: 1.5.1
-          - python-version: 3.10
-            pydantic-version: 1.5.1
-          - python-version: 3.11
-            pydantic-version: 1.5.1
-          - python-version: 3.12
-            pydantic-version: 1.5.1
+            python-version: 3.8
+          - os: windows-latest
+            python-version: 3.9
+          - os: macos-latest
+            python-version: 3.9
+          - os: windows-latest
+            python-version: 3.10
+          - os: macos-latest
+            python-version: 3.10
+          - os: windows-latest
+            python-version: 3.11
+          - os: macos-latest
+            python-version: 3.11
+          - os: windows-latest
+            python-version: 3.12
+          - os: macos-latest
+            python-version: 3.12
+          - os: macos-latest
+            isort-version: 4.3.21
+          - isort-version: 5.6.4
+            pydantic-version: 1.10.9
     defaults:
       run:
         shell: bash
@@ -92,9 +114,9 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction -E http -E graphql
     - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
-      if: runner.os != 'Windows'
+      if: "runner.os != 'Windows' && matrix.isort-version != 'default'"
       run: |
-         poetry run pip install isort=="$ISORT"
+         poetry run pip install isort==${{ matrix.isort-version }}
     - name: Install Pydantic ${{ matrix.pydantic-version }}
       if: matrix.pydantic-version != 'default'
       run: |
@@ -114,10 +136,10 @@ jobs:
          ./scripts/test.sh
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.pydantic-version != '1.5.1'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         flags: unittests
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: true
         env_vars: OS,PYTHON,ISORT
       env:
