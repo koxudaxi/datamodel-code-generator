@@ -1,6 +1,7 @@
 import json
 import shutil
 from argparse import Namespace
+from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call
@@ -14,6 +15,7 @@ from packaging import version
 from datamodel_code_generator import (
     DataModelType,
     InputFileType,
+    PythonVersion,
     chdir,
     generate,
 )
@@ -3167,6 +3169,10 @@ def test_main_typed_dict_not_required_nullable():
     ],
 )
 @freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
 def test_main_jsonschema_discriminator_literals(output_model, expected_output):
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -3596,4 +3602,104 @@ def test_main_jsonschema_duration(output_model, expected_output):
         assert (
             output_file.read_text()
             == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_keyword_only_msgspec() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_JSON_SCHEMA_PATH
+                / 'discriminator_literals_msgspec_keyword_only.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_keyword_only_msgspec_with_extra_data() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                str(JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json'),
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'jsonschema',
+                '--output-model-type',
+                'msgspec.Struct',
+                '--keyword-only',
+                '--target-python-version',
+                '3.8',
+                '--extra-template-data',
+                str(JSON_SCHEMA_DATA_PATH / 'extra_data_msgspec.json'),
+            ]
+        )
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_JSON_SCHEMA_PATH
+                / 'discriminator_literals_msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
+        )
+
+
+@freeze_time('2019-07-26')
+@pytest.mark.skipif(
+    int(black.__version__.split('.')[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data() -> None:
+    extra_data = json.loads(
+        (JSON_SCHEMA_DATA_PATH / 'extra_data_msgspec.json').read_text()
+    )
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / 'output.py'
+        generate(
+            input_=JSON_SCHEMA_DATA_PATH / 'discriminator_literals.json',
+            output=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            keyword_only=True,
+            target_python_version=PythonVersion.PY_38,
+            extra_template_data=defaultdict(dict, extra_data),
+            # Following values are implied by `msgspec.Struct` in the CLI
+            use_annotated=True,
+            field_constraints=True,
+        )
+        assert (
+            output_file.read_text()
+            == (
+                EXPECTED_JSON_SCHEMA_PATH
+                / 'discriminator_literals_msgspec_keyword_only_omit_defaults.py'
+            ).read_text()
         )
