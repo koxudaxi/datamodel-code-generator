@@ -397,7 +397,7 @@ def generate(
                         if isinstance(input_, Path)
                         else input_
                     )
-                else:  # noqa
+                else:
                     # InputFileType.GraphQL is also a member of RAW_DATA_TYPES but it is already handled separately,
                     # so there's nothing left to be handled
                     raise Error('Invalid file format')
