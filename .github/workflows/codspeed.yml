@@ -36,7 +36,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v1
+        uses: CodSpeedHQ/action@v3
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: poetry run pytest tests/ --codspeed -n auto
