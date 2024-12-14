@@ -11,9 +11,9 @@ on:
 
 jobs:
   benchmarks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
@@ -27,7 +27,7 @@ jobs:
           installer-parallel: true
       - name: Load cached venv
         id: cached-poetry-dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: .venv
           key: venv-${{ runner.os }}-codspeed-3.12-v1-${{ hashFiles('**/poetry.lock') }}
@@ -36,7 +36,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v1
+        uses: CodSpeedHQ/action@v3
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: poetry run pytest tests/ --codspeed -n auto
