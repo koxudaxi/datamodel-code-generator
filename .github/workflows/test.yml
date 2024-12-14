@@ -15,7 +15,7 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
-        isort-version: [default]
+        isort-version: [4.3.21, 5.6.4, default]
         black-version: [default]
         pydantic-version: [1.10.9, 2.10.3]
         include:
@@ -29,27 +29,9 @@ jobs:
             black-version: default
             python-version: 3.8
             pydantic-version: 1.8.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 19.10b0
-            python-version: 3.9
-            pydantic-version: 1.8.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 24.1.0
-            python-version: 3.12
-            pydantic-version: 2.4.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 23.12.1
-            python-version: 3.12
-            pydantic-version: 2.4.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 22.1.0
-            python-version: 3.12
-            pydantic-version: 2.4.2
         exclude:
+          - isort-version: 4.3.21
+          - isort-version: 5.6.4
           - os: windows-latest
             black-version: 22.1.0
           - os: macos-latest
