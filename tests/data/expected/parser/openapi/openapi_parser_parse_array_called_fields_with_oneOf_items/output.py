@@ -5,13 +5,13 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 
 
-class FieldModel(BaseModel):
+class Fields(BaseModel):
     a: Optional[str] = None
 
 
-class Field1(BaseModel):
+class Fields1(BaseModel):
     b: Optional[str] = Field(None, regex='^[a-zA-Z_]+$')
 
 
 class BadSchema(BaseModel):
-    fields: Optional[List[Union[FieldModel, Field1]]] = None
+    fields: Optional[List[Union[Fields, Fields1]]] = None
