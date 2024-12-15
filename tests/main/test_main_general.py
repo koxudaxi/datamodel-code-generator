@@ -6,6 +6,9 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator import (
+    DataModelType,
+    InputFileType,
+    generate,
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Exit, main
@@ -85,4 +88,22 @@ def test_space_and_special_characters_dict():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_PATH / 'space_and_special_characters_dict.py').read_text()
+        )
+
+
+@freeze_time('2024-12-14')
+def test_direct_input_dict():
+    with TemporaryDirectory() as output_dir:
+        output_file = Path(output_dir) / 'output.py'
+        generate(
+            {'foo': 1, 'bar': {'baz': 2}},
+            input_file_type=InputFileType.Dict,
+            input_filename=None,
+            output=output_file,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            snake_case_field=True,
+        )
+        assert (
+            output_file.read_text()
+            == (EXPECTED_MAIN_PATH / 'direct_input_dict.py').read_text()
         )
