@@ -397,6 +397,8 @@ def generate(
                         if isinstance(input_, Path)
                         else input_
                     )
+                else:  # pragma: no cover
+                    raise Error(f'Unsupported input file type: {input_file_type}')
             except:  # noqa
                 raise Error('Invalid file format')
 
