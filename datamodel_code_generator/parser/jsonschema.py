@@ -303,11 +303,11 @@ class JsonSchemaObject(BaseModel):
 
     @cached_property
     def has_default(self) -> bool:
-        return 'default' in self.__fields_set__ or 'default_factory' in self.extras
+        return 'default' in self.model_fields_set or 'default_factory' in self.extras
 
     @cached_property
     def has_constraint(self) -> bool:
-        return bool(self.__constraint_fields__ & self.__fields_set__)
+        return bool(self.__constraint_fields__ & self.model_fields_set)
 
     @cached_property
     def ref_type(self) -> Optional[JSONReference]:
@@ -609,7 +609,9 @@ class JsonSchemaParser(Parser):
             data_type=field_type,
             required=required,
             alias=alias,
-            constraints=field.dict() if self.is_constraints_field(field) else None,
+            constraints=field.model_dump()
+            if self.is_constraints_field(field)
+            else None,
             nullable=field.nullable
             if self.strict_nullable and (field.has_default or required)
             else None,
@@ -636,7 +638,7 @@ class JsonSchemaParser(Parser):
         def _get_data_type(type_: str, format__: str) -> DataType:
             return self.data_type_manager.get_data_type(
                 _get_type(type_, format__),
-                **obj.dict() if not self.field_constraints else {},
+                **obj.model_dump() if not self.field_constraints else {},
             )
 
         if isinstance(obj.type, list):
@@ -686,7 +688,7 @@ class JsonSchemaParser(Parser):
         path: List[str],
         target_attribute_name: str,
     ) -> List[DataType]:
-        base_object = obj.dict(
+        base_object = obj.model_dump(
             exclude={target_attribute_name}, exclude_unset=True, by_alias=True
         )
         combined_schemas: List[JsonSchemaObject] = []
@@ -713,7 +715,7 @@ class JsonSchemaParser(Parser):
                 # }
             else:
                 combined_schemas.append(
-                    self.SCHEMA_OBJECT_TYPE.parse_obj(
+                    self.SCHEMA_OBJECT_TYPE.model_validate(
                         self._deep_merge(
                             base_object,
                             target_attribute.dict(exclude_unset=True, by_alias=True),
@@ -1259,7 +1261,7 @@ class JsonSchemaParser(Parser):
             data_type=self.data_type(data_types=data_types),
             default=obj.default,
             required=required,
-            constraints=obj.dict(),
+            constraints=obj.model_dump(),
             nullable=nullable,
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(obj),
@@ -1389,7 +1391,7 @@ class JsonSchemaParser(Parser):
                     data_type=data_type,
                     default=obj.default,
                     required=required,
-                    constraints=obj.dict() if self.field_constraints else {},
+                    constraints=obj.model_dump() if self.field_constraints else {},
                     nullable=obj.nullable if self.strict_nullable else None,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
@@ -1665,7 +1667,7 @@ class JsonSchemaParser(Parser):
         raw: Dict[str, Any],
         path: List[str],
     ) -> None:
-        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.parse_obj(raw), path)
+        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.model_validate(raw), path)
 
     def parse_obj(
         self,
@@ -1795,7 +1797,7 @@ class JsonSchemaParser(Parser):
                 # Some jsonschema docs include attribute self to have include version details
                 raw.pop('self', None)
                 # parse $id before parsing $ref
-                root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
+                root_obj = self.SCHEMA_OBJECT_TYPE.model_validate(raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: Optional[Dict[Any, Any]] = None
                 for schema_path, split_schema_path in self.schema_paths:
@@ -1809,14 +1811,14 @@ class JsonSchemaParser(Parser):
                     definitions = {}
 
                 for key, model in definitions.items():
-                    obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)
+                    obj = self.SCHEMA_OBJECT_TYPE.model_validate(model)
                     self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
                     self.parse_obj(
-                        model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path
+                        model_name, self.SCHEMA_OBJECT_TYPE.model_validate(models), path
                     )
                 else:
                     self.parse_obj(obj_name, root_obj, path_parts or ['#'])
@@ -1838,7 +1840,9 @@ class JsonSchemaParser(Parser):
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
                         self.parse_obj(
-                            model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path
+                            model_name,
+                            self.SCHEMA_OBJECT_TYPE.model_validate(models),
+                            path,
                         )
                     previous_reserved_refs = reserved_refs
                     reserved_refs = set(self.reserved_refs.get(key) or [])

@@ -454,7 +454,7 @@ Model customization:
                         pydantic: datetime, dataclass: str, ...)
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
-  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12}
+  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12,3.13}
                         target python version (default: 3.8)
   --treat-dot-as-module
                         treat dotted module names as modules
@@ -475,7 +475,7 @@ Template customization:
                         A file with kwargs for custom formatters.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
-  --encoding ENCODING   The encoding of input and output (default: utf-8)
+  --encoding ENCODING   The encoding of input and output (default: cp1252)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
   --use-double-quotes   Model generated with double quotes. Single quotes or your black
