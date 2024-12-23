@@ -435,7 +435,7 @@ Field customization:
                         Use schema description to populate field docstring
 
 Model customization:
-  --allow-extra-fields  Allow to pass extra fields, if this flag is not passed, extra fields
+  --allow-extra-fields  Allow passing extra fields, if this flag is not passed, extra fields
                         are forbidden.
   --allow-population-by-field-name
                         Allow population by field name
