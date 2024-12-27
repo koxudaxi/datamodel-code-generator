@@ -98,7 +98,7 @@ base_options.add_argument(
 # ======================================================================================
 model_options.add_argument(
     '--allow-extra-fields',
-    help='Allow to pass extra fields, if this flag is not passed, extra fields are forbidden.',
+    help='Allow passing extra fields, if this flag is not passed, extra fields are forbidden.',
     action='store_true',
     default=None,
 )
