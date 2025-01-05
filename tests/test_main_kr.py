@@ -1,6 +1,5 @@
 import shutil
 from argparse import Namespace
-from contextlib import chdir
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -8,7 +7,7 @@ import black
 import pytest
 from freezegun import freeze_time
 
-from datamodel_code_generator import inferred_message
+from datamodel_code_generator import chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 
 try:
