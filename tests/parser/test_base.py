@@ -288,7 +288,7 @@ def test_postprocess_result_modules(input_data, expected):
 
 
 @pytest.fixture
-def escape_map() -> dict[str, str]:
+def escape_map() -> Dict[str, str]:
     return {
         '\u0000': r'\x00',  # Null byte
         "'": r'\'',
