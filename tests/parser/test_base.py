@@ -287,7 +287,6 @@ def test_postprocess_result_modules(input_data, expected):
     assert result == expected
 
 
-
 def test_find_member_with_integer_enum():
     """Test find_member method with integer enum values"""
     from datamodel_code_generator.model.enum import Enum
@@ -418,6 +417,7 @@ def test_find_member_with_mixed_enum():
     assert member is not None
     assert member.field.name == 'STR_VALUE'
 
+
 @pytest.fixture
 def escape_map() -> Dict[str, str]:
     return {
@@ -447,4 +447,3 @@ def escape_map() -> Dict[str, str]:
 )
 def test_character_escaping(input_str: str, expected: str) -> None:
     assert input_str.translate(escape_characters) == expected
-
