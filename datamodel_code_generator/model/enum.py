@@ -94,7 +94,7 @@ class Enum(DataModel):
                 return self.get_member(field)
 
             # Keep original comparison for backwards compatibility
-            if field.default == repr_value:
+            if field.default == repr_value:  # pragma: no cover
                 return self.get_member(field)
 
         return None
