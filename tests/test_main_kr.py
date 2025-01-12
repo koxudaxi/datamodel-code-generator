@@ -207,6 +207,10 @@ def test_pyproject():
         )
 
 
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
 @freeze_time('2019-07-26')
 def test_pyproject_with_tool_section():
     """Test that a pyproject.toml with a [tool.datamodel-codegen] section is
