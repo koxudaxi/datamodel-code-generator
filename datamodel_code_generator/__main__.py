@@ -53,7 +53,6 @@ from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, nam
 from datamodel_code_generator.format import (
     DatetimeClassType,
     PythonVersion,
-    black_find_project_root,
     is_supported_in_black,
 )
 from datamodel_code_generator.parser import LiteralType
@@ -366,6 +365,26 @@ class Config(BaseModel):
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
+def _get_pyproject_toml_config(source: Path) -> Optional[Dict[str, Any]]:
+    """Find and return the [tool.datamodel-codgen] section of the closest
+    pyproject.toml if it exists.
+    """
+
+    current_path = source
+    while current_path != current_path.parent:
+        if (current_path / 'pyproject.toml').is_file():
+            pyproject_toml = load_toml(current_path / 'pyproject.toml')
+            if 'datamodel-codegen' in pyproject_toml.get('tool', {}):
+                return pyproject_toml['tool']['datamodel-codegen']
+
+        if (current_path / '.git').exists():
+            # Stop early if we see a git repository root.
+            return None
+
+        current_path = current_path.parent
+    return None
+
+
 def main(args: Optional[Sequence[str]] = None) -> Exit:
     """Main function."""
 
@@ -383,16 +402,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         print(version)
         exit(0)
 
-    root = black_find_project_root((Path().resolve(),))
-    pyproject_toml_path = root / 'pyproject.toml'
-    if pyproject_toml_path.is_file():
-        pyproject_toml: Dict[str, Any] = {
-            k.replace('-', '_'): v
-            for k, v in load_toml(pyproject_toml_path)
-            .get('tool', {})
-            .get('datamodel-codegen', {})
-            .items()
-        }
+    pyproject_config = _get_pyproject_toml_config(Path().resolve())
+    if pyproject_config is not None:
+        pyproject_toml = {k.replace('-', '_'): v for k, v in pyproject_config.items()}
     else:
         pyproject_toml = {}
 

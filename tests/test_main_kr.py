@@ -7,7 +7,7 @@ import black
 import pytest
 from freezegun import freeze_time
 
-from datamodel_code_generator import inferred_message
+from datamodel_code_generator import chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 
 try:
@@ -204,6 +204,46 @@ def test_pyproject():
         assert (
             output_file.read_text()
             == (EXPECTED_MAIN_KR_PATH / 'pyproject' / 'output.py').read_text()
+        )
+
+
+@pytest.mark.skipif(
+    black.__version__.split('.')[0] == '19',
+    reason="Installed black doesn't support the old style",
+)
+@freeze_time('2019-07-26')
+def test_pyproject_with_tool_section():
+    """Test that a pyproject.toml with a [tool.datamodel-codegen] section is
+    found and its configuration applied.
+    """
+    with TemporaryDirectory() as output_dir:
+        output_dir = Path(output_dir)
+        pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.10"
+strict-types = ["str"]
+"""
+        with open(output_dir / 'pyproject.toml', 'w') as f:
+            f.write(pyproject_toml)
+        output_file: Path = output_dir / 'output.py'
+
+        # Run main from within the output directory so we can find our
+        # pyproject.toml.
+        with chdir(output_dir):
+            return_code: Exit = main(
+                [
+                    '--input',
+                    str((OPEN_API_DATA_PATH / 'api.yaml').resolve()),
+                    '--output',
+                    str(output_file.resolve()),
+                ]
+            )
+
+        assert return_code == Exit.OK
+        assert (
+            output_file.read_text()
+            # We expect the output to use pydantic.StrictStr in place of str
+            == (EXPECTED_MAIN_KR_PATH / 'pyproject' / 'output.strictstr.py').read_text()
         )
 
 
