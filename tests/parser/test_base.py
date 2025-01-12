@@ -7,6 +7,7 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
 from datamodel_code_generator.parser.base import (
     Parser,
+    escape_characters,
     exact_import,
     relative,
     sort_data_models,
@@ -284,3 +285,34 @@ def test_no_additional_imports():
 def test_postprocess_result_modules(input_data, expected):
     result = Parser._Parser__postprocess_result_modules(input_data)
     assert result == expected
+
+
+@pytest.fixture
+def escape_map() -> Dict[str, str]:
+    return {
+        '\u0000': r'\x00',  # Null byte
+        "'": r'\'',
+        '\b': r'\b',
+        '\f': r'\f',
+        '\n': r'\n',
+        '\r': r'\r',
+        '\t': r'\t',
+        '\\': r'\\',
+    }
+
+
+@pytest.mark.parametrize(
+    'input_str,expected',
+    [
+        ('\u0000', r'\x00'),  # Test null byte
+        ("'", r'\''),  # Test single quote
+        ('\b', r'\b'),  # Test backspace
+        ('\f', r'\f'),  # Test form feed
+        ('\n', r'\n'),  # Test newline
+        ('\r', r'\r'),  # Test carriage return
+        ('\t', r'\t'),  # Test tab
+        ('\\', r'\\'),  # Test backslash
+    ],
+)
+def test_character_escaping(input_str: str, expected: str) -> None:
+    assert input_str.translate(escape_characters) == expected

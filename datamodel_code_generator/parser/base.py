@@ -65,6 +65,7 @@ def get_special_path(keyword: str, path: List[str]) -> List[str]:
 
 escape_characters = str.maketrans(
     {
+        '\u0000': r'\x00',  # Null byte
         '\\': r'\\',
         "'": r'\'',
         '\b': r'\b',
