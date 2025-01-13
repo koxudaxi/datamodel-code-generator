@@ -16,7 +16,7 @@ def test_data_class():
     assert data_class.name == 'test_model'
     assert data_class.fields == [field]
     assert data_class.decorators == []
-    assert data_class.render() == '@dataclass\n' 'class test_model:\n' '    a: str'
+    assert data_class.render() == '@dataclass\nclass test_model:\n    a: str'
 
 
 def test_data_class_base_class():
@@ -31,9 +31,7 @@ def test_data_class_base_class():
     assert data_class.name == 'test_model'
     assert data_class.fields == [field]
     assert data_class.decorators == []
-    assert (
-        data_class.render() == '@dataclass\n' 'class test_model(Base):\n' '    a: str'
-    )
+    assert data_class.render() == '@dataclass\nclass test_model(Base):\n    a: str'
 
 
 def test_data_class_optional():
@@ -49,9 +47,7 @@ def test_data_class_optional():
     assert data_class.name == 'test_model'
     assert data_class.fields == [field]
     assert data_class.decorators == []
-    assert (
-        data_class.render() == '@dataclass\n' 'class test_model:\n' "    a: str = 'abc'"
-    )
+    assert data_class.render() == "@dataclass\nclass test_model:\n    a: str = 'abc'"
 
 
 def test_data_class_get_data_type():

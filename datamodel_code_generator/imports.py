@@ -43,7 +43,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
     def create_line(self, from_: Optional[str], imports: Set[str]) -> str:
         if from_:
-            return f"from {from_} import {', '.join(self._set_alias(from_, imports))}"
+            return f'from {from_} import {", ".join(self._set_alias(from_, imports))}'
         return '\n'.join(f'import {i}' for i in self._set_alias(from_, imports))
 
     def dump(self) -> str:

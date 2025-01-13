@@ -465,7 +465,7 @@ class DataType(_BaseModel):
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
             elif self.literals:
-                type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
+                type_ = f'{LITERAL}[{", ".join(repr(literal) for literal in self.literals)}]'
             else:
                 if self.reference:
                     type_ = self.reference.short_name

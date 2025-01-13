@@ -473,7 +473,7 @@ class ModelResolver:
         else:
             joined_path = self.join_path(path)
         if joined_path == '#':
-            return f"{'/'.join(self.current_root)}#"
+            return f'{"/".join(self.current_root)}#'
         if (
             self.current_base_path
             and not self.base_url
@@ -498,7 +498,7 @@ class ModelResolver:
 
             delimiter = joined_path.index('#')
             file_path = ''.join(joined_path[:delimiter])
-            ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1:])}"
+            ref = f'{"".join(joined_path[:delimiter])}#{"".join(joined_path[delimiter + 1 :])}'
             if self.root_id_base_path and not (
                 is_url(joined_path) or Path(self._base_path, file_path).is_file()
             ):
