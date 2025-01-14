@@ -17,7 +17,7 @@ def test_base_model():
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
     assert base_model.decorators == []
-    assert base_model.render() == 'class test_model(BaseModel):\n' '    a: str'
+    assert base_model.render() == 'class test_model(BaseModel):\n    a: str'
 
 
 def test_base_model_optional():
@@ -79,7 +79,7 @@ def test_base_model_strict_non_nullable_required():
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
     assert base_model.decorators == []
-    assert base_model.render() == 'class test_model(BaseModel):\n' '    a: str'
+    assert base_model.render() == 'class test_model(BaseModel):\n    a: str'
 
 
 def test_base_model_decorator():

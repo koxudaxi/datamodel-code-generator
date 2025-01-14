@@ -69,7 +69,7 @@ def test_template_base():
 
 def test_data_model():
     field = DataModelFieldBase(
-        name='a', data_type=DataType(type='str'), default='' 'abc' '', required=True
+        name='a', data_type=DataType(type='str'), default='abc', required=True
     )
 
     with NamedTemporaryFile('w', delete=False) as dummy_template:
@@ -88,17 +88,12 @@ def test_data_model():
     assert data_model.fields == [field]
     assert data_model.decorators == ['@validate']
     assert data_model.base_class == 'Base'
-    assert (
-        data_model.render() == '@validate\n'
-        '@dataclass\n'
-        'class test_model:\n'
-        '    a: str'
-    )
+    assert data_model.render() == '@validate\n@dataclass\nclass test_model:\n    a: str'
 
 
 def test_data_model_exception():
     field = DataModelFieldBase(
-        name='a', data_type=DataType(type='str'), default='' 'abc' '', required=True
+        name='a', data_type=DataType(type='str'), default='abc', required=True
     )
     with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
         C(

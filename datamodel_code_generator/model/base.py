@@ -423,7 +423,7 @@ class DataModel(TemplateBase, Nullable, ABC):
     def class_name(self, class_name: str) -> None:
         if '.' in self.reference.name:
             self.reference.name = (
-                f"{self.reference.name.rsplit('.', 1)[0]}.{class_name}"
+                f'{self.reference.name.rsplit(".", 1)[0]}.{class_name}'
             )
         else:
             self.reference.name = class_name
