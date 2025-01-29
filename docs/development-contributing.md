@@ -30,14 +30,17 @@ $ uv sync
 ## 4. Create new branch and rewrite code.
 $ git checkout -b new-branch
 
-## 5. Run unittest (you should pass all test and coverage should be 100%)
+## 5. Activate the virtual environment
+$ source .venv/bin/python
+ 
+## 6. Run unittest (you should pass all test and coverage should be 100%)
 $ ./scripts/test.sh
 
-## 6. Format code
-$ poetry run ./scripts/format.sh
+## 7. Format code
+$ ./scripts/format.sh
 
-## 7. Check lint (mypy)
-$ poetry run ./scripts/lint.sh
+## 8. Check lint (mypy)
+$ ./scripts/lint.sh
 
-## 8. Commit and Push...
+## 9. Commit and Push...
 ```
