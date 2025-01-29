@@ -18,17 +18,20 @@ We are waiting for your contributions to `datamodel-code-generator`.
 $ git clone git@github.com:<your username>/datamodel-code-generator.git
 $ cd datamodel-code-generator
 
-## 2. Install [poetry](https://github.com/python-poetry/poetry)
-$ curl -sSL https://install.python-poetry.org | python3 - 
+## 2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+## 3. Create virtual environment
+$ uv venv -p 3.13 --python-preference managed
 
 ## 3. Install dependencies
-$ poetry install --all-extras
+$ uv sync
 
 ## 4. Create new branch and rewrite code.
 $ git checkout -b new-branch
 
 ## 5. Run unittest (you should pass all test and coverage should be 100%)
-$ poetry run ./scripts/test.sh
+$ ./scripts/test.sh
 
 ## 6. Format code
 $ poetry run ./scripts/format.sh

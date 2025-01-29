@@ -4,29 +4,19 @@ on:
   push:
     branches:
     - main
+  workflow_dispatch:
 
 jobs:
   build-deploy:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
-
-    - name: Setup Python
-      uses: actions/setup-python@v4
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.8'
-        architecture: 'x64'
-
-    - uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-docs.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install mkdocs
-      run: |
-         pip install -r requirements-docs.txt
+        python-version: 3.13
+    - name: Install dependencies
+      run: uv sync
     - name: build site
       run:  mkdocs build --verbose --clean --strict
     - name: Deploy

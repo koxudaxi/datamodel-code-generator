@@ -27,6 +27,7 @@ from datamodel_code_generator import (
     PythonVersion,
     chdir,
     generate,
+    get_version,
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit, main
@@ -773,10 +774,11 @@ def test_enable_version_header():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_OPENAPI_PATH / 'enable_version_header.py').read_text()
+        expected = (EXPECTED_OPENAPI_PATH / 'enable_version_header.py').read_text()
+        expected = expected.replace(
+            '#   version:   0.0.0', f'#   version:   {get_version()}'
         )
+        assert output_file.read_text() == expected
 
 
 @pytest.mark.parametrize(

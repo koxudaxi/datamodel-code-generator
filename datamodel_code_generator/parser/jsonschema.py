@@ -320,7 +320,7 @@ class JsonSchemaObject(BaseModel):
         return isinstance(self.type, list) and 'null' in self.type
 
 
-@lru_cache()
+@lru_cache
 def get_ref_type(ref: str) -> JSONReference:
     if ref[0] == '#':
         return JSONReference.LOCAL

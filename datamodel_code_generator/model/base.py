@@ -229,7 +229,7 @@ class DataModelFieldBase(_BaseModel):
         return True
 
 
-@lru_cache()
+@lru_cache
 def get_template(template_file_path: Path) -> Template:
     loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
     environment: Environment = Environment(loader=loader)
