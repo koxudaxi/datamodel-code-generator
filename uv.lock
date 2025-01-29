@@ -557,7 +557,7 @@ toml = [
 
 [[package]]
 name = "datamodel-code-generator"
-version = "0.26.6.dev0+gdd92cd0b.d20250129"
+version = "0.26.6.dev1+g454cfc4e.d20250129"
 source = { editable = "." }
 dependencies = [
     { name = "argcomplete" },
@@ -575,7 +575,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pysnooper" },
     { name = "pyyaml" },
-    { name = "toml", marker = "python_full_version < '3.12'" },
+    { name = "tomli", marker = "python_full_version < '3.12'" },
 ]
 
 [package.optional-dependencies]
@@ -682,7 +682,7 @@ requires-dist = [
     { name = "pysnooper", specifier = ">=0.4.1,<2" },
     { name = "pysnooper", marker = "extra == 'debug'" },
     { name = "pyyaml", specifier = ">=6.0.1" },
-    { name = "toml", marker = "python_full_version < '3.12'", specifier = ">=0.10,<1" },
+    { name = "tomli", marker = "python_full_version < '3.12'", specifier = ">=2.2.1,<3" },
 ]
 
 [package.metadata.requires-dev]
@@ -2537,15 +2537,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
-]
-
-[[package]]
-name = "toml"
-version = "0.10.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f", size = 22253 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b", size = 16588 },
 ]
 
 [[package]]
