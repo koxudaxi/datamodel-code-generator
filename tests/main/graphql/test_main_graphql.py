@@ -218,7 +218,7 @@ def test_main_graphql_additional_imports_isort_4():
 
 
 @pytest.mark.skipif(
-    not isort.__version__.startswith('5.'),
+    isort.__version__.startswith('4.'),
     reason='See https://github.com/PyCQA/isort/issues/1600 for example',
 )
 @freeze_time('2019-07-26')
@@ -226,7 +226,7 @@ def test_main_graphql_additional_imports_isort_4():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_additional_imports_isort_5():
+def test_main_graphql_additional_imports_isort_5_or_6():
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
