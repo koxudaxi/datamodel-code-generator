@@ -7,6 +7,9 @@ readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/koxudaxi/datamodel-code-generator"
 repository = "https://github.com/koxudaxi/datamodel-code-generator"
+include = [
+    { path = "tests", format = "sdist" },
+]
 
 
 classifiers = [
