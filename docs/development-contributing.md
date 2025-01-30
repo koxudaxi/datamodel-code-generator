@@ -21,26 +21,22 @@ $ cd datamodel-code-generator
 ## 2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
 
-## 3. Create virtual environment
-$ uv venv -p 3.13 --python-preference managed
+## 3. Install tox with uv
+$ uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
 
-## 3. Install dependencies
-$ uv sync
+## 3. Create developer environment
+$ tox run -e dev
+
+.tox/dev is a Python environment you can use for development purposes
 
 ## 4. Create new branch and rewrite code.
 $ git checkout -b new-branch
-
-## 5. Activate the virtual environment
-$ source .venv/bin/python
  
-## 6. Run unittest (you should pass all test and coverage should be 100%)
-$ ./scripts/test.sh
+## 5. Run unittest under Python 3.13 (you should pass all test and coverage should be 100%)
+$ tox run -e 3.13
 
-## 7. Format code
-$ ./scripts/format.sh
+## 7. Format and lint code (will print errors that cannot be automatically fixed)
+$ tox run -e fix
 
-## 8. Check lint (mypy)
-$ ./scripts/lint.sh
-
-## 9. Commit and Push...
+## 8. Commit and Push...
 ```
