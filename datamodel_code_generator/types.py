@@ -114,25 +114,25 @@ class UnionIntFloat:
     def __get_pydantic_core_schema__(
         cls, _source_type: Any, _handler: 'GetCoreSchemaHandler'
     ) -> 'core_schema.CoreSchema':
-        from_int_schema = core_schema.chain_schema( # pyright: ignore [reportPossiblyUnboundVariable]
+        from_int_schema = core_schema.chain_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
             [
-                core_schema.union_schema( # pyright: ignore [reportPossiblyUnboundVariable]
-                    [core_schema.int_schema(), core_schema.float_schema()] # pyright: ignore [reportPossiblyUnboundVariable]
+                core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
+                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore [reportPossiblyUnboundVariable]
                 ),
-                core_schema.no_info_plain_validator_function(cls.validate), # pyright: ignore [reportPossiblyUnboundVariable]
+                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore [reportPossiblyUnboundVariable]
             ]
         )
 
         return core_schema.json_or_python_schema(
             json_schema=from_int_schema,
-            python_schema=core_schema.union_schema( # pyright: ignore [reportPossiblyUnboundVariable]
+            python_schema=core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
                 [
                     # check if it's an instance first before doing any further work
-                    core_schema.is_instance_schema(UnionIntFloat), # pyright: ignore [reportPossiblyUnboundVariable]
+                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore [reportPossiblyUnboundVariable]
                     from_int_schema,
                 ]
             ),
-            serialization=core_schema.plain_serializer_function_ser_schema( # pyright: ignore [reportPossiblyUnboundVariable]
+            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
                 lambda instance: instance.value
             ),
         )
