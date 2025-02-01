@@ -367,7 +367,7 @@ class OpenAPIParser(JsonSchemaParser):
         for (
             media_type,
             media_obj,
-        ) in request_body.content.items():  # type: str, MediaObject
+        ) in request_body.content.items():
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 self.parse_schema(name, media_obj.schema_, [*path, media_type])
 
@@ -604,7 +604,7 @@ class OpenAPIParser(JsonSchemaParser):
                 for (
                     obj_name,
                     raw_obj,
-                ) in schemas.items():  # type: str, Dict[Any, Any]
+                ) in schemas.items():
                     self.parse_raw_obj(
                         obj_name,
                         raw_obj,

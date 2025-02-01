@@ -669,6 +669,7 @@ dev = [
     { name = "mypy" },
     { name = "pre-commit", version = "3.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pre-commit", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-benchmark", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pytest-benchmark", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
@@ -725,6 +726,7 @@ type = [
     { name = "diff-cover", version = "9.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.17'" },
     { name = "freezegun" },
     { name = "mypy" },
+    { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-benchmark", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pytest-benchmark", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
@@ -770,10 +772,11 @@ dev = [
     { name = "check-wheel-contents", specifier = ">=0.6.1" },
     { name = "diff-cover", specifier = ">=7.7" },
     { name = "freezegun" },
-    { name = "mkdocs", specifier = "==1.6" },
-    { name = "mkdocs-material", specifier = "==9.5.31" },
+    { name = "mkdocs", specifier = ">=1.6" },
+    { name = "mkdocs-material", specifier = ">=9.5.31" },
     { name = "mypy", specifier = ">=1.4.1,<1.5" },
     { name = "pre-commit" },
+    { name = "pyright", specifier = ">=1.1.393" },
     { name = "pytest", specifier = ">=6.1" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-benchmark" },
@@ -792,8 +795,8 @@ dev = [
     { name = "uv", specifier = ">=0.5.22" },
 ]
 docs = [
-    { name = "mkdocs", specifier = "==1.6" },
-    { name = "mkdocs-material", specifier = "==9.5.31" },
+    { name = "mkdocs", specifier = ">=1.6" },
+    { name = "mkdocs-material", specifier = ">=9.5.31" },
 ]
 lint = [
     { name = "black", specifier = ">=23.3,<25" },
@@ -822,6 +825,7 @@ type = [
     { name = "diff-cover", specifier = ">=7.7" },
     { name = "freezegun" },
     { name = "mypy", specifier = ">=1.4.1,<1.5" },
+    { name = "pyright", specifier = ">=1.1.393" },
     { name = "pytest", specifier = ">=6.1" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-benchmark" },
@@ -2064,6 +2068,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/aa/7b/de388047c577e43dc45ce35c23b9b349ec3df8c7023c3e3c4d413a850982/pymdown_extensions-10.14.2.tar.gz", hash = "sha256:7a77b8116dc04193f2c01143760a43387bd9dc4aa05efacb7d838885a7791253", size = 846777 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/a3/61527d80d84e9fd4d97649322e83bd7efde8200fc07fe34469c8c2bd0d91/pymdown_extensions-10.14.2-py3-none-any.whl", hash = "sha256:f45bc5892410e54fd738ab8ccd736098b7ff0cb27fdb4bf24d0a0c6584bc90e1", size = 264459 },
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.393"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/c1/aede6c74e664ab103673e4f1b7fd3d058fef32276be5c43572f4067d4a8e/pyright-1.1.393.tar.gz", hash = "sha256:aeeb7ff4e0364775ef416a80111613f91a05c8e01e58ecfefc370ca0db7aed9c", size = 3790430 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/47/f0dd0f8afce13d92e406421ecac6df0990daee84335fc36717678577d3e0/pyright-1.1.393-py3-none-any.whl", hash = "sha256:8320629bb7a44ca90944ba599390162bf59307f3d9fb6e27da3b7011b8c17ae5", size = 5646057 },
 ]
 
 [[package]]
