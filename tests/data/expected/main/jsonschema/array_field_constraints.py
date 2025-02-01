@@ -9,7 +9,14 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
-class TestSchema(BaseModel):
-    numbers: List[str] = Field(
-        ..., description='A list of numbers', regex='^\\d{1,15}$'
+class Number(BaseModel):
+    __root__: str = Field(
+        ...,
+        description='Just a number',
+        examples=['1', '5464446', '684572369854259'],
+        regex='^\\d{1,15}$',
     )
+
+
+class TestSchema(BaseModel):
+    numbers: List[Number] = Field(..., description='A list of numbers')

@@ -1038,7 +1038,7 @@ class Parser(ABC):
                         and any(
                             d
                             for d in model_field.data_type.all_data_types
-                            if d.is_dict or d.is_union
+                            if d.is_dict or d.is_union or d.is_list
                         )
                     ):
                         continue  # pragma: no cover
