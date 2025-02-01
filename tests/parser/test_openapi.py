@@ -1,3 +1,4 @@
+import os
 import platform
 from pathlib import Path
 from typing import List, Optional
@@ -568,6 +569,7 @@ def test_openapi_parser_parse_remote_ref(with_import, format_, base_class):
         data_model_field_type=DataModelFieldBase,
         base_class=base_class,
         source=(DATA_PATH / 'refs.yaml').read_text(),
+        http_ignore_tls=bool(os.environ.get('HTTP_IGNORE_TLS')),
     )
     expected_file = get_expected_file(
         'openapi_parser_parse_remote_ref', with_import, format_, base_class

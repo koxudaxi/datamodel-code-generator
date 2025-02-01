@@ -9,116 +9,68 @@ on:
 
 jobs:
   test:
-    name: Test ${{ matrix.python-version }}@${{ matrix.os }} with isort ${{ matrix.isort-version }}, pydantic ${{ matrix.pydantic-version }}, black ${{ matrix.black-version }}
-    runs-on: ${{ matrix.os }}
+    name: >-
+      Test ${{ matrix.py }}
+      ${{ matrix.os == 'windows-latest' && 'Windows' || (matrix.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
+      ${{ matrix.isort != '' && format('isort={0} ', matrix.isort) || ''}}
+      ${{ matrix.black != '' && format('black={0} ', matrix.black) || ''}}
+      ${{ matrix.pydantic != '' && format('pydantic={0} ', matrix.pydantic) || ''}}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.13", "3.12", "3.11", "3.10", "3.9", "3.8"]
+        py: ["3.13", "3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
-        isort-version: [4.3.21, 5.6.4, default]
-        black-version: [default]
-        pydantic-version: [1.10.9, 2.10.3]
+        isort: [''] # '' mean not set, aka use the default
+        black: ['']
+        pydantic: ['']
         include:
-          - os: ubuntu-24.04
-            isort-version: 4.3.21
-            black-version: default
-            python-version: 3.8
-            pydantic-version: 1.5.1
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: default
-            python-version: 3.8
-            pydantic-version: 1.8.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 19.10b0
-            python-version: 3.9
-            pydantic-version: 1.8.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 24.1.0
-            python-version: 3.12
-            pydantic-version: 2.4.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 23.12.1
-            python-version: 3.12
-            pydantic-version: 2.4.2
-          - os: ubuntu-24.04
-            isort-version: 5.6.4
-            black-version: 22.1.0
-            python-version: 3.12
-            pydantic-version: 2.4.2
-        exclude:
-          - isort-version: 4.3.21
-          - isort-version: 5.6.4
-          - os: windows-latest
-            black-version: 22.1.0
-          - os: macos-latest
-            black-version: 22.1.0
-          - os: windows-latest
-            pydantic-version: 1.10.9
-          - os: macos-latest
-            pydantic-version: 1.10.9
-          - os: windows-latest
-            python-version: 3.8
-          - os: macos-latest
-            python-version: 3.8
-          - os: windows-latest
-            python-version: 3.9
-          - os: macos-latest
-            python-version: 3.9
-          - os: windows-latest
-            python-version: 3.10
-          - os: macos-latest
-            python-version: 3.10
-          - os: windows-latest
-            python-version: 3.11
-          - os: macos-latest
-            python-version: 3.11
-          - os: windows-latest
-            python-version: 3.12
-          - os: macos-latest
-            python-version: 3.12
-          - os: macos-latest
-            isort-version: 4.3.21
-          - isort-version: 5.6.4
-            pydantic-version: 1.10.9
-    defaults:
-      run:
-        shell: bash
+          - py: 3.12
+            black: 24.1.0
+          - py: 3.12
+            black: 23.12.1
+          - py: 3.12
+            black: 22.1.0
+          - py: 3.9
+            black: 19.10b0
+            pydantic: 1.8.2
+          - py: 3.8
+            pydantic: 1.8.2
+          - py: 3.8
+            isort: 4.3.21
+            pydantic: 1.5.1
+    runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
-      OS: ${{ matrix.os }}
+      OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v5
       with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: uv sync
-    - name: Install isort ${{ matrix.isort-version }} for Linux/macOS
-      if: "runner.os != 'Windows' && matrix.isort-version != 'default'"
-      run: uv pip install isort==${{ matrix.isort-version }}
-    - name: Install Pydantic ${{ matrix.pydantic-version }}
-      if: matrix.pydantic-version != 'default'
-      run: uv pip install pydantic=="${{ matrix.pydantic-version }}"
-    - name: Install Black ${{ matrix.black-version }}
-      if: matrix.black-version != 'default'
-      run: uv pip install black=="${{ matrix.black-version }}"
-    - name: Lint
-      if: matrix.pydantic-version == 'default'
-      run: ./scripts/lint.sh
-    - name: Unit Test
-      run: ./scripts/test.sh
+        python-version: ${{ matrix.py }}
+    - name: Install tox
+      run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+    - name: Setup Python test environment
+      run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py }}
+    - name: Install custom package versions
+      if: ${{ matrix.isort != '' || matrix.black != '' || matrix.pydantic != ''}}
+      run: >-
+        tox exec --no-list-dependencies --skip-pkg-install -e ${{ matrix.py }} -- uv pip install
+        ${{ matrix.isort != '' && format('isort=={0} ', matrix.isort) || ''}}
+        ${{ matrix.black != '' && format('black=={0} ', matrix.black) || ''}}
+        ${{ matrix.pydantic != '' && format('pydantic=={0} ', matrix.pydantic) || ''}}
+    - name: Run test suite
+      run: tox run --skip-pkg-install -e ${{ matrix.py }}
+      env:
+        COVERAGE_XML: ./coverage.xml
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-24.04'
+      if: matrix.os == 'ubuntu-24.04' || matrix.os == ''
       uses: codecov/codecov-action@v5
       with:
         flags: unittests
         files: ./coverage.xml
         fail_ci_if_error: true
-        env_vars: OS,PYTHON,ISORT
+        env_vars: OS,PY,ISORT
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
