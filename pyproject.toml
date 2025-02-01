@@ -59,10 +59,12 @@ scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
 dev = [
   { include-group = "docs" },
   { include-group = "lint" },
+  { include-group = "pkg-meta" },
   { include-group = "test" },
   { include-group = "type" },
 ]
 test = [
+  "diff-cover>=7.7",
   "freezegun",
   "pytest>=6.1",
   "pytest>=8.3.4",
@@ -82,13 +84,14 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "mkdocs==1.6",
-  "mkdocs-material==9.5.31",
+  "mkdocs>=1.6",
+  "mkdocs-material>=9.5.31",
 ]
 lint = [ "black>=23.3,<25", "pre-commit", "ruff>=0.0.290,<0.7.5", "ruff-lsp>=0.0.39,<0.0.60" ]
+pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 
 [tool.hatch]
-build.dev-mode-dirs = [ "src" ]
+build.dev-mode-dirs = [ "." ]
 build.targets.sdist.include = [
   "/datamodel_code_generator",
   "/tests",
@@ -110,7 +113,18 @@ lint.flake8-quotes = { inline-quotes = 'single', multiline-quotes = 'double' }
 skip = '.git,*.lock,tests'
 
 [tool.pytest.ini_options]
-filterwarnings = "ignore::DeprecationWarning:distutils"
+filterwarnings = [
+  "error",
+  "ignore:^.*The `parse_obj` method is deprecated; use `model_validate` instead.*",
+  "ignore:^.*The `__fields_set__` attribute is deprecated, use `model_fields_set` instead.*",
+  "ignore:^.*The `dict` method is deprecated; use `model_dump` instead.*",
+  "ignore:^.*The `copy` method is deprecated; use `model_copy` instead.*",
+  "ignore:^.*`--validation` option is deprecated.*",
+  "ignore:^.*Field name `name` is duplicated on Pet.*",
+  "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",
+  "ignore:^.*unclosed file.*",
+
+]
 norecursedirs = "tests/data/*"
 
 [tool.coverage]
