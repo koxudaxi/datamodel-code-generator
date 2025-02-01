@@ -25,7 +25,7 @@ $ curl -LsSf https://astral.sh/uv/install.sh | sh
 $ uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
 
 ## 3. Create developer environment
-$ uv tool run tox run -e dev
+$ tox run -e dev
 
 .tox/dev is a Python environment you can use for development purposes
 
@@ -33,10 +33,10 @@ $ uv tool run tox run -e dev
 $ git checkout -b new-branch
  
 ## 5. Run unittest under Python 3.13 (you should pass all test and coverage should be 100%)
-$ uv tool run tox run -e 3.13
+$ tox run -e 3.13
 
 ## 7. Format and lint code (will print errors that cannot be automatically fixed)
-$ uv tool run tox run -e fix
+$ tox run -e fix
 
 ## 8. Commit and Push...
 ```
