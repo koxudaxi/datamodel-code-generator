@@ -286,6 +286,8 @@ See the following linked projects for real world examples and inspiration.
   - *[`Makefile`](https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62)*
 - [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python)
   - *Recommended for [advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases) in the official documentation*
+- [cloudcoil/cloudcoil](https://github.com/cloudcoil/cloudcoil)
+  - *[Cloudcoil - Model generation](https://github.com/cloudcoil/cloudcoil#%EF%B8%8F-model-generation)
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core)
   - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
 - [hashintel/hash](https://github.com/hashintel/hash)
