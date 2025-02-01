@@ -770,8 +770,8 @@ dev = [
     { name = "check-wheel-contents", specifier = ">=0.6.1" },
     { name = "diff-cover", specifier = ">=7.7" },
     { name = "freezegun" },
-    { name = "mkdocs", specifier = "==1.6" },
-    { name = "mkdocs-material", specifier = "==9.5.31" },
+    { name = "mkdocs", specifier = ">=1.6" },
+    { name = "mkdocs-material", specifier = ">=9.5.31" },
     { name = "mypy", specifier = ">=1.4.1,<1.5" },
     { name = "pre-commit" },
     { name = "pytest", specifier = ">=6.1" },
@@ -792,8 +792,8 @@ dev = [
     { name = "uv", specifier = ">=0.5.22" },
 ]
 docs = [
-    { name = "mkdocs", specifier = "==1.6" },
-    { name = "mkdocs-material", specifier = "==9.5.31" },
+    { name = "mkdocs", specifier = ">=1.6" },
+    { name = "mkdocs-material", specifier = ">=9.5.31" },
 ]
 lint = [
     { name = "black", specifier = ">=23.3,<25" },
