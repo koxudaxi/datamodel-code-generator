@@ -755,7 +755,7 @@ def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
         singular_name = f'{name}{suffix}'
-    return singular_name  # pyright: ignore [reportAssignmentType]
+    return singular_name  # pyright: ignore [reportReturnType]
 
 
 @lru_cache

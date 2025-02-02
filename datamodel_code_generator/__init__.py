@@ -81,6 +81,9 @@ def enable_debug_message() -> None:  # pragma: no cover
     pysnooper.tracer.DISABLED = False
 
 
+DEFAULT_MAX_VARIABLE_LENGTH: int = 100
+
+
 def snooper_to_methods(  # type: ignore
     output=None,
     watch=(),
@@ -90,7 +93,7 @@ def snooper_to_methods(  # type: ignore
     overwrite=False,
     thread_info=False,
     custom_repr=(),
-    max_variable_length: int | None = 100,
+    max_variable_length: int | None = DEFAULT_MAX_VARIABLE_LENGTH,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         if not pysnooper:
@@ -108,7 +111,9 @@ def snooper_to_methods(  # type: ignore
                 overwrite,
                 thread_info,
                 custom_repr,
-                max_variable_length,
+                max_variable_length
+                if max_variable_length is not None
+                else DEFAULT_MAX_VARIABLE_LENGTH,
             )(method)
             setattr(cls, name, snooper_method)
         return cls
