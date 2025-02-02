@@ -411,7 +411,7 @@ class Parser(ABC):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
-        target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
+        target_datetime_class: Optional[DatetimeClassType] = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
     ) -> None:

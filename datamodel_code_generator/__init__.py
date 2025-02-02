@@ -93,7 +93,7 @@ def snooper_to_methods(  # type: ignore
     overwrite=False,
     thread_info=False,
     custom_repr=(),
-    max_variable_length: int | None = DEFAULT_MAX_VARIABLE_LENGTH,
+    max_variable_length: Optional[int] = DEFAULT_MAX_VARIABLE_LENGTH,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         if not pysnooper:
