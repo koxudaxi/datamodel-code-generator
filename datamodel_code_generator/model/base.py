@@ -251,7 +251,7 @@ def get_module_name(name: str, file_path: Optional[Path]) -> str:
 
 
 class TemplateBase(ABC):
-    @property
+    @cached_property
     @abstractmethod
     def template_file_path(self) -> Path:
         raise NotImplementedError

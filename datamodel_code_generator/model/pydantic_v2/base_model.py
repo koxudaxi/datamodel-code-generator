@@ -234,7 +234,7 @@ class BaseModel(BaseModelBase):
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict
 
-            self.extra_template_data['config'] = ConfigDict.parse_obj(config_parameters)
+            self.extra_template_data['config'] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore [reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
     def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:

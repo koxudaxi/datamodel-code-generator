@@ -400,11 +400,13 @@ class OpenAPIParser(JsonSchemaParser):
                 if not object_schema:  # pragma: no cover
                     continue
                 if isinstance(object_schema, JsonSchemaObject):
-                    data_types[status_code][content_type] = self.parse_schema(
-                        name, object_schema, [*path, str(status_code), content_type]
+                    data_types[status_code][content_type] = self.parse_schema(  # pyright: ignore [reportArgumentType]
+                        name,
+                        object_schema,
+                        [*path, str(status_code), content_type],  # pyright: ignore [reportArgumentType]
                     )
                 else:
-                    data_types[status_code][content_type] = self.get_ref_data_type(
+                    data_types[status_code][content_type] = self.get_ref_data_type(  # pyright: ignore [reportArgumentType]
                         object_schema.ref
                     )
 
