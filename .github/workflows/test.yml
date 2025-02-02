@@ -105,8 +105,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: echo "$USERPROFILE/.local/bin" >> $GITHUB_PATH
-      - name: Install tox@self
-        run: uv tool install --python-preference only-managed --python 3.13 tox@.
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup check suite
         run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
       - name: Run check for ${{ matrix.tox_env }}
