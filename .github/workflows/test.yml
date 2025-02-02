@@ -49,6 +49,8 @@ jobs:
       uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.py }}
+    - name: Install tox
+      run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup Python test environment
       run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py }}
     - name: Install custom package versions
@@ -93,8 +95,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup check suite
         run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
       - name: Run check for ${{ matrix.tox_env }}
