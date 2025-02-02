@@ -429,8 +429,10 @@ def generate(
     data_model_types = get_data_model_types(
         output_model_type, target_python_version, output_datetime_class
     )
+    source = input_text or input_
+    assert not isinstance(source, Mapping)
     parser = parser_class(
-        source=input_text or input_,
+        source=source,
         data_model_type=data_model_types.data_model,
         data_model_root_type=data_model_types.root_model,
         data_model_field_type=data_model_types.field_model,
@@ -519,6 +521,7 @@ def generate(
             # input_ might be a dict object provided directly, and missing a name field
             input_filename = getattr(input_, 'name', '<dict>')
         else:
+            assert isinstance(input_, Path)
             input_filename = input_.name
     if not results:
         raise Error('Models not found in the input data')

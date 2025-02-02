@@ -849,12 +849,12 @@ class Parser(ABC):
 
                     # Check the main discriminator model path
                     if mapping:
-                        check_paths(discriminator_model, mapping)
+                        check_paths(discriminator_model, mapping)  # pyright: ignore [reportArgumentType]
 
                         # Check the base_classes if they exist
                         if len(type_names) == 0:
                             for base_class in discriminator_model.base_classes:
-                                check_paths(base_class.reference, mapping)
+                                check_paths(base_class.reference, mapping)  # pyright: ignore [reportArgumentType]
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
                     if not type_names:  # pragma: no cover

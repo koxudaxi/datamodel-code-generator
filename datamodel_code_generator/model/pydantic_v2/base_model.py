@@ -98,7 +98,7 @@ class DataModelField(DataModelFieldV1):
         'max_length',
         'union_mode',
     }
-    constraints: Optional[Constraints] = None
+    constraints: Optional[Constraints] = None  # pyright: ignore [reportIncompatibleVariableOverride]
     _PARSE_METHOD: ClassVar[str] = 'model_validate'
     can_have_extra_keys: ClassVar[bool] = False
 
