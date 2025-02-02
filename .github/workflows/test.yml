@@ -74,3 +74,40 @@ jobs:
         env_vars: OS,PY,ISORT
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  check:
+    name: tox env ${{ matrix.tox_env }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tox_env:
+          - type
+          - dev
+          - docs
+          - pkg_meta
+          - readme
+        os:
+          - ubuntu-latest
+          - windows-latest
+        exclude:
+          - { os: windows-latest, tox_env: docs }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add .local/bin to Windows PATH
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "$USERPROFILE/.local/bin" >> $GITHUB_PATH
+      - name: Install tox@self
+        run: uv tool install --python-preference only-managed --python 3.13 tox@.
+      - name: Setup check suite
+        run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
+      - name: Run check for ${{ matrix.tox_env }}
+        run: tox r --skip-pkg-install -e ${{ matrix.tox_env }}
