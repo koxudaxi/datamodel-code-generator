@@ -588,7 +588,7 @@ class DataTypeManager(ABC):
         )
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
-        self.target_datetime_class: DatetimeClassType = target_datetime_class
+        self.target_datetime_class: DatetimeClassType = target_datetime_class or DatetimeClassType.Datetime
 
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36
