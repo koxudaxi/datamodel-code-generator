@@ -123,7 +123,7 @@ class UnionIntFloat:
             ]
         )
 
-        return core_schema.json_or_python_schema(
+        return core_schema.json_or_python_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
             json_schema=from_int_schema,
             python_schema=core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
                 [
@@ -236,7 +236,7 @@ class DataType(_BaseModel):
     if PYDANTIC_V2:
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(
+        model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
             extra='forbid',
             revalidate_instances='never',
         )

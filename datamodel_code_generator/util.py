@@ -99,4 +99,4 @@ else:
 
 class BaseModel(_BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(strict=False)
+        model_config = ConfigDict(strict=False)  # pyright: ignore [reportAssignmentType]

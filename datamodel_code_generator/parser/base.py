@@ -1061,7 +1061,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent.is_list:
+                    elif data_type.parent is not None and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -1073,6 +1073,7 @@ class Parser(ABC):
                             discriminator = root_type_field.extras.get('discriminator')
                             if discriminator:
                                 model_field.extras['discriminator'] = discriminator
+                        assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(
                             data_type
                         )  # pragma: no cover
