@@ -77,7 +77,7 @@ def field_validator(
     field_name: str,
     *fields: str,
     mode: Literal['before', 'after'] = 'after',
-) -> Callable[[Any], Callable[[Model, Any], Any]]:
+) -> Callable[[Any], Callable[[BaseModel, Any], Any]]:
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
         if PYDANTIC_V2:
             from pydantic import field_validator as field_validator_v2
