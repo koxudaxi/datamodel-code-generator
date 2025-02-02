@@ -167,7 +167,7 @@ class DataModelFieldBase(_BaseModel):
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
-            (
+            iter(
                 i
                 for i in self.data_type.all_imports
                 if not (not has_union and i == IMPORT_UNION)
