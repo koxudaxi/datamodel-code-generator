@@ -373,7 +373,7 @@ class GraphQLParser(Parser):
     def parse_field(
         self,
         field_name: str,
-        alias: str | None,
+        alias: Optional[str],
         field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
     ) -> DataModelFieldBase:
         final_data_type = DataType(
