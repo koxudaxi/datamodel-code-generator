@@ -95,6 +95,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
       - name: Setup check suite
         run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
       - name: Run check for ${{ matrix.tox_env }}
