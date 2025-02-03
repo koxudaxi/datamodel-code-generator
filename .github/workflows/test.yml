@@ -67,7 +67,7 @@ jobs:
     - name: Upload .coverage file
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-${{ matrix.py }}-${{ matrix.os }}
+        name: coverage-${{ matrix.py }}-${{ matrix.os }}-${{ github.job }}-${{ github.run_number }}
         path: coverage.${{ matrix.py }}.xml
   coverage-check:
     name: Combine Coverage Reports and Check
