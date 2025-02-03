@@ -91,6 +91,7 @@ jobs:
           - windows-latest
         exclude:
           - { os: windows-latest, tox_env: docs }
+          - { os: windows-latest, tox_env: readme }
     steps:
       - uses: actions/checkout@v4
         with:
