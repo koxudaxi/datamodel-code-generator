@@ -429,7 +429,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         print(
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"  # type: ignore
             f'You have to install a newer black.\n'
-            f'Installed black version: {black.__version__}',  # pyright: ignore [reportPrivateImportUsage]
+            f'Installed black version: {black.__version__}',
             file=sys.stderr,
         )
         return Exit.ERROR
