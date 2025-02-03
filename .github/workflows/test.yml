@@ -63,7 +63,7 @@ jobs:
     - name: Run test suite
       run: tox run --skip-pkg-install -e ${{ matrix.py }}
       env:
-        COVERAGE_XML: ${{ github.workspace }}/.coverage.${{ matrix.py }}.xml
+        COVERAGE_XML: .coverage.${{ matrix.py }}.xml
     - name: Upload .coverage file
       uses: actions/upload-artifact@v4
       with:
@@ -76,6 +76,10 @@ jobs:
     steps:
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Combine coverage reports and generate XML
         run: |
           ls -la
