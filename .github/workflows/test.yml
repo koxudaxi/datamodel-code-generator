@@ -64,16 +64,35 @@ jobs:
       run: tox run --skip-pkg-install -e ${{ matrix.py }}
       env:
         COVERAGE_XML: ./coverage.xml
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-24.04' || matrix.os == ''
-      uses: codecov/codecov-action@v5
+        COVERAGE_FILE: ${{ github.workspace }}/.coverage.${{ matrix.py }}
+    - name: Upload .coverage file
+      uses: actions/upload-artifact@v3
       with:
-        flags: unittests
-        files: ./coverage.xml
-        fail_ci_if_error: true
-        env_vars: OS,PY,ISORT
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        name: coverage-${{ matrix.py }}-${{ matrix.os }}
+        path: .coverage.${{ matrix.py }}
+  coverage-check:
+    name: Combine Coverage Reports and Check
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v3
+      - name: Combine coverage reports and generate XML
+        run: |
+          ls -la
+          find . -type f -name '.coverage.*' -exec cp {} . \;
+          coverage combine
+          coverage xml -o combined_coverage.xml
+      - name: Check combined coverage with diff-cover
+        run: diff-cover --compare-branch ${DIFF_AGAINST:-origin/main} combined_coverage.xml --fail-under 100
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          flags: unittests
+          files: ./combined_coverage.xml
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   check:
     name: tox env ${{ matrix.tox_env }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
