@@ -249,6 +249,18 @@ def test_openapi_parser_parse_duplicate_models():
     )
 
 
+def test_openapi_parser_parse_duplicate_model_with_simplify():
+    raw = Path(DATA_PATH / 'duplicate_model_simplify.yaml')
+    parser = OpenAPIParser(raw)
+    expected = (
+        EXPECTED_OPEN_API_PATH
+        / 'openapi_parser_parse_duplicate_models_simplify'
+        / 'output.py'
+    ).read_text()
+    got = parser.parse()
+    assert got == expected
+
+
 def test_openapi_parser_parse_resolved_models():
     parser = OpenAPIParser(
         Path(DATA_PATH / 'resolved_models.yaml'),

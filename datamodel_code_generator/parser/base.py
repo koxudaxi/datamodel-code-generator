@@ -668,7 +668,16 @@ class Parser(ABC):
         for model, duplicate_models in model_to_duplicate_models.items():
             for duplicate_model in duplicate_models:
                 for child in duplicate_model.reference.children[:]:
-                    child.replace_reference(model.reference)
+                    if isinstance(child, DataType):
+                        child.replace_reference(model.reference)
+                    # simplify if introduce duplicate base classes
+                    if isinstance(child, DataModel):
+                        child.base_classes = list(
+                            {
+                                f'{c.module_name}.{c.type_hint}': c
+                                for c in child.base_classes
+                            }.values()
+                        )
                 models.remove(duplicate_model)
 
     @classmethod
