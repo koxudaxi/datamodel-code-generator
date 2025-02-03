@@ -161,7 +161,7 @@ class CodeFormatter:
             if black.__version__.startswith('19.'):  # type: ignore
                 warn(
                     f"black doesn't support `experimental-string-processing` option"  # type: ignore
-                    f' for wrapping string literal in {black.__version__}'  # pyright: ignore [reportPrivateImportUsage]
+                    f' for wrapping string literal in {black.__version__}'
                 )
             elif black.__version__ < '24.1.0':  # type: ignore
                 black_kwargs['experimental_string_processing'] = (
