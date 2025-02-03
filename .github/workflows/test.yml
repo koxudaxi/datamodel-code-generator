@@ -78,14 +78,11 @@ jobs:
         uses: actions/download-artifact@v4
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Combine coverage reports and generate XML
         run: |
           ls -la
-          find . -type f -name '.coverage.*' -exec cp {} . \;
-          coverage combine
-          coverage xml -o combined_coverage.xml
+          uv run coverage combine
+          uv run coverage xml -o combined_coverage.xml
       - name: Check combined coverage with diff-cover
         run: diff-cover --compare-branch ${DIFF_AGAINST:-origin/main} combined_coverage.xml --fail-under 100
       - name: Upload coverage to Codecov
