@@ -81,6 +81,9 @@ def enable_debug_message() -> None:  # pragma: no cover
     pysnooper.tracer.DISABLED = False
 
 
+DEFAULT_MAX_VARIABLE_LENGTH: int = 100
+
+
 def snooper_to_methods(  # type: ignore
     output=None,
     watch=(),
@@ -90,7 +93,7 @@ def snooper_to_methods(  # type: ignore
     overwrite=False,
     thread_info=False,
     custom_repr=(),
-    max_variable_length=100,
+    max_variable_length: Optional[int] = DEFAULT_MAX_VARIABLE_LENGTH,
 ) -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         if not pysnooper:
@@ -108,7 +111,9 @@ def snooper_to_methods(  # type: ignore
                 overwrite,
                 thread_info,
                 custom_repr,
-                max_variable_length,
+                max_variable_length
+                if max_variable_length is not None
+                else DEFAULT_MAX_VARIABLE_LENGTH,
             )(method)
             setattr(cls, name, snooper_method)
         return cls
@@ -424,8 +429,10 @@ def generate(
     data_model_types = get_data_model_types(
         output_model_type, target_python_version, output_datetime_class
     )
+    source = input_text or input_
+    assert not isinstance(source, Mapping)
     parser = parser_class(
-        source=input_text or input_,
+        source=source,
         data_model_type=data_model_types.data_model,
         data_model_root_type=data_model_types.root_model,
         data_model_field_type=data_model_types.field_model,
@@ -514,6 +521,7 @@ def generate(
             # input_ might be a dict object provided directly, and missing a name field
             input_filename = getattr(input_, 'name', '<dict>')
         else:
+            assert isinstance(input_, Path)
             input_filename = input_.name
     if not results:
         raise Error('Models not found in the input data')

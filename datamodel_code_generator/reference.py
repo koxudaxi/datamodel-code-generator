@@ -138,7 +138,7 @@ class Reference(_BaseModel):
     if PYDANTIC_V2:
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(
+        model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
             revalidate_instances='never',
@@ -755,7 +755,7 @@ def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
         singular_name = f'{name}{suffix}'
-    return singular_name
+    return singular_name  # pyright: ignore [reportReturnType]
 
 
 @lru_cache

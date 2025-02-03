@@ -114,25 +114,25 @@ class UnionIntFloat:
     def __get_pydantic_core_schema__(
         cls, _source_type: Any, _handler: 'GetCoreSchemaHandler'
     ) -> 'core_schema.CoreSchema':
-        from_int_schema = core_schema.chain_schema(
+        from_int_schema = core_schema.chain_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
             [
-                core_schema.union_schema(
-                    [core_schema.int_schema(), core_schema.float_schema()]
+                core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
+                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore [reportPossiblyUnboundVariable]
                 ),
-                core_schema.no_info_plain_validator_function(cls.validate),
+                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore [reportPossiblyUnboundVariable]
             ]
         )
 
-        return core_schema.json_or_python_schema(
+        return core_schema.json_or_python_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
             json_schema=from_int_schema,
-            python_schema=core_schema.union_schema(
+            python_schema=core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
                 [
                     # check if it's an instance first before doing any further work
-                    core_schema.is_instance_schema(UnionIntFloat),
+                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore [reportPossiblyUnboundVariable]
                     from_int_schema,
                 ]
             ),
-            serialization=core_schema.plain_serializer_function_ser_schema(
+            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
                 lambda instance: instance.value
             ),
         )
@@ -236,7 +236,7 @@ class DataType(_BaseModel):
     if PYDANTIC_V2:
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(
+        model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
             extra='forbid',
             revalidate_instances='never',
         )
@@ -588,7 +588,9 @@ class DataTypeManager(ABC):
         )
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
-        self.target_datetime_class: DatetimeClassType = target_datetime_class
+        self.target_datetime_class: DatetimeClassType = (
+            target_datetime_class or DatetimeClassType.Datetime
+        )
 
         if (
             use_generic_container_types and python_version == PythonVersion.PY_36

@@ -367,7 +367,7 @@ class OpenAPIParser(JsonSchemaParser):
         for (
             media_type,
             media_obj,
-        ) in request_body.content.items():  # type: str, MediaObject
+        ) in request_body.content.items():
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 self.parse_schema(name, media_obj.schema_, [*path, media_type])
 
@@ -400,11 +400,13 @@ class OpenAPIParser(JsonSchemaParser):
                 if not object_schema:  # pragma: no cover
                     continue
                 if isinstance(object_schema, JsonSchemaObject):
-                    data_types[status_code][content_type] = self.parse_schema(
-                        name, object_schema, [*path, str(status_code), content_type]
+                    data_types[status_code][content_type] = self.parse_schema(  # pyright: ignore [reportArgumentType]
+                        name,
+                        object_schema,
+                        [*path, str(status_code), content_type],  # pyright: ignore [reportArgumentType]
                     )
                 else:
-                    data_types[status_code][content_type] = self.get_ref_data_type(
+                    data_types[status_code][content_type] = self.get_ref_data_type(  # pyright: ignore [reportArgumentType]
                         object_schema.ref
                     )
 
@@ -604,7 +606,7 @@ class OpenAPIParser(JsonSchemaParser):
                 for (
                     obj_name,
                     raw_obj,
-                ) in schemas.items():  # type: str, Dict[Any, Any]
+                ) in schemas.items():
                     self.parse_raw_obj(
                         obj_name,
                         raw_obj,

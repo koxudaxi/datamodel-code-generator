@@ -53,7 +53,7 @@ class ConstraintsBase(_BaseModel):
     unique_items: Optional[bool] = Field(None, alias='uniqueItems')
     _exclude_fields: ClassVar[Set[str]] = {'has_constraints'}
     if PYDANTIC_V2:
-        model_config = ConfigDict(
+        model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
             arbitrary_types_allowed=True, ignored_types=(cached_property,)
         )
     else:
@@ -87,7 +87,9 @@ class ConstraintsBase(_BaseModel):
         else:
             model_field_constraints = {}
 
-        if not issubclass(constraints_class, ConstraintsBase):  # pragma: no cover
+        if constraints_class is None or not issubclass(
+            constraints_class, ConstraintsBase
+        ):  # pragma: no cover
             return None
 
         return constraints_class.parse_obj(
@@ -165,7 +167,7 @@ class DataModelFieldBase(_BaseModel):
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
-            (
+            iter(
                 i
                 for i in self.data_type.all_imports
                 if not (not has_union and i == IMPORT_UNION)
@@ -251,7 +253,7 @@ def get_module_name(name: str, file_path: Optional[Path]) -> str:
 
 
 class TemplateBase(ABC):
-    @property
+    @cached_property
     @abstractmethod
     def template_file_path(self) -> Path:
         raise NotImplementedError

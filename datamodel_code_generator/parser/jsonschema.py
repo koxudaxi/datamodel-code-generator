@@ -258,7 +258,7 @@ class JsonSchemaObject(BaseModel):
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Union[Discriminator, str, None] = None
     if PYDANTIC_V2:
-        model_config = ConfigDict(
+        model_config = ConfigDict(  # pyright: ignore [reportPossiblyUnboundVariable]
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
         )
@@ -360,7 +360,7 @@ EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: Set[str] = {
 }
 
 EXCLUDE_FIELD_KEYS = (
-    set(JsonSchemaObject.get_fields())
+    set(JsonSchemaObject.get_fields())  # pyright: ignore [reportAttributeAccessIssue]
     - DEFAULT_FIELD_KEYS
     - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
 ) | {
@@ -528,7 +528,7 @@ class JsonSchemaParser(Parser):
         self.raw_obj: Dict[Any, Any] = {}
         self._root_id: Optional[str] = None
         self._root_id_base_path: Optional[str] = None
-        self.reserved_refs: DefaultDict[Tuple[str], Set[str]] = defaultdict(set)
+        self.reserved_refs: DefaultDict[Tuple[str, ...], Set[str]] = defaultdict(set)
         self.field_keys: Set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -1798,6 +1798,7 @@ class JsonSchemaParser(Parser):
                 root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: Optional[Dict[Any, Any]] = None
+                schema_path = ''
                 for schema_path, split_schema_path in self.schema_paths:
                     try:
                         definitions = get_model_by_path(raw, split_schema_path)

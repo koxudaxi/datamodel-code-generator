@@ -411,7 +411,7 @@ class Parser(ABC):
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: Optional[Dict[str, Any]] = None,
-        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        target_datetime_class: Optional[DatetimeClassType] = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
     ) -> None:
@@ -849,12 +849,12 @@ class Parser(ABC):
 
                     # Check the main discriminator model path
                     if mapping:
-                        check_paths(discriminator_model, mapping)
+                        check_paths(discriminator_model, mapping)  # pyright: ignore [reportArgumentType]
 
                         # Check the base_classes if they exist
                         if len(type_names) == 0:
                             for base_class in discriminator_model.base_classes:
-                                check_paths(base_class.reference, mapping)
+                                check_paths(base_class.reference, mapping)  # pyright: ignore [reportArgumentType]
                     else:
                         type_names = [discriminator_model.path.split('/')[-1]]
                     if not type_names:  # pragma: no cover
@@ -1061,7 +1061,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent.is_list:
+                    elif data_type.parent is not None and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -1073,6 +1073,7 @@ class Parser(ABC):
                             discriminator = root_type_field.extras.get('discriminator')
                             if discriminator:
                                 model_field.extras['discriminator'] = discriminator
+                        assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(
                             data_type
                         )  # pragma: no cover
@@ -1358,7 +1359,7 @@ class Parser(ABC):
         module_to_import: Dict[Tuple[str, ...], Imports] = {}
 
         previous_module = ()  # type: Tuple[str, ...]
-        for module, models in ((k, [*v]) for k, v in grouped_models):  # type: Tuple[str, ...], List[DataModel]
+        for module, models in ((k, [*v]) for k, v in grouped_models):
             for model in models:
                 model_to_module_models[model] = module, models
             self.__delete_duplicate_models(models)

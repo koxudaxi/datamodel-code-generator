@@ -21,7 +21,8 @@ def get_body(
         headers=headers,
         verify=not ignore_tls,
         follow_redirects=True,
-        params=query_parameters,
+        params=query_parameters,  # pyright: ignore [reportArgumentType]
+        # TODO: Improve params type
     ).text
 
 
