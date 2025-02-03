@@ -63,7 +63,7 @@ jobs:
     - name: Run test suite
       run: tox run --skip-pkg-install -e ${{ matrix.py }}
       env:
-        COVERAGE_XML: .coverage.${{ matrix.py }}.xml
+        COVERAGE_XML: coverage.${{ matrix.py }}.xml
     - name: Check the XML file
       run: |
         ls -la
@@ -71,7 +71,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.py }}-${{ matrix.os }}
-        path: .coverage.${{ matrix.py }}.xml
+        path: coverage.${{ matrix.py }}.xml
   coverage-check:
     name: Combine Coverage Reports and Check
     runs-on: ubuntu-latest
