@@ -410,19 +410,6 @@ wheels = [
 ]
 
 [[package]]
-name = "covdefaults"
-version = "2.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "coverage", version = "7.6.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/44/ee/9a6f2611f72e4c5657ae5542a510cf4164d2c673687c0ea73bb1cbd85b4d/covdefaults-2.3.0.tar.gz", hash = "sha256:4e99f679f12d792bc62e5510fa3eb59546ed47bd569e36e4fddc4081c9c3ebf7", size = 4835 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/4c/823bc951445aa97e5a1b7e337690db3abf85212c8d138e170922e7916ac8/covdefaults-2.3.0-py2.py3-none-any.whl", hash = "sha256:2832961f6ffcfe4b57c338bc3418a3526f495c26fb9c54565409c5532f7c41be", size = 5144 },
-]
-
-[[package]]
 name = "coverage"
 version = "7.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -656,7 +643,6 @@ validation = [
 
 [package.dev-dependencies]
 coverage = [
-    { name = "covdefaults" },
     { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
     { name = "coverage", version = "7.6.10", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
     { name = "diff-cover", version = "7.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8.10'" },
@@ -665,7 +651,6 @@ coverage = [
 ]
 dev = [
     { name = "check-wheel-contents" },
-    { name = "covdefaults" },
     { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
     { name = "coverage", version = "7.6.10", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
     { name = "diff-cover", version = "7.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8.10'" },
@@ -768,13 +753,11 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 coverage = [
-    { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
     { name = "diff-cover", specifier = ">=7.7" },
 ]
 dev = [
     { name = "check-wheel-contents", specifier = ">=0.6.1" },
-    { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
     { name = "diff-cover", specifier = ">=7.7" },
     { name = "freezegun" },
