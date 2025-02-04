@@ -57,6 +57,7 @@ scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [dependency-groups]
 dev = [
+  { include-group = "coverage" },
   { include-group = "docs" },
   { include-group = "fix" },
   { include-group = "pkg-meta" },
@@ -89,6 +90,10 @@ docs = [
 ]
 fix = [ "pre-commit>=3.5" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
+coverage = [
+  "coverage[toml]>=7.6.1",
+  "diff-cover>=7.7",
+]
 
 [tool.hatch]
 build.dev-mode-dirs = [ "." ]

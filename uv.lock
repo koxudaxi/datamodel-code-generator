@@ -642,8 +642,17 @@ validation = [
 ]
 
 [package.dev-dependencies]
+coverage = [
+    { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
+    { name = "coverage", version = "7.6.10", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
+    { name = "diff-cover", version = "7.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8.10'" },
+    { name = "diff-cover", version = "9.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8.10' and python_full_version < '3.9.17'" },
+    { name = "diff-cover", version = "9.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.17'" },
+]
 dev = [
     { name = "check-wheel-contents" },
+    { name = "coverage", version = "7.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.9'" },
+    { name = "coverage", version = "7.6.10", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.9'" },
     { name = "diff-cover", version = "7.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8.10'" },
     { name = "diff-cover", version = "9.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8.10' and python_full_version < '3.9.17'" },
     { name = "diff-cover", version = "9.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.17'" },
@@ -743,8 +752,13 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
+coverage = [
+    { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
+    { name = "diff-cover", specifier = ">=7.7" },
+]
 dev = [
     { name = "check-wheel-contents", specifier = ">=0.6.1" },
+    { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
     { name = "diff-cover", specifier = ">=7.7" },
     { name = "freezegun" },
     { name = "mkdocs", specifier = ">=1.6" },

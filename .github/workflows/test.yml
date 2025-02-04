@@ -62,18 +62,64 @@ jobs:
         ${{ matrix.pydantic != '' && format('pydantic=={0} ', matrix.pydantic) || ''}}
     - name: Run test suite
       run: tox run --skip-pkg-install -e ${{ matrix.py }}
-      env:
-        COVERAGE_XML: ./coverage.xml
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-24.04' || matrix.os == ''
-      uses: codecov/codecov-action@v5
+    - name: Rename coverage report file
+      run: |
+        import os; import sys
+        os.rename(f".tox/.coverage.${{ matrix.py }}", f".tox/.coverage.${{ matrix.py }}-${{ matrix.os }}-${{ matrix.isort }}-${{ matrix.black }}-${{ matrix.pydantic }}")
+      shell: python
+    - name: Upload coverage data
+      uses: actions/upload-artifact@v4
       with:
-        flags: unittests
-        files: ./coverage.xml
-        fail_ci_if_error: true
-        env_vars: OS,PY,ISORT
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        include-hidden-files: true
+        name: .coverage.${{ matrix.py }}.${{ matrix.os }}.${{ matrix.isort }}.${{ matrix.black }}.${{ matrix.pydantic }}
+        path: ".tox/.coverage.*"
+        retention-days: 3
+
+  coverage:
+    name: Combine coverage
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install hatch
+        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
+      - name: Build package to generate version
+        run: uv build --python 3.13 --python-preference only-managed --wheel . --out-dir dist
+      - name: Setup coverage tool
+        run: tox -e coverage --notest
+        env:
+          UV_PYTHON_PREFERENCE: only-managed
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          path: .tox
+          pattern: .coverage.*
+          merge-multiple: true
+      - name: Combine and report coverage
+        run: tox -e coverage --skip-pkg-install
+        env:
+          UV_PYTHON_PREFERENCE: only-managed
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report
+          path: .tox/htmlcov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          flags: unittests
+          files: .tox/coverage.xml
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   check:
     name: tox env ${{ matrix.tox_env }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
