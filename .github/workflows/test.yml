@@ -56,12 +56,12 @@ jobs:
     - name: Install custom package versions
       if: ${{ matrix.isort != '' || matrix.black != '' || matrix.pydantic != ''}}
       run: >-
-        tox exec --no-list-dependencies --skip-pkg-install -e ${{ matrix.py }} -- uv pip install
+        tox exec --no-list-dependencies --skip-uv-sync --skip-pkg-install -e ${{ matrix.py }} -- uv pip install
         ${{ matrix.isort != '' && format('isort=={0} ', matrix.isort) || ''}}
         ${{ matrix.black != '' && format('black=={0} ', matrix.black) || ''}}
         ${{ matrix.pydantic != '' && format('pydantic=={0} ', matrix.pydantic) || ''}}
     - name: Run test suite
-      run: tox run --skip-pkg-install -e ${{ matrix.py }}
+      run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.py }}
     - name: Rename coverage report file
       run: |
         import os; import sys
@@ -104,7 +104,7 @@ jobs:
           pattern: .coverage.*
           merge-multiple: true
       - name: Combine and report coverage
-        run: tox -e coverage --skip-pkg-install
+        run: tox -e coverage --skip-uv-sync --skip-pkg-install
         env:
           UV_PYTHON_PREFERENCE: only-managed
       - name: Upload HTML report
@@ -145,4 +145,4 @@ jobs:
       - name: Setup check suite
         run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
       - name: Run check for ${{ matrix.tox_env }}
-        run: tox r --skip-pkg-install -e ${{ matrix.tox_env }}
+        run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
