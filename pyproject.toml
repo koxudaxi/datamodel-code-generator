@@ -128,7 +128,7 @@ filterwarnings = [
   "ignore:^.*Field name `name` is duplicated on Pet.*",
   "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",
   "ignore:^.*unclosed file.*",
-
+  "ignore:^.*black doesn't support `experimental-string-processing` option for wrapping string literal in .*",
 ]
 norecursedirs = "tests/data/*"
 
