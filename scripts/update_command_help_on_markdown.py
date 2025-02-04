@@ -70,11 +70,11 @@ def main() -> Exit:
         with file_path.open('r') as f:
             markdown_text = f.read()
         new_markdown_text = inject_help(markdown_text, help_text)
-        if validate:
-            if new_markdown_text != markdown_text:
-                raise ValueError(
-                    f'{file_path} is not up to date. Run `python update_command_help_on_markdown.py`'
-                )
+        if validate and new_markdown_text != markdown_text:
+            print(
+                f'{file_path} is not up to date. Run `python update_command_help_on_markdown.py`',
+                file=sys.stderr,
+            )
             return Exit.ERROR
         with file_path.open('w') as f:
             f.write(new_markdown_text)

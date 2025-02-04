@@ -6,6 +6,5 @@ use_parentheses = true
 line_length = 88
 skip = "tests/data"
 
-sections = ['FUTURE', 'STDLIB', 'THIRDPARTY', 'FIRSTPARTY', 'LOCALFOLDER']
-known_first_party = ['custom_module']
-
+sections = [ 'FUTURE', 'STDLIB', 'THIRDPARTY', 'FIRSTPARTY', 'LOCALFOLDER' ]
+known_first_party = [ 'custom_module' ]

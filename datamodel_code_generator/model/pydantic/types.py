@@ -180,7 +180,7 @@ class DataTypeManager(_DataTypeManager):
             self.data_type,
             strict_types=self.strict_types,
             pattern_key=self.PATTERN_KEY,
-            target_datetime_class=target_datetime_class,
+            target_datetime_class=self.target_datetime_class,
         )
         self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
             self.data_type,

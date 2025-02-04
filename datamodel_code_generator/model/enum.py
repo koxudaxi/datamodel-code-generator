@@ -87,7 +87,7 @@ class Enum(DataModel):
 
         for field in self.fields:
             # Remove surrounding quotes from field default value
-            field_default = field.default.strip('\'"')
+            field_default = (field.default or '').strip('\'"')
 
             # Compare values after removing quotes
             if field_default == str_value:

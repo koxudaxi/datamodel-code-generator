@@ -85,7 +85,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 class Config(BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(arbitrary_types_allowed=True)
+        model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore [reportAssignmentType]
 
         def get(self, item: str) -> Any:
             return getattr(self, item)
@@ -185,8 +185,8 @@ class Config(BaseModel):
 
     @model_validator(mode='after')
     def validate_keyword_only(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        output_model_type: DataModelType = values.get('output_model_type')
-        python_target: PythonVersion = values.get('target_python_version')
+        output_model_type: DataModelType = values.get('output_model_type')  # pyright: ignore [reportAssignmentType]
+        python_target: PythonVersion = values.get('target_python_version')  # pyright: ignore [reportAssignmentType]
         if (
             values.get('keyword_only')
             and output_model_type == DataModelType.DataclassesDataclass
@@ -219,7 +219,7 @@ class Config(BaseModel):
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split(':', maxsplit=1)  # type: str, str
+                    field_name, field_value = each_item.split(':', maxsplit=1)
                     return field_name, field_value.lstrip()
                 except ValueError:
                     raise Error(f'Invalid http header: {each_item!r}')
@@ -236,7 +236,7 @@ class Config(BaseModel):
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split('=', maxsplit=1)  # type: str, str
+                    field_name, field_value = each_item.split('=', maxsplit=1)
                     return field_name, field_value.lstrip()
                 except ValueError:
                     raise Error(f'Invalid http query parameter: {each_item!r}')
@@ -248,14 +248,16 @@ class Config(BaseModel):
 
     @model_validator(mode='before')
     def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('additional_imports') is not None:
-            values['additional_imports'] = values.get('additional_imports').split(',')
+        additional_imports = values.get('additional_imports')
+        if additional_imports is not None:
+            values['additional_imports'] = additional_imports.split(',')
         return values
 
     @model_validator(mode='before')
     def validate_custom_formatters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('custom_formatters') is not None:
-            values['custom_formatters'] = values.get('custom_formatters').split(',')
+        custom_formatters = values.get('custom_formatters')
+        if custom_formatters is not None:
+            values['custom_formatters'] = custom_formatters.split(',')
         return values
 
     if PYDANTIC_V2:
@@ -282,7 +284,7 @@ class Config(BaseModel):
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_38
     base_class: str = ''
-    additional_imports: Optional[List[str]] = (None,)
+    additional_imports: Optional[List[str]] = None
     custom_template_dir: Optional[Path] = None
     extra_template_data: Optional[TextIOBase] = None
     validation: bool = False

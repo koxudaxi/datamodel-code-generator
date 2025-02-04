@@ -24,7 +24,10 @@ class DataTypeManager(_DataTypeManager):
     ) -> Dict[Types, DataType]:
         result = {
             **super().type_map_factory(
-                data_type, strict_types, pattern_key, target_datetime_class
+                data_type,
+                strict_types,
+                pattern_key,
+                target_datetime_class or DatetimeClassType.Datetime,
             ),
             Types.hostname: self.data_type.from_import(
                 IMPORT_CONSTR,

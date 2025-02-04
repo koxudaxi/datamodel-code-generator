@@ -37,17 +37,13 @@ else:
         from yaml import SafeLoader
 
     try:
-        import tomllib
-
-        def load_toml(path: Path) -> Dict[str, Any]:
-            with path.open('rb') as f:
-                return tomllib.load(f)
-
+        from tomllib import load as load_tomllib
     except ImportError:
-        import toml
+        from tomli import load as load_tomllib
 
-        def load_toml(path: Path) -> Dict[str, Any]:
-            return toml.load(path)
+    def load_toml(path: Path) -> Dict[str, Any]:
+        with path.open('rb') as f:
+            return load_tomllib(f)
 
 
 SafeLoaderTemp = copy.deepcopy(SafeLoader)
@@ -81,7 +77,7 @@ def field_validator(
     field_name: str,
     *fields: str,
     mode: Literal['before', 'after'] = 'after',
-) -> Callable[[Any], Callable[[Model, Any], Any]]:
+) -> Callable[[Any], Callable[[BaseModel, Any], Any]]:
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
         if PYDANTIC_V2:
             from pydantic import field_validator as field_validator_v2
@@ -103,4 +99,4 @@ else:
 
 class BaseModel(_BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(strict=False)
+        model_config = ConfigDict(strict=False)  # pyright: ignore [reportAssignmentType]
