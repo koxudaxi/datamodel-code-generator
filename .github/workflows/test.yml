@@ -65,7 +65,7 @@ jobs:
     - name: Rename coverage report file
       run: |
         import os; import sys
-        os.rename(f".tox/.coverage.${{ matrix.py }}", f".tox/.coverage.${{ matrix.py }}-{sys.platform}")
+        os.rename(f".tox/.coverage.${{ matrix.py }}", f".tox/.coverage.${{ matrix.py }}-${{ matrix.os }}-${{ matrix.isort }}-${{ matrix.black }}-${{ matrix.pydantic }}")
       shell: python
     - name: Upload coverage data
       uses: actions/upload-artifact@v4
