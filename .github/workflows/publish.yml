@@ -30,9 +30,7 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
-    environment:
-      name: release
-      url: https://pypi.org/project/datamodel-code-generator/${{ github.ref_name }}
+    environment: pypi
     permissions:
       id-token: write
     steps:
@@ -42,7 +40,7 @@ jobs:
           name: ${{ env.dists-artifact-name }}
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.12.4
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           attestations: true
 
