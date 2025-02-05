@@ -42,7 +42,7 @@ dependencies = [
   "openapi-spec-validator>=0.2.8,<0.7",
   "packaging",
   "prance>=0.18.2",
-  "pydantic>=1.10",
+  "pydantic>=1.5",
   "pysnooper>=0.4.1,<2",
   "pyyaml>=6.0.1",
   "tomli>=2.2.1,<3; python_version<='3.11'",
@@ -75,6 +75,7 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
+  "setuptools; python_version<'3.9'",
 ]
 type = [
   "pyright>=1.1.393",
@@ -88,6 +89,12 @@ docs = [
   "mkdocs>=1.6",
   "mkdocs-material>=9.5.31",
 ]
+black19-pydantic18 = [ "black==19.10b0", "pydantic==1.8.2" ]
+black22 = [ "black==22.1" ]
+black23 = [ "black==23.12" ]
+black24 = [ "black==24.1" ]
+pydantic18 = [ "pydantic==1.8.2" ]
+isort4-pydantic15 = [ "isort[pyproject]==4.3.21", "pydantic==1.5.1" ]
 fix = [ "pre-commit>=3.5" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
@@ -129,13 +136,15 @@ filterwarnings = [
   "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",
   "ignore:^.*unclosed file.*",
   "ignore:^.*black doesn't support `experimental-string-processing` option for wrapping string literal in .*",
+  "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
+  "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
 ]
 norecursedirs = "tests/data/*"
 
 [tool.coverage]
 run.source = [ "datamodel_code_generator" ]
 run.branch = true
-run.omit = [ "scripts/*" ]
+run.omit = [ "scripts/*", "tests/*" ]
 report.ignore_errors = true
 report.exclude_lines = [
   "if self.debug:",
@@ -145,7 +154,13 @@ report.exclude_lines = [
   "if TYPE_CHECKING:",
   "if not TYPE_CHECKING:",
 ]
-report.omit = [ "tests/*" ]
+paths.source = [
+  "datamodel_code_generator",
+  ".tox*/*/lib/python*/site-packages/datamodel_code_generator",
+  ".tox*\\*\\Lib\\site-packages/datamodel_code_generator",
+  "*/datamodel_code_generator",
+  "*\\datamodel_code_generator",
+]
 
 [tool.pyright]
 reportPrivateImportUsage = false
@@ -153,3 +168,25 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
+
+[tool.uv]
+conflicts = [
+  [
+    { group = "black24" },
+    { group = "black22" },
+    { group = "black23" },
+    { group = "black19-pydantic18" },
+    { group = "pydantic18" },
+    { group = "isort4-pydantic15" },
+    { group = "pkg-meta" },
+  ],
+  [
+    { group = "black24" },
+    { group = "black22" },
+    { group = "black23" },
+    { group = "black19-pydantic18" },
+    { group = "pydantic18" },
+    { group = "isort4-pydantic15" },
+    { group = "dev" },
+  ],
+]
