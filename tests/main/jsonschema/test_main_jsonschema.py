@@ -2458,7 +2458,7 @@ def test_version(capsys):
         main(['--version'])
     assert e.value.code == Exit.OK
     captured = capsys.readouterr()
-    assert captured.out == '0.0.0\n'
+    assert captured.out != '0.0.0\n'
     assert captured.err == ''
 
 

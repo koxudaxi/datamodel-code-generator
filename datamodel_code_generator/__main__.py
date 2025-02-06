@@ -399,9 +399,9 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     arg_parser.parse_args(args, namespace=namespace)
 
     if namespace.version:
-        from datamodel_code_generator.version import version
+        from datamodel_code_generator import get_version
 
-        print(version)
+        print(get_version())
         exit(0)
 
     pyproject_config = _get_pyproject_toml_config(Path().resolve())
