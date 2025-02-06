@@ -282,9 +282,11 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     )
 
 
-def test_main_openapi_no_file(capsys: CaptureFixture) -> None:
+def test_main_openapi_no_file(
+    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test main function on non-modular file with no output name."""
-
+    monkeypatch.chdir(tmp_path)
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
 
     with freeze_time(TIMESTAMP):
@@ -313,10 +315,15 @@ def test_main_openapi_no_file(capsys: CaptureFixture) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_extra_template_data_config(
-    capsys: CaptureFixture, output_model, expected_output
+    capsys: CaptureFixture,
+    output_model,
+    expected_output,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test main function with custom config data in extra template."""
 
+    monkeypatch.chdir(tmp_path)
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
     extra_template_data = OPEN_API_DATA_PATH / 'extra_data.json'
 
@@ -337,9 +344,12 @@ def test_main_openapi_extra_template_data_config(
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
+def test_main_custom_template_dir_old_style(
+    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test main function with custom template directory."""
 
+    monkeypatch.chdir(tmp_path)
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
     custom_template_dir = DATA_PATH / 'templates_old_style'
     extra_template_data = OPEN_API_DATA_PATH / 'extra_data.json'
@@ -363,7 +373,10 @@ def test_main_custom_template_dir_old_style(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_openapi_custom_template_dir(capsys: CaptureFixture) -> None:
+def test_main_openapi_custom_template_dir(
+    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'

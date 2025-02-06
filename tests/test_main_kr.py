@@ -135,7 +135,10 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     )
 
 
-def test_main_no_file(capsys: CaptureFixture) -> None:
+def test_main_no_file(
+    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     """Test main function on non-modular file with no output name."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
@@ -152,7 +155,10 @@ def test_main_no_file(capsys: CaptureFixture) -> None:
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_custom_template_dir(capsys: CaptureFixture) -> None:
+def test_main_custom_template_dir(
+    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
 
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'

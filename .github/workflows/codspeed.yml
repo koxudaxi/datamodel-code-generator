@@ -9,6 +9,10 @@ on:
   # performance analysis in order to generate initial data.
   workflow_dispatch:
 
+concurrency:
+  group: codespeed-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   benchmarks:
     runs-on: ubuntu-24.04

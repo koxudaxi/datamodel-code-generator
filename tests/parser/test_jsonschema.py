@@ -377,7 +377,8 @@ def test_parse_array_schema():
     )
 
 
-def test_parse_nested_array():
+def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
     parser = JsonSchemaParser(
         DATA_PATH / 'nested_array.json',
         data_model_field_type=DataModelFieldBase,
