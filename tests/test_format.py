@@ -30,8 +30,12 @@ def test_python_version():
     ],
 )
 def test_format_code_with_skip_string_normalization(
-    skip_string_normalization: bool, expected_output: str
+    skip_string_normalization: bool,
+    expected_output: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38, skip_string_normalization=skip_string_normalization
     )
@@ -65,7 +69,10 @@ def test_format_code_is_not_subclass():
         )
 
 
-def test_format_code_with_custom_formatter_without_kwargs():
+def test_format_code_with_custom_formatter_without_kwargs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38,
         custom_formatters=[ADD_COMMENT_FORMATTER],
@@ -76,7 +83,10 @@ def test_format_code_with_custom_formatter_without_kwargs():
     assert formatted_code == '# a comment\nx = 1\ny = 2' + '\n'
 
 
-def test_format_code_with_custom_formatter_with_kwargs():
+def test_format_code_with_custom_formatter_with_kwargs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38,
         custom_formatters=[ADD_LICENSE_FORMATTER],
@@ -97,7 +107,10 @@ y = 2
     )
 
 
-def test_format_code_with_two_custom_formatters():
+def test_format_code_with_two_custom_formatters(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38,
         custom_formatters=[

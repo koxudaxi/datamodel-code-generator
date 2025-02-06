@@ -7,37 +7,28 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: >-
-      Test ${{ matrix.py }}
+      ${{ matrix.py || matrix.tox_env }} on
       ${{ matrix.os == 'windows-latest' && 'Windows' || (matrix.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
-      ${{ matrix.isort != '' && format('isort={0} ', matrix.isort) || ''}}
-      ${{ matrix.black != '' && format('black={0} ', matrix.black) || ''}}
-      ${{ matrix.pydantic != '' && format('pydantic={0} ', matrix.pydantic) || ''}}
     strategy:
       fail-fast: false
       matrix:
         py: ["3.13", "3.12", "3.11", "3.10", "3.9", "3.8"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
-        isort: [''] # '' mean not set, aka use the default
-        black: ['']
-        pydantic: ['']
+        tox_env: ['']
         include:
-          - py: 3.12
-            black: 24.1.0
-          - py: 3.12
-            black: 23.12.1
-          - py: 3.12
-            black: 22.1.0
-          - py: 3.9
-            black: 19.10b0
-            pydantic: 1.8.2
-          - py: 3.8
-            pydantic: 1.8.2
-          - py: 3.8
-            isort: 4.3.21
-            pydantic: 1.5.1
+          - tox_env: py3.12-black24
+          - tox_env: py3.12-black23
+          - tox_env: py3.12-black22
+          - tox_env: py3.9-black19
+          - tox_env: py3.8-pydantic18
+          - tox_env: py3.8-isort4
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
@@ -47,36 +38,31 @@ jobs:
         fetch-depth: 0
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v5
-      with:
-        python-version: ${{ matrix.py }}
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup Python test environment
-      run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py }}
-    - name: Install custom package versions
-      if: ${{ matrix.isort != '' || matrix.black != '' || matrix.pydantic != ''}}
-      run: >-
-        tox exec --no-list-dependencies --skip-pkg-install -e ${{ matrix.py }} -- uv pip install
-        ${{ matrix.isort != '' && format('isort=={0} ', matrix.isort) || ''}}
-        ${{ matrix.black != '' && format('black=={0} ', matrix.black) || ''}}
-        ${{ matrix.pydantic != '' && format('pydantic=={0} ', matrix.pydantic) || ''}}
+      run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py || matrix.tox_env }}
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run test suite
-      run: tox run --skip-pkg-install -e ${{ matrix.py }}
+      run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.py || matrix.tox_env }}
+      env:
+        UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
       run: |
         import os; import sys
-        os.rename(f".tox/.coverage.${{ matrix.py }}", f".tox/.coverage.${{ matrix.py }}-${{ matrix.os }}-${{ matrix.isort }}-${{ matrix.black }}-${{ matrix.pydantic }}")
+        os.rename(f".tox/.coverage.${{ matrix.py || matrix.tox_env }}", f".tox/.coverage.${{ matrix.py || matrix.tox_env}}-${{ matrix.os }}")
       shell: python
     - name: Upload coverage data
       uses: actions/upload-artifact@v4
       with:
         include-hidden-files: true
-        name: .coverage.${{ matrix.py }}.${{ matrix.os }}.${{ matrix.isort }}.${{ matrix.black }}.${{ matrix.pydantic }}
+        name: .coverage.${{ matrix.py || matrix.tox_env }}-${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
         path: ".tox/.coverage.*"
         retention-days: 3
 
   coverage:
-    name: Combine coverage
+    name: combine coverage
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -94,7 +80,7 @@ jobs:
       - name: Build package to generate version
         run: uv build --python 3.13 --python-preference only-managed --wheel . --out-dir dist
       - name: Setup coverage tool
-        run: tox -e coverage --notest
+        run: tox run -e coverage --notest
         env:
           UV_PYTHON_PREFERENCE: only-managed
       - name: Download coverage data
@@ -104,7 +90,7 @@ jobs:
           pattern: .coverage.*
           merge-multiple: true
       - name: Combine and report coverage
-        run: tox -e coverage --skip-pkg-install
+        run: tox run -e coverage --skip-uv-sync --skip-pkg-install
         env:
           UV_PYTHON_PREFERENCE: only-managed
       - name: Upload HTML report
@@ -120,9 +106,10 @@ jobs:
           fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   check:
-    name: tox env ${{ matrix.tox_env }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.tox_env }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -132,8 +119,6 @@ jobs:
           - docs
           - pkg_meta
           - readme
-        os:
-          - ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -144,5 +129,9 @@ jobs:
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup check suite
         run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
       - name: Run check for ${{ matrix.tox_env }}
-        run: tox r --skip-pkg-install -e ${{ matrix.tox_env }}
+        run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
