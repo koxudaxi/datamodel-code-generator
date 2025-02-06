@@ -1214,7 +1214,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.24.1" },
     { name = "httpx", marker = "extra == 'http'" },
     { name = "inflect", specifier = ">=4.1,<6" },
-    { name = "isort", specifier = ">=4.3.21,<6" },
+    { name = "isort", specifier = ">=4.3.21,<7" },
     { name = "jinja2", specifier = ">=2.10.1,<4" },
     { name = "openapi-spec-validator", specifier = ">=0.2.8,<0.7" },
     { name = "openapi-spec-validator", marker = "extra == 'validation'" },
