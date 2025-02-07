@@ -21,9 +21,7 @@ from datamodel_code_generator.types import DataType
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'jsonschema'
 
-EXPECTED_JSONSCHEMA_PATH = (
-    Path(__file__).parents[1] / 'data' / 'expected' / 'parser' / 'jsonschema'
-)
+EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / 'data' / 'expected' / 'parser' / 'jsonschema'
 
 
 @pytest.mark.parametrize(
@@ -66,9 +64,7 @@ def test_get_model_by_path(schema: Dict, path: str, model: Dict):
 
 def test_json_schema_object_ref_url_json(mocker):
     parser = JsonSchemaParser('')
-    obj = JsonSchemaObject.parse_obj(
-        {'$ref': 'https://example.com/person.schema.json#/definitions/User'}
-    )
+    obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.com/person.schema.json#/definitions/User'})
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = json.dumps(
         {
@@ -109,13 +105,9 @@ def test_json_schema_object_ref_url_json(mocker):
 
 def test_json_schema_object_ref_url_yaml(mocker):
     parser = JsonSchemaParser('')
-    obj = JsonSchemaObject.parse_obj(
-        {'$ref': 'https://example.org/schema.yaml#/definitions/User'}
-    )
+    obj = JsonSchemaObject.parse_obj({'$ref': 'https://example.org/schema.yaml#/definitions/User'})
     mock_get = mocker.patch('httpx.get')
-    mock_get.return_value.text = yaml.safe_dump(
-        json.load((DATA_PATH / 'user.json').open())
-    )
+    mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / 'user.json').open()))
 
     parser.parse_ref(obj, ['User'])
     assert (
@@ -151,9 +143,7 @@ def test_json_schema_object_cached_ref_url_yaml(mocker):
         }
     )
     mock_get = mocker.patch('httpx.get')
-    mock_get.return_value.text = yaml.safe_dump(
-        json.load((DATA_PATH / 'user.json').open())
-    )
+    mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / 'user.json').open()))
 
     parser.parse_ref(obj, [])
     assert (
@@ -179,9 +169,7 @@ def test_json_schema_ref_url_json(mocker):
     parser = JsonSchemaParser('')
     obj = {
         'type': 'object',
-        'properties': {
-            'user': {'$ref': 'https://example.org/schema.json#/definitions/User'}
-        },
+        'properties': {'user': {'$ref': 'https://example.org/schema.json#/definitions/User'}},
     }
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.text = json.dumps(json.load((DATA_PATH / 'user.json').open()))
@@ -384,10 +372,7 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         data_model_field_type=DataModelFieldBase,
     )
     parser.parse()
-    assert (
-        dump_templates(list(parser.results))
-        == (DATA_PATH / 'nested_array.json.snapshot').read_text()
-    )
+    assert dump_templates(list(parser.results)) == (DATA_PATH / 'nested_array.json.snapshot').read_text()
 
 
 @pytest.mark.parametrize(
@@ -430,9 +415,7 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ('string', 'unknown-type', 'str', None, None, False),
     ],
 )
-def test_get_data_type(
-    schema_type, schema_format, result_type, from_, import_, use_pendulum
-):
+def test_get_data_type(schema_type, schema_format, result_type, from_, import_, use_pendulum):
     if from_ and import_:
         import_: Optional[Import] = Import(from_=from_, import_=import_)
     else:
@@ -440,9 +423,7 @@ def test_get_data_type(
 
     parser = JsonSchemaParser('', use_pendulum=use_pendulum)
     assert (
-        parser.get_data_type(
-            JsonSchemaObject(type=schema_type, format=schema_format)
-        ).dict()
+        parser.get_data_type(JsonSchemaObject(type=schema_type, format=schema_format)).dict()
         == DataType(type=result_type, import_=import_).dict()
     )
 
@@ -456,9 +437,7 @@ def test_get_data_type(
 )
 def test_get_data_type_array(schema_types, result_types):
     parser = JsonSchemaParser('')
-    assert parser.get_data_type(
-        JsonSchemaObject(type=schema_types)
-    ) == parser.data_type(
+    assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == parser.data_type(
         data_types=[
             parser.data_type(
                 type=r,
@@ -525,9 +504,7 @@ def test_no_additional_imports():
         ),
     ],
 )
-@pytest.mark.skipif(
-    pydantic.VERSION < '2.0.0', reason='Require Pydantic version 2.0.0 or later '
-)
+@pytest.mark.skipif(pydantic.VERSION < '2.0.0', reason='Require Pydantic version 2.0.0 or later ')
 def test_json_schema_parser_extension(source_obj, generated_classes):
     """
     Contrived example to extend the JsonSchemaParser to support an alt_type, which

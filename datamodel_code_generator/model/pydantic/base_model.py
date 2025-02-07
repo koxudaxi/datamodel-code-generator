@@ -87,9 +87,7 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def self_reference(self) -> bool:
-        return isinstance(
-            self.parent, BaseModelBase
-        ) and self.parent.reference.path in {
+        return isinstance(self.parent, BaseModelBase) and self.parent.reference.path in {
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
 
@@ -97,9 +95,7 @@ class DataModelField(DataModelFieldBase):
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
 
-        if any(
-            data_type.type == 'float' for data_type in self.data_type.all_data_types
-        ):
+        if any(data_type.type == 'float' for data_type in self.data_type.all_data_types):
             return float(value)
         return int(value)
 
@@ -117,9 +113,7 @@ class DataModelField(DataModelFieldBase):
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
                     return f'lambda :[{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}(v) for v in {repr(self.default)}]'
-            elif data_type.reference and isinstance(
-                data_type.reference.source, BaseModelBase
-            ):  # pragma: no cover
+            elif data_type.reference and isinstance(data_type.reference.source, BaseModelBase):  # pragma: no cover
                 return f'lambda :{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}({repr(self.default)})'
         return None
 
@@ -127,30 +121,19 @@ class DataModelField(DataModelFieldBase):
         if self.const:
             data['const'] = True
 
-    def _process_annotated_field_arguments(
-        self, field_arguments: List[str]
-    ) -> List[str]:
+    def _process_annotated_field_arguments(self, field_arguments: List[str]) -> List[str]:
         return field_arguments
 
     def __str__(self) -> str:
-        data: Dict[str, Any] = {
-            k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS
-        }
+        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data['alias'] = self.alias
-        if (
-            self.constraints is not None
-            and not self.self_reference()
-            and not self.data_type.strict
-        ):
+        if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
             data = {
                 **data,
                 **(
                     {}
-                    if any(
-                        d.import_ == IMPORT_ANYURL
-                        for d in self.data_type.all_data_types
-                    )
+                    if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types)
                     else {
                         k: self._get_strict_field_constraint_value(k, v)
                         for k, v in self.constraints.dict(exclude_unset=True).items()
@@ -177,9 +160,7 @@ class DataModelField(DataModelFieldBase):
         else:
             default_factory = data.pop('default_factory', None)
 
-        field_arguments = sorted(
-            f'{k}={repr(v)}' for k, v in data.items() if v is not None
-        )
+        field_arguments = sorted(f'{k}={repr(v)}' for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
             if self.nullable and self.required:
@@ -251,9 +232,7 @@ class BaseModelBase(DataModel, ABC):
         # Current version supports '{custom_template_dir}/BaseModel.jinja'
         # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
         if self._custom_template_dir is not None:
-            custom_template_file_path = (
-                self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
-            )
+            custom_template_file_path = self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
             if custom_template_file_path.exists():
                 return custom_template_file_path
         return super().template_file_path
@@ -298,18 +277,12 @@ class BaseModel(BaseModelBase):
         additionalProperties = self.extra_template_data.get('additionalProperties')
         allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
         if additionalProperties is not None or allow_extra_fields:
-            config_parameters['extra'] = (
-                'Extra.allow'
-                if additionalProperties or allow_extra_fields
-                else 'Extra.forbid'
-            )
+            config_parameters['extra'] = 'Extra.allow' if additionalProperties or allow_extra_fields else 'Extra.forbid'
             self._additional_imports.append(IMPORT_EXTRA)
 
         for config_attribute in 'allow_population_by_field_name', 'allow_mutation':
             if config_attribute in self.extra_template_data:
-                config_parameters[config_attribute] = self.extra_template_data[
-                    config_attribute
-                ]
+                config_parameters[config_attribute] = self.extra_template_data[config_attribute]
         for data_type in self.all_data_types:
             if data_type.is_custom_type:
                 config_parameters['arbitrary_types_allowed'] = True

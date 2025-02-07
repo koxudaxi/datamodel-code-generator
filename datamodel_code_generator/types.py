@@ -162,9 +162,7 @@ def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
 
 
 @lru_cache
-def _remove_none_from_type(
-    type_: str, split_pattern: Pattern[str], delimiter: str
-) -> List[str]:
+def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: str) -> List[str]:
     types: List[str] = []
     split_type: str = ''
     inner_count: int = 0
@@ -191,16 +189,12 @@ def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:
         if not re.match(r'^\w+ | ', type_):
             return type_
         return UNION_OPERATOR_DELIMITER.join(
-            _remove_none_from_type(
-                type_, UNION_OPERATOR_PATTERN, UNION_OPERATOR_DELIMITER
-            )
+            _remove_none_from_type(type_, UNION_OPERATOR_PATTERN, UNION_OPERATOR_DELIMITER)
         )
 
     if not type_.startswith(UNION_PREFIX):
         return type_
-    inner_types = _remove_none_from_type(
-        type_[len(UNION_PREFIX) :][:-1], UNION_PATTERN, UNION_DELIMITER
-    )
+    inner_types = _remove_none_from_type(type_[len(UNION_PREFIX) :][:-1], UNION_PATTERN, UNION_DELIMITER)
 
     if len(inner_types) == 1:
         return inner_types[0]
@@ -249,11 +243,7 @@ class DataType(_BaseModel):
 
         class Config:
             extra = 'forbid'
-            copy_on_model_validation = (
-                False
-                if version.parse(pydantic.VERSION) < version.parse('1.9.2')
-                else 'none'
-            )
+            copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse('1.9.2') else 'none'
 
     type: Optional[str] = None
     reference: Optional[Reference] = None
@@ -309,25 +299,17 @@ class DataType(_BaseModel):
     @property
     def unresolved_types(self) -> FrozenSet[str]:
         return frozenset(
-            {
-                t.reference.path
-                for data_types in self.data_types
-                for t in data_types.all_data_types
-                if t.reference
-            }
+            {t.reference.path for data_types in self.data_types for t in data_types.all_data_types if t.reference}
             | ({self.reference.path} if self.reference else set())
         )
 
     def replace_reference(self, reference: Optional[Reference]) -> None:
         if not self.reference:  # pragma: no cover
             raise Exception(
-                f"`{self.__class__.__name__}.replace_reference()` can't be called"
-                f' when `reference` field is empty.'
+                f"`{self.__class__.__name__}.replace_reference()` can't be called when `reference` field is empty."
             )
         self_id = id(self)
-        self.reference.children = [
-            c for c in self.reference.children if id(c) != self_id
-        ]
+        self.reference.children = [c for c in self.reference.children if id(c) != self_id]
         self.reference = reference
         if reference:
             reference.children.append(self)
@@ -372,9 +354,7 @@ class DataType(_BaseModel):
             (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
             (
                 bool(self.literals),
-                IMPORT_LITERAL
-                if self.python_version.has_literal_type
-                else IMPORT_LITERAL_BACKPORT,
+                IMPORT_LITERAL if self.python_version.has_literal_type else IMPORT_LITERAL_BACKPORT,
             ),
         )
 
@@ -418,11 +398,7 @@ class DataType(_BaseModel):
             if type_.type == ANY and type_.is_optional:
                 if any(t for t in self.data_types if t.type != ANY):  # pragma: no cover
                     self.is_optional = True
-                    self.data_types = [
-                        t
-                        for t in self.data_types
-                        if not (t.type == ANY and t.is_optional)
-                    ]
+                    self.data_types = [t for t in self.data_types if not (t.type == ANY and t.is_optional)]
                 break  # pragma: no cover
 
         for data_type in self.data_types:
@@ -447,9 +423,7 @@ class DataType(_BaseModel):
                         self.is_optional = True
                         continue
 
-                    non_optional_data_type_type = _remove_none_from_union(
-                        data_type_type, self.use_union_operator
-                    )
+                    non_optional_data_type_type = _remove_none_from_union(data_type_type, self.use_union_operator)
 
                     if non_optional_data_type_type != data_type_type:
                         self.is_optional = True
@@ -588,13 +562,9 @@ class DataTypeManager(ABC):
         )
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
-        self.target_datetime_class: DatetimeClassType = (
-            target_datetime_class or DatetimeClassType.Datetime
-        )
+        self.target_datetime_class: DatetimeClassType = target_datetime_class or DatetimeClassType.Datetime
 
-        if (
-            use_generic_container_types and python_version == PythonVersion.PY_36
-        ):  # pragma: no cover
+        if use_generic_container_types and python_version == PythonVersion.PY_36:  # pragma: no cover
             raise Exception(
                 'use_generic_container_types can not be used with target_python_version 3.6.\n'
                 ' The version will be not supported in a future version'
@@ -616,12 +586,8 @@ class DataTypeManager(ABC):
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
         raise NotImplementedError
 
-    def get_data_type_from_full_path(
-        self, full_path: str, is_custom_type: bool
-    ) -> DataType:
-        return self.data_type.from_import(
-            Import.from_full_path(full_path), is_custom_type=is_custom_type
-        )
+    def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:
+        return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
 
     def get_data_type_from_value(self, value: Any) -> DataType:
         type_: Optional[Types] = None

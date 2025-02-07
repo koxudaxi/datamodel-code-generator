@@ -55,10 +55,7 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / expected_output).read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / expected_output).read_text()
 
 
 @freeze_time('2019-07-26')
@@ -80,10 +77,7 @@ def test_main_graphql_different_types_of_fields():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'different_types_of_fields.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'different_types_of_fields.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -107,10 +101,7 @@ def test_main_graphql_custom_scalar_types():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'custom_scalar_types.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'custom_scalar_types.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -134,10 +125,7 @@ def test_main_graphql_field_aliases():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'field_aliases.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'field_aliases.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -159,9 +147,7 @@ def test_main_graphql_enums():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'enums.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'enums.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -183,9 +169,7 @@ def test_main_graphql_union():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'union.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'union.py').read_text()
 
 
 @pytest.mark.skipif(
@@ -211,10 +195,7 @@ def test_main_graphql_additional_imports_isort_4():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'additional_imports_isort4.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'additional_imports_isort4.py').read_text()
 
 
 @pytest.mark.skipif(
@@ -244,10 +225,7 @@ def test_main_graphql_additional_imports_isort_5_or_6():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'additional_imports_isort5.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'additional_imports_isort5.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -271,10 +249,7 @@ def test_main_graphql_custom_formatters():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'custom_formatters.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'custom_formatters.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -297,10 +272,7 @@ def test_main_graphql_use_standard_collections():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'use_standard_collections.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'use_standard_collections.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -323,7 +295,4 @@ def test_main_graphql_use_union_operator():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'use_union_operator.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'use_union_operator.py').read_text()

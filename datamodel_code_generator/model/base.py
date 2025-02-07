@@ -67,29 +67,21 @@ class ConstraintsBase(_BaseModel):
         return any(v is not None for v in self.dict().values())
 
     @staticmethod
-    def merge_constraints(
-        a: ConstraintsBaseT, b: ConstraintsBaseT
-    ) -> Optional[ConstraintsBaseT]:
+    def merge_constraints(a: ConstraintsBaseT, b: ConstraintsBaseT) -> Optional[ConstraintsBaseT]:
         constraints_class = None
         if isinstance(a, ConstraintsBase):  # pragma: no cover
-            root_type_field_constraints = {
-                k: v for k, v in a.dict(by_alias=True).items() if v is not None
-            }
+            root_type_field_constraints = {k: v for k, v in a.dict(by_alias=True).items() if v is not None}
             constraints_class = a.__class__
         else:
             root_type_field_constraints = {}  # pragma: no cover
 
         if isinstance(b, ConstraintsBase):  # pragma: no cover
-            model_field_constraints = {
-                k: v for k, v in b.dict(by_alias=True).items() if v is not None
-            }
+            model_field_constraints = {k: v for k, v in b.dict(by_alias=True).items() if v is not None}
             constraints_class = constraints_class or b.__class__
         else:
             model_field_constraints = {}
 
-        if constraints_class is None or not issubclass(
-            constraints_class, ConstraintsBase
-        ):  # pragma: no cover
+        if constraints_class is None or not issubclass(constraints_class, ConstraintsBase):  # pragma: no cover
             return None
 
         return constraints_class.parse_obj(
@@ -167,11 +159,7 @@ class DataModelFieldBase(_BaseModel):
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
         imports: List[Union[Tuple[Import], Iterator[Import]]] = [
-            iter(
-                i
-                for i in self.data_type.all_imports
-                if not (not has_union and i == IMPORT_UNION)
-            )
+            iter(i for i in self.data_type.all_imports if not (not has_union and i == IMPORT_UNION))
         ]
 
         if self.fall_back_to_nullable:
@@ -180,15 +168,11 @@ class DataModelFieldBase(_BaseModel):
             ) and not self.data_type.use_union_operator:
                 imports.append((IMPORT_OPTIONAL,))
         else:
-            if (
-                self.nullable and not self.data_type.use_union_operator
-            ):  # pragma: no cover
+            if self.nullable and not self.data_type.use_union_operator:  # pragma: no cover
                 imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated and self.annotated:
             import_annotated = (
-                IMPORT_ANNOTATED
-                if self.data_type.python_version.has_annotated_type
-                else IMPORT_ANNOTATED_BACKPORT
+                IMPORT_ANNOTATED if self.data_type.python_version.has_annotated_type else IMPORT_ANNOTATED_BACKPORT
             )
             imports.append((import_annotated,))
         return chain_as_tuple(*imports)
@@ -310,9 +294,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         self._additional_imports: List[Import] = []
         self.custom_base_class = custom_base_class
         if base_classes:
-            self.base_classes: List[BaseClassDataType] = [
-                BaseClassDataType(reference=b) for b in base_classes
-            ]
+            self.base_classes: List[BaseClassDataType] = [BaseClassDataType(reference=b) for b in base_classes]
         else:
             self.set_base_class()
 
@@ -324,9 +306,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         self.extra_template_data = (
             # The supplied defaultdict will either create a new entry,
             # or already contain a predefined entry for this type
-            extra_template_data[self.name]
-            if extra_template_data is not None
-            else defaultdict(dict)
+            extra_template_data[self.name] if extra_template_data is not None else defaultdict(dict)
         )
 
         self.fields = self._validate_fields(fields) if fields else []
@@ -352,9 +332,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         self.default: Any = default
         self._nullable: bool = nullable
 
-    def _validate_fields(
-        self, fields: List[DataModelFieldBase]
-    ) -> List[DataModelFieldBase]:
+    def _validate_fields(self, fields: List[DataModelFieldBase]) -> List[DataModelFieldBase]:
         names: Set[str] = set()
         unique_fields: List[DataModelFieldBase] = []
         for field in fields:
@@ -424,9 +402,7 @@ class DataModel(TemplateBase, Nullable, ABC):
     @class_name.setter
     def class_name(self, class_name: str) -> None:
         if '.' in self.reference.name:
-            self.reference.name = (
-                f'{self.reference.name.rsplit(".", 1)[0]}.{class_name}'
-            )
+            self.reference.name = f'{self.reference.name.rsplit(".", 1)[0]}.{class_name}'
         else:
             self.reference.name = class_name
 

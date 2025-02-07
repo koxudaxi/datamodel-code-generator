@@ -60,9 +60,7 @@ def test_show_help(no_color: bool, capsys: CaptureFixture[str]):
 
 
 def test_show_help_when_no_input(mocker):
-    print_help_mock = mocker.patch(
-        'datamodel_code_generator.__main__.arg_parser.print_help'
-    )
+    print_help_mock = mocker.patch('datamodel_code_generator.__main__.arg_parser.print_help')
     isatty_mock = mocker.patch('sys.stdin.isatty', return_value=True)
     return_code: Exit = main([])
     assert return_code == Exit.ERROR
@@ -85,10 +83,7 @@ def test_space_and_special_characters_dict():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'space_and_special_characters_dict.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / 'space_and_special_characters_dict.py').read_text()
 
 
 @freeze_time('2024-12-14')
@@ -103,7 +98,4 @@ def test_direct_input_dict():
             output_model_type=DataModelType.PydanticV2BaseModel,
             snake_case_field=True,
         )
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_PATH / 'direct_input_dict.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / 'direct_input_dict.py').read_text()

@@ -46,10 +46,7 @@ def test_main():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_KR_PATH / 'main' / 'output.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / 'main' / 'output.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -68,10 +65,7 @@ def test_main_base_class():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_KR_PATH / 'main_base_class' / 'output.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / 'main_base_class' / 'output.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -89,12 +83,7 @@ def test_target_python_version():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_KR_PATH / 'target_python_version' / 'output.py'
-            ).read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / 'target_python_version' / 'output.py').read_text()
 
 
 def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
@@ -129,15 +118,10 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
     output_filename = output_directory / 'model.py'
 
-    assert (
-        main(['--input', str(input_filename), '--output', str(output_filename)])
-        == Exit.ERROR
-    )
+    assert main(['--input', str(input_filename), '--output', str(output_filename)]) == Exit.ERROR
 
 
-def test_main_no_file(
-    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_no_file(capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     """Test main function on non-modular file with no output name."""
 
@@ -147,17 +131,12 @@ def test_main_no_file(
         main(['--input', str(input_filename)])
 
     captured = capsys.readouterr()
-    assert (
-        captured.out
-        == (EXPECTED_MAIN_KR_PATH / 'main_no_file' / 'output.py').read_text()
-    )
+    assert captured.out == (EXPECTED_MAIN_KR_PATH / 'main_no_file' / 'output.py').read_text()
 
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_custom_template_dir(
-    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_custom_template_dir(capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
 
@@ -178,12 +157,7 @@ def test_main_custom_template_dir(
         )
 
     captured = capsys.readouterr()
-    assert (
-        captured.out
-        == (
-            EXPECTED_MAIN_KR_PATH / 'main_custom_template_dir' / 'output.py'
-        ).read_text()
-    )
+    assert captured.out == (EXPECTED_MAIN_KR_PATH / 'main_custom_template_dir' / 'output.py').read_text()
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
@@ -207,10 +181,7 @@ def test_pyproject():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_MAIN_KR_PATH / 'pyproject' / 'output.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / 'pyproject' / 'output.py').read_text()
 
 
 @pytest.mark.skipif(
@@ -268,10 +239,7 @@ def test_main_use_schema_description():
         )
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
-            == (
-                EXPECTED_MAIN_KR_PATH / 'main_use_schema_description' / 'output.py'
-            ).read_text()
+            output_file.read_text() == (EXPECTED_MAIN_KR_PATH / 'main_use_schema_description' / 'output.py').read_text()
         )
 
 
@@ -290,7 +258,5 @@ def test_main_use_field_description():
         )
         assert return_code == Exit.OK
         generated = output_file.read_text()
-        expected = (
-            EXPECTED_MAIN_KR_PATH / 'main_use_field_description' / 'output.py'
-        ).read_text()
+        expected = (EXPECTED_MAIN_KR_PATH / 'main_use_field_description' / 'output.py').read_text()
         assert generated == expected

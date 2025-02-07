@@ -17,9 +17,7 @@ from datamodel_code_generator.parser.openapi import OpenAPIParser
 
 DATA_PATH: Path = Path(__file__).parents[1] / 'data' / 'openapi'
 
-EXPECTED_OPEN_API_PATH = (
-    Path(__file__).parents[1] / 'data' / 'expected' / 'parser' / 'openapi'
-)
+EXPECTED_OPEN_API_PATH = Path(__file__).parents[1] / 'data' / 'expected' / 'parser' / 'openapi'
 
 
 def get_expected_file(
@@ -149,9 +147,7 @@ class Pets(BaseModel):
         (
             {
                 'type': 'array',
-                'items': [
-                    {'type': 'object', 'properties': {'name': {'type': 'string'}}}
-                ],
+                'items': [{'type': 'object', 'properties': {'name': {'type': 'string'}}}],
             },
             """class Pet(BaseModel):
     name: Optional[str] = None
@@ -203,13 +199,9 @@ def test_openapi_parser_parse(with_import, format_, base_class):
         source=Path(DATA_PATH / 'api.yaml'),
         base_class=base_class,
     )
-    expected_file = get_expected_file(
-        'openapi_parser_parse', with_import, format_, base_class
-    )
+    expected_file = get_expected_file('openapi_parser_parse', with_import, format_, base_class)
     assert (
-        parser.parse(
-            with_import=with_import, format_=format_, settings_path=DATA_PATH.parent
-        )
+        parser.parse(with_import=with_import, format_=format_, settings_path=DATA_PATH.parent)
         == expected_file.read_text()
     )
 
@@ -235,58 +227,34 @@ def test_parse_root_type(source_obj, generated_classes):
     assert dump_templates(list(parser.results)) == generated_classes
 
 
-def test_openapi_parser_parse_duplicate_models(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_duplicate_models(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'duplicate_models.yaml'),
     )
     assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH
-            / 'openapi_parser_parse_duplicate_models'
-            / 'output.py'
-        ).read_text()
+        parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_duplicate_models' / 'output.py').read_text()
     )
 
 
-def test_openapi_parser_parse_duplicate_model_with_simplify(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_duplicate_model_with_simplify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     raw = Path(DATA_PATH / 'duplicate_model_simplify.yaml')
     parser = OpenAPIParser(raw)
-    expected = (
-        EXPECTED_OPEN_API_PATH
-        / 'openapi_parser_parse_duplicate_models_simplify'
-        / 'output.py'
-    ).read_text()
+    expected = (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_duplicate_models_simplify' / 'output.py').read_text()
     got = parser.parse()
     assert got == expected
 
 
-def test_openapi_parser_parse_resolved_models(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_resolved_models(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'resolved_models.yaml'),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH
-            / 'openapi_parser_parse_resolved_models'
-            / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_resolved_models' / 'output.py').read_text()
 
 
-def test_openapi_parser_parse_lazy_resolved_models(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_lazy_resolved_models(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'lazy_resolved_models.yaml'),
@@ -385,9 +353,7 @@ class UnknownTypeNumber(Enum):
     )
 
 
-@pytest.mark.skipif(
-    pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later '
-)
+@pytest.mark.skipif(pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later ')
 def test_openapi_parser_parse_enum_models():
     parser = OpenAPIParser(
         Path(DATA_PATH / 'enum_models.yaml').read_text(),
@@ -402,101 +368,58 @@ def test_openapi_parser_parse_enum_models():
     assert parser.parse() == (expected_dir / 'output_py36.py').read_text()
 
 
-def test_openapi_parser_parse_anyof(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'anyof.yaml'),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_anyof' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_anyof' / 'output.py').read_text()
 
 
-def test_openapi_parser_parse_nested_anyof(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_nested_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'nested_anyof.yaml').read_text(),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_nested_anyof' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_nested_anyof' / 'output.py').read_text()
 
 
-def test_openapi_parser_parse_oneof(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'oneof.yaml'),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_oneof' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_oneof' / 'output.py').read_text()
 
 
-def test_openapi_parser_parse_nested_oneof(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_nested_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'nested_oneof.yaml').read_text(),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_nested_oneof' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_nested_oneof' / 'output.py').read_text()
 
 
-def test_openapi_parser_parse_allof_ref(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_allof_ref(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'allof_same_prefix_with_ref.yaml'),
     )
     assert (
         parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH
-            / 'openapi_parser_parse_allof_same_prefix_with_ref'
-            / 'output.py'
-        ).read_text()
+        == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_allof_same_prefix_with_ref' / 'output.py').read_text()
     )
 
 
-def test_openapi_parser_parse_allof(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_allof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'allof.yaml'),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_allof' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_allof' / 'output.py').read_text()
 
 
-def test_openapi_parser_parse_alias(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'alias.yaml'),
@@ -506,9 +429,7 @@ def test_openapi_parser_parse_alias(
     else:
         delimiter = '/'
     results = {delimiter.join(p): r for p, r in parser.parse().items()}
-    openapi_parser_parse_alias_dir = (
-        EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_alias'
-    )
+    openapi_parser_parse_alias_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_alias'
     for path in openapi_parser_parse_alias_dir.rglob('*.py'):
         key = str(path.relative_to(openapi_parser_parse_alias_dir))
         assert results.pop(key).body == path.read_text()
@@ -568,9 +489,7 @@ def test_openapi_parser_parse_additional_properties(with_import, format_, base_c
     )
 
     assert (
-        parser.parse(
-            with_import=with_import, format_=format_, settings_path=DATA_PATH.parent
-        )
+        parser.parse(with_import=with_import, format_=format_, settings_path=DATA_PATH.parent)
         == get_expected_file(
             'openapi_parser_parse_additional_properties',
             with_import,
@@ -594,16 +513,9 @@ def test_openapi_parser_parse_array_enum(
     with_import, format_, base_class, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    parser = OpenAPIParser(
-        source=Path(DATA_PATH / 'array_enum.yaml'), base_class=base_class
-    )
-    expected_file = get_expected_file(
-        'openapi_parser_parse_array_enum', with_import, format_, base_class
-    )
-    assert (
-        parser.parse(with_import=with_import, format_=format_)
-        == expected_file.read_text()
-    )
+    parser = OpenAPIParser(source=Path(DATA_PATH / 'array_enum.yaml'), base_class=base_class)
+    expected_file = get_expected_file('openapi_parser_parse_array_enum', with_import, format_, base_class)
+    assert parser.parse(with_import=with_import, format_=format_) == expected_file.read_text()
 
 
 @pytest.mark.parametrize(
@@ -626,19 +538,12 @@ def test_openapi_parser_parse_remote_ref(
         source=(DATA_PATH / 'refs.yaml').read_text(),
         http_ignore_tls=bool(os.environ.get('HTTP_IGNORE_TLS')),
     )
-    expected_file = get_expected_file(
-        'openapi_parser_parse_remote_ref', with_import, format_, base_class
-    )
+    expected_file = get_expected_file('openapi_parser_parse_remote_ref', with_import, format_, base_class)
 
-    assert (
-        parser.parse(with_import=with_import, format_=format_)
-        == expected_file.read_text()
-    )
+    assert parser.parse(with_import=with_import, format_=format_) == expected_file.read_text()
 
 
-def test_openapi_model_resolver(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_model_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(source=(DATA_PATH / 'api.yaml'))
     parser.parse()
@@ -730,25 +635,16 @@ def test_openapi_model_resolver(
     }
 
 
-def test_openapi_parser_parse_any(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_any(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / 'any.yaml'),
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_any' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_any' / 'output.py').read_text()
 
 
-def test_openapi_parser_responses_without_content(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_responses_without_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -758,29 +654,18 @@ def test_openapi_parser_responses_without_content(
     )
     assert (
         parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH
-            / 'openapi_parser_responses_without_content'
-            / 'output.py'
-        ).read_text()
+        == (EXPECTED_OPEN_API_PATH / 'openapi_parser_responses_without_content' / 'output.py').read_text()
     )
 
 
-def test_openapi_parser_responses_with_tag(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_responses_with_tag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / 'body_and_parameters.yaml'),
         openapi_scopes=[OpenAPIScope.Tags, OpenAPIScope.Schemas, OpenAPIScope.Paths],
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH / 'openapi_parser_responses_with_tag' / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_responses_with_tag' / 'output.py').read_text()
 
 
 @pytest.mark.skipif(
@@ -797,14 +682,7 @@ def test_openapi_parser_with_query_parameters():
             OpenAPIScope.Paths,
         ],
     )
-    assert (
-        parser.parse()
-        == (
-            EXPECTED_OPEN_API_PATH
-            / 'openapi_parser_with_query_parameters'
-            / 'output.py'
-        ).read_text()
-    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / 'openapi_parser_with_query_parameters' / 'output.py').read_text()
 
 
 @pytest.mark.skipif(
@@ -825,9 +703,7 @@ def test_openapi_parser_array_called_fields_with_oneOf_items():
     assert (
         parser.parse()
         == (
-            EXPECTED_OPEN_API_PATH
-            / 'openapi_parser_parse_array_called_fields_with_oneOf_items'
-            / 'output.py'
+            EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_array_called_fields_with_oneOf_items' / 'output.py'
         ).read_text()
     )
 

@@ -11,9 +11,7 @@ from .types import DataTypeManager
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
-    return '\n'.join(
-        f'{class_name}.update_forward_refs()' for class_name in class_names
-    )
+    return '\n'.join(f'{class_name}.update_forward_refs()' for class_name in class_names)
 
 
 class Config(_BaseModel):

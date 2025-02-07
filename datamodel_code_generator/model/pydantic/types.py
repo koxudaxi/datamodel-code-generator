@@ -214,14 +214,8 @@ class DataTypeManager(_DataTypeManager):
             self.target_datetime_class,
         )
 
-    def transform_kwargs(
-        self, kwargs: Dict[str, Any], filter_: Set[str]
-    ) -> Dict[str, str]:
-        return {
-            self.kwargs_schema_to_model.get(k, k): v
-            for (k, v) in kwargs.items()
-            if v is not None and k in filter_
-        }
+    def transform_kwargs(self, kwargs: Dict[str, Any], filter_: Set[str]) -> Dict[str, str]:
+        return {self.kwargs_schema_to_model.get(k, k): v for (k, v) in kwargs.items() if v is not None and k in filter_}
 
     def get_data_int_type(
         self,
@@ -236,15 +230,9 @@ class DataTypeManager(_DataTypeManager):
                     return self.data_type.from_import(IMPORT_POSITIVE_INT)
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_INT)
-                if (
-                    data_type_kwargs == {'ge': 0}
-                    and self.use_non_positive_negative_number_constrained_types
-                ):
+                if data_type_kwargs == {'ge': 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_INT)
-                if (
-                    data_type_kwargs == {'le': 0}
-                    and self.use_non_positive_negative_number_constrained_types
-                ):
+                if data_type_kwargs == {'le': 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_INT)
             kwargs = {k: int(v) for k, v in data_type_kwargs.items()}
             if strict:
@@ -267,15 +255,9 @@ class DataTypeManager(_DataTypeManager):
                     return self.data_type.from_import(IMPORT_POSITIVE_FLOAT)
                 if data_type_kwargs == {'lt': 0}:
                     return self.data_type.from_import(IMPORT_NEGATIVE_FLOAT)
-                if (
-                    data_type_kwargs == {'ge': 0}
-                    and self.use_non_positive_negative_number_constrained_types
-                ):
+                if data_type_kwargs == {'ge': 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_NEGATIVE_FLOAT)
-                if (
-                    data_type_kwargs == {'le': 0}
-                    and self.use_non_positive_negative_number_constrained_types
-                ):
+                if data_type_kwargs == {'le': 0} and self.use_non_positive_negative_number_constrained_types:
                     return self.data_type.from_import(IMPORT_NON_POSITIVE_FLOAT)
             kwargs = {k: float(v) for k, v in data_type_kwargs.items()}
             if strict:
@@ -290,10 +272,7 @@ class DataTypeManager(_DataTypeManager):
         if data_type_kwargs:
             return self.data_type.from_import(
                 IMPORT_CONDECIMAL,
-                kwargs={
-                    k: Decimal(str(v) if isinstance(v, UnionIntFloat) else v)
-                    for k, v in data_type_kwargs.items()
-                },
+                kwargs={k: Decimal(str(v) if isinstance(v, UnionIntFloat) else v) for k, v in data_type_kwargs.items()},
             )
         return self.type_map[types]
 
@@ -304,9 +283,7 @@ class DataTypeManager(_DataTypeManager):
             if strict:
                 data_type_kwargs['strict'] = True
             if self.PATTERN_KEY in data_type_kwargs:
-                escaped_regex = data_type_kwargs[self.PATTERN_KEY].translate(
-                    escape_characters
-                )
+                escaped_regex = data_type_kwargs[self.PATTERN_KEY].translate(escape_characters)
                 # TODO: remove unneeded escaped characters
                 data_type_kwargs[self.PATTERN_KEY] = f"r'{escaped_regex}'"
             return self.data_type.from_import(IMPORT_CONSTR, kwargs=data_type_kwargs)
@@ -319,9 +296,7 @@ class DataTypeManager(_DataTypeManager):
         strict = StrictTypes.bytes in self.strict_types
         if data_type_kwargs:
             if not strict:
-                return self.data_type.from_import(
-                    IMPORT_CONBYTES, kwargs=data_type_kwargs
-                )
+                return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)
         # conbytes doesn't accept strict argument
         # https://github.com/samuelcolvin/pydantic/issues/2489
         #    if strict:

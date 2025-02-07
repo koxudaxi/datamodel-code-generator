@@ -296,9 +296,7 @@ def test_find_member_with_integer_enum():
 
     # Create test Enum with integer values
     enum = Enum(
-        reference=Reference(
-            path='test_path', original_name='TestEnum', name='TestEnum'
-        ),
+        reference=Reference(path='test_path', original_name='TestEnum', name='TestEnum'),
         fields=[
             DataModelField(
                 name='VALUE_1000',
@@ -343,9 +341,7 @@ def test_find_member_with_string_enum():
     from datamodel_code_generator.types import DataType
 
     enum = Enum(
-        reference=Reference(
-            path='test_path', original_name='TestEnum', name='TestEnum'
-        ),
+        reference=Reference(path='test_path', original_name='TestEnum', name='TestEnum'),
         fields=[
             DataModelField(
                 name='VALUE_A',
@@ -382,9 +378,7 @@ def test_find_member_with_mixed_enum():
     from datamodel_code_generator.types import DataType
 
     enum = Enum(
-        reference=Reference(
-            path='test_path', original_name='TestEnum', name='TestEnum'
-        ),
+        reference=Reference(path='test_path', original_name='TestEnum', name='TestEnum'),
         fields=[
             DataModelField(
                 name='INT_VALUE',

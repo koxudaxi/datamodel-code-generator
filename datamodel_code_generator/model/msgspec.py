@@ -49,10 +49,7 @@ from datamodel_code_generator.types import (
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return not (
-        field.required
-        or (field.represented_default == 'None' and field.strip_default_none)
-    )
+    return not (field.required or (field.represented_default == 'None' and field.strip_default_none))
 
 
 DataModelFieldBaseT = TypeVar('DataModelFieldBaseT', bound=DataModelFieldBase)
@@ -172,18 +169,14 @@ class DataModelField(DataModelFieldBase):
         self.const = True
         self.nullable = False
         const = self.extras['const']
-        if self.data_type.type == 'str' and isinstance(
-            const, str
-        ):  # pragma: no cover # Literal supports only str
+        if self.data_type.type == 'str' and isinstance(const, str):  # pragma: no cover # Literal supports only str
             self.data_type = self.data_type.__class__(literals=[const])
 
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
 
-        if any(
-            data_type.type == 'float' for data_type in self.data_type.all_data_types
-        ):
+        if any(data_type.type == 'float' for data_type in self.data_type.all_data_types):
             return float(value)
         return int(value)
 
@@ -197,9 +190,7 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def __str__(self) -> str:
-        data: Dict[str, Any] = {
-            k: v for k, v in self.extras.items() if k in self._FIELD_KEYS
-        }
+        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
         if self.alias:
             data['name'] = self.alias
 
@@ -230,9 +221,7 @@ class DataModelField(DataModelFieldBase):
         if len(data) == 1 and 'default' in data:
             return repr(data['default'])
 
-        kwargs = [
-            f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()
-        ]
+        kwargs = [f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()]
         return f'field({", ".join(kwargs)})'
 
     @property
@@ -240,14 +229,8 @@ class DataModelField(DataModelFieldBase):
         if not self.use_annotated:  # pragma: no cover
             return None
 
-        data: Dict[str, Any] = {
-            k: v for k, v in self.extras.items() if k in self._META_FIELD_KEYS
-        }
-        if (
-            self.constraints is not None
-            and not self.self_reference()
-            and not self.data_type.strict
-        ):
+        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._META_FIELD_KEYS}
+        if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
             data = {
                 **data,
                 **{
@@ -257,9 +240,7 @@ class DataModelField(DataModelFieldBase):
                 },
             }
 
-        meta_arguments = sorted(
-            f'{k}={repr(v)}' for k, v in data.items() if v is not None
-        )
+        meta_arguments = sorted(f'{k}={repr(v)}' for k, v in data.items() if v is not None)
         if not meta_arguments:
             return None
 

@@ -71,9 +71,7 @@ class GraphQLParser(Parser):
     # `graphql.type.introspection.TypeKind` -- an enum with all supported types
     # `graphql.GraphQLNamedType` -- base type for each graphql object
     # see `graphql-core` for more details
-    support_graphql_types: Dict[
-        graphql.type.introspection.TypeKind, List[graphql.GraphQLNamedType]
-    ]
+    support_graphql_types: Dict[graphql.type.introspection.TypeKind, List[graphql.GraphQLNamedType]]
     # graphql types order for render
     # may be as a parameter in the future
     parse_order: List[graphql.type.introspection.TypeKind] = [
@@ -250,8 +248,7 @@ class GraphQLParser(Parser):
         ):  # pragma: no cover
             self.current_source_path = Path()
             self.model_resolver.after_load_files = {
-                self.base_path.joinpath(s.path).resolve().as_posix()
-                for s in self.iter_source
+                self.base_path.joinpath(s.path).resolve().as_posix() for s in self.iter_source
             }
 
         for source in self.iter_source:
@@ -335,11 +332,7 @@ class GraphQLParser(Parser):
         exclude_field_names: Set[str] = set()
 
         for value_name, value in enum_object.values.items():
-            default = (
-                f"'{value_name.translate(escape_characters)}'"
-                if isinstance(value_name, str)
-                else value_name
-            )
+            default = f"'{value_name.translate(escape_characters)}'" if isinstance(value_name, str) else value_name
 
             field_name = self.model_resolver.get_valid_field_name(
                 value_name, excludes=exclude_field_names, model_type=ModelType.ENUM
@@ -403,16 +396,10 @@ class GraphQLParser(Parser):
 
         data_type.type = obj.name  # pyright: ignore [reportAttributeAccessIssue]
 
-        required = (not self.force_optional_for_required_fields) and (
-            not final_data_type.is_optional
-        )
+        required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
 
         default = self._get_default(field, final_data_type, required)
-        extras = (
-            {}
-            if self.default_field_extras is None
-            else self.default_field_extras.copy()
-        )
+        extras = {} if self.default_field_extras is None else self.default_field_extras.copy()
 
         if field.description is not None:  # pragma: no cover
             extras['description'] = field.description
@@ -471,26 +458,20 @@ class GraphQLParser(Parser):
         )
         self.results.append(data_model_type)
 
-    def parse_interface(
-        self, interface_graphql_object: graphql.GraphQLInterfaceType
-    ) -> None:
+    def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:
         self.parse_object_like(interface_graphql_object)
 
     def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:
         self.parse_object_like(graphql_object)
 
-    def parse_input_object(
-        self, input_graphql_object: graphql.GraphQLInputObjectType
-    ) -> None:
+    def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:
         self.parse_object_like(input_graphql_object)  # pragma: no cover
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
         fields = []
 
         for type_ in union_object.types:
-            fields.append(
-                self.data_model_field_type(name=type_.name, data_type=DataType())
-            )
+            fields.append(self.data_model_field_type(name=type_.name, data_type=DataType()))
 
         data_model_type = self.data_model_union_type(
             reference=self.references[union_object.name],

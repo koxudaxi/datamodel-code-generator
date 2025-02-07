@@ -146,15 +146,10 @@ class CodeFormatter:
             experimental_string_processing = wrap_string_literal
         else:
             if black.__version__ < '24.1.0':  # type: ignore
-                experimental_string_processing = config.get(
-                    'experimental-string-processing'
-                )
+                experimental_string_processing = config.get('experimental-string-processing')
             else:
-                experimental_string_processing = config.get(
-                    'preview', False
-                ) and (  # pragma: no cover
-                    config.get('unstable', False)
-                    or 'string_processing' in config.get('enable-unstable-feature', [])
+                experimental_string_processing = config.get('preview', False) and (  # pragma: no cover
+                    config.get('unstable', False) or 'string_processing' in config.get('enable-unstable-feature', [])
                 )
 
         if experimental_string_processing is not None:  # pragma: no cover
@@ -164,15 +159,11 @@ class CodeFormatter:
                     f' for wrapping string literal in {black.__version__}'
                 )
             elif black.__version__ < '24.1.0':  # type: ignore
-                black_kwargs['experimental_string_processing'] = (
-                    experimental_string_processing
-                )
+                black_kwargs['experimental_string_processing'] = experimental_string_processing
             elif experimental_string_processing:
                 black_kwargs['preview'] = True
                 black_kwargs['unstable'] = config.get('unstable', False)
-                black_kwargs['enabled_features'] = {
-                    black.mode.Preview.string_processing
-                }
+                black_kwargs['enabled_features'] = {black.mode.Preview.string_processing}
 
         if TYPE_CHECKING:
             self.black_mode: black.FileMode
@@ -180,8 +171,7 @@ class CodeFormatter:
             self.black_mode = black.FileMode(
                 target_versions={BLACK_PYTHON_VERSION[python_version]},
                 line_length=config.get('line-length', black.DEFAULT_LINE_LENGTH),
-                string_normalization=not skip_string_normalization
-                or not config.get('skip-string-normalization', True),
+                string_normalization=not skip_string_normalization or not config.get('skip-string-normalization', True),
                 **black_kwargs,
             )
 
@@ -194,42 +184,29 @@ class CodeFormatter:
         if isort.__version__.startswith('4.'):
             self.isort_config = None
         else:
-            self.isort_config = isort.Config(
-                settings_path=self.settings_path, **self.isort_config_kwargs
-            )
+            self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
 
         self.custom_formatters_kwargs = custom_formatters_kwargs or {}
         self.custom_formatters = self._check_custom_formatters(custom_formatters)
 
-    def _load_custom_formatter(
-        self, custom_formatter_import: str
-    ) -> CustomCodeFormatter:
+    def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         import_ = import_module(custom_formatter_import)
 
         if not hasattr(import_, 'CodeFormatter'):
-            raise NameError(
-                f'Custom formatter module `{import_.__name__}` must contains object with name Formatter'
-            )
+            raise NameError(f'Custom formatter module `{import_.__name__}` must contains object with name Formatter')
 
         formatter_class = import_.__getattribute__('CodeFormatter')
 
         if not issubclass(formatter_class, CustomCodeFormatter):
-            raise TypeError(
-                f'The custom module {custom_formatter_import} must inherit from `datamodel-code-generator`'
-            )
+            raise TypeError(f'The custom module {custom_formatter_import} must inherit from `datamodel-code-generator`')
 
         return formatter_class(formatter_kwargs=self.custom_formatters_kwargs)
 
-    def _check_custom_formatters(
-        self, custom_formatters: Optional[List[str]]
-    ) -> List[CustomCodeFormatter]:
+    def _check_custom_formatters(self, custom_formatters: Optional[List[str]]) -> List[CustomCodeFormatter]:
         if custom_formatters is None:
             return []
 
-        return [
-            self._load_custom_formatter(custom_formatter_import)
-            for custom_formatter_import in custom_formatters
-        ]
+        return [self._load_custom_formatter(custom_formatter_import) for custom_formatter_import in custom_formatters]
 
     def format_code(
         self,

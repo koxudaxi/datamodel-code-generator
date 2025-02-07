@@ -19,12 +19,10 @@ from datamodel_code_generator.reference import ModelResolver, get_relative_path
         ('/a/b/c/d', '/a/b/e/d', '../../e/d'),
     ],
 )
-def test_get_relative_path_posix(
-    base_path: str, target_path: str, expected: str
-) -> None:
-    assert PurePosixPath(
-        get_relative_path(PurePosixPath(base_path), PurePosixPath(target_path))
-    ) == PurePosixPath(expected)
+def test_get_relative_path_posix(base_path: str, target_path: str, expected: str) -> None:
+    assert PurePosixPath(get_relative_path(PurePosixPath(base_path), PurePosixPath(target_path))) == PurePosixPath(
+        expected
+    )
 
 
 @pytest.mark.parametrize(
@@ -41,9 +39,7 @@ def test_get_relative_path_posix(
         ('c:/a/b/c/d', 'c:/a/b/e/d', '../../e/d'),
     ],
 )
-def test_get_relative_path_windows(
-    base_path: str, target_path: str, expected: str
-) -> None:
+def test_get_relative_path_windows(base_path: str, target_path: str, expected: str) -> None:
     assert PureWindowsPath(
         get_relative_path(PureWindowsPath(base_path), PureWindowsPath(target_path))
     ) == PureWindowsPath(expected)
@@ -51,9 +47,7 @@ def test_get_relative_path_windows(
 
 def test_model_resolver_add_ref_with_hash():
     model_resolver = ModelResolver()
-    reference = model_resolver.add_ref(
-        'https://json-schema.org/draft/2020-12/meta/core#'
-    )
+    reference = model_resolver.add_ref('https://json-schema.org/draft/2020-12/meta/core#')
     assert reference.original_name == 'core'
 
 

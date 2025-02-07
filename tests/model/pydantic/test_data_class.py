@@ -35,9 +35,7 @@ def test_data_class_base_class():
 
 
 def test_data_class_optional():
-    field = DataModelFieldBase(
-        name='a', data_type=DataType(type='str'), default="'abc'", required=True
-    )
+    field = DataModelFieldBase(name='a', data_type=DataType(type='str'), default="'abc'", required=True)
 
     data_class = DataClass(
         fields=[field],
@@ -52,6 +50,4 @@ def test_data_class_optional():
 
 def test_data_class_get_data_type():
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type(
-        Types.integer
-    ) == data_type_manager.data_type(type='int')
+    assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type='int')
