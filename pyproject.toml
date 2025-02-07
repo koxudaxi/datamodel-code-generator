@@ -74,7 +74,6 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "diff-cover>=7.7",
   "freezegun",
   "pytest>=6.1",
   "pytest>=8.3.4",
@@ -85,6 +84,7 @@ test = [
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
   "setuptools; python_version<'3.9'",
+  { include-group = "coverage" },
 ]
 type = [
   "pyright>=1.1.393",
@@ -107,14 +107,15 @@ isort4-pydantic15 = [ "isort[pyproject]==4.3.21", "pydantic==1.5.1" ]
 fix = [ "pre-commit>=3.5" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
+  "covdefaults>=2.3",
   "coverage[toml]>=7.6.1",
   "diff-cover>=7.7",
 ]
 
 [tool.hatch]
-build.dev-mode-dirs = [ "." ]
+build.dev-mode-dirs = [ "src" ]
 build.targets.sdist.include = [
-  "/datamodel_code_generator",
+  "/src",
   "/tests",
 ]
 version.source = "vcs"
@@ -151,25 +152,28 @@ filterwarnings = [
 norecursedirs = "tests/data/*"
 
 [tool.coverage]
-run.source = [ "datamodel_code_generator" ]
-run.branch = true
-run.omit = [ "scripts/*", "tests/*" ]
-report.ignore_errors = true
-report.exclude_lines = [
-  "if self.debug:",
-  "pragma: no cover",
-  "raise NotImplementedError",
-  "if __name__ == .__main__.:",
-  "if TYPE_CHECKING:",
-  "if not TYPE_CHECKING:",
-]
+html.skip_covered = false
+html.show_contexts = false
 paths.source = [
-  "datamodel_code_generator",
-  ".tox*/*/lib/python*/site-packages/datamodel_code_generator",
-  ".tox*\\*\\Lib\\site-packages\\datamodel_code_generator",
-  "*/datamodel_code_generator",
-  "*\\datamodel_code_generator",
+  "src",
+  ".tox*/*/lib/python*/site-packages",
+  ".tox*\\*\\Lib\\site-packages",
+  "*/src",
+  "*\\src",
 ]
+paths.other = [
+  ".",
+  "*/datamodel-code-generator",
+  "*\\datamodel-code-generator",
+]
+run.dynamic_context = "none"
+run.omit = [ "tests/data/*" ]
+report.fail_under = 94
+run.parallel = true
+run.plugins = [
+  "covdefaults",
+]
+covdefaults.subtract_omit = "*/__main__.py"
 
 [tool.pyright]
 reportPrivateImportUsage = false
