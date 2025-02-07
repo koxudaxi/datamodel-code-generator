@@ -43,27 +43,21 @@ dependencies = [
   "tomli>=2.2.1,<3; python_version<='3.11'",
 ]
 
-[project.optional-dependencies]
-debug = [
-  "pysnooper>=0.4.1,<2"
+optional-dependencies.debug = [
+  "pysnooper>=0.4.1,<2",
 ]
-graphql = [
-  "graphql-core>=3.2.3"
+optional-dependencies.graphql = [
+  "graphql-core>=3.2.3",
 ]
-http = [
-  "httpx>=0.24.1"
+optional-dependencies.http = [
+  "httpx>=0.24.1",
 ]
-validation = [
+optional-dependencies.validation = [
   "openapi-spec-validator>=0.2.8,<0.7",
-  "prance>=0.18.2"
+  "prance>=0.18.2",
 ]
-
-[project.urls]
-Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
-Source = "https://github.com/koxudaxi/datamodel-code-generator"
-
-[scripts]
-datamodel-codegen = "datamodel_code_generator.__main__:main"
+urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
+urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
 
 [dependency-groups]
 dev = [
@@ -174,6 +168,9 @@ paths.source = [
 
 [tool.pyright]
 reportPrivateImportUsage = false
+
+[scripts]
+datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
