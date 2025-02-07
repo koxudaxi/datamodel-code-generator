@@ -34,23 +34,28 @@ dependencies = [
   "argcomplete>=2.10.1,<4",
   "black>=19.10b0",
   "genson>=1.2.1,<2",
-  "graphql-core>=3.2.3",
-  "httpx>=0.24.1",
   "inflect>=4.1,<6",
   "isort>=4.3.21,<7",
   "jinja2>=2.10.1,<4",
-  "openapi-spec-validator>=0.2.8,<0.7",
   "packaging",
-  "prance>=0.18.2",
   "pydantic>=1.5",
-  "pysnooper>=0.4.1,<2",
   "pyyaml>=6.0.1",
   "tomli>=2.2.1,<3; python_version<='3.11'",
 ]
-optional-dependencies.debug = [ "pysnooper" ]
-optional-dependencies.graphql = [ "graphql-core" ]
-optional-dependencies.http = [ "httpx" ]
-optional-dependencies.validation = [ "openapi-spec-validator", "prance" ]
+
+optional-dependencies.debug = [
+  "pysnooper>=0.4.1,<2",
+]
+optional-dependencies.graphql = [
+  "graphql-core>=3.2.3",
+]
+optional-dependencies.http = [
+  "httpx>=0.24.1",
+]
+optional-dependencies.validation = [
+  "openapi-spec-validator>=0.2.8,<0.7",
+  "prance>=0.18.2",
+]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
 urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
 scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
@@ -58,11 +63,15 @@ scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
 [dependency-groups]
 dev = [
   { include-group = "coverage" },
+  { include-group = "debug" },
   { include-group = "docs" },
   { include-group = "fix" },
+  { include-group = "graphql" },
+  { include-group = "http" },
   { include-group = "pkg-meta" },
   { include-group = "test" },
   { include-group = "type" },
+  { include-group = "validation" },
 ]
 test = [
   "diff-cover>=7.7",
@@ -76,6 +85,10 @@ test = [
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
   "setuptools; python_version<'3.9'",
+  { include-group = "debug" },
+  { include-group = "graphql" },
+  { include-group = "http" },
+  { include-group = "validation" },
 ]
 type = [
   "pyright>=1.1.393",
@@ -88,6 +101,19 @@ type = [
 docs = [
   "mkdocs>=1.6",
   "mkdocs-material>=9.5.31",
+]
+debug = [
+  "pysnooper>=0.4.1,<2",
+]
+graphql = [
+  "graphql-core>=3.2.3",
+]
+http = [
+  "httpx>=0.24.1",
+]
+validation = [
+  "openapi-spec-validator>=0.2.8,<0.7",
+  "prance>=0.18.2",
 ]
 black19-pydantic18 = [ "black==19.10b0", "pydantic==1.8.2" ]
 black22 = [ "black==22.1" ]
@@ -157,7 +183,7 @@ report.exclude_lines = [
 paths.source = [
   "datamodel_code_generator",
   ".tox*/*/lib/python*/site-packages/datamodel_code_generator",
-  ".tox*\\*\\Lib\\site-packages/datamodel_code_generator",
+  ".tox*\\*\\Lib\\site-packages\\datamodel_code_generator",
   "*/datamodel_code_generator",
   "*\\datamodel_code_generator",
 ]
