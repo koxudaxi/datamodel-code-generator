@@ -58,6 +58,7 @@ optional-dependencies.validation = [
 ]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
 urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
+scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [dependency-groups]
 dev = [
@@ -189,9 +190,6 @@ paths.source = [
 
 [tool.pyright]
 reportPrivateImportUsage = false
-
-[scripts]
-datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
