@@ -71,14 +71,8 @@ jobs:
           fetch-depth: 0
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install hatch
+      - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Build package to generate version
-        run: uv build --python 3.13 --python-preference only-managed --wheel . --out-dir dist
       - name: Setup coverage tool
         run: tox run -e coverage --notest
         env:
