@@ -5,9 +5,7 @@ import pytest
 
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 
-EXAMPLE_LICENSE_FILE = str(
-    Path(__file__).parent / 'data/python/custom_formatters/license_example.txt'
-)
+EXAMPLE_LICENSE_FILE = str(Path(__file__).parent / 'data/python/custom_formatters/license_example.txt')
 
 UN_EXIST_FORMATTER = 'tests.data.python.custom_formatters.un_exist'
 WRONG_FORMATTER = 'tests.data.python.custom_formatters.wrong'
@@ -36,9 +34,7 @@ def test_format_code_with_skip_string_normalization(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    formatter = CodeFormatter(
-        PythonVersion.PY_38, skip_string_normalization=skip_string_normalization
-    )
+    formatter = CodeFormatter(PythonVersion.PY_38, skip_string_normalization=skip_string_normalization)
 
     formatted_code = formatter.format_code("a = 'b'")
 
@@ -69,9 +65,7 @@ def test_format_code_is_not_subclass():
         )
 
 
-def test_format_code_with_custom_formatter_without_kwargs(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_format_code_with_custom_formatter_without_kwargs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38,
@@ -83,9 +77,7 @@ def test_format_code_with_custom_formatter_without_kwargs(
     assert formatted_code == '# a comment\nx = 1\ny = 2' + '\n'
 
 
-def test_format_code_with_custom_formatter_with_kwargs(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_format_code_with_custom_formatter_with_kwargs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38,
@@ -107,9 +99,7 @@ y = 2
     )
 
 
-def test_format_code_with_two_custom_formatters(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_format_code_with_two_custom_formatters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersion.PY_38,

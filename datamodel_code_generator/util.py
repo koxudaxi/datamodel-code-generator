@@ -17,9 +17,7 @@ import pydantic
 from packaging import version
 from pydantic import BaseModel as _BaseModel
 
-PYDANTIC_VERSION = version.parse(
-    pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION)
-)
+PYDANTIC_VERSION = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))
 
 PYDANTIC_V2: bool = PYDANTIC_VERSION >= version.parse('2.0b3')
 

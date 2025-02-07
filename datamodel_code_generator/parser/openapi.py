@@ -90,9 +90,7 @@ class ExampleObject(BaseModel):
 
 
 class MediaObject(BaseModel):
-    schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(
-        None, alias='schema'
-    )
+    schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(None, alias='schema')
     example: Any = None
     examples: Union[str, ReferenceObject, ExampleObject, None] = None
 
@@ -303,9 +301,7 @@ class OpenAPIParser(JsonSchemaParser):
             keyword_only=keyword_only,
             no_alias=no_alias,
         )
-        self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [
-            OpenAPIScope.Schemas
-        ]
+        self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
 
     def get_ref_model(self, ref: str) -> Dict[str, Any]:
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split('#', 1)
@@ -325,9 +321,7 @@ class OpenAPIParser(JsonSchemaParser):
 
         return super().get_data_type(obj)
 
-    def resolve_object(
-        self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]
-    ) -> BaseModelT:
+    def resolve_object(self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]) -> BaseModelT:
         if isinstance(obj, ReferenceObject):
             ref_obj = self.get_ref_model(obj.ref)
             return object_type.parse_obj(ref_obj)
@@ -377,18 +371,13 @@ class OpenAPIParser(JsonSchemaParser):
         responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]],
         path: List[str],
     ) -> Dict[Union[str, int], Dict[str, DataType]]:
-        data_types: DefaultDict[Union[str, int], Dict[str, DataType]] = defaultdict(
-            dict
-        )
+        data_types: DefaultDict[Union[str, int], Dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
                     continue
                 ref_model = self.get_ref_model(detail.ref)
-                content = {
-                    k: MediaObject.parse_obj(v)
-                    for k, v in ref_model.get('content', {}).items()
-                }
+                content = {k: MediaObject.parse_obj(v) for k, v in ref_model.get('content', {}).items()}
             else:
                 content = detail.content
 
@@ -448,9 +437,7 @@ class OpenAPIParser(JsonSchemaParser):
                     self.get_object_field(
                         field_name=field_name,
                         field=parameter.schema_,
-                        field_type=self.parse_item(
-                            field_name, parameter.schema_, [*path, name, parameter_name]
-                        ),
+                        field_type=self.parse_item(field_name, parameter.schema_, [*path, name, parameter_name]),
                         original_field_name=parameter_name,
                         required=parameter.required,
                         alias=alias,
@@ -465,9 +452,7 @@ class OpenAPIParser(JsonSchemaParser):
                 ) in parameter.content.items():
                     if not media_obj.schema_:
                         continue
-                    object_schema = self.resolve_object(
-                        media_obj.schema_, JsonSchemaObject
-                    )
+                    object_schema = self.resolve_object(media_obj.schema_, JsonSchemaObject)
                     data_types.append(
                         self.parse_item(
                             field_name,
@@ -495,24 +480,16 @@ class OpenAPIParser(JsonSchemaParser):
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,
                         nullable=object_schema.nullable
-                        if object_schema
-                        and self.strict_nullable
-                        and (object_schema.has_default or parameter.required)
+                        if object_schema and self.strict_nullable and (object_schema.has_default or parameter.required)
                         else None,
                         strip_default_none=self.strip_default_none,
-                        extras=self.get_field_extras(object_schema)
-                        if object_schema
-                        else {},
+                        extras=self.get_field_extras(object_schema) if object_schema else {},
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,
                         use_default_kwarg=self.use_default_kwarg,
                         original_name=parameter_name,
-                        has_default=object_schema.has_default
-                        if object_schema
-                        else False,
-                        type_has_null=object_schema.type_has_null
-                        if object_schema
-                        else None,
+                        has_default=object_schema.has_default if object_schema else False,
+                        type_has_null=object_schema.type_has_null if object_schema else None,
                     )
                 )
 
@@ -596,12 +573,8 @@ class OpenAPIParser(JsonSchemaParser):
 
             specification: Dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
-            schemas: Dict[Any, Any] = specification.get('components', {}).get(
-                'schemas', {}
-            )
-            security: Optional[List[Dict[str, List[str]]]] = specification.get(
-                'security'
-            )
+            schemas: Dict[Any, Any] = specification.get('components', {}).get('schemas', {})
+            security: Optional[List[Dict[str, List[str]]]] = specification.get('security')
             if OpenAPIScope.Schemas in self.open_api_scopes:
                 for (
                     obj_name,

@@ -29,9 +29,7 @@ def test_custom_root_type():
         )
     ]
 
-    assert custom_root_type.render() == (
-        "class test_model(BaseModel):\n    __root__: Optional[str] = 'abc'"
-    )
+    assert custom_root_type.render() == ("class test_model(BaseModel):\n    __root__: Optional[str] = 'abc'")
 
 
 def test_custom_root_type_required():
@@ -42,14 +40,10 @@ def test_custom_root_type_required():
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [
-        DataModelFieldBase(
-            data_type=DataType(type='str'), required=True, parent=custom_root_type
-        )
+        DataModelFieldBase(data_type=DataType(type='str'), required=True, parent=custom_root_type)
     ]
 
-    assert custom_root_type.render() == (
-        'class test_model(BaseModel):\n    __root__: str'
-    )
+    assert custom_root_type.render() == ('class test_model(BaseModel):\n    __root__: str')
 
 
 def test_custom_root_type_decorator():
@@ -62,20 +56,12 @@ def test_custom_root_type_decorator():
 
     assert custom_root_type.name == 'test_model'
     assert custom_root_type.fields == [
-        DataModelFieldBase(
-            data_type=DataType(type='str'), required=True, parent=custom_root_type
-        )
+        DataModelFieldBase(data_type=DataType(type='str'), required=True, parent=custom_root_type)
     ]
     assert custom_root_type.base_class == 'Base'
-    assert (
-        custom_root_type.render() == '@validate\n'
-        'class test_model(Base):\n'
-        '    __root__: str'
-    )
+    assert custom_root_type.render() == '@validate\nclass test_model(Base):\n    __root__: str'
 
 
 def test_custom_root_type_get_data_type():
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type(
-        Types.integer
-    ) == data_type_manager.data_type(type='int')
+    assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type='int')

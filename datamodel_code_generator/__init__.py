@@ -74,9 +74,7 @@ else:
 
 def enable_debug_message() -> None:  # pragma: no cover
     if not pysnooper:
-        raise Exception(
-            "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
-        )
+        raise Exception("Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option")
 
     pysnooper.tracer.DISABLED = False
 
@@ -111,9 +109,7 @@ def snooper_to_methods(  # type: ignore
                 overwrite,
                 thread_info,
                 custom_repr,
-                max_variable_length
-                if max_variable_length is not None
-                else DEFAULT_MAX_VARIABLE_LENGTH,
+                max_variable_length if max_variable_length is not None else DEFAULT_MAX_VARIABLE_LENGTH,
             )(method)
             setattr(cls, name, snooper_method)
         return cls
@@ -151,9 +147,7 @@ def is_schema(text: str) -> bool:
     if not isinstance(data, dict):
         return False
     schema = data.get('$schema')
-    if isinstance(schema, str) and any(
-        schema.startswith(u) for u in JSON_SCHEMA_URLS
-    ):  # pragma: no cover
+    if isinstance(schema, str) and any(schema.startswith(u) for u in JSON_SCHEMA_URLS):  # pragma: no cover
         return True
     if isinstance(data.get('type'), str):
         return True
@@ -318,9 +312,7 @@ def generate(
 
         input_text = remote_text_cache.get_or_put(
             input_.geturl(),
-            default_factory=lambda url: get_body(
-                url, http_headers, http_ignore_tls, http_query_parameters
-            ),
+            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
         )
     else:
         input_text = None
@@ -330,9 +322,7 @@ def generate(
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
-                get_first_file(input_).read_text(encoding=encoding)
-                if isinstance(input_, Path)
-                else input_text
+                get_first_file(input_).read_text(encoding=encoding) if isinstance(input_, Path) else input_text
             )
             assert isinstance(input_text_, str)
             input_file_type = infer_input_type(input_text_)
@@ -426,9 +416,7 @@ def generate(
 
     from datamodel_code_generator.model import get_data_model_types
 
-    data_model_types = get_data_model_types(
-        output_model_type, target_python_version, output_datetime_class
-    )
+    data_model_types = get_data_model_types(output_model_type, target_python_version, output_datetime_class)
     source = input_text or input_
     assert not isinstance(source, Mapping)
     parser = parser_class(
@@ -454,9 +442,7 @@ def generate(
         force_optional_for_required_fields=force_optional_for_required_fields,
         class_name=class_name,
         use_standard_collections=use_standard_collections,
-        base_path=input_.parent
-        if isinstance(input_, Path) and input_.is_file()
-        else None,
+        base_path=input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         use_schema_description=use_schema_description,
         use_field_description=use_field_description,
         use_default_kwarg=use_default_kwarg,

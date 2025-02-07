@@ -121,9 +121,7 @@ class Config(BaseModel):
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
 
-    @field_validator(
-        'aliases', 'extra_template_data', 'custom_formatters_kwargs', mode='before'
-    )
+    @field_validator('aliases', 'extra_template_data', 'custom_formatters_kwargs', mode='before')
     def validate_file(cls, value: Any) -> Optional[TextIOBase]:
         if value is None or isinstance(value, TextIOBase):
             return value
@@ -147,14 +145,10 @@ class Config(BaseModel):
             return urlparse(value)
         elif value is None:  # pragma: no cover
             return None
-        raise Error(
-            f"This protocol doesn't support only http/https. --input={value}"
-        )  # pragma: no cover
+        raise Error(f"This protocol doesn't support only http/https. --input={value}")  # pragma: no cover
 
     @model_validator(mode='after')
-    def validate_use_generic_container_types(
-        cls, values: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def validate_use_generic_container_types(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('use_generic_container_types'):
             target_python_version: PythonVersion = values['target_python_version']
             if target_python_version == target_python_version.PY_36:
@@ -165,22 +159,16 @@ class Config(BaseModel):
         return values
 
     @model_validator(mode='after')
-    def validate_original_field_name_delimiter(
-        cls, values: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def validate_original_field_name_delimiter(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('original_field_name_delimiter') is not None:
             if not values.get('snake_case_field'):
-                raise Error(
-                    '`--original-field-name-delimiter` can not be used without `--snake-case-field`.'
-                )
+                raise Error('`--original-field-name-delimiter` can not be used without `--snake-case-field`.')
         return values
 
     @model_validator(mode='after')
     def validate_custom_file_header(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get('custom_file_header') and values.get('custom_file_header_path'):
-            raise Error(
-                '`--custom_file_header_path` can not be used with `--custom_file_header`.'
-            )  # pragma: no cover
+            raise Error('`--custom_file_header_path` can not be used with `--custom_file_header`.')  # pragma: no cover
         return values
 
     @model_validator(mode='after')
@@ -192,16 +180,12 @@ class Config(BaseModel):
             and output_model_type == DataModelType.DataclassesDataclass
             and not python_target.has_kw_only_dataclass
         ):
-            raise Error(
-                f'`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher.'
-            )
+            raise Error(f'`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher.')
         return values
 
     @model_validator(mode='after')
     def validate_output_datetime_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        datetime_class_type: Optional[DatetimeClassType] = values.get(
-            'output_datetime_class'
-        )
+        datetime_class_type: Optional[DatetimeClassType] = values.get('output_datetime_class')
         if (
             datetime_class_type
             and datetime_class_type is not DatetimeClassType.Datetime
@@ -230,9 +214,7 @@ class Config(BaseModel):
         return value  # pragma: no cover
 
     @field_validator('http_query_parameters', mode='before')
-    def validate_http_query_parameters(
-        cls, value: Any
-    ) -> Optional[List[Tuple[str, str]]]:
+    def validate_http_query_parameters(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
@@ -350,11 +332,7 @@ class Config(BaseModel):
     no_alias: bool = False
 
     def merge_args(self, args: Namespace) -> None:
-        set_args = {
-            f: getattr(args, f)
-            for f in self.get_fields()
-            if getattr(args, f) is not None
-        }
+        set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
 
         if set_args.get('output_model_type') == DataModelType.MsgspecStruct.value:
             set_args['use_annotated'] = True
@@ -445,9 +423,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     else:
         with config.extra_template_data as data:
             try:
-                extra_template_data = json.load(
-                    data, object_hook=lambda d: defaultdict(dict, **d)
-                )
+                extra_template_data = json.load(data, object_hook=lambda d: defaultdict(dict, **d))
             except json.JSONDecodeError as e:
                 print(f'Unable to load extra template data: {e}', file=sys.stderr)
                 return Exit.ERROR
@@ -483,8 +459,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
                 )
                 return Exit.ERROR
         if not isinstance(custom_formatters_kwargs, dict) or not all(
-            isinstance(k, str) and isinstance(v, str)
-            for k, v in custom_formatters_kwargs.items()
+            isinstance(k, str) and isinstance(v, str) for k, v in custom_formatters_kwargs.items()
         ):  # pragma: no cover
             print(
                 'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',

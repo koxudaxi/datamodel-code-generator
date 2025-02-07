@@ -37,10 +37,7 @@ def test_annotated():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'annotated.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'annotated.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -62,12 +59,7 @@ def test_annotated_use_standard_collections():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (
-                EXPECTED_GRAPHQL_PATH / 'annotated_use_standard_collections.py'
-            ).read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'annotated_use_standard_collections.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -92,10 +84,7 @@ def test_annotated_use_standard_collections_use_union_operator():
         assert return_code == Exit.OK
         assert (
             output_file.read_text()
-            == (
-                EXPECTED_GRAPHQL_PATH
-                / 'annotated_use_standard_collections_use_union_operator.py'
-            ).read_text()
+            == (EXPECTED_GRAPHQL_PATH / 'annotated_use_standard_collections_use_union_operator.py').read_text()
         )
 
 
@@ -118,10 +107,7 @@ def test_annotated_use_union_operator():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'annotated_use_union_operator.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'annotated_use_union_operator.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -144,7 +130,4 @@ def test_annotated_field_aliases():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_GRAPHQL_PATH / 'annotated_field_aliases.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / 'annotated_field_aliases.py').read_text()

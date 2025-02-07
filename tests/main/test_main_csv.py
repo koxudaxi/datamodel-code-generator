@@ -36,10 +36,7 @@ def test_csv_file():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_CSV_PATH / 'csv_file_simple.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_CSV_PATH / 'csv_file_simple.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -56,7 +53,4 @@ def test_csv_stdin(monkeypatch):
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_CSV_PATH / 'csv_stdin_simple.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_CSV_PATH / 'csv_stdin_simple.py').read_text()

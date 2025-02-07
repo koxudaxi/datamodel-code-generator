@@ -19,9 +19,7 @@ class TestDataType:
 
     def test_imports_with_literal_one_and_optional(self):
         """Test imports for an optional DataType with single literal value"""
-        data_type = DataType(
-            literals=[''], is_optional=True, python_version=PythonVersion.PY_38
-        )
+        data_type = DataType(literals=[''], is_optional=True, python_version=PythonVersion.PY_38)
 
         imports = list(data_type.imports)
         assert IMPORT_LITERAL in imports

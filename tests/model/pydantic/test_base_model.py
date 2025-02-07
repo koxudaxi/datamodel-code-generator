@@ -21,9 +21,7 @@ def test_base_model():
 
 
 def test_base_model_optional():
-    field = DataModelField(
-        name='a', data_type=DataType(type='str'), default='abc', required=False
-    )
+    field = DataModelField(name='a', data_type=DataType(type='str'), default='abc', required=False)
 
     base_model = BaseModel(
         fields=[field],
@@ -33,10 +31,7 @@ def test_base_model_optional():
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
     assert base_model.decorators == []
-    assert (
-        base_model.render() == 'class test_model(BaseModel):\n'
-        "    a: Optional[str] = 'abc'"
-    )
+    assert base_model.render() == "class test_model(BaseModel):\n    a: Optional[str] = 'abc'"
 
 
 def test_base_model_nullable_required():
@@ -56,10 +51,7 @@ def test_base_model_nullable_required():
     assert base_model.name == 'test_model'
     assert base_model.fields == [field]
     assert base_model.decorators == []
-    assert (
-        base_model.render() == 'class test_model(BaseModel):\n'
-        '    a: Optional[str] = Field(...)'
-    )
+    assert base_model.render() == 'class test_model(BaseModel):\n    a: Optional[str] = Field(...)'
 
 
 def test_base_model_strict_non_nullable_required():
@@ -83,9 +75,7 @@ def test_base_model_strict_non_nullable_required():
 
 
 def test_base_model_decorator():
-    field = DataModelField(
-        name='a', data_type=DataType(type='str'), default='abc', required=False
-    )
+    field = DataModelField(name='a', data_type=DataType(type='str'), default='abc', required=False)
 
     base_model = BaseModel(
         fields=[field],
@@ -98,18 +88,12 @@ def test_base_model_decorator():
     assert base_model.fields == [field]
     assert base_model.base_class == 'Base'
     assert base_model.decorators == ['@validate']
-    assert (
-        base_model.render() == '@validate\n'
-        'class test_model(Base):\n'
-        "    a: Optional[str] = 'abc'"
-    )
+    assert base_model.render() == "@validate\nclass test_model(Base):\n    a: Optional[str] = 'abc'"
 
 
 def test_base_model_get_data_type():
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type(
-        Types.integer
-    ) == data_type_manager.data_type(type='int')
+    assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type='int')
 
 
 @pytest.mark.parametrize(

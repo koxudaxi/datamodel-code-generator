@@ -128,15 +128,12 @@ from datamodel_code_generator.types import DataType, Types, UnionIntFloat
         ),
     ],
 )
-def test_get_data_int_type(
-    types, use_non_positive_negative_number_constrained_types, params, data_type
-):
+def test_get_data_int_type(types, use_non_positive_negative_number_constrained_types, params, data_type):
     data_type_manager = DataTypeManager(
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
     )
     assert (
-        data_type_manager.get_data_int_type(types, **params).dict()
-        == data_type_manager.data_type(**data_type).dict()
+        data_type_manager.get_data_int_type(types, **params).dict() == data_type_manager.data_type(**data_type).dict()
     )
 
 
@@ -247,15 +244,11 @@ def test_get_data_int_type(
         ),
     ],
 )
-def test_get_data_float_type(
-    types, use_non_positive_negative_number_constrained_types, params, data_type
-):
+def test_get_data_float_type(types, use_non_positive_negative_number_constrained_types, params, data_type):
     data_type_manager = DataTypeManager(
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
     )
-    assert data_type_manager.get_data_float_type(
-        types, **params
-    ) == data_type_manager.data_type(**data_type)
+    assert data_type_manager.get_data_float_type(types, **params) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
@@ -330,9 +323,7 @@ def test_get_data_float_type(
 )
 def test_get_data_decimal_type(types, params, data_type):
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_decimal_type(
-        types, **params
-    ) == data_type_manager.data_type(**data_type)
+    assert data_type_manager.get_data_decimal_type(types, **params) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
@@ -373,9 +364,7 @@ def test_get_data_decimal_type(types, params, data_type):
 )
 def test_get_data_str_type(types, params, data_type):
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_str_type(
-        types, **params
-    ) == data_type_manager.data_type(**data_type)
+    assert data_type_manager.get_data_str_type(types, **params) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
@@ -394,18 +383,13 @@ def test_get_data_str_type(types, params, data_type):
 )
 def test_get_data_type(types, params, data_type):
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type(
-        types, **params
-    ) == data_type_manager.data_type(**data_type)
+    assert data_type_manager.get_data_type(types, **params) == data_type_manager.data_type(**data_type)
 
 
 def test_data_type_type_hint():
     assert DataType(type='str').type_hint == 'str'
     assert DataType(type='constr', is_func=True).type_hint == 'constr()'
-    assert (
-        DataType(type='constr', is_func=True, kwargs={'min_length': 10}).type_hint
-        == 'constr(min_length=10)'
-    )
+    assert DataType(type='constr', is_func=True, kwargs={'min_length': 10}).type_hint == 'constr(min_length=10)'
 
 
 @pytest.mark.parametrize(
@@ -419,9 +403,7 @@ def test_data_type_type_hint():
 )
 def test_get_data_type_from_value(types, data_type):
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type_from_value(
-        types
-    ) == data_type_manager.data_type(**data_type)
+    assert data_type_manager.get_data_type_from_value(types) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
@@ -440,6 +422,6 @@ def test_get_data_type_from_value(types, data_type):
 )
 def test_get_data_type_from_full_path(types, data_type):
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type_from_value(
-        types
-    ) == data_type_manager.get_data_type_from_full_path(*data_type)
+    assert data_type_manager.get_data_type_from_value(types) == data_type_manager.get_data_type_from_full_path(
+        *data_type
+    )

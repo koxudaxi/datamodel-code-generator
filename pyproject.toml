@@ -120,7 +120,7 @@ build.targets.sdist.include = [
 version.source = "vcs"
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 extend-exclude = [ "tests/data" ]
 format.indent-style = "space"
 format.quote-style = "single"

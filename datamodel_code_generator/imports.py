@@ -17,9 +17,7 @@ class Import(BaseModel):
     @lru_cache
     def from_full_path(cls, class_path: str) -> Import:
         split_class_path: List[str] = class_path.split('.')
-        return Import(
-            from_='.'.join(split_class_path[:-1]) or None, import_=split_class_path[-1]
-        )
+        return Import(from_='.'.join(split_class_path[:-1]) or None, import_=split_class_path[-1])
 
 
 class Imports(DefaultDict[Optional[str], Set[str]]):
@@ -35,9 +33,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
     def _set_alias(self, from_: Optional[str], imports: Set[str]) -> List[str]:
         return [
-            f'{i} as {self.alias[from_][i]}'
-            if i in self.alias[from_] and i != self.alias[from_][i]
-            else i
+            f'{i} as {self.alias[from_][i]}' if i in self.alias[from_] and i != self.alias[from_][i] else i
             for i in sorted(imports)
         ]
 
@@ -47,9 +43,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
         return '\n'.join(f'import {i}' for i in self._set_alias(from_, imports))
 
     def dump(self) -> str:
-        return '\n'.join(
-            self.create_line(from_, imports) for from_, imports in self.items()
-        )
+        return '\n'.join(self.create_line(from_, imports) for from_, imports in self.items())
 
     def append(self, imports: Union[Import, Iterable[Import], None]) -> None:
         if imports:
@@ -79,9 +73,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                         del self[None]
             else:
                 self.counter[(import_.from_, import_.import_)] -= 1  # pragma: no cover
-                if (
-                    self.counter[(import_.from_, import_.import_)] == 0
-                ):  # pragma: no cover
+                if self.counter[(import_.from_, import_.import_)] == 0:  # pragma: no cover
                     self[import_.from_].remove(import_.import_)
                     if not self[import_.from_]:
                         del self[import_.from_]

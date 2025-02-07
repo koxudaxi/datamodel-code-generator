@@ -29,9 +29,7 @@ class SortingHelpFormatter(HelpFormatter):
         super().add_arguments(actions)
 
     def start_section(self, heading: Optional[str]) -> None:
-        return super().start_section(
-            heading if namespace.no_color or not heading else self._bold_cyan(heading)
-        )
+        return super().start_section(heading if namespace.no_color or not heading else self._bold_cyan(heading))
 
 
 arg_parser = ArgumentParser(
@@ -117,8 +115,7 @@ model_options.add_argument(
     '--collapse-root-models',
     action='store_true',
     default=None,
-    help='Models generated with a root-type field will be merged '
-    'into the models using that root-type model',
+    help='Models generated with a root-type field will be merged into the models using that root-type model',
 )
 model_options.add_argument(
     '--disable-appending-item-suffix',

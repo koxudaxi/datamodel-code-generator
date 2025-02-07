@@ -138,9 +138,7 @@ class DataModelField(DataModelFieldV1):
                 data.pop('union_mode')
 
         # **extra is not supported in pydantic 2.0
-        json_schema_extra = {
-            k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS
-        }
+        json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
         if json_schema_extra:
             data['json_schema_extra'] = json_schema_extra
             for key in json_schema_extra.keys():
@@ -208,9 +206,7 @@ class BaseModel(BaseModelBase):
         for from_, to, invert in self.CONFIG_ATTRIBUTES:
             if from_ in self.extra_template_data:
                 config_parameters[to] = (
-                    not self.extra_template_data[from_]
-                    if invert
-                    else self.extra_template_data[from_]
+                    not self.extra_template_data[from_] if invert else self.extra_template_data[from_]
                 )
         for data_type in self.all_data_types:
             if data_type.is_custom_type:  # pragma: no cover
@@ -220,9 +216,9 @@ class BaseModel(BaseModelBase):
         for field in self.fields:
             # Check if a regex pattern uses lookarounds.
             # Depending on the generation configuration, the pattern may end up in two different places.
-            pattern = (
-                isinstance(field.constraints, Constraints) and field.constraints.pattern
-            ) or (field.data_type.kwargs or {}).get('pattern')
+            pattern = (isinstance(field.constraints, Constraints) and field.constraints.pattern) or (
+                field.data_type.kwargs or {}
+            ).get('pattern')
             if pattern and re.search(r'\(\?<?[=!]', pattern):
                 config_parameters['regex_engine'] = '"python-re"'
                 break
@@ -241,7 +237,5 @@ class BaseModel(BaseModelBase):
         additionalProperties = self.extra_template_data.get('additionalProperties')
         allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
         if additionalProperties is not None or allow_extra_fields:
-            return (
-                "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
-            )
+            return "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
         return None

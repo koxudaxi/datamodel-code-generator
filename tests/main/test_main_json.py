@@ -44,9 +44,7 @@ def test_main_json():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text() == (EXPECTED_JSON_PATH / 'general.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / 'general.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -64,10 +62,7 @@ def test_space_and_special_characters_json():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_JSON_PATH / 'space_and_special_characters.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / 'space_and_special_characters.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -102,10 +97,7 @@ def test_main_json_array_include_null():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_JSON_PATH / 'json_array_include_null.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / 'json_array_include_null.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -124,10 +116,7 @@ def test_main_json_reuse_model():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_JSON_PATH / 'json_reuse_model.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / 'json_reuse_model.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -147,10 +136,7 @@ def test_simple_json_snake_case_field():
                 ]
             )
             assert return_code == Exit.OK
-            assert (
-                output_file.read_text()
-                == (EXPECTED_JSON_PATH / 'simple_json_snake_case_field.py').read_text()
-            )
+            assert output_file.read_text() == (EXPECTED_JSON_PATH / 'simple_json_snake_case_field.py').read_text()
 
 
 @freeze_time('2019-07-26')
@@ -179,9 +165,7 @@ def test_main_http_json(mocker):
             ]
         )
         assert return_code == Exit.OK
-        assert output_file.read_text() == (
-            EXPECTED_JSON_PATH / 'general.py'
-        ).read_text().replace(
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / 'general.py').read_text().replace(
             '#   filename:  pet.json',
             '#   filename:  https://example.com/pet.json',
         )
@@ -220,10 +204,7 @@ def test_main_typed_dict_space_and_special_characters():
         )
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
-            == (
-                EXPECTED_JSON_PATH / 'typed_dict_space_and_special_characters.py'
-            ).read_text()
+            output_file.read_text() == (EXPECTED_JSON_PATH / 'typed_dict_space_and_special_characters.py').read_text()
         )
 
 
@@ -243,7 +224,4 @@ def test_main_json_snake_case_field():
             ]
         )
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_JSON_PATH / 'json_snake_case_field.py').read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / 'json_snake_case_field.py').read_text()
