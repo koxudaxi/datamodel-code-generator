@@ -5,7 +5,7 @@ from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 
-def test_data_class():
+def test_data_class() -> None:
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
 
     data_class = DataClass(
@@ -19,7 +19,7 @@ def test_data_class():
     assert data_class.render() == '@dataclass\nclass test_model:\n    a: str'
 
 
-def test_data_class_base_class():
+def test_data_class_base_class() -> None:
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), required=True)
 
     data_class = DataClass(
@@ -34,7 +34,7 @@ def test_data_class_base_class():
     assert data_class.render() == '@dataclass\nclass test_model(Base):\n    a: str'
 
 
-def test_data_class_optional():
+def test_data_class_optional() -> None:
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), default="'abc'", required=True)
 
     data_class = DataClass(
@@ -48,6 +48,6 @@ def test_data_class_optional():
     assert data_class.render() == "@dataclass\nclass test_model:\n    a: str = 'abc'"
 
 
-def test_data_class_get_data_type():
+def test_data_class_get_data_type() -> None:
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type='int')

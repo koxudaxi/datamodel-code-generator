@@ -1,3 +1,4 @@
+import contextlib
 import json
 import platform
 import shutil
@@ -14,11 +15,10 @@ import pydantic
 import pytest
 from freezegun import freeze_time
 from packaging import version
+from pytest_mock import MockerFixture
 
-try:
-    from pytest import TempdirFactory
-except ImportError:
-    from _pytest.tmpdir import TempdirFactory
+with contextlib.suppress(ImportError):
+    pass
 
 from datamodel_code_generator import (
     DataModelType,
@@ -33,15 +33,12 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
 
-CaptureFixture = pytest.CaptureFixture
-MonkeyPatch = pytest.MonkeyPatch
-
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
 EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / 'openapi'
 
 
 @pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: MonkeyPatch):
+def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
@@ -49,7 +46,7 @@ def reset_namespace(monkeypatch: MonkeyPatch):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main():
+def test_main() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -69,7 +66,7 @@ def test_main():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_discriminator_enum():
+def test_main_openapi_discriminator_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -95,7 +92,7 @@ def test_main_openapi_discriminator_enum():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_discriminator_enum_duplicate():
+def test_main_openapi_discriminator_enum_duplicate() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -117,7 +114,7 @@ def test_main_openapi_discriminator_enum_duplicate():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_discriminator_with_properties():
+def test_main_openapi_discriminator_with_properties() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -132,8 +129,6 @@ def test_main_openapi_discriminator_with_properties():
         )
         assert return_code == Exit.OK
 
-        print(output_file.read_text())
-
         assert (
             output_file.read_text()
             == (EXPECTED_OPENAPI_PATH / 'discriminator' / 'discriminator_with_properties.py').read_text()
@@ -141,7 +136,7 @@ def test_main_openapi_discriminator_with_properties():
 
 
 @freeze_time('2019-07-26')
-def test_main_pydantic_basemodel():
+def test_main_pydantic_basemodel() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -159,7 +154,7 @@ def test_main_pydantic_basemodel():
 
 
 @freeze_time('2019-07-26')
-def test_main_base_class():
+def test_main_base_class() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
@@ -178,7 +173,7 @@ def test_main_base_class():
 
 
 @freeze_time('2019-07-26')
-def test_target_python_version():
+def test_target_python_version() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -196,7 +191,7 @@ def test_target_python_version():
 
 
 @pytest.mark.benchmark
-def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
+def test_main_modular(tmpdir_factory: pytest.TempdirFactory) -> None:
     """Test main function on modular file."""
 
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -212,7 +207,7 @@ def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
         assert result == path.read_text()
 
 
-def test_main_modular_reuse_model(tmpdir_factory: TempdirFactory) -> None:
+def test_main_modular_reuse_model(tmpdir_factory: pytest.TempdirFactory) -> None:
     """Test main function on modular file."""
 
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -244,7 +239,7 @@ def test_main_modular_no_file() -> None:
     assert main(['--input', str(input_filename)]) == Exit.ERROR
 
 
-def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
+def test_main_modular_filename(tmpdir_factory: pytest.TempdirFactory) -> None:
     """Test main function on modular file with filename."""
 
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -255,7 +250,7 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     assert main(['--input', str(input_filename), '--output', str(output_filename)]) == Exit.ERROR
 
 
-def test_main_openapi_no_file(capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_openapi_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test main function on non-modular file with no output name."""
     monkeypatch.chdir(tmp_path)
     input_filename = OPEN_API_DATA_PATH / 'api.yaml'
@@ -269,7 +264,7 @@ def test_main_openapi_no_file(capsys: CaptureFixture, tmp_path: Path, monkeypatc
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -286,9 +281,9 @@ def test_main_openapi_no_file(capsys: CaptureFixture, tmp_path: Path, monkeypatc
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_extra_template_data_config(
-    capsys: CaptureFixture,
-    output_model,
-    expected_output,
+    capsys: pytest.CaptureFixture,
+    output_model: str,
+    expected_output: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -316,7 +311,7 @@ def test_main_openapi_extra_template_data_config(
 
 
 def test_main_custom_template_dir_old_style(
-    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test main function with custom template directory."""
 
@@ -343,7 +338,7 @@ def test_main_custom_template_dir_old_style(
 
 
 def test_main_openapi_custom_template_dir(
-    capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
@@ -374,22 +369,22 @@ def test_main_openapi_custom_template_dir(
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_pyproject():
+def test_pyproject() -> None:
     if platform.system() == 'Windows':
 
-        def get_path(path):
+        def get_path(path: str) -> str:
             return str(path).replace('\\', '\\\\')
 
     else:
 
-        def get_path(path):
+        def get_path(path: str) -> str:
             return str(path)
 
     with TemporaryDirectory() as output_dir:
-        output_dir = Path(output_dir)
+        output_path = Path(output_dir)
 
-        with chdir(output_dir):
-            output_file: Path = output_dir / 'output.py'
+        with chdir(output_path):
+            output_file: Path = output_path / 'output.py'
             pyproject_toml_path = Path(DATA_PATH) / 'project' / 'pyproject.toml'
             pyproject_toml = (
                 pyproject_toml_path.read_text()
@@ -400,9 +395,9 @@ def test_pyproject():
                     'EXTRA_TEMPLATE_DATA_PATH',
                     get_path(OPEN_API_DATA_PATH / 'empty_data.json'),
                 )
-                .replace('CUSTOM_TEMPLATE_DIR_PATH', get_path(output_dir))
+                .replace('CUSTOM_TEMPLATE_DIR_PATH', get_path(output_path))
             )
-            (output_dir / 'pyproject.toml').write_text(pyproject_toml)
+            (output_path / 'pyproject.toml').write_text(pyproject_toml)
 
             return_code: Exit = main([])
             assert return_code == Exit.OK
@@ -410,11 +405,11 @@ def test_pyproject():
 
 
 @freeze_time('2019-07-26')
-def test_pyproject_not_found():
+def test_pyproject_not_found() -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir = Path(output_dir)
-        with chdir(output_dir):
-            output_file: Path = output_dir / 'output.py'
+        output_path = Path(output_dir)
+        with chdir(output_path):
+            output_file: Path = output_path / 'output.py'
             return_code: Exit = main(
                 [
                     '--input',
@@ -428,10 +423,10 @@ def test_pyproject_not_found():
 
 
 @freeze_time('2019-07-26')
-def test_stdin(monkeypatch):
+def test_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir = Path(output_dir)
-        output_file: Path = output_dir / 'output.py'
+        output_path = Path(output_dir)
+        output_file: Path = output_path / 'output.py'
         monkeypatch.setattr('sys.stdin', (OPEN_API_DATA_PATH / 'api.yaml').open())
         return_code: Exit = main(
             [
@@ -444,7 +439,7 @@ def test_stdin(monkeypatch):
 
 
 @freeze_time('2019-07-26')
-def test_validation(mocker):
+def test_validation(mocker: MockerFixture) -> None:
     mock_prance = mocker.patch('prance.BaseParser')
 
     with TemporaryDirectory() as output_dir:
@@ -464,7 +459,7 @@ def test_validation(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_validation_failed(mocker):
+def test_validation_failed(mocker: MockerFixture) -> None:
     mock_prance = mocker.patch('prance.BaseParser', side_effect=Exception('error'))
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -486,7 +481,7 @@ def test_validation_failed(mocker):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output, args',
+    ('output_model', 'expected_output', 'args'),
     [
         ('pydantic.BaseModel', 'with_field_constraints.py', []),
         (
@@ -520,7 +515,7 @@ def test_validation_failed(mocker):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_with_field_constraints(output_model, expected_output, args):
+def test_main_with_field_constraints(output_model: str, expected_output: str, args: list[str]) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -540,7 +535,7 @@ def test_main_with_field_constraints(output_model, expected_output, args):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -553,7 +548,7 @@ def test_main_with_field_constraints(output_model, expected_output, args):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_without_field_constraints(output_model, expected_output):
+def test_main_without_field_constraints(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -571,7 +566,7 @@ def test_main_without_field_constraints(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -588,7 +583,7 @@ def test_main_without_field_constraints(output_model, expected_output):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_with_aliases(output_model, expected_output):
+def test_main_with_aliases(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -609,7 +604,7 @@ def test_main_with_aliases(output_model, expected_output):
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
-def test_main_with_bad_aliases():
+def test_main_with_bad_aliases() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -625,7 +620,7 @@ def test_main_with_bad_aliases():
         assert return_code == Exit.ERROR
 
 
-def test_main_with_more_bad_aliases():
+def test_main_with_more_bad_aliases() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -641,7 +636,7 @@ def test_main_with_more_bad_aliases():
         assert return_code == Exit.ERROR
 
 
-def test_main_with_bad_extra_data():
+def test_main_with_bad_extra_data() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -659,7 +654,7 @@ def test_main_with_bad_extra_data():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_with_snake_case_field():
+def test_main_with_snake_case_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -677,7 +672,7 @@ def test_main_with_snake_case_field():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_with_strip_default_none():
+def test_main_with_strip_default_none() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -693,7 +688,7 @@ def test_main_with_strip_default_none():
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / 'with_strip_default_none.py').read_text()
 
 
-def test_disable_timestamp():
+def test_disable_timestamp() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -710,7 +705,7 @@ def test_disable_timestamp():
 
 
 @freeze_time('2019-07-26')
-def test_enable_version_header():
+def test_enable_version_header() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -729,7 +724,7 @@ def test_enable_version_header():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -746,7 +741,7 @@ def test_enable_version_header():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_allow_population_by_field_name(output_model, expected_output):
+def test_allow_population_by_field_name(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -765,7 +760,7 @@ def test_allow_population_by_field_name(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -782,7 +777,7 @@ def test_allow_population_by_field_name(output_model, expected_output):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_allow_extra_fields(output_model, expected_output):
+def test_allow_extra_fields(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -801,7 +796,7 @@ def test_allow_extra_fields(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -818,7 +813,7 @@ def test_allow_extra_fields(output_model, expected_output):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_enable_faux_immutability(output_model, expected_output):
+def test_enable_faux_immutability(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -838,7 +833,7 @@ def test_enable_faux_immutability(output_model, expected_output):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_use_default():
+def test_use_default() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -856,7 +851,7 @@ def test_use_default():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_force_optional():
+def test_force_optional() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -873,7 +868,7 @@ def test_force_optional():
 
 
 @freeze_time('2019-07-26')
-def test_main_with_exclusive():
+def test_main_with_exclusive() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -889,7 +884,7 @@ def test_main_with_exclusive():
 
 
 @freeze_time('2019-07-26')
-def test_main_subclass_enum():
+def test_main_subclass_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -904,7 +899,7 @@ def test_main_subclass_enum():
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / 'subclass_enum.py').read_text()
 
 
-def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
+def test_main_use_standard_collections(tmpdir_factory: pytest.TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
@@ -930,7 +925,7 @@ def test_main_use_standard_collections(tmpdir_factory: TempdirFactory) -> None:
     black.__version__.split('.')[0] >= '24',
     reason="Installed black doesn't support the old style",
 )
-def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> None:
+def test_main_use_generic_container_types(tmpdir_factory: pytest.TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
@@ -958,7 +953,7 @@ def test_main_use_generic_container_types(tmpdir_factory: TempdirFactory) -> Non
 )
 @pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
-    tmpdir_factory: TempdirFactory,
+    tmpdir_factory: pytest.TempdirFactory,
 ) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -986,7 +981,7 @@ def test_main_use_generic_container_types_standard_collections(
         assert result == path.read_text()
 
 
-def test_main_use_generic_container_types_py36(capsys) -> None:
+def test_main_use_generic_container_types_py36(capsys: pytest.CaptureFixture) -> None:
     input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
 
     return_code: Exit = main(
@@ -1007,7 +1002,7 @@ def test_main_use_generic_container_types_py36(capsys) -> None:
     )
 
 
-def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> None:
+def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pytest.CaptureFixture) -> None:
     input_filename = OPEN_API_DATA_PATH / 'modular.yaml'
 
     return_code: Exit = main(
@@ -1025,7 +1020,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output,date_type',
+    ('output_model', 'expected_output', 'date_type'),
     [
         ('pydantic.BaseModel', 'datetime.py', 'AwareDatetime'),
         ('pydantic_v2.BaseModel', 'datetime_pydantic_v2.py', 'AwareDatetime'),
@@ -1033,7 +1028,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys) -> 
         ('msgspec.Struct', 'datetime_msgspec.py', 'datetime'),
     ],
 )
-def test_main_openapi_aware_datetime(output_model, expected_output, date_type):
+def test_main_openapi_aware_datetime(output_model: str, expected_output: str, date_type: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1056,7 +1051,7 @@ def test_main_openapi_aware_datetime(output_model, expected_output, date_type):
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -1068,7 +1063,7 @@ def test_main_openapi_aware_datetime(output_model, expected_output, date_type):
         ),
     ],
 )
-def test_main_openapi_datetime(output_model, expected_output):
+def test_main_openapi_datetime(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1088,7 +1083,7 @@ def test_main_openapi_datetime(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
-def test_main_models_not_found(capsys):
+def test_main_models_not_found(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1111,7 +1106,7 @@ def test_main_models_not_found(capsys):
     reason='Require Pydantic version 1.9.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_enum_models_as_literal_one():
+def test_main_openapi_enum_models_as_literal_one() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1137,7 +1132,7 @@ def test_main_openapi_enum_models_as_literal_one():
     reason='Require Pydantic version 1.9.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_use_one_literal_as_default():
+def test_main_openapi_use_one_literal_as_default() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1170,7 +1165,7 @@ def test_main_openapi_use_one_literal_as_default():
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_enum_models_as_literal_all():
+def test_main_openapi_enum_models_as_literal_all() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1200,7 +1195,7 @@ def test_main_openapi_enum_models_as_literal_all():
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_enum_models_as_literal_py37(capsys):
+def test_main_openapi_enum_models_as_literal_py37() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1224,7 +1219,7 @@ def test_main_openapi_enum_models_as_literal_py37(capsys):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_openapi_all_of_required():
+def test_main_openapi_all_of_required() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1243,7 +1238,7 @@ def test_main_openapi_all_of_required():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_openapi_nullable():
+def test_main_openapi_nullable() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1261,7 +1256,7 @@ def test_main_openapi_nullable():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_nullable_strict_nullable():
+def test_main_openapi_nullable_strict_nullable() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1280,7 +1275,7 @@ def test_main_openapi_nullable_strict_nullable():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -1301,7 +1296,7 @@ def test_main_openapi_nullable_strict_nullable():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_pattern(output_model, expected_output):
+def test_main_openapi_pattern(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1325,7 +1320,7 @@ def test_main_openapi_pattern(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'expected_output, args',
+    ('expected_output', 'args'),
     [
         ('pattern_with_lookaround_pydantic_v2.py', []),
         (
@@ -1339,7 +1334,7 @@ def test_main_openapi_pattern(output_model, expected_output):
     black.__version__.split('.')[0] < '22',
     reason="Installed black doesn't support Python version 3.10",
 )
-def test_main_openapi_pattern_with_lookaround_pydantic_v2(expected_output: str, args: List[str]):
+def test_main_openapi_pattern_with_lookaround_pydantic_v2(expected_output: str, args: List[str]) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1363,14 +1358,14 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(expected_output: str, 
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator_modular(
-    tmpdir_factory: TempdirFactory,
-):
+    tmpdir_factory: pytest.TempdirFactory,
+) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     output_path = output_directory / 'model'
     main_modular_custom_class_name_dir = EXPECTED_OPENAPI_PATH / 'modular_custom_class_name'
 
-    def custom_class_name_generator(name):
+    def custom_class_name_generator(name: str) -> str:
         return f'Custom{name[0].upper() + name[1:]}'
 
     with freeze_time(TIMESTAMP):
@@ -1389,7 +1384,7 @@ def test_main_generate_custom_class_name_generator_modular(
 
 
 @freeze_time('2019-07-26')
-def test_main_http_openapi(mocker):
+def test_main_http_openapi(mocker: MockerFixture) -> None:
     def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()
         mock.text = (OPEN_API_DATA_PATH / path).read_text()
@@ -1437,7 +1432,7 @@ def test_main_http_openapi(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_main_disable_appending_item_suffix():
+def test_main_disable_appending_item_suffix() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1455,7 +1450,7 @@ def test_main_disable_appending_item_suffix():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_body_and_parameters():
+def test_main_openapi_body_and_parameters() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1476,7 +1471,7 @@ def test_main_openapi_body_and_parameters():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_body_and_parameters_remote_ref(mocker):
+def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture) -> None:
     input_path = OPEN_API_DATA_PATH / 'body_and_parameters_remote_ref.yaml'
     person_response = mocker.Mock()
     person_response.text = input_path.read_text()
@@ -1513,7 +1508,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_body_and_parameters_only_paths():
+def test_main_openapi_body_and_parameters_only_paths() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1533,7 +1528,7 @@ def test_main_openapi_body_and_parameters_only_paths():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_body_and_parameters_only_schemas():
+def test_main_openapi_body_and_parameters_only_schemas() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1555,7 +1550,7 @@ def test_main_openapi_body_and_parameters_only_schemas():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_content_in_parameters():
+def test_main_openapi_content_in_parameters() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1573,7 +1568,7 @@ def test_main_openapi_content_in_parameters():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_oas_response_reference():
+def test_main_openapi_oas_response_reference() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1594,7 +1589,7 @@ def test_main_openapi_oas_response_reference():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_json_pointer():
+def test_main_openapi_json_pointer() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1613,7 +1608,7 @@ def test_main_openapi_json_pointer():
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         ('pydantic.BaseModel', 'use_annotated_with_field_constraints.py'),
         (
@@ -1626,7 +1621,7 @@ def test_main_openapi_json_pointer():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_use_annotated_with_field_constraints(output_model, expected_output):
+def test_main_use_annotated_with_field_constraints(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1648,7 +1643,7 @@ def test_main_use_annotated_with_field_constraints(output_model, expected_output
 
 
 @freeze_time('2019-07-26')
-def test_main_use_annotated_with_field_constraints_py38():
+def test_main_use_annotated_with_field_constraints_py38() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1670,7 +1665,7 @@ def test_main_use_annotated_with_field_constraints_py38():
 
 
 @freeze_time('2019-07-26')
-def test_main_nested_enum():
+def test_main_nested_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1688,7 +1683,7 @@ def test_main_nested_enum():
 
 
 @freeze_time('2019-07-26')
-def test_openapi_special_yaml_keywords(mocker):
+def test_openapi_special_yaml_keywords(mocker: MockerFixture) -> None:
     mock_prance = mocker.patch('prance.BaseParser')
 
     with TemporaryDirectory() as output_dir:
@@ -1712,7 +1707,7 @@ def test_openapi_special_yaml_keywords(mocker):
     reason="Installed black doesn't support Python version 3.10",
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_nullable_use_union_operator():
+def test_main_openapi_nullable_use_union_operator() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1735,7 +1730,7 @@ def test_main_openapi_nullable_use_union_operator():
 
 
 @freeze_time('2019-07-26')
-def test_external_relative_ref():
+def test_external_relative_ref() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -1755,7 +1750,7 @@ def test_external_relative_ref():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_collapse_root_models():
+def test_main_collapse_root_models() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1772,7 +1767,7 @@ def test_main_collapse_root_models():
 
 
 @freeze_time('2019-07-26')
-def test_main_collapse_root_models_field_constraints():
+def test_main_collapse_root_models_field_constraints() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1792,7 +1787,7 @@ def test_main_collapse_root_models_field_constraints():
 
 
 @freeze_time('2019-07-26')
-def test_main_collapse_root_models_with_references_to_flat_types():
+def test_main_collapse_root_models_with_references_to_flat_types() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1813,7 +1808,7 @@ def test_main_collapse_root_models_with_references_to_flat_types():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_max_items_enum():
+def test_main_openapi_max_items_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1831,7 +1826,7 @@ def test_main_openapi_max_items_enum():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -1844,7 +1839,7 @@ def test_main_openapi_max_items_enum():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_const(output_model, expected_output):
+def test_main_openapi_const(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1864,7 +1859,7 @@ def test_main_openapi_const(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -1881,7 +1876,7 @@ def test_main_openapi_const(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_const_field(output_model, expected_output):
+def test_main_openapi_const_field(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1902,7 +1897,7 @@ def test_main_openapi_const_field(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_complex_reference():
+def test_main_openapi_complex_reference() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1920,7 +1915,7 @@ def test_main_openapi_complex_reference():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_reference_to_object_properties():
+def test_main_openapi_reference_to_object_properties() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1938,7 +1933,7 @@ def test_main_openapi_reference_to_object_properties():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_reference_to_object_properties_collapse_root_models():
+def test_main_openapi_reference_to_object_properties_collapse_root_models() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1960,7 +1955,7 @@ def test_main_openapi_reference_to_object_properties_collapse_root_models():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_override_required_all_of_field():
+def test_main_openapi_override_required_all_of_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1979,7 +1974,7 @@ def test_main_openapi_override_required_all_of_field():
 
 
 @freeze_time('2019-07-26')
-def test_main_use_default_kwarg():
+def test_main_use_default_kwarg() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1998,7 +1993,7 @@ def test_main_use_default_kwarg():
 
 
 @pytest.mark.parametrize(
-    'input,output',
+    ('input_', 'output'),
     [
         (
             'discriminator.yaml',
@@ -2011,13 +2006,13 @@ def test_main_use_default_kwarg():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_discriminator(input, output):
+def test_main_openapi_discriminator(input_: str, output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
             [
                 '--input',
-                str(OPEN_API_DATA_PATH / input),
+                str(OPEN_API_DATA_PATH / input_),
                 '--output',
                 str(output_file),
                 '--input-file-type',
@@ -2030,7 +2025,7 @@ def test_main_openapi_discriminator(input, output):
 
 @freeze_time('2023-07-27')
 @pytest.mark.parametrize(
-    'kind,option, expected',
+    ('kind', 'option', 'expected'),
     [
         (
             'anyOf',
@@ -2046,7 +2041,7 @@ def test_main_openapi_discriminator(input, output):
         ('oneOf', None, 'in_array.py'),
     ],
 )
-def test_main_openapi_discriminator_in_array(kind, option, expected):
+def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expected: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         input_file = f'discriminator_in_array_{kind.lower()}.yaml'
@@ -2072,7 +2067,7 @@ def test_main_openapi_discriminator_in_array(kind, option, expected):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -2093,7 +2088,7 @@ def test_main_openapi_discriminator_in_array(kind, option, expected):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_default_object(output_model, expected_output):
+def test_main_openapi_default_object(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2119,7 +2114,7 @@ def test_main_openapi_default_object(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
-def test_main_dataclass():
+def test_main_dataclass() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2137,7 +2132,7 @@ def test_main_dataclass():
 
 
 @freeze_time('2019-07-26')
-def test_main_dataclass_base_class():
+def test_main_dataclass_base_class() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2157,28 +2152,25 @@ def test_main_dataclass_base_class():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_reference_same_hierarchy_directory():
-    with TemporaryDirectory() as output_dir:
-        with chdir(OPEN_API_DATA_PATH / 'reference_same_hierarchy_directory'):
-            output_file: Path = Path(output_dir) / 'output.py'
-            return_code: Exit = main(
-                [
-                    '--input',
-                    './public/entities.yaml',
-                    '--output',
-                    str(output_file),
-                    '--input-file-type',
-                    'openapi',
-                ]
-            )
-            assert return_code == Exit.OK
-            assert (
-                output_file.read_text() == (EXPECTED_OPENAPI_PATH / 'reference_same_hierarchy_directory.py').read_text()
-            )
+def test_main_openapi_reference_same_hierarchy_directory() -> None:
+    with TemporaryDirectory() as output_dir, chdir(OPEN_API_DATA_PATH / 'reference_same_hierarchy_directory'):
+        output_file: Path = Path(output_dir) / 'output.py'
+        return_code: Exit = main(
+            [
+                '--input',
+                './public/entities.yaml',
+                '--output',
+                str(output_file),
+                '--input-file-type',
+                'openapi',
+            ]
+        )
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / 'reference_same_hierarchy_directory.py').read_text()
 
 
 @freeze_time('2019-07-26')
-def test_main_multiple_required_any_of():
+def test_main_multiple_required_any_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2195,7 +2187,7 @@ def test_main_multiple_required_any_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_max_min():
+def test_main_openapi_max_min() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2211,7 +2203,7 @@ def test_main_openapi_max_min():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_use_operation_id_as_name():
+def test_main_openapi_use_operation_id_as_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2232,7 +2224,7 @@ def test_main_openapi_use_operation_id_as_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_use_operation_id_as_name_not_found_operation_id(capsys):
+def test_main_openapi_use_operation_id_as_name_not_found_operation_id(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2259,7 +2251,7 @@ def test_main_openapi_use_operation_id_as_name_not_found_operation_id(capsys):
 
 
 @freeze_time('2019-07-26')
-def test_main_unsorted_optional_fields():
+def test_main_unsorted_optional_fields() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2277,7 +2269,7 @@ def test_main_unsorted_optional_fields():
 
 
 @freeze_time('2019-07-26')
-def test_main_typed_dict():
+def test_main_typed_dict() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2295,7 +2287,7 @@ def test_main_typed_dict():
 
 
 @freeze_time('2019-07-26')
-def test_main_typed_dict_py_38():
+def test_main_typed_dict_py_38() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2318,7 +2310,7 @@ def test_main_typed_dict_py_38():
     version.parse(black.__version__) < version.parse('23.3.0'),
     reason='Require Black version 23.3.0 or later ',
 )
-def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
+def test_main_modular_typed_dict(tmpdir_factory: pytest.TempdirFactory) -> None:
     """Test main function on modular file."""
 
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -2350,7 +2342,7 @@ def test_main_modular_typed_dict(tmpdir_factory: TempdirFactory) -> None:
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_typed_dict_nullable():
+def test_main_typed_dict_nullable() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2374,7 +2366,7 @@ def test_main_typed_dict_nullable():
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_typed_dict_nullable_strict_nullable():
+def test_main_typed_dict_nullable_strict_nullable() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2396,7 +2388,7 @@ def test_main_typed_dict_nullable_strict_nullable():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_openapi_nullable_31():
+def test_main_openapi_nullable_31() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2418,7 +2410,7 @@ def test_main_openapi_nullable_31():
 
 
 @freeze_time('2019-07-26')
-def test_main_custom_file_header_path():
+def test_main_custom_file_header_path() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2436,7 +2428,7 @@ def test_main_custom_file_header_path():
 
 
 @freeze_time('2019-07-26')
-def test_main_custom_file_header_duplicate_options(capsys):
+def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2458,7 +2450,7 @@ def test_main_custom_file_header_duplicate_options(capsys):
 
 
 @freeze_time('2019-07-26')
-def test_main_pydantic_v2():
+def test_main_pydantic_v2() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2476,7 +2468,7 @@ def test_main_pydantic_v2():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_custom_id_pydantic_v2():
+def test_main_openapi_custom_id_pydantic_v2() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2498,7 +2490,7 @@ def test_main_openapi_custom_id_pydantic_v2():
     reason="isort 5.x don't sort pydantic modules",
 )
 @freeze_time('2019-07-26')
-def test_main_openapi_custom_id_pydantic_v2_custom_base():
+def test_main_openapi_custom_id_pydantic_v2_custom_base() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2522,7 +2514,7 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_all_of_with_relative_ref():
+def test_main_openapi_all_of_with_relative_ref() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2548,7 +2540,7 @@ def test_main_openapi_all_of_with_relative_ref():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_msgspec_struct():
+def test_main_openapi_msgspec_struct() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2569,7 +2561,7 @@ def test_main_openapi_msgspec_struct():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_msgspec_struct_snake_case():
+def test_main_openapi_msgspec_struct_snake_case() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2595,7 +2587,7 @@ def test_main_openapi_msgspec_struct_snake_case():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_msgspec_use_annotated_with_field_constraints():
+def test_main_openapi_msgspec_use_annotated_with_field_constraints() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2619,7 +2611,7 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_discriminator_one_literal_as_default():
+def test_main_openapi_discriminator_one_literal_as_default() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2643,7 +2635,7 @@ def test_main_openapi_discriminator_one_literal_as_default():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_discriminator_one_literal_as_default_dataclass():
+def test_main_openapi_discriminator_one_literal_as_default_dataclass() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2671,7 +2663,7 @@ def test_main_openapi_discriminator_one_literal_as_default_dataclass():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_dataclass():
+def test_main_openapi_keyword_only_dataclass() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2694,7 +2686,7 @@ def test_main_openapi_keyword_only_dataclass():
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: CaptureFixture):
+def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture) -> None:
     return_code = main(
         [
             '--input',
@@ -2715,7 +2707,7 @@ def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: CaptureFixt
 
 
 @freeze_time('2019-07-26')
-def test_main_openapi_dataclass_with_NaiveDatetime(capsys: CaptureFixture):
+def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixture) -> None:
     return_code = main(
         [
             '--input',
@@ -2742,7 +2734,7 @@ def test_main_openapi_dataclass_with_NaiveDatetime(capsys: CaptureFixture):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_msgspec():
+def test_main_openapi_keyword_only_msgspec() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

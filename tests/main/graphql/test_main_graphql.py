@@ -15,14 +15,14 @@ EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / 'graphql'
 
 
 @pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: pytest.MonkeyPatch):
+def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -39,7 +39,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_simple_star_wars(output_model, expected_output):
+def test_main_graphql_simple_star_wars(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -63,7 +63,7 @@ def test_main_graphql_simple_star_wars(output_model, expected_output):
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_different_types_of_fields():
+def test_main_graphql_different_types_of_fields() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -85,7 +85,7 @@ def test_main_graphql_different_types_of_fields():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_custom_scalar_types():
+def test_main_graphql_custom_scalar_types() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -109,7 +109,7 @@ def test_main_graphql_custom_scalar_types():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_field_aliases():
+def test_main_graphql_field_aliases() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -133,7 +133,7 @@ def test_main_graphql_field_aliases():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_enums():
+def test_main_graphql_enums() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -155,7 +155,7 @@ def test_main_graphql_enums():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_union():
+def test_main_graphql_union() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -177,7 +177,7 @@ def test_main_graphql_union():
     reason='See https://github.com/PyCQA/isort/issues/1600 for example',
 )
 @freeze_time('2019-07-26')
-def test_main_graphql_additional_imports_isort_4():
+def test_main_graphql_additional_imports_isort_4() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -207,7 +207,7 @@ def test_main_graphql_additional_imports_isort_4():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_additional_imports_isort_5_or_6():
+def test_main_graphql_additional_imports_isort_5_or_6() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -233,7 +233,7 @@ def test_main_graphql_additional_imports_isort_5_or_6():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_custom_formatters():
+def test_main_graphql_custom_formatters() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -257,7 +257,7 @@ def test_main_graphql_custom_formatters():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_use_standard_collections():
+def test_main_graphql_use_standard_collections() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -280,7 +280,7 @@ def test_main_graphql_use_standard_collections():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_use_union_operator():
+def test_main_graphql_use_union_operator() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

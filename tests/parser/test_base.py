@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -25,14 +25,14 @@ class B(DataModel):
 
 
 class C(Parser):
-    def parse_raw(self, name: str, raw: Dict) -> None:
+    def parse_raw(self, name: str, raw: Dict[str, Any]) -> None:
         pass
 
     def parse(self) -> str:
         return 'parsed'
 
 
-def test_parser():
+def test_parser() -> None:
     c = C(
         data_model_type=D,
         data_model_root_type=B,
@@ -46,7 +46,7 @@ def test_parser():
     assert c.base_class == 'Base'
 
 
-def test_sort_data_models():
+def test_sort_data_models() -> None:
     reference_a = Reference(path='A', original_name='A', name='A')
     reference_b = Reference(path='B', original_name='B', name='B')
     reference_c = Reference(path='C', original_name='C', name='C')
@@ -82,7 +82,7 @@ def test_sort_data_models():
     assert require_update_action_models == ['B', 'A']
 
 
-def test_sort_data_models_unresolved():
+def test_sort_data_models_unresolved() -> None:
     reference_a = Reference(path='A', original_name='A', name='A')
     reference_b = Reference(path='B', original_name='B', name='B')
     reference_c = Reference(path='C', original_name='C', name='C')
@@ -124,11 +124,11 @@ def test_sort_data_models_unresolved():
         ),
     ]
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017, PT011
         sort_data_models(reference)
 
 
-def test_sort_data_models_unresolved_raise_recursion_error():
+def test_sort_data_models_unresolved_raise_recursion_error() -> None:
     reference_a = Reference(path='A', original_name='A', name='A')
     reference_b = Reference(path='B', original_name='B', name='B')
     reference_c = Reference(path='C', original_name='C', name='C')
@@ -170,12 +170,12 @@ def test_sort_data_models_unresolved_raise_recursion_error():
         ),
     ]
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017, PT011
         sort_data_models(reference, recursion_count=100000)
 
 
 @pytest.mark.parametrize(
-    'current_module,reference,val',
+    ('current_module', 'reference', 'val'),
     [
         ('', 'Foo', ('', '')),
         ('a', 'a.Foo', ('', '')),
@@ -185,12 +185,12 @@ def test_sort_data_models_unresolved_raise_recursion_error():
         ('a.b.c', 'Foo', ('...', 'Foo')),
     ],
 )
-def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
+def test_relative(current_module: str, reference: str, val: Tuple[str, str]) -> None:
     assert relative(current_module, reference) == val
 
 
 @pytest.mark.parametrize(
-    'from_,import_,name,val',
+    ('from_', 'import_', 'name', 'val'),
     [
         ('.', 'mod', 'Foo', ('.mod', 'Foo')),
         ('..', 'mod', 'Foo', ('..mod', 'Foo')),
@@ -199,12 +199,12 @@ def test_relative(current_module: str, reference: str, val: Tuple[str, str]):
         ('..a.b', 'mod', 'Foo', ('..a.b.mod', 'Foo')),
     ],
 )
-def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str]):
+def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str]) -> None:
     assert exact_import(from_, import_, name) == val
 
 
 @pytest.mark.parametrize(
-    'word,expected',
+    ('word', 'expected'),
     [
         (
             '_hello',
@@ -221,14 +221,14 @@ def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str])
         ('____', '_'),  # degenerate case, but this is the current expected behavior
     ],
 )
-def test_snake_to_upper_camel(word, expected):
+def test_snake_to_upper_camel(word: str, expected: str) -> None:
     """Tests the snake to upper camel function."""
     actual = snake_to_upper_camel(word)
     assert actual == expected
 
 
 class D(DataModel):
-    def __init__(self, filename: str, data: str, fields: List[DataModelFieldBase]):
+    def __init__(self, filename: str, data: str, fields: List[DataModelFieldBase]) -> None:  # noqa: ARG002
         super().__init__(fields=fields, reference=Reference(''))
         self._data = data
 
@@ -236,7 +236,7 @@ class D(DataModel):
         return self._data
 
 
-def test_additional_imports():
+def test_additional_imports() -> None:
     """Test that additional imports are inside imports container."""
     new_parser = C(
         source='',
@@ -246,7 +246,7 @@ def test_additional_imports():
     assert new_parser.imports['collections'] == {'deque'}
 
 
-def test_no_additional_imports():
+def test_no_additional_imports() -> None:
     """Test that not additional imports are not affecting imports container."""
     new_parser = C(
         source='',
@@ -255,7 +255,7 @@ def test_no_additional_imports():
 
 
 @pytest.mark.parametrize(
-    'input_data, expected',
+    ('input_data', 'expected'),
     [
         (
             {
@@ -282,12 +282,12 @@ def test_no_additional_imports():
         ),
     ],
 )
-def test_postprocess_result_modules(input_data, expected):
+def test_postprocess_result_modules(input_data: Any, expected: Any) -> None:
     result = Parser._Parser__postprocess_result_modules(input_data)
     assert result == expected
 
 
-def test_find_member_with_integer_enum():
+def test_find_member_with_integer_enum() -> None:
     """Test find_member method with integer enum values"""
     from datamodel_code_generator.model.enum import Enum
     from datamodel_code_generator.model.pydantic.base_model import DataModelField
@@ -334,7 +334,7 @@ def test_find_member_with_integer_enum():
     assert enum.find_member('999') is None
 
 
-def test_find_member_with_string_enum():
+def test_find_member_with_string_enum() -> None:
     from datamodel_code_generator.model.enum import Enum
     from datamodel_code_generator.model.pydantic.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
@@ -371,7 +371,7 @@ def test_find_member_with_string_enum():
     assert member.field.name == 'VALUE_A'
 
 
-def test_find_member_with_mixed_enum():
+def test_find_member_with_mixed_enum() -> None:
     from datamodel_code_generator.model.enum import Enum
     from datamodel_code_generator.model.pydantic.base_model import DataModelField
     from datamodel_code_generator.reference import Reference
@@ -427,7 +427,7 @@ def escape_map() -> Dict[str, str]:
 
 
 @pytest.mark.parametrize(
-    'input_str,expected',
+    ('input_str', 'expected'),
     [
         ('\u0000', r'\x00'),  # Test null byte
         ("'", r'\''),  # Test single quote

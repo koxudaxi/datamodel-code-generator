@@ -1,3 +1,4 @@
+import contextlib
 import json
 import shutil
 from argparse import Namespace
@@ -11,6 +12,7 @@ import isort
 import pytest
 from freezegun import freeze_time
 from packaging import version
+from pytest_mock import MockerFixture
 
 from datamodel_code_generator import (
     DataModelType,
@@ -22,21 +24,19 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
 
-try:
-    from pytest import TempdirFactory
-except ImportError:
-    from _pytest.tmpdir import TempdirFactory
+with contextlib.suppress(ImportError):
+    pass
 
-CaptureFixture = pytest.CaptureFixture
+
 FixtureRequest = pytest.FixtureRequest
-MonkeyPatch = pytest.MonkeyPatch
+
 
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / 'jsonschema'
 EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / 'jsonschema'
 
 
 @pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: MonkeyPatch):
+def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
@@ -44,7 +44,7 @@ def reset_namespace(monkeypatch: MonkeyPatch):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_inheritance_forward_ref():
+def test_main_inheritance_forward_ref() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
@@ -62,7 +62,7 @@ def test_main_inheritance_forward_ref():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_inheritance_forward_ref_keep_model_order():
+def test_main_inheritance_forward_ref_keep_model_order() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
@@ -84,14 +84,14 @@ def test_main_inheritance_forward_ref_keep_model_order():
 
 @pytest.mark.skip(reason='pytest-xdist does not support the test')
 @freeze_time('2019-07-26')
-def test_main_without_arguments():
+def test_main_without_arguments() -> None:
     with pytest.raises(SystemExit):
         main()
 
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_autodetect():
+def test_main_autodetect() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -109,7 +109,7 @@ def test_main_autodetect():
 
 
 @freeze_time('2019-07-26')
-def test_main_autodetect_failed():
+def test_main_autodetect_failed() -> None:
     with TemporaryDirectory() as input_dir, TemporaryDirectory() as output_dir:
         input_file: Path = Path(input_dir) / 'input.yaml'
         output_file: Path = Path(output_dir) / 'output.py'
@@ -130,7 +130,7 @@ def test_main_autodetect_failed():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema():
+def test_main_jsonschema() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -149,7 +149,7 @@ def test_main_jsonschema():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_nested_deep():
+def test_main_jsonschema_nested_deep() -> None:
     with TemporaryDirectory() as output_dir:
         output_init_file: Path = Path(output_dir) / '__init__.py'
         output_nested_file: Path = Path(output_dir) / 'nested/deep.py'
@@ -179,7 +179,7 @@ def test_main_jsonschema_nested_deep():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_nested_skip():
+def test_main_jsonschema_nested_skip() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -201,7 +201,7 @@ def test_main_jsonschema_nested_skip():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_files():
+def test_main_jsonschema_external_files() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -220,31 +220,31 @@ def test_main_jsonschema_external_files():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_collapsed_external_references():
+def test_main_jsonschema_collapsed_external_references() -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir: Path = Path(output_dir) / 'output'
-        output_dir.mkdir()
+        output_path: Path = Path(output_dir) / 'output'
+        output_path.mkdir()
         return_code: Exit = main(
             [
                 '--input',
                 str(JSON_SCHEMA_DATA_PATH / 'external_reference'),
                 '--output',
-                str(output_dir),
+                str(output_path),
                 '--input-file-type',
                 'jsonschema',
                 '--collapse-root-models',
             ]
         )
         assert return_code == Exit.OK
-        assert (output_dir / 'ref0.py').read_text() == (EXPECTED_JSON_SCHEMA_PATH / 'external_ref0.py').read_text()
-        assert (output_dir / 'other/ref2.py').read_text() == (
+        assert (output_path / 'ref0.py').read_text() == (EXPECTED_JSON_SCHEMA_PATH / 'external_ref0.py').read_text()
+        assert (output_path / 'other/ref2.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / 'external_other_ref2.py'
         ).read_text()
 
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_multiple_files():
+def test_main_jsonschema_multiple_files() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -266,28 +266,28 @@ def test_main_jsonschema_multiple_files():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_no_empty_collapsed_external_model():
+def test_main_jsonschema_no_empty_collapsed_external_model() -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir: Path = Path(output_dir) / 'output'
-        output_dir.mkdir()
+        output_path: Path = Path(output_dir) / 'output'
+        output_path.mkdir()
         return_code: Exit = main(
             [
                 '--input',
                 str(JSON_SCHEMA_DATA_PATH / 'external_collapse'),
                 '--output',
-                str(output_dir),
+                str(output_path),
                 '--input-file-type',
                 'jsonschema',
                 '--collapse-root-models',
             ]
         )
         assert return_code == Exit.OK
-        assert not (output_dir / 'child.py').exists()
-        assert (output_dir / '__init__.py').exists()
+        assert not (output_path / 'child.py').exists()
+        assert (output_path / '__init__.py').exists()
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -300,7 +300,7 @@ def test_main_jsonschema_no_empty_collapsed_external_model():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_null_and_array(output_model, expected_output):
+def test_main_null_and_array(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -320,7 +320,7 @@ def test_main_null_and_array(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
-def test_use_default_pydantic_v2_with_json_schema_const():
+def test_use_default_pydantic_v2_with_json_schema_const() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -340,7 +340,7 @@ def test_use_default_pydantic_v2_with_json_schema_const():
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output,option',
+    ('output_model', 'expected_output', 'option'),
     [
         (
             'pydantic.BaseModel',
@@ -359,7 +359,7 @@ def test_use_default_pydantic_v2_with_json_schema_const():
         ),
     ],
 )
-def test_main_complicated_enum_default_member(output_model, expected_output, option):
+def test_main_complicated_enum_default_member(output_model: str, expected_output: str, option: str | None) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -383,7 +383,7 @@ def test_main_complicated_enum_default_member(output_model, expected_output, opt
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_json_reuse_enum_default_member():
+def test_main_json_reuse_enum_default_member() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -403,7 +403,7 @@ def test_main_json_reuse_enum_default_member():
 
 
 @freeze_time('2019-07-26')
-def test_main_invalid_model_name_failed(capsys):
+def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -424,7 +424,7 @@ def test_main_invalid_model_name_failed(capsys):
 
 
 @freeze_time('2019-07-26')
-def test_main_invalid_model_name_converted(capsys):
+def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -443,7 +443,7 @@ def test_main_invalid_model_name_converted(capsys):
 
 
 @freeze_time('2019-07-26')
-def test_main_invalid_model_name():
+def test_main_invalid_model_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -463,7 +463,7 @@ def test_main_invalid_model_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_with_local_file(mocker):
+def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture) -> None:
     root_id_response = mocker.Mock()
     root_id_response.text = 'dummy'
     person_response = mocker.Mock()
@@ -487,7 +487,7 @@ def test_main_root_id_jsonschema_with_local_file(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_with_remote_file(mocker):
+def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture) -> None:
     root_id_response = mocker.Mock()
     root_id_response.text = 'dummy'
     person_response = mocker.Mock()
@@ -524,7 +524,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
+def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture) -> None:
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
     httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
@@ -549,7 +549,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
+def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixture) -> None:
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / 'person.json').read_text()
     httpx_get_mock = mocker.patch('httpx.get', side_effect=[person_response])
@@ -585,7 +585,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
+def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture) -> None:
     root_id_response = mocker.Mock()
     root_id_response.text = 'dummy'
     person_response = mocker.Mock()
@@ -621,7 +621,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker):
 
 
 @freeze_time('2019-07-26')
-def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
+def test_main_root_id_jsonschema_with_absolute_local_file() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -640,7 +640,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(mocker):
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_id():
+def test_main_jsonschema_id() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -658,7 +658,7 @@ def test_main_jsonschema_id():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_id_as_stdin(monkeypatch):
+def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         monkeypatch.setattr('sys.stdin', (JSON_SCHEMA_DATA_PATH / 'id.json').open())
@@ -674,7 +674,7 @@ def test_main_jsonschema_id_as_stdin(monkeypatch):
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / 'id_stdin.py').read_text()
 
 
-def test_main_jsonschema_ids(tmpdir_factory: TempdirFactory) -> None:
+def test_main_jsonschema_ids(tmpdir_factory: pytest.TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     input_filename = JSON_SCHEMA_DATA_PATH / 'ids' / 'Organization.schema.json'
@@ -699,7 +699,7 @@ def test_main_jsonschema_ids(tmpdir_factory: TempdirFactory) -> None:
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_external_definitions():
+def test_main_external_definitions() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -717,7 +717,7 @@ def test_main_external_definitions():
 
 
 @freeze_time('2019-07-26')
-def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> None:
+def test_main_external_files_in_directory() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -736,7 +736,7 @@ def test_main_external_files_in_directory(tmpdir_factory: TempdirFactory) -> Non
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_nested_directory(tmpdir_factory: TempdirFactory) -> None:
+def test_main_nested_directory(tmpdir_factory: pytest.TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     output_path = output_directory / 'model'
@@ -759,7 +759,7 @@ def test_main_nested_directory(tmpdir_factory: TempdirFactory) -> None:
 
 
 @freeze_time('2019-07-26')
-def test_main_circular_reference():
+def test_main_circular_reference() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -777,7 +777,7 @@ def test_main_circular_reference():
 
 
 @freeze_time('2019-07-26')
-def test_main_invalid_enum_name():
+def test_main_invalid_enum_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -795,7 +795,7 @@ def test_main_invalid_enum_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_invalid_enum_name_snake_case_field():
+def test_main_invalid_enum_name_snake_case_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -816,7 +816,7 @@ def test_main_invalid_enum_name_snake_case_field():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_reuse_enum():
+def test_main_json_reuse_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -835,7 +835,7 @@ def test_main_json_reuse_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_capitalise_enum_members():
+def test_main_json_capitalise_enum_members() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -854,7 +854,7 @@ def test_main_json_capitalise_enum_members():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_capitalise_enum_members_without_enum():
+def test_main_json_capitalise_enum_members_without_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -873,7 +873,7 @@ def test_main_json_capitalise_enum_members_without_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_similar_nested_array():
+def test_main_similar_nested_array() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -891,7 +891,7 @@ def test_main_similar_nested_array():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -904,15 +904,15 @@ def test_main_similar_nested_array():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_require_referenced_field(output_model, expected_output):
+def test_main_require_referenced_field(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir: Path = Path(output_dir)
+        output_path: Path = Path(output_dir)
         return_code: Exit = main(
             [
                 '--input',
                 str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
                 '--output',
-                str(output_dir),
+                str(output_path),
                 '--input-file-type',
                 'jsonschema',
                 '--output-datetime-class',
@@ -923,16 +923,16 @@ def test_main_require_referenced_field(output_model, expected_output):
         )
         assert return_code == Exit.OK
 
-        assert (output_dir / 'referenced.py').read_text() == (
+        assert (output_path / 'referenced.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'referenced.py'
         ).read_text()
-        assert (output_dir / 'required.py').read_text() == (
+        assert (output_path / 'required.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -945,15 +945,15 @@ def test_main_require_referenced_field(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_require_referenced_field_naivedatetime(output_model, expected_output):
+def test_main_require_referenced_field_naive_datetime(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir: Path = Path(output_dir)
+        output_path: Path = Path(output_dir)
         return_code: Exit = main(
             [
                 '--input',
                 str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
                 '--output',
-                str(output_dir),
+                str(output_path),
                 '--input-file-type',
                 'jsonschema',
                 '--output-datetime-class',
@@ -964,16 +964,16 @@ def test_main_require_referenced_field_naivedatetime(output_model, expected_outp
         )
         assert return_code == Exit.OK
 
-        assert (output_dir / 'referenced.py').read_text() == (
+        assert (output_path / 'referenced.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'referenced.py'
         ).read_text()
-        assert (output_dir / 'required.py').read_text() == (
+        assert (output_path / 'required.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -990,15 +990,15 @@ def test_main_require_referenced_field_naivedatetime(output_model, expected_outp
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_require_referenced_field_datetime(output_model, expected_output):
+def test_main_require_referenced_field_datetime(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir: Path = Path(output_dir)
+        output_path: Path = Path(output_dir)
         return_code: Exit = main(
             [
                 '--input',
                 str(JSON_SCHEMA_DATA_PATH / 'require_referenced_field/'),
                 '--output',
-                str(output_dir),
+                str(output_path),
                 '--input-file-type',
                 'jsonschema',
                 '--output-model-type',
@@ -1007,16 +1007,16 @@ def test_main_require_referenced_field_datetime(output_model, expected_output):
         )
         assert return_code == Exit.OK
 
-        assert (output_dir / 'referenced.py').read_text() == (
+        assert (output_path / 'referenced.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'referenced.py'
         ).read_text()
-        assert (output_dir / 'required.py').read_text() == (
+        assert (output_path / 'required.py').read_text() == (
             EXPECTED_JSON_SCHEMA_PATH / expected_output / 'required.py'
         ).read_text()
 
 
 @freeze_time('2019-07-26')
-def test_main_json_pointer():
+def test_main_json_pointer() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1034,7 +1034,7 @@ def test_main_json_pointer():
 
 
 @freeze_time('2019-07-26')
-def test_main_nested_json_pointer():
+def test_main_nested_json_pointer() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1052,7 +1052,7 @@ def test_main_nested_json_pointer():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_multiple_files_json_pointer():
+def test_main_jsonschema_multiple_files_json_pointer() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -1073,7 +1073,7 @@ def test_main_jsonschema_multiple_files_json_pointer():
 
 
 @freeze_time('2019-07-26')
-def test_main_root_model_with_additional_properties():
+def test_main_root_model_with_additional_properties() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1094,7 +1094,7 @@ def test_main_root_model_with_additional_properties():
 
 
 @freeze_time('2019-07-26')
-def test_main_root_model_with_additional_properties_use_generic_container_types():
+def test_main_root_model_with_additional_properties_use_generic_container_types() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1118,7 +1118,7 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
 
 
 @freeze_time('2019-07-26')
-def test_main_root_model_with_additional_properties_use_standard_collections():
+def test_main_root_model_with_additional_properties_use_standard_collections() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1142,7 +1142,7 @@ def test_main_root_model_with_additional_properties_use_standard_collections():
 
 
 @freeze_time('2019-07-26')
-def test_main_root_model_with_additional_properties_literal():
+def test_main_root_model_with_additional_properties_literal() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1167,7 +1167,7 @@ def test_main_root_model_with_additional_properties_literal():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_multiple_files_ref():
+def test_main_jsonschema_multiple_files_ref() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -1188,7 +1188,7 @@ def test_main_jsonschema_multiple_files_ref():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_multiple_files_ref_test_json():
+def test_main_jsonschema_multiple_files_ref_test_json() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         with chdir(JSON_SCHEMA_DATA_PATH / 'multiple_files_self_ref'):
@@ -1209,7 +1209,7 @@ def test_main_jsonschema_multiple_files_ref_test_json():
 
 
 @freeze_time('2019-07-26')
-def test_main_space_field_enum_snake_case_field():
+def test_main_space_field_enum_snake_case_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         with chdir(JSON_SCHEMA_DATA_PATH / 'space_field_enum.json'):
@@ -1235,7 +1235,7 @@ def test_main_space_field_enum_snake_case_field():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_all_of_ref():
+def test_main_all_of_ref() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         with chdir(JSON_SCHEMA_DATA_PATH / 'all_of_ref'):
@@ -1256,7 +1256,7 @@ def test_main_all_of_ref():
 
 
 @freeze_time('2019-07-26')
-def test_main_all_of_with_object():
+def test_main_all_of_with_object() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         with chdir(JSON_SCHEMA_DATA_PATH):
@@ -1279,7 +1279,7 @@ def test_main_all_of_with_object():
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_main_combined_array():
+def test_main_combined_array() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         with chdir(JSON_SCHEMA_DATA_PATH):
@@ -1298,7 +1298,7 @@ def test_main_combined_array():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_pattern():
+def test_main_jsonschema_pattern() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1316,7 +1316,7 @@ def test_main_jsonschema_pattern():
 
 
 @freeze_time('2019-07-26')
-def test_main_generate():
+def test_main_generate() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         input_ = (JSON_SCHEMA_DATA_PATH / 'person.json').relative_to(Path.cwd())
@@ -1331,7 +1331,7 @@ def test_main_generate():
 
 
 @freeze_time('2019-07-26')
-def test_main_generate_non_pydantic_output():
+def test_main_generate_non_pydantic_output() -> None:
     """
     See https://github.com/koxudaxi/datamodel-code-generator/issues/1452.
     """
@@ -1351,7 +1351,7 @@ def test_main_generate_non_pydantic_output():
 
 
 @freeze_time('2019-07-26')
-def test_main_generate_from_directory():
+def test_main_generate_from_directory() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         input_ = (JSON_SCHEMA_DATA_PATH / 'external_files_in_directory').relative_to(Path.cwd())
@@ -1371,8 +1371,8 @@ def test_main_generate_from_directory():
 
 
 @freeze_time('2019-07-26')
-def test_main_generate_custom_class_name_generator():
-    def custom_class_name_generator(title):
+def test_main_generate_custom_class_name_generator() -> None:
+    def custom_class_name_generator(title: str) -> str:
         return f'Custom{title}'
 
     with TemporaryDirectory() as output_dir:
@@ -1393,13 +1393,13 @@ def test_main_generate_custom_class_name_generator():
 
 @freeze_time('2019-07-26')
 def test_main_generate_custom_class_name_generator_additional_properties(
-    tmpdir_factory: TempdirFactory,
-):
+    tmpdir_factory: pytest.TempdirFactory,
+) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     output_file = output_directory / 'models.py'
 
-    def custom_class_name_generator(name):
+    def custom_class_name_generator(name: str) -> str:
         return f'Custom{name[0].upper() + name[1:]}'
 
     input_ = (JSON_SCHEMA_DATA_PATH / 'root_model_with_additional_properties.json').relative_to(Path.cwd())
@@ -1418,7 +1418,7 @@ def test_main_generate_custom_class_name_generator_additional_properties(
 
 
 @freeze_time('2019-07-26')
-def test_main_http_jsonschema(mocker):
+def test_main_http_jsonschema(mocker: MockerFixture) -> None:
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
     def get_mock_response(path: str) -> mocker.Mock:
@@ -1522,7 +1522,13 @@ def test_main_http_jsonschema(mocker):
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'headers_arguments,headers_requests,query_parameters_arguments,query_parameters_requests,http_ignore_tls',
+    (
+        'headers_arguments',
+        'headers_requests',
+        'query_parameters_arguments',
+        'query_parameters_requests',
+        'http_ignore_tls',
+    ),
     [
         (
             ('Authorization: Basic dXNlcjpwYXNz',),
@@ -1541,13 +1547,13 @@ def test_main_http_jsonschema(mocker):
     ],
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
-    mocker,
-    headers_arguments,
-    headers_requests,
-    query_parameters_arguments,
-    query_parameters_requests,
-    http_ignore_tls,
-):
+    mocker: MockerFixture,
+    headers_arguments: tuple[str, str],
+    headers_requests: list[tuple[str, str]],
+    query_parameters_arguments: tuple[str, ...],
+    query_parameters_requests: list[tuple[str, str]],
+    http_ignore_tls: bool,
+) -> None:
     external_directory = JSON_SCHEMA_DATA_PATH / 'external_files_in_directory'
 
     def get_mock_response(path: str) -> mocker.Mock:
@@ -1598,56 +1604,56 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 call(
                     'https://example.com/external_files_in_directory/person.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/relative/animal/fur.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/friends.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/food.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/machine/robot.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/coffee.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
                 call(
                     'https://example.com/external_files_in_directory/definitions/drink/tea.json',
                     headers=headers_requests,
-                    verify=True if not http_ignore_tls else False,
+                    verify=bool(not http_ignore_tls),
                     follow_redirects=True,
                     params=query_parameters_requests,
                 ),
@@ -1656,7 +1662,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
 
 
 @freeze_time('2019-07-26')
-def test_main_self_reference():
+def test_main_self_reference() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1675,7 +1681,7 @@ def test_main_self_reference():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_strict_types():
+def test_main_strict_types() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1697,7 +1703,7 @@ def test_main_strict_types():
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_main_strict_types_all():
+def test_main_strict_types_all() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1722,7 +1728,7 @@ def test_main_strict_types_all():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_strict_types_all_with_field_constraints():
+def test_main_strict_types_all_with_field_constraints() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1750,7 +1756,7 @@ def test_main_strict_types_all_with_field_constraints():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_special_enum():
+def test_main_jsonschema_special_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1768,7 +1774,7 @@ def test_main_jsonschema_special_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_special_enum_special_field_name_prefix():
+def test_main_jsonschema_special_enum_special_field_name_prefix() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1791,7 +1797,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private():
+def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1814,7 +1820,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_special_model_remove_special_field_name_prefix():
+def test_main_jsonschema_special_model_remove_special_field_name_prefix() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1836,7 +1842,7 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_subclass_enum():
+def test_main_jsonschema_subclass_enum() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1855,7 +1861,7 @@ def test_main_jsonschema_subclass_enum():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_special_enum_empty_enum_field_name():
+def test_main_jsonschema_special_enum_empty_enum_field_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1878,7 +1884,7 @@ def test_main_jsonschema_special_enum_empty_enum_field_name():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_special_field_name():
+def test_main_jsonschema_special_field_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1896,7 +1902,7 @@ def test_main_jsonschema_special_field_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_complex_one_of():
+def test_main_jsonschema_complex_one_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1915,7 +1921,7 @@ def test_main_jsonschema_complex_one_of():
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_complex_any_of():
+def test_main_jsonschema_complex_any_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1933,7 +1939,7 @@ def test_main_jsonschema_complex_any_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_combine_one_of_object():
+def test_main_jsonschema_combine_one_of_object() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1955,7 +1961,7 @@ def test_main_jsonschema_combine_one_of_object():
     reason="Installed black doesn't support the old style",
 )
 @pytest.mark.parametrize(
-    'union_mode,output_model,expected_output',
+    ('union_mode', 'output_model', 'expected_output'),
     [
         (None, 'pydantic.BaseModel', 'combine_any_of_object.py'),
         (None, 'pydantic_v2.BaseModel', 'combine_any_of_object_v2.py'),
@@ -1967,7 +1973,7 @@ def test_main_jsonschema_combine_one_of_object():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_jsonschema_combine_any_of_object(union_mode, output_model, expected_output):
+def test_main_jsonschema_combine_any_of_object(union_mode: str | None, output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -1989,7 +1995,7 @@ def test_main_jsonschema_combine_any_of_object(union_mode, output_model, expecte
 
 @pytest.mark.benchmark
 @freeze_time('2019-07-26')
-def test_main_jsonschema_field_include_all_keys():
+def test_main_jsonschema_field_include_all_keys() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2009,7 +2015,7 @@ def test_main_jsonschema_field_include_all_keys():
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -2021,7 +2027,7 @@ def test_main_jsonschema_field_include_all_keys():
         ),
     ],
 )
-def test_main_jsonschema_field_extras_field_include_all_keys(output_model, expected_output):
+def test_main_jsonschema_field_extras_field_include_all_keys(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2045,7 +2051,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(output_model, expec
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -2057,7 +2063,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(output_model, expec
         ),
     ],
 )
-def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_output):
+def test_main_jsonschema_field_extras_field_extra_keys(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2083,7 +2089,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_ou
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -2095,7 +2101,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(output_model, expected_ou
         ),
     ],
 )
-def test_main_jsonschema_field_extras(output_model, expected_output):
+def test_main_jsonschema_field_extras(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2119,7 +2125,7 @@ def test_main_jsonschema_field_extras(output_model, expected_output):
     reason="isort 5.x don't sort pydantic modules",
 )
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -2132,7 +2138,7 @@ def test_main_jsonschema_field_extras(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_jsonschema_custom_type_path(output_model, expected_output):
+def test_main_jsonschema_custom_type_path(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2152,7 +2158,7 @@ def test_main_jsonschema_custom_type_path(output_model, expected_output):
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_custom_base_path():
+def test_main_jsonschema_custom_base_path() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2170,7 +2176,7 @@ def test_main_jsonschema_custom_base_path():
 
 
 @freeze_time('2019-07-26')
-def test_long_description():
+def test_long_description() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2192,7 +2198,7 @@ def test_long_description():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_long_description_wrap_string_literal():
+def test_long_description_wrap_string_literal() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2213,7 +2219,7 @@ def test_long_description_wrap_string_literal():
         )
 
 
-def test_version(capsys):
+def test_version(capsys: pytest.CaptureFixture) -> None:
     with pytest.raises(SystemExit) as e:
         main(['--version'])
     assert e.value.code == Exit.OK
@@ -2223,7 +2229,7 @@ def test_version(capsys):
 
 
 @freeze_time('2019-07-26')
-def test_jsonschema_pattern_properties():
+def test_jsonschema_pattern_properties() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2241,7 +2247,7 @@ def test_jsonschema_pattern_properties():
 
 
 @freeze_time('2019-07-26')
-def test_jsonschema_pattern_properties_field_constraints():
+def test_jsonschema_pattern_properties_field_constraints() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2263,7 +2269,7 @@ def test_jsonschema_pattern_properties_field_constraints():
 
 
 @freeze_time('2019-07-26')
-def test_jsonschema_titles():
+def test_jsonschema_titles() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2281,7 +2287,7 @@ def test_jsonschema_titles():
 
 
 @freeze_time('2019-07-26')
-def test_jsonschema_titles_use_title_as_name():
+def test_jsonschema_titles_use_title_as_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2300,7 +2306,7 @@ def test_jsonschema_titles_use_title_as_name():
 
 
 @freeze_time('2019-07-26')
-def test_jsonschema_without_titles_use_title_as_name():
+def test_jsonschema_without_titles_use_title_as_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2321,7 +2327,7 @@ def test_jsonschema_without_titles_use_title_as_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_has_default_value():
+def test_main_jsonschema_has_default_value() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2339,7 +2345,7 @@ def test_main_jsonschema_has_default_value():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_boolean_property():
+def test_main_jsonschema_boolean_property() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2358,7 +2364,7 @@ def test_main_jsonschema_boolean_property():
 
 @freeze_time('2019-07-26')
 def test_main_jsonschema_modular_default_enum_member(
-    tmpdir_factory: TempdirFactory,
+    tmpdir_factory: pytest.TempdirFactory,
 ) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
@@ -2386,7 +2392,7 @@ def test_main_jsonschema_modular_default_enum_member(
     reason="Installed black doesn't support Python version 3.10",
 )
 @freeze_time('2019-07-26')
-def test_main_use_union_operator(tmpdir_factory: TempdirFactory) -> None:
+def test_main_use_union_operator(tmpdir_factory: pytest.TempdirFactory) -> None:
     output_directory = Path(tmpdir_factory.mktemp('output'))
 
     output_path = output_directory / 'model'
@@ -2411,7 +2417,7 @@ def test_main_use_union_operator(tmpdir_factory: TempdirFactory) -> None:
 
 @freeze_time('2019-07-26')
 @pytest.mark.parametrize('as_module', [True, False])
-def test_treat_dot_as_module(as_module):
+def test_treat_dot_as_module(as_module: bool) -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         if as_module:
@@ -2444,7 +2450,7 @@ def test_treat_dot_as_module(as_module):
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_duplicate_name():
+def test_main_jsonschema_duplicate_name() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2465,7 +2471,7 @@ def test_main_jsonschema_duplicate_name():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_items_boolean():
+def test_main_jsonschema_items_boolean() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2483,7 +2489,7 @@ def test_main_jsonschema_items_boolean():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_array_in_additional_properites():
+def test_main_jsonschema_array_in_additional_properites() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2501,7 +2507,7 @@ def test_main_jsonschema_array_in_additional_properites():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_nullable_object():
+def test_main_jsonschema_nullable_object() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2519,7 +2525,7 @@ def test_main_jsonschema_nullable_object():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_object_has_one_of():
+def test_main_jsonschema_object_has_one_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2537,7 +2543,7 @@ def test_main_jsonschema_object_has_one_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_json_pointer_array():
+def test_main_jsonschema_json_pointer_array() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2555,7 +2561,7 @@ def test_main_jsonschema_json_pointer_array():
 
 
 @pytest.mark.filterwarnings('error')
-def test_main_disable_warnings_config(capsys: CaptureFixture):
+def test_main_disable_warnings_config(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2578,7 +2584,7 @@ def test_main_disable_warnings_config(capsys: CaptureFixture):
 
 
 @pytest.mark.filterwarnings('error')
-def test_main_disable_warnings(capsys: CaptureFixture):
+def test_main_disable_warnings(capsys: pytest.CaptureFixture) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2598,7 +2604,7 @@ def test_main_disable_warnings(capsys: CaptureFixture):
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_pattern_properties_by_reference():
+def test_main_jsonschema_pattern_properties_by_reference() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2616,7 +2622,7 @@ def test_main_jsonschema_pattern_properties_by_reference():
 
 
 @freeze_time('2019-07-26')
-def test_main_dataclass_field():
+def test_main_dataclass_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2638,7 +2644,7 @@ def test_main_dataclass_field():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_jsonschema_enum_root_literal():
+def test_main_jsonschema_enum_root_literal() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2668,7 +2674,7 @@ def test_main_jsonschema_enum_root_literal():
 
 
 @freeze_time('2019-07-26')
-def test_main_nullable_any_of():
+def test_main_nullable_any_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2685,7 +2691,7 @@ def test_main_nullable_any_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_nullable_any_of_use_union_operator():
+def test_main_nullable_any_of_use_union_operator() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2705,7 +2711,7 @@ def test_main_nullable_any_of_use_union_operator():
 
 
 @freeze_time('2019-07-26')
-def test_main_nested_all_of():
+def test_main_nested_all_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2721,7 +2727,7 @@ def test_main_nested_all_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_all_of_any_of():
+def test_main_all_of_any_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2742,7 +2748,7 @@ def test_main_all_of_any_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_all_of_one_of():
+def test_main_all_of_one_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2763,7 +2769,7 @@ def test_main_all_of_one_of():
 
 
 @freeze_time('2019-07-26')
-def test_main_null():
+def test_main_null() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2785,7 +2791,7 @@ def test_main_null():
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_typed_dict_special_field_name_with_inheritance_model():
+def test_main_typed_dict_special_field_name_with_inheritance_model() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2812,7 +2818,7 @@ def test_main_typed_dict_special_field_name_with_inheritance_model():
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_typed_dict_not_required_nullable():
+def test_main_typed_dict_not_required_nullable() -> None:
     """Test main function writing to TypedDict, with combos of Optional/NotRequired."""
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
@@ -2835,7 +2841,7 @@ def test_main_typed_dict_not_required_nullable():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic_v2.BaseModel',
@@ -2852,7 +2858,7 @@ def test_main_typed_dict_not_required_nullable():
     int(black.__version__.split('.')[0]) < 24,
     reason="Installed black doesn't support the new style",
 )
-def test_main_jsonschema_discriminator_literals(output_model, expected_output):
+def test_main_jsonschema_discriminator_literals(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2872,7 +2878,7 @@ def test_main_jsonschema_discriminator_literals(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic_v2.BaseModel',
@@ -2885,7 +2891,7 @@ def test_main_jsonschema_discriminator_literals(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_discriminator(output_model, expected_output):
+def test_main_jsonschema_external_discriminator(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -2907,7 +2913,7 @@ def test_main_jsonschema_external_discriminator(output_model, expected_output):
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic.BaseModel',
@@ -2920,7 +2926,7 @@ def test_main_jsonschema_external_discriminator(output_model, expected_output):
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_jsonschema_external_discriminator_folder(output_model, expected_output):
+def test_main_jsonschema_external_discriminator_folder(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2943,7 +2949,7 @@ def test_main_jsonschema_external_discriminator_folder(output_model, expected_ou
 
 
 @freeze_time('2019-07-26')
-def test_main_duplicate_field_constraints():
+def test_main_duplicate_field_constraints() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -2967,7 +2973,7 @@ def test_main_duplicate_field_constraints():
 
 
 @pytest.mark.parametrize(
-    'collapse_root_models,python_version,expected_output',
+    ('collapse_root_models', 'python_version', 'expected_output'),
     [
         (
             '--collapse-root-models',
@@ -2986,7 +2992,11 @@ def test_main_duplicate_field_constraints():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_duplicate_field_constraints_msgspec(collapse_root_models, python_version, expected_output):
+def test_main_duplicate_field_constraints_msgspec(
+    collapse_root_models: str | None,
+    python_version: str,
+    expected_output: str,
+) -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -3016,7 +3026,7 @@ def test_main_duplicate_field_constraints_msgspec(collapse_root_models, python_v
 
 
 @freeze_time('2019-07-26')
-def test_main_dataclass_field_defs():
+def test_main_dataclass_field_defs() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3036,7 +3046,7 @@ def test_main_dataclass_field_defs():
 
 
 @freeze_time('2019-07-26')
-def test_main_dataclass_default():
+def test_main_dataclass_default() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3054,7 +3064,7 @@ def test_main_dataclass_default():
 
 
 @freeze_time('2019-07-26')
-def test_main_all_of_ref_self():
+def test_main_all_of_ref_self() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3076,7 +3086,7 @@ def test_main_all_of_ref_self():
     black.__version__.split('.')[0] == '19',
     reason="Installed black doesn't support the old style",
 )
-def test_main_array_field_constraints():
+def test_main_array_field_constraints() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3098,7 +3108,7 @@ def test_main_array_field_constraints():
 
 
 @freeze_time('2019-07-26')
-def test_all_of_use_default():
+def test_all_of_use_default() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3115,7 +3125,7 @@ def test_all_of_use_default():
 
 
 @freeze_time('2019-07-26')
-def test_main_root_one_of():
+def test_main_root_one_of() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -3136,7 +3146,7 @@ def test_main_root_one_of():
 
 
 @freeze_time('2019-07-26')
-def test_one_of_with_sub_schema_array_item():
+def test_one_of_with_sub_schema_array_item() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -3158,7 +3168,7 @@ def test_one_of_with_sub_schema_array_item():
 
 
 @freeze_time('2019-07-26')
-def test_main_jsonschema_with_custom_formatters():
+def test_main_jsonschema_with_custom_formatters() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         formatter_config = {
@@ -3188,7 +3198,7 @@ def test_main_jsonschema_with_custom_formatters():
 
 
 @freeze_time('2019-07-26')
-def test_main_imports_correct():
+def test_main_imports_correct() -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main(
@@ -3209,7 +3219,7 @@ def test_main_imports_correct():
 
 
 @pytest.mark.parametrize(
-    'output_model,expected_output',
+    ('output_model', 'expected_output'),
     [
         (
             'pydantic_v2.BaseModel',
@@ -3222,7 +3232,7 @@ def test_main_imports_correct():
     ],
 )
 @freeze_time('2019-07-26')
-def test_main_jsonschema_duration(output_model, expected_output):
+def test_main_jsonschema_duration(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

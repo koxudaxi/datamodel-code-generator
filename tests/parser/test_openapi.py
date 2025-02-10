@@ -1,7 +1,7 @@
 import os
 import platform
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import black
 import pydantic
@@ -40,7 +40,7 @@ def get_expected_file(
 
 
 @pytest.mark.parametrize(
-    'source_obj,generated_classes',
+    ('source_obj', 'generated_classes'),
     [
         (
             {'properties': {'name': {'type': 'string'}}},
@@ -123,14 +123,14 @@ class Pets(BaseModel):
         ),
     ],
 )
-def test_parse_object(source_obj, generated_classes):
+def test_parse_object(source_obj: dict[str, Any], generated_classes: str) -> None:
     parser = OpenAPIParser('')
     parser.parse_object('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
 @pytest.mark.parametrize(
-    'source_obj,generated_classes',
+    ('source_obj', 'generated_classes'),
     [
         (
             {
@@ -166,14 +166,14 @@ class Pets(BaseModel):
         ),
     ],
 )
-def test_parse_array(source_obj, generated_classes):
+def test_parse_array(source_obj: dict[str, Any], generated_classes: str) -> None:
     parser = OpenAPIParser('')
     parser.parse_array('Pets', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
 @pytest.mark.parametrize(
-    'with_import, format_, base_class',
+    ('with_import', 'format_', 'base_class'),
     [
         (
             True,
@@ -193,7 +193,7 @@ def test_parse_array(source_obj, generated_classes):
         (True, True, 'custom_module.Base'),
     ],
 )
-def test_openapi_parser_parse(with_import, format_, base_class):
+def test_openapi_parser_parse(with_import: bool, format_: bool, base_class: str | None) -> None:
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / 'api.yaml'),
@@ -207,7 +207,7 @@ def test_openapi_parser_parse(with_import, format_, base_class):
 
 
 @pytest.mark.parametrize(
-    'source_obj,generated_classes',
+    ('source_obj', 'generated_classes'),
     [
         (
             {'type': 'string', 'nullable': True},
@@ -221,7 +221,7 @@ def test_openapi_parser_parse(with_import, format_, base_class):
         ),
     ],
 )
-def test_parse_root_type(source_obj, generated_classes):
+def test_parse_root_type(source_obj: dict[str, Any], generated_classes: str) -> None:
     parser = OpenAPIParser('')
     parser.parse_root_type('Name', JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -299,12 +299,11 @@ class Results(BaseModel):
     )
 
 
-def test_openapi_parser_parse_x_enum_varnames(tmp_path, monkeypatch):
+def test_openapi_parser_parse_x_enum_varnames(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / 'x_enum_varnames.yaml'),
     )
-    print(parser.parse())
     assert (
         parser.parse()
         == """from __future__ import annotations
@@ -354,7 +353,7 @@ class UnknownTypeNumber(Enum):
 
 
 @pytest.mark.skipif(pydantic.VERSION < '1.9.0', reason='Require Pydantic version 1.9.0 or later ')
-def test_openapi_parser_parse_enum_models():
+def test_openapi_parser_parse_enum_models() -> None:
     parser = OpenAPIParser(
         Path(DATA_PATH / 'enum_models.yaml').read_text(),
     )
@@ -424,10 +423,7 @@ def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     parser = OpenAPIParser(
         Path(DATA_PATH / 'alias.yaml'),
     )
-    if platform.system() == 'Windows':
-        delimiter = '\\'
-    else:
-        delimiter = '/'
+    delimiter = '\\' if platform.system() == 'Windows' else '/'
     results = {delimiter.join(p): r for p, r in parser.parse().items()}
     openapi_parser_parse_alias_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_alias'
     for path in openapi_parser_parse_alias_dir.rglob('*.py'):
@@ -435,20 +431,10 @@ def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         assert results.pop(key).body == path.read_text()
 
 
-@pytest.mark.parametrize(
-    'with_import, format_, base_class',
-    [(True, True, None)],
-)
-def test_openapi_parser_parse_modular(
-    with_import, format_, base_class, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
-    parser = OpenAPIParser(
-        Path(DATA_PATH / 'modular.yaml'),
-        base_class=base_class,
-        data_model_field_type=DataModelFieldBase,
-    )
-    modules = parser.parse(with_import=with_import, format_=format_)
+    parser = OpenAPIParser(Path(DATA_PATH / 'modular.yaml'), data_model_field_type=DataModelFieldBase)
+    modules = parser.parse()
     main_modular_dir = EXPECTED_OPEN_API_PATH / 'openapi_parser_parse_modular'
 
     for paths, result in modules.items():
@@ -457,7 +443,7 @@ def test_openapi_parser_parse_modular(
 
 
 @pytest.mark.parametrize(
-    'with_import, format_, base_class',
+    ('with_import', 'format_', 'base_class'),
     [
         (
             True,
@@ -481,7 +467,7 @@ def test_openapi_parser_parse_modular(
         ),
     ],
 )
-def test_openapi_parser_parse_additional_properties(with_import, format_, base_class):
+def test_openapi_parser_parse_additional_properties(with_import: bool, format_: bool, base_class: str | None) -> None:
     parser = OpenAPIParser(
         Path(DATA_PATH / 'additional_properties.yaml').read_text(),
         base_class=base_class,
@@ -499,48 +485,23 @@ def test_openapi_parser_parse_additional_properties(with_import, format_, base_c
     )
 
 
-@pytest.mark.parametrize(
-    'with_import, format_, base_class',
-    [
-        (
-            True,
-            True,
-            None,
-        ),
-    ],
-)
-def test_openapi_parser_parse_array_enum(
-    with_import, format_, base_class, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_array_enum(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
-    parser = OpenAPIParser(source=Path(DATA_PATH / 'array_enum.yaml'), base_class=base_class)
-    expected_file = get_expected_file('openapi_parser_parse_array_enum', with_import, format_, base_class)
-    assert parser.parse(with_import=with_import, format_=format_) == expected_file.read_text()
+    parser = OpenAPIParser(source=Path(DATA_PATH / 'array_enum.yaml'))
+    expected_file = get_expected_file('openapi_parser_parse_array_enum', True, True)
+    assert parser.parse() == expected_file.read_text()
 
 
-@pytest.mark.parametrize(
-    'with_import, format_, base_class',
-    [
-        (
-            True,
-            True,
-            None,
-        ),
-    ],
-)
-def test_openapi_parser_parse_remote_ref(
-    with_import, format_, base_class, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openapi_parser_parse_remote_ref(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
-        base_class=base_class,
         source=(DATA_PATH / 'refs.yaml').read_text(),
         http_ignore_tls=bool(os.environ.get('HTTP_IGNORE_TLS')),
     )
-    expected_file = get_expected_file('openapi_parser_parse_remote_ref', with_import, format_, base_class)
+    expected_file = get_expected_file('openapi_parser_parse_remote_ref', True, True)
 
-    assert parser.parse(with_import=with_import, format_=format_) == expected_file.read_text()
+    assert parser.parse() == expected_file.read_text()
 
 
 def test_openapi_model_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -672,7 +633,7 @@ def test_openapi_parser_responses_with_tag(tmp_path: Path, monkeypatch: pytest.M
     black.__version__.split('.')[0] >= '24',
     reason="Installed black doesn't support the old style",
 )
-def test_openapi_parser_with_query_parameters():
+def test_openapi_parser_with_query_parameters() -> None:
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / 'query_parameters.yaml'),
@@ -689,7 +650,7 @@ def test_openapi_parser_with_query_parameters():
     version.parse(pydantic.VERSION) < version.parse('2.9.0'),
     reason='Require Pydantic version 2.0.0 or later ',
 )
-def test_openapi_parser_array_called_fields_with_oneOf_items():
+def test_openapi_parser_array_called_fields_with_one_of_items() -> None:
     parser = OpenAPIParser(
         data_model_field_type=DataModelField,
         source=Path(DATA_PATH / 'array_called_fields_with_oneOf_items.yaml'),
@@ -708,14 +669,14 @@ def test_openapi_parser_array_called_fields_with_oneOf_items():
     )
 
 
-def test_additional_imports():
+def test_additional_imports() -> None:
     """Test that additional imports are inside imports container."""
     new_parser = OpenAPIParser(source='', additional_imports=['collections.deque'])
     assert len(new_parser.imports) == 1
     assert new_parser.imports['collections'] == {'deque'}
 
 
-def test_no_additional_imports():
+def test_no_additional_imports() -> None:
     """Test that not additional imports are not affecting imports container."""
     new_parser = OpenAPIParser(
         source='',

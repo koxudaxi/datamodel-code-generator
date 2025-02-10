@@ -6,7 +6,7 @@ from datamodel_code_generator.imports import Import, Imports
 
 
 @pytest.mark.parametrize(
-    'inputs,value',
+    ('inputs', 'value'),
     [
         ([(None, 'foo')], 'import foo'),
         ([('.', 'foo')], 'from . import foo'),
@@ -17,7 +17,7 @@ from datamodel_code_generator.imports import Import, Imports
         ([(None, 'foo.baz')], 'import foo.baz'),
     ],
 )
-def test_dump(inputs: Sequence[Tuple[Optional[str], str]], value):
+def test_dump(inputs: Sequence[Tuple[Optional[str], str]], value: str) -> None:
     """Test creating import lines."""
 
     imports = Imports()

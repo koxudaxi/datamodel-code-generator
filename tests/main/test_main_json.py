@@ -7,6 +7,7 @@ import black
 import pytest
 from freezegun import freeze_time
 from packaging import version
+from pytest_mock import MockerFixture
 
 from datamodel_code_generator import (
     chdir,
@@ -14,23 +15,22 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
-CaptureFixture = pytest.CaptureFixture
 FixtureRequest = pytest.FixtureRequest
-MonkeyPatch = pytest.MonkeyPatch
+
 
 JSON_DATA_PATH: Path = DATA_PATH / 'json'
 EXPECTED_JSON_PATH: Path = EXPECTED_MAIN_PATH / 'json'
 
 
 @pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: MonkeyPatch):
+def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
 @freeze_time('2019-07-26')
-def test_main_json():
+def test_main_json() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -48,7 +48,7 @@ def test_main_json():
 
 
 @freeze_time('2019-07-26')
-def test_space_and_special_characters_json():
+def test_space_and_special_characters_json() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -66,7 +66,7 @@ def test_space_and_special_characters_json():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_failed():
+def test_main_json_failed() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -83,7 +83,7 @@ def test_main_json_failed():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_array_include_null():
+def test_main_json_array_include_null() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -101,7 +101,7 @@ def test_main_json_array_include_null():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_reuse_model():
+def test_main_json_reuse_model() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -120,7 +120,7 @@ def test_main_json_reuse_model():
 
 
 @freeze_time('2019-07-26')
-def test_simple_json_snake_case_field():
+def test_simple_json_snake_case_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         with chdir(JSON_DATA_PATH / 'simple.json'):
@@ -140,7 +140,7 @@ def test_simple_json_snake_case_field():
 
 
 @freeze_time('2019-07-26')
-def test_main_http_json(mocker):
+def test_main_http_json(mocker: MockerFixture) -> None:
     def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()
         mock.text = (JSON_DATA_PATH / path).read_text()
@@ -187,7 +187,7 @@ def test_main_http_json(mocker):
     reason='Require Black version 23.3.0 or later ',
 )
 @freeze_time('2019-07-26')
-def test_main_typed_dict_space_and_special_characters():
+def test_main_typed_dict_space_and_special_characters() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -209,7 +209,7 @@ def test_main_typed_dict_space_and_special_characters():
 
 
 @freeze_time('2019-07-26')
-def test_main_json_snake_case_field():
+def test_main_json_snake_case_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

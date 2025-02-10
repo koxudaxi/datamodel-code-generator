@@ -10,14 +10,6 @@ from freezegun import freeze_time
 from datamodel_code_generator import chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 
-try:
-    from pytest import TempdirFactory
-except ImportError:
-    from _pytest.tmpdir import TempdirFactory
-
-CaptureFixture = pytest.CaptureFixture
-MonkeyPatch = pytest.MonkeyPatch
-
 DATA_PATH: Path = Path(__file__).parent / 'data'
 OPEN_API_DATA_PATH: Path = DATA_PATH / 'openapi'
 EXPECTED_MAIN_KR_PATH = DATA_PATH / 'expected' / 'main_kr'
@@ -27,14 +19,14 @@ TIMESTAMP = '1985-10-26T01:21:00-07:00'
 
 
 @pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: MonkeyPatch):
+def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
 @freeze_time('2019-07-26')
-def test_main():
+def test_main() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -50,7 +42,7 @@ def test_main():
 
 
 @freeze_time('2019-07-26')
-def test_main_base_class():
+def test_main_base_class() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         shutil.copy(DATA_PATH / 'pyproject.toml', Path(output_dir) / 'pyproject.toml')
@@ -69,7 +61,7 @@ def test_main_base_class():
 
 
 @freeze_time('2019-07-26')
-def test_target_python_version():
+def test_target_python_version() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -86,7 +78,7 @@ def test_target_python_version():
         assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / 'target_python_version' / 'output.py').read_text()
 
 
-def test_main_modular(tmpdir_factory: TempdirFactory) -> None:
+def test_main_modular(tmpdir_factory: pytest.TempdirFactory) -> None:
     """Test main function on modular file."""
 
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -110,7 +102,7 @@ def test_main_modular_no_file() -> None:
     assert main(['--input', str(input_filename)]) == Exit.ERROR
 
 
-def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
+def test_main_modular_filename(tmpdir_factory: pytest.TempdirFactory) -> None:
     """Test main function on modular file with filename."""
 
     output_directory = Path(tmpdir_factory.mktemp('output'))
@@ -121,7 +113,7 @@ def test_main_modular_filename(tmpdir_factory: TempdirFactory) -> None:
     assert main(['--input', str(input_filename), '--output', str(output_filename)]) == Exit.ERROR
 
 
-def test_main_no_file(capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     """Test main function on non-modular file with no output name."""
 
@@ -136,7 +128,9 @@ def test_main_no_file(capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytes
     assert captured.err == inferred_message.format('openapi') + '\n'
 
 
-def test_main_custom_template_dir(capsys: CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_custom_template_dir(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
 
@@ -166,12 +160,12 @@ def test_main_custom_template_dir(capsys: CaptureFixture, tmp_path: Path, monkey
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_pyproject():
+def test_pyproject() -> None:
     with TemporaryDirectory() as output_dir:
-        output_dir = Path(output_dir)
+        output_path = Path(output_dir)
         pyproject_toml = Path(DATA_PATH) / 'project' / 'pyproject.toml'
-        shutil.copy(pyproject_toml, output_dir)
-        output_file: Path = output_dir / 'output.py'
+        shutil.copy(pyproject_toml, output_path)
+        output_file: Path = output_path / 'output.py'
         return_code: Exit = main(
             [
                 '--input',
@@ -189,24 +183,24 @@ def test_pyproject():
     reason="Installed black doesn't support the old style",
 )
 @freeze_time('2019-07-26')
-def test_pyproject_with_tool_section():
+def test_pyproject_with_tool_section() -> None:
     """Test that a pyproject.toml with a [tool.datamodel-codegen] section is
     found and its configuration applied.
     """
     with TemporaryDirectory() as output_dir:
-        output_dir = Path(output_dir)
+        output_path = Path(output_dir)
         pyproject_toml = """
 [tool.datamodel-codegen]
 target-python-version = "3.10"
 strict-types = ["str"]
 """
-        with open(output_dir / 'pyproject.toml', 'w') as f:
+        with (output_path / 'pyproject.toml').open('w') as f:
             f.write(pyproject_toml)
-        output_file: Path = output_dir / 'output.py'
+        output_file: Path = output_path / 'output.py'
 
         # Run main from within the output directory so we can find our
         # pyproject.toml.
-        with chdir(output_dir):
+        with chdir(output_path):
             return_code: Exit = main(
                 [
                     '--input',
@@ -225,7 +219,7 @@ strict-types = ["str"]
 
 
 @freeze_time('2019-07-26')
-def test_main_use_schema_description():
+def test_main_use_schema_description() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -244,7 +238,7 @@ def test_main_use_schema_description():
 
 
 @freeze_time('2022-11-11')
-def test_main_use_field_description():
+def test_main_use_field_description() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

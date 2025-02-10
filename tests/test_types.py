@@ -4,7 +4,7 @@ from datamodel_code_generator.types import get_optional_type
 
 
 @pytest.mark.parametrize(
-    'input_,use_union_operator,expected',
+    ('input_', 'use_union_operator', 'expected'),
     [
         ('List[str]', False, 'Optional[List[str]]'),
         ('List[str, int, float]', False, 'Optional[List[str, int, float]]'),
@@ -37,5 +37,5 @@ from datamodel_code_generator.types import get_optional_type
         ),
     ],
 )
-def test_get_optional_type(input_: str, use_union_operator: bool, expected: str):
+def test_get_optional_type(input_: str, use_union_operator: bool, expected: str) -> None:
     assert get_optional_type(input_, use_union_operator) == expected

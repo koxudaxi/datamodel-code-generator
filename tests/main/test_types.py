@@ -8,7 +8,7 @@ from datamodel_code_generator.types import DataType
 
 
 class TestDataType:
-    def test_imports_with_literal_one(self):
+    def test_imports_with_literal_one(self) -> None:
         """Test imports for a DataType with single literal value"""
         data_type = DataType(literals=[''], python_version=PythonVersion.PY_38)
 
@@ -17,7 +17,7 @@ class TestDataType:
         assert IMPORT_LITERAL in imports
         assert len(imports) == 1
 
-    def test_imports_with_literal_one_and_optional(self):
+    def test_imports_with_literal_one_and_optional(self) -> None:
         """Test imports for an optional DataType with single literal value"""
         data_type = DataType(literals=[''], is_optional=True, python_version=PythonVersion.PY_38)
 
@@ -26,14 +26,14 @@ class TestDataType:
         assert IMPORT_OPTIONAL in imports
         assert len(imports) == 2
 
-    def test_imports_with_literal_empty(self):
+    def test_imports_with_literal_empty(self) -> None:
         """Test imports for a DataType with no literal values"""
         data_type = DataType(literals=[], python_version=PythonVersion.PY_38)
 
         imports = list(data_type.imports)
         assert len(imports) == 0
 
-    def test_imports_with_literal_python37(self):
+    def test_imports_with_literal_python37(self) -> None:
         """Test imports for a DataType with literal in Python 3.7"""
         data_type = DataType(literals=[''], python_version=PythonVersion.PY_37)
 
@@ -41,7 +41,7 @@ class TestDataType:
         assert IMPORT_LITERAL_BACKPORT in imports
         assert len(imports) == 1
 
-    def test_imports_with_nested_dict_key(self):
+    def test_imports_with_nested_dict_key(self) -> None:
         """Test imports for a DataType with dict_key containing literals"""
         dict_key_type = DataType(literals=['key'], python_version=PythonVersion.PY_38)
 
@@ -51,7 +51,7 @@ class TestDataType:
         assert IMPORT_LITERAL in imports
         assert len(imports) == 1
 
-    def test_imports_without_duplicate_literals(self):
+    def test_imports_without_duplicate_literals(self) -> None:
         """Test that literal import is not duplicated"""
         dict_key_type = DataType(literals=['key1'], python_version=PythonVersion.PY_38)
 

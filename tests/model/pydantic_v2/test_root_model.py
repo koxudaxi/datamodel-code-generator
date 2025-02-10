@@ -4,7 +4,7 @@ from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
 
-def test_root_model():
+def test_root_model() -> None:
     root_model = RootModel(
         fields=[
             DataModelFieldBase(
@@ -33,7 +33,7 @@ def test_root_model():
     assert root_model.render() == ("class TestRootModel(RootModel[Optional[str]]):\n    root: Optional[str] = 'abc'")
 
 
-def test_root_model_custom_base_class_is_ignored():
+def test_root_model_custom_base_class_is_ignored() -> None:
     """Verify that passing a custom_base_class is ignored."""
 
     root_model = RootModel(

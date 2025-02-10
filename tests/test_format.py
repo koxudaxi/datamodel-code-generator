@@ -14,7 +14,7 @@ ADD_COMMENT_FORMATTER = 'tests.data.python.custom_formatters.add_comment'
 ADD_LICENSE_FORMATTER = 'tests.data.python.custom_formatters.add_license'
 
 
-def test_python_version():
+def test_python_version() -> None:
     """Ensure that the python version used for the tests is properly listed"""
 
     _ = PythonVersion('{}.{}'.format(*sys.version_info[:2]))
@@ -41,7 +41,7 @@ def test_format_code_with_skip_string_normalization(
     assert formatted_code == expected_output + '\n'
 
 
-def test_format_code_un_exist_custom_formatter():
+def test_format_code_un_exist_custom_formatter() -> None:
     with pytest.raises(ModuleNotFoundError):
         _ = CodeFormatter(
             PythonVersion.PY_38,
@@ -49,7 +49,7 @@ def test_format_code_un_exist_custom_formatter():
         )
 
 
-def test_format_code_invalid_formatter_name():
+def test_format_code_invalid_formatter_name() -> None:
     with pytest.raises(NameError):
         _ = CodeFormatter(
             PythonVersion.PY_38,
@@ -57,7 +57,7 @@ def test_format_code_invalid_formatter_name():
         )
 
 
-def test_format_code_is_not_subclass():
+def test_format_code_is_not_subclass() -> None:
     with pytest.raises(TypeError):
         _ = CodeFormatter(
             PythonVersion.PY_38,
@@ -90,9 +90,9 @@ def test_format_code_with_custom_formatter_with_kwargs(tmp_path: Path, monkeypat
     assert (
         formatted_code
         == """# MIT License
-# 
+#
 # Copyright (c) 2023 Blah-blah
-# 
+#
 x = 1
 y = 2
 """
@@ -115,9 +115,9 @@ def test_format_code_with_two_custom_formatters(tmp_path: Path, monkeypatch: pyt
     assert (
         formatted_code
         == """# MIT License
-# 
+#
 # Copyright (c) 2023 Blah-blah
-# 
+#
 # a comment
 x = 1
 y = 2

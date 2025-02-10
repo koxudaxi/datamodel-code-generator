@@ -13,14 +13,14 @@ EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / 'graphql'
 
 
 @pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: pytest.MonkeyPatch):
+def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr('datamodel_code_generator.__main__.namespace', namespace_)
     monkeypatch.setattr('datamodel_code_generator.arguments.namespace', namespace_)
 
 
 @freeze_time('2019-07-26')
-def test_annotated():
+def test_annotated() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -41,7 +41,7 @@ def test_annotated():
 
 
 @freeze_time('2019-07-26')
-def test_annotated_use_standard_collections():
+def test_annotated_use_standard_collections() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -63,7 +63,7 @@ def test_annotated_use_standard_collections():
 
 
 @freeze_time('2019-07-26')
-def test_annotated_use_standard_collections_use_union_operator():
+def test_annotated_use_standard_collections_use_union_operator() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -89,7 +89,7 @@ def test_annotated_use_standard_collections_use_union_operator():
 
 
 @freeze_time('2019-07-26')
-def test_annotated_use_union_operator():
+def test_annotated_use_union_operator() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(
@@ -111,7 +111,7 @@ def test_annotated_use_union_operator():
 
 
 @freeze_time('2019-07-26')
-def test_annotated_field_aliases():
+def test_annotated_field_aliases() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / 'output.py'
         return_code: Exit = main(

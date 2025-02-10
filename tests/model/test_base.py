@@ -30,7 +30,7 @@ class B(DataModel):
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
         pass
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
     TEMPLATE_FILE_PATH = ''
@@ -56,7 +56,7 @@ class {{ class_name }}:
 {%- endfor -%}"""
 
 
-def test_template_base():
+def test_template_base() -> None:
     with NamedTemporaryFile('w', delete=False) as dummy_template:
         dummy_template.write('abc')
         dummy_template.seek(0)
@@ -67,7 +67,7 @@ def test_template_base():
     assert str(a) == ''
 
 
-def test_data_model():
+def test_data_model() -> None:
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), default='abc', required=True)
 
     with NamedTemporaryFile('w', delete=False) as dummy_template:
@@ -89,7 +89,7 @@ def test_data_model():
     assert data_model.render() == '@validate\n@dataclass\nclass test_model:\n    a: str'
 
 
-def test_data_model_exception():
+def test_data_model_exception() -> None:
     field = DataModelFieldBase(name='a', data_type=DataType(type='str'), default='abc', required=True)
     with pytest.raises(Exception, match='TEMPLATE_FILE_PATH is undefined'):
         C(
@@ -98,9 +98,7 @@ def test_data_model_exception():
         )
 
 
-def test_data_field():
-    # field = DataModelField(name='a', data_types=[], required=True)
-    # assert field.type_hint == ''
+def test_data_field() -> None:
     field = DataModelFieldBase(
         name='a',
         data_type=DataType(is_list=True),
@@ -109,14 +107,6 @@ def test_data_field():
         is_union=True,
     )
     assert field.type_hint == 'List'
-    # field = DataModelField(
-    #     name='a', data_types=[], required=True, is_list=False, is_union=True
-    # )
-    # assert field.type_hint == ''
-    # field = DataModelField(
-    #     name='a', data_types=[], required=True, is_list=False, is_union=False
-    # )
-    # assert field.type_hint == ''
     field = DataModelFieldBase(
         name='a',
         data_type=DataType(is_list=True),

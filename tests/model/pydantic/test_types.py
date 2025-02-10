@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Any
 
 import pytest
 
@@ -22,7 +23,7 @@ from datamodel_code_generator.types import DataType, Types, UnionIntFloat
 
 
 @pytest.mark.parametrize(
-    'types,use_non_positive_negative_number_constrained_types,params,data_type',
+    ('types', 'use_non_positive_negative_number_constrained_types', 'params', 'data_type'),
     [
         (Types.integer, False, {}, {'type': 'int'}),
         (
@@ -128,7 +129,12 @@ from datamodel_code_generator.types import DataType, Types, UnionIntFloat
         ),
     ],
 )
-def test_get_data_int_type(types, use_non_positive_negative_number_constrained_types, params, data_type):
+def test_get_data_int_type(
+    types: Types,
+    use_non_positive_negative_number_constrained_types: bool,
+    params: dict[str, Any],
+    data_type: dict[str, Any],
+) -> None:
     data_type_manager = DataTypeManager(
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
     )
@@ -138,7 +144,7 @@ def test_get_data_int_type(types, use_non_positive_negative_number_constrained_t
 
 
 @pytest.mark.parametrize(
-    'types,use_non_positive_negative_number_constrained_types,params,data_type',
+    ('types', 'use_non_positive_negative_number_constrained_types', 'params', 'data_type'),
     [
         (Types.float, False, {}, {'type': 'float'}),
         (
@@ -244,7 +250,12 @@ def test_get_data_int_type(types, use_non_positive_negative_number_constrained_t
         ),
     ],
 )
-def test_get_data_float_type(types, use_non_positive_negative_number_constrained_types, params, data_type):
+def test_get_data_float_type(
+    types: Types,
+    use_non_positive_negative_number_constrained_types: bool,
+    params: dict[str, Any],
+    data_type: dict[str, Any],
+) -> None:
     data_type_manager = DataTypeManager(
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
     )
@@ -252,7 +263,7 @@ def test_get_data_float_type(types, use_non_positive_negative_number_constrained
 
 
 @pytest.mark.parametrize(
-    'types,params,data_type',
+    ('types', 'params', 'data_type'),
     [
         (
             Types.decimal,
@@ -321,13 +332,13 @@ def test_get_data_float_type(types, use_non_positive_negative_number_constrained
         ),
     ],
 )
-def test_get_data_decimal_type(types, params, data_type):
+def test_get_data_decimal_type(types: Types, params: dict[str, Any], data_type: dict[str, Any]) -> None:
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_decimal_type(types, **params) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
-    'types,params,data_type',
+    ('types', 'params', 'data_type'),
     [
         (Types.string, {}, {'type': 'str'}),
         (
@@ -362,38 +373,37 @@ def test_get_data_decimal_type(types, params, data_type):
         ),
     ],
 )
-def test_get_data_str_type(types, params, data_type):
+def test_get_data_str_type(types: Types, params: dict[str, Any], data_type: dict[str, Any]) -> None:
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_str_type(types, **params) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
-    'types,params,data_type',
+    ('types', 'data_type'),
     [
-        (Types.string, {}, {'type': 'str'}),
-        (Types.integer, {}, {'type': 'int'}),
-        (Types.float, {}, {'type': 'float'}),
-        (Types.boolean, {}, {'type': 'bool'}),
+        (Types.string, {'type': 'str'}),
+        (Types.integer, {'type': 'int'}),
+        (Types.float, {'type': 'float'}),
+        (Types.boolean, {'type': 'bool'}),
         (
             Types.decimal,
-            {},
             {'type': 'Decimal', 'import_': Import(from_='decimal', import_='Decimal')},
         ),
     ],
 )
-def test_get_data_type(types, params, data_type):
+def test_get_data_type(types: Types, data_type: dict[str, str]) -> None:
     data_type_manager = DataTypeManager()
-    assert data_type_manager.get_data_type(types, **params) == data_type_manager.data_type(**data_type)
+    assert data_type_manager.get_data_type(types) == data_type_manager.data_type(**data_type)
 
 
-def test_data_type_type_hint():
+def test_data_type_type_hint() -> None:
     assert DataType(type='str').type_hint == 'str'
     assert DataType(type='constr', is_func=True).type_hint == 'constr()'
     assert DataType(type='constr', is_func=True, kwargs={'min_length': 10}).type_hint == 'constr(min_length=10)'
 
 
 @pytest.mark.parametrize(
-    'types,data_type',
+    ('types', 'data_type'),
     [
         ('string', {'type': 'str'}),
         (10, {'type': 'int'}),
@@ -401,13 +411,13 @@ def test_data_type_type_hint():
         (True, {'type': 'bool'}),
     ],
 )
-def test_get_data_type_from_value(types, data_type):
+def test_get_data_type_from_value(types: Any, data_type: dict[str, str]) -> None:
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_type_from_value(types) == data_type_manager.data_type(**data_type)
 
 
 @pytest.mark.parametrize(
-    'types,data_type',
+    ('types', 'data_type'),
     [
         (
             [1, 2, 3],
@@ -420,7 +430,7 @@ def test_get_data_type_from_value(types, data_type):
         (None, ('typing.Any', False)),
     ],
 )
-def test_get_data_type_from_full_path(types, data_type):
+def test_get_data_type_from_full_path(types: Any, data_type: tuple[str, bool]) -> None:
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_type_from_value(types) == data_type_manager.get_data_type_from_full_path(
         *data_type
