@@ -82,7 +82,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 class Config(BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore [reportAssignmentType]
+        model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
         def get(self, item: str) -> Any:
             return getattr(self, item)
@@ -173,8 +173,8 @@ class Config(BaseModel):
 
     @model_validator(mode="after")
     def validate_keyword_only(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
-        output_model_type: DataModelType = values.get("output_model_type")  # pyright: ignore [reportAssignmentType]
-        python_target: PythonVersion = values.get("target_python_version")  # pyright: ignore [reportAssignmentType]
+        output_model_type: DataModelType = values.get("output_model_type")  # pyright: ignore[reportAssignmentType]
+        python_target: PythonVersion = values.get("target_python_version")  # pyright: ignore[reportAssignmentType]
         if (
             values.get("keyword_only")
             and output_model_type == DataModelType.DataclassesDataclass
@@ -248,7 +248,7 @@ class Config(BaseModel):
 
     if PYDANTIC_V2:
 
-        @model_validator(mode="after")
+        @model_validator(mode="after")  # pyright: ignore[reportArgumentType]
         def validate_root(self: Self) -> Self:
             if self.use_annotated:
                 self.field_constraints = True

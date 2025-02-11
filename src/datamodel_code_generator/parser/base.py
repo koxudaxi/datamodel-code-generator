@@ -778,12 +778,12 @@ class Parser(ABC):
 
                     # Check the main discriminator model path
                     if mapping:
-                        check_paths(discriminator_model, mapping)  # pyright: ignore [reportArgumentType]
+                        check_paths(discriminator_model, mapping)  # pyright: ignore[reportArgumentType]
 
                         # Check the base_classes if they exist
                         if len(type_names) == 0:
                             for base_class in discriminator_model.base_classes:
-                                check_paths(base_class.reference, mapping)  # pyright: ignore [reportArgumentType]
+                                check_paths(base_class.reference, mapping)  # pyright: ignore[reportArgumentType]
                     else:
                         type_names = [discriminator_model.path.split("/")[-1]]
                     if not type_names:  # pragma: no cover
@@ -819,10 +819,7 @@ class Parser(ABC):
                             )
                         )
                     literal = IMPORT_LITERAL if self.target_python_version.has_literal_type else IMPORT_LITERAL_BACKPORT
-                    has_imported_literal = any(
-                        literal == import_  # type: ignore [comparison-overlap]
-                        for import_ in imports
-                    )
+                    has_imported_literal = any(literal == import_ for import_ in imports)
                     if has_imported_literal:  # pragma: no cover
                         imports.append(literal)
 

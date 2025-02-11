@@ -78,9 +78,9 @@ def get_model_by_path(schema: Union[Dict[str, Any], List[Any]], keys: Union[List
     if not keys:
         model = schema
     elif len(keys) == 1:
-        model = schema.get(keys[0], {}) if isinstance(schema, dict) else schema[int(keys[0])]
+        model = schema.get(str(keys[0]), {}) if isinstance(schema, dict) else schema[int(keys[0])]
     elif isinstance(schema, dict):
-        model = get_model_by_path(schema[keys[0]], keys[1:])
+        model = get_model_by_path(schema[str(keys[0])], keys[1:])
     else:
         model = get_model_by_path(schema[int(keys[0])], keys[1:])
     if isinstance(model, dict):
@@ -253,7 +253,7 @@ class JsonSchemaObject(BaseModel):
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Union[Discriminator, str, None] = None
     if PYDANTIC_V2:
-        model_config = ConfigDict(  # pyright: ignore [reportPossiblyUnboundVariable]
+        model_config = ConfigDict(  # pyright: ignore[reportPossiblyUnboundVariable]
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
         )
@@ -284,7 +284,7 @@ class JsonSchemaObject(BaseModel):
 
     @cached_property
     def ref_object_name(self) -> str:  # pragma: no cover
-        return self.ref.rsplit("/", 1)[-1]
+        return (self.ref or "").rsplit("/", 1)[-1]
 
     @field_validator("items", mode="before")
     def validate_items(cls, values: Any) -> Any:  # noqa: N805
@@ -348,7 +348,7 @@ EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: Set[str] = {
 }
 
 EXCLUDE_FIELD_KEYS = (
-    set(JsonSchemaObject.get_fields())  # pyright: ignore [reportAttributeAccessIssue]
+    set(JsonSchemaObject.get_fields())  # pyright: ignore[reportAttributeAccessIssue]
     - DEFAULT_FIELD_KEYS
     - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
 ) | {
@@ -358,7 +358,7 @@ EXCLUDE_FIELD_KEYS = (
 }
 
 
-@snooper_to_methods(max_variable_length=None)  # noqa: PLR0904
+@snooper_to_methods()  # noqa: PLR0904
 class JsonSchemaParser(Parser):
     SCHEMA_PATHS: ClassVar[List[str]] = ["#/definitions", "#/$defs"]
     SCHEMA_OBJECT_TYPE: ClassVar[Type[JsonSchemaObject]] = JsonSchemaObject
@@ -830,6 +830,7 @@ class JsonSchemaParser(Parser):
             base_classes,
             required,
         )
+        assert all_of_data_type.reference is not None
         data_type = self.data_type(
             data_types=[
                 self._parse_object_common_part(

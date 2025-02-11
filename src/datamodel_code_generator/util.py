@@ -62,10 +62,10 @@ def model_validator(
         if PYDANTIC_V2:
             from pydantic import model_validator as model_validator_v2  # noqa: PLC0415
 
-            return model_validator_v2(mode=mode)(method)
+            return model_validator_v2(mode=mode)(method)  # pyright: ignore[reportReturnType]
         from pydantic import root_validator  # noqa: PLC0415
 
-        return root_validator(method, pre=mode == "before")
+        return root_validator(method, pre=mode == "before")  # pyright: ignore[reportCallIssue]
 
     return inner
 
@@ -82,7 +82,7 @@ def field_validator(
             return field_validator_v2(field_name, *fields, mode=mode)(method)
         from pydantic import validator  # noqa: PLC0415
 
-        return validator(field_name, *fields, pre=mode == "before")(method)
+        return validator(field_name, *fields, pre=mode == "before")(method)  # pyright: ignore[reportReturnType]
 
     return inner
 
@@ -95,4 +95,4 @@ else:
 
 class BaseModel(_BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(strict=False)  # pyright: ignore [reportAssignmentType]
+        model_config = ConfigDict(strict=False)  # pyright: ignore[reportAssignmentType]

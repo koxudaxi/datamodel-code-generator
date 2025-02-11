@@ -150,7 +150,7 @@ class ComponentsObject(BaseModel):
     headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012
 
 
-@snooper_to_methods(max_variable_length=None)
+@snooper_to_methods()
 class OpenAPIParser(JsonSchemaParser):
     SCHEMA_PATHS: ClassVar[List[str]] = ["#/components/schemas"]
 
@@ -388,13 +388,13 @@ class OpenAPIParser(JsonSchemaParser):
                 if not object_schema:  # pragma: no cover
                     continue
                 if isinstance(object_schema, JsonSchemaObject):
-                    data_types[status_code][content_type] = self.parse_schema(  # pyright: ignore [reportArgumentType]
+                    data_types[status_code][content_type] = self.parse_schema(  # pyright: ignore[reportArgumentType]
                         name,
                         object_schema,
-                        [*path, str(status_code), content_type],  # pyright: ignore [reportArgumentType]
+                        [*path, str(status_code), content_type],  # pyright: ignore[reportArgumentType]
                     )
                 else:
-                    data_types[status_code][content_type] = self.get_ref_data_type(  # pyright: ignore [reportArgumentType]
+                    data_types[status_code][content_type] = self.get_ref_data_type(  # pyright: ignore[reportArgumentType]
                         object_schema.ref
                     )
 

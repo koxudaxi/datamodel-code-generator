@@ -23,6 +23,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 from urllib.parse import ParseResult
 
@@ -90,7 +91,7 @@ def snooper_to_methods() -> Callable[..., Any]:
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
-            snooper_method = pysnooper.snoop(DEFAULT_MAX_VARIABLE_LENGTH)(method)
+            snooper_method = pysnooper.snoop(max_variable_length=DEFAULT_MAX_VARIABLE_LENGTH)(method)
             setattr(cls, name, snooper_method)
         return cls
 
@@ -341,6 +342,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
                     def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
+                        assert csv_reader.fieldnames is not None
                         return dict(zip(csv_reader.fieldnames, next(csv_reader)))
 
                     if isinstance(input_, Path):
@@ -351,14 +353,26 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
                         obj = get_header_and_first_line(io.StringIO(input_text))
                 elif input_file_type == InputFileType.Yaml:
-                    obj = load_yaml(input_.read_text(encoding=encoding) if isinstance(input_, Path) else input_text)
+                    if isinstance(input_, Path):
+                        obj = load_yaml(input_.read_text(encoding=encoding))
+                    else:
+                        assert input_text is not None
+                        obj = load_yaml(input_text)
                 elif input_file_type == InputFileType.Json:
-                    obj = json.loads(input_.read_text(encoding=encoding) if isinstance(input_, Path) else input_text)
+                    if isinstance(input_, Path):
+                        obj = json.loads(input_.read_text(encoding=encoding))
+                    else:
+                        assert input_text is not None
+                        obj = json.loads(input_text)
                 elif input_file_type == InputFileType.Dict:
                     import ast  # noqa: PLC0415
 
                     # Input can be a dict object stored in a python file
-                    obj = ast.literal_eval(input_.read_text(encoding=encoding)) if isinstance(input_, Path) else input_
+                    obj = (
+                        ast.literal_eval(input_.read_text(encoding=encoding))
+                        if isinstance(input_, Path)
+                        else cast("Dict[Any, Any]", input_)
+                    )
                 else:  # pragma: no cover
                     msg = f"Unsupported input file type: {input_file_type}"
                     raise Error(msg)  # noqa: TRY301

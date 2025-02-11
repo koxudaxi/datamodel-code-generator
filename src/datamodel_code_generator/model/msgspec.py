@@ -56,9 +56,9 @@ DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
 
 
 def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]:
-    original_imports: property = getattr(cls, "imports", None)
+    original_imports: property = cls.imports
 
-    @wraps(original_imports.fget)
+    @wraps(original_imports.fget)  # pyright: ignore[reportArgumentType]
     def new_imports(self: DataModelFieldBaseT) -> Tuple[Import, ...]:
         extra_imports = []
         field = self.field
@@ -71,9 +71,9 @@ def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_META)
         if self.extras.get("is_classvar"):
             extra_imports.append(IMPORT_CLASSVAR)
-        return chain_as_tuple(original_imports.fget(self), extra_imports)
+        return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
 
-    cls.imports = property(new_imports)
+    cls.imports = property(new_imports)  # pyright: ignore[reportAttributeAccessIssue]
     return cls
 
 

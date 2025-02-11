@@ -53,7 +53,7 @@ class ConstraintsBase(_BaseModel):
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")
     _exclude_fields: ClassVar[Set[str]] = {"has_constraints"}
     if PYDANTIC_V2:
-        model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
+        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             arbitrary_types_allowed=True, ignored_types=(cached_property,)
         )
     else:

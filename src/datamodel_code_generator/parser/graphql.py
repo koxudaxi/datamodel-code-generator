@@ -55,7 +55,7 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
     return graphql.lexicographic_sort_schema(schema)
 
 
-@snooper_to_methods(max_variable_length=None)
+@snooper_to_methods()
 class GraphQLParser(Parser):
     # raw graphql schema as `graphql-core` object
     raw_obj: graphql.GraphQLSchema
@@ -389,9 +389,9 @@ class GraphQLParser(Parser):
             elif graphql.is_non_null_type(obj):  # pragma: no cover
                 data_type.is_optional = False
 
-            obj = obj.of_type  # pyright: ignore [reportAttributeAccessIssue]
+            obj = obj.of_type  # pyright: ignore[reportAttributeAccessIssue]
 
-        data_type.type = obj.name  # pyright: ignore [reportAttributeAccessIssue]
+        data_type.type = obj.name  # pyright: ignore[reportAttributeAccessIssue]
 
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
 
@@ -440,7 +440,7 @@ class GraphQLParser(Parser):
 
         base_classes = []
         if hasattr(obj, "interfaces"):  # pragma: no cover
-            base_classes = [self.references[i.name] for i in obj.interfaces]  # pyright: ignore [reportAttributeAccessIssue]
+            base_classes = [self.references[i.name] for i in obj.interfaces]  # pyright: ignore[reportAttributeAccessIssue]
 
         data_model_type = self.data_model_type(
             reference=self.references[obj.name],

@@ -114,25 +114,25 @@ class UnionIntFloat:
     def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _source_type: Any, _handler: "GetCoreSchemaHandler"
     ) -> "core_schema.CoreSchema":
-        from_int_schema = core_schema.chain_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
+        from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
             [
-                core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
-                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore [reportPossiblyUnboundVariable]
+                core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
+                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore[reportPossiblyUnboundVariable]
                 ),
-                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore [reportPossiblyUnboundVariable]
+                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore[reportPossiblyUnboundVariable]
             ]
         )
 
-        return core_schema.json_or_python_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
+        return core_schema.json_or_python_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
             json_schema=from_int_schema,
-            python_schema=core_schema.union_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
+            python_schema=core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
                 [
                     # check if it's an instance first before doing any further work
-                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore [reportPossiblyUnboundVariable]
+                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore[reportPossiblyUnboundVariable]
                     from_int_schema,
                 ]
             ),
-            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
+            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
                 lambda instance: instance.value
             ),
         )
@@ -230,7 +230,7 @@ class DataType(_BaseModel):
     if PYDANTIC_V2:
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
+        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             extra="forbid",
             revalidate_instances="never",
         )
@@ -326,8 +326,8 @@ class DataType(_BaseModel):
     def full_name(self) -> str:
         module_name = self.module_name
         if module_name:
-            return f"{module_name}.{self.reference.short_name}"
-        return self.reference.short_name
+            return f"{module_name}.{self.reference.short_name if self.reference else ''}"
+        return self.reference.short_name if self.reference else ""
 
     @property
     def all_data_types(self) -> Iterator["DataType"]:
