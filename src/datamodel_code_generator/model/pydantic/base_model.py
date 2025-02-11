@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from abc import ABC
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Set
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
     ConstraintsBase,
     DataModel,
@@ -16,74 +17,73 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_EXTRA,
     IMPORT_FIELD,
 )
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 from datamodel_code_generator.util import cached_property
 
+if TYPE_CHECKING:
+    from collections import defaultdict
+
+    from datamodel_code_generator.imports import Import
+    from datamodel_code_generator.reference import Reference
+
 
 class Constraints(ConstraintsBase):
-    gt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMinimum')
-    ge: Optional[UnionIntFloat] = Field(None, alias='minimum')
-    lt: Optional[UnionIntFloat] = Field(None, alias='exclusiveMaximum')
-    le: Optional[UnionIntFloat] = Field(None, alias='maximum')
-    multiple_of: Optional[float] = Field(None, alias='multipleOf')
-    min_items: Optional[int] = Field(None, alias='minItems')
-    max_items: Optional[int] = Field(None, alias='maxItems')
-    min_length: Optional[int] = Field(None, alias='minLength')
-    max_length: Optional[int] = Field(None, alias='maxLength')
-    regex: Optional[str] = Field(None, alias='pattern')
+    gt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMinimum")  # noqa: UP045
+    ge: Optional[UnionIntFloat] = Field(None, alias="minimum")  # noqa: UP045
+    lt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMaximum")  # noqa: UP045
+    le: Optional[UnionIntFloat] = Field(None, alias="maximum")  # noqa: UP045
+    multiple_of: Optional[float] = Field(None, alias="multipleOf")  # noqa: UP045
+    min_items: Optional[int] = Field(None, alias="minItems")  # noqa: UP045
+    max_items: Optional[int] = Field(None, alias="maxItems")  # noqa: UP045
+    min_length: Optional[int] = Field(None, alias="minLength")  # noqa: UP045
+    max_length: Optional[int] = Field(None, alias="maxLength")  # noqa: UP045
+    regex: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
 class DataModelField(DataModelFieldBase):
-    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
-        'alias',
-        'default',
-        'const',
-        'gt',
-        'ge',
-        'lt',
-        'le',
-        'multiple_of',
-        'min_items',
-        'max_items',
-        'min_length',
-        'max_length',
-        'regex',
+    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+        "alias",
+        "default",
+        "const",
+        "gt",
+        "ge",
+        "lt",
+        "le",
+        "multiple_of",
+        "min_items",
+        "max_items",
+        "min_length",
+        "max_length",
+        "regex",
     }
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le'}
-    constraints: Optional[Constraints] = None
-    _PARSE_METHOD: ClassVar[str] = 'parse_obj'
+    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le"}  # noqa: UP006
+    constraints: Optional[Constraints] = None  # noqa: UP045
+    _PARSE_METHOD: ClassVar[str] = "parse_obj"
 
     @property
-    def method(self) -> Optional[str]:
+    def method(self) -> str | None:
         return self.validator
 
     @property
-    def validator(self) -> Optional[str]:
+    def validator(self) -> str | None:
         return None
         # TODO refactor this method for other validation logic
-        # from datamodel_code_generator.model.pydantic import VALIDATOR_TEMPLATE
-        #
-        # return VALIDATOR_TEMPLATE.render(
-        #     field_name=self.name, types=','.join([t.type_hint for t in self.data_types])
-        # )
 
     @property
-    def field(self) -> Optional[str]:
+    def field(self) -> str | None:
         """for backwards compatibility"""
         result = str(self)
         if (
             self.use_default_kwarg
-            and not result.startswith('Field(...')
-            and not result.startswith('Field(default_factory=')
+            and not result.startswith("Field(...")
+            and not result.startswith("Field(default_factory=")
         ):
             # Use `default=` for fields that have a default value so that type
             # checkers using @dataclass_transform can infer the field as
             # optional in __init__.
-            result = result.replace('Field(', 'Field(default=')
-        if result == '':
+            result = result.replace("Field(", "Field(default=")
+        if not result:
             return None
-
         return result
 
     def self_reference(self) -> bool:
@@ -95,39 +95,45 @@ class DataModelField(DataModelFieldBase):
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
 
-        if any(data_type.type == 'float' for data_type in self.data_type.all_data_types):
+        if any(data_type.type == "float" for data_type in self.data_type.all_data_types):
             return float(value)
         return int(value)
 
-    def _get_default_as_pydantic_model(self) -> Optional[str]:
+    def _get_default_as_pydantic_model(self) -> str | None:
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict or self.data_type.is_union:
                 # TODO: Parse Union and dict model for default
                 continue
-            elif data_type.is_list and len(data_type.data_types) == 1:
-                data_type = data_type.data_types[0]
+            if data_type.is_list and len(data_type.data_types) == 1:
+                data_type_child = data_type.data_types[0]
                 if (
-                    data_type.reference
-                    and isinstance(data_type.reference.source, BaseModelBase)
+                    data_type_child.reference
+                    and isinstance(data_type_child.reference.source, BaseModelBase)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
-                    return f'lambda :[{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}(v) for v in {repr(self.default)}]'
+                    return (
+                        f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
+                        f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
+                    )
             elif data_type.reference and isinstance(data_type.reference.source, BaseModelBase):  # pragma: no cover
-                return f'lambda :{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}({repr(self.default)})'
+                return (
+                    f"lambda :{data_type.alias or data_type.reference.source.class_name}."
+                    f"{self._PARSE_METHOD}({self.default!r})"
+                )
         return None
 
-    def _process_data_in_str(self, data: Dict[str, Any]) -> None:
+    def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
-            data['const'] = True
+            data["const"] = True
 
-    def _process_annotated_field_arguments(self, field_arguments: List[str]) -> List[str]:
+    def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
 
-    def __str__(self) -> str:
-        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
+    def __str__(self) -> str:  # noqa: PLR0912
+        data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
-            data['alias'] = self.alias
+            data["alias"] = self.alias
         if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
             data = {
                 **data,
@@ -142,73 +148,73 @@ class DataModelField(DataModelFieldBase):
             }
 
         if self.use_field_description:
-            data.pop('description', None)  # Description is part of field docstring
+            data.pop("description", None)  # Description is part of field docstring
 
         self._process_data_in_str(data)
 
-        discriminator = data.pop('discriminator', None)
+        discriminator = data.pop("discriminator", None)
         if discriminator:
             if isinstance(discriminator, str):
-                data['discriminator'] = discriminator
+                data["discriminator"] = discriminator
             elif isinstance(discriminator, dict):  # pragma: no cover
-                data['discriminator'] = discriminator['propertyName']
+                data["discriminator"] = discriminator["propertyName"]
 
         if self.required:
             default_factory = None
-        elif self.default and 'default_factory' not in data:
+        elif self.default and "default_factory" not in data:
             default_factory = self._get_default_as_pydantic_model()
         else:
-            default_factory = data.pop('default_factory', None)
+            default_factory = data.pop("default_factory", None)
 
-        field_arguments = sorted(f'{k}={repr(v)}' for k, v in data.items() if v is not None)
+        field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
             if self.nullable and self.required:
-                return 'Field(...)'  # Field() is for mypy
-            return ''
+                return "Field(...)"  # Field() is for mypy
+            return ""
 
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif self.required:
-            field_arguments = ['...', *field_arguments]
+            field_arguments = ["...", *field_arguments]
         elif default_factory:
-            field_arguments = [f'default_factory={default_factory}', *field_arguments]
+            field_arguments = [f"default_factory={default_factory}", *field_arguments]
         else:
-            field_arguments = [f'{repr(self.default)}', *field_arguments]
+            field_arguments = [f"{self.default!r}", *field_arguments]
 
-        return f'Field({", ".join(field_arguments)})'
+        return f"Field({', '.join(field_arguments)})"
 
     @property
-    def annotated(self) -> Optional[str]:
+    def annotated(self) -> str | None:
         if not self.use_annotated or not str(self):
             return None
-        return f'Annotated[{self.type_hint}, {str(self)}]'
+        return f"Annotated[{self.type_hint}, {self!s}]"
 
     @property
-    def imports(self) -> Tuple[Import, ...]:
+    def imports(self) -> tuple[Import, ...]:
         if self.field:
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 
 
 class BaseModelBase(DataModel, ABC):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, Any] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
     ) -> None:
-        methods: List[str] = [field.method for field in fields if field.method]
+        methods: list[str] = [field.method for field in fields if field.method]
 
         super().__init__(
             fields=fields,
@@ -239,21 +245,21 @@ class BaseModelBase(DataModel, ABC):
 
 
 class BaseModel(BaseModelBase):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic/BaseModel.jinja2'
-    BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic/BaseModel.jinja2"
+    BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, Any] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
@@ -272,27 +278,29 @@ class BaseModel(BaseModelBase):
             nullable=nullable,
             keyword_only=keyword_only,
         )
-        config_parameters: Dict[str, Any] = {}
+        config_parameters: dict[str, Any] = {}
 
-        additionalProperties = self.extra_template_data.get('additionalProperties')
-        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
-        if additionalProperties is not None or allow_extra_fields:
-            config_parameters['extra'] = 'Extra.allow' if additionalProperties or allow_extra_fields else 'Extra.forbid'
+        additional_properties = self.extra_template_data.get("additionalProperties")
+        allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
+        if additional_properties is not None or allow_extra_fields:
+            config_parameters["extra"] = (
+                "Extra.allow" if additional_properties or allow_extra_fields else "Extra.forbid"
+            )
             self._additional_imports.append(IMPORT_EXTRA)
 
-        for config_attribute in 'allow_population_by_field_name', 'allow_mutation':
+        for config_attribute in "allow_population_by_field_name", "allow_mutation":
             if config_attribute in self.extra_template_data:
                 config_parameters[config_attribute] = self.extra_template_data[config_attribute]
         for data_type in self.all_data_types:
             if data_type.is_custom_type:
-                config_parameters['arbitrary_types_allowed'] = True
+                config_parameters["arbitrary_types_allowed"] = True
                 break
 
-        if isinstance(self.extra_template_data.get('config'), dict):
-            for key, value in self.extra_template_data['config'].items():
-                config_parameters[key] = value
+        if isinstance(self.extra_template_data.get("config"), dict):
+            for key, value in self.extra_template_data["config"].items():
+                config_parameters[key] = value  # noqa: PERF403
 
         if config_parameters:
-            from datamodel_code_generator.model.pydantic import Config
+            from datamodel_code_generator.model.pydantic import Config  # noqa: PLC0415
 
-            self.extra_template_data['config'] = Config.parse_obj(config_parameters)  # pyright: ignore [reportArgumentType]
+            self.extra_template_data["config"] = Config.parse_obj(config_parameters)  # pyright: ignore[reportArgumentType]

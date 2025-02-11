@@ -11,19 +11,13 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    DefaultDict,
     Dict,
     Iterator,
-    List,
     Mapping,
-    Optional,
     Sequence,
-    Set,
     TextIO,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
+    cast,
 )
 from urllib.parse import ParseResult
 
@@ -31,13 +25,10 @@ import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import DatetimeClassType, PythonVersion
-from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.parser.base import Parser
-from datamodel_code_generator.types import StrictTypes
-from datamodel_code_generator.util import SafeLoader  # type: ignore
+from datamodel_code_generator.util import SafeLoader
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 try:
     import pysnooper
@@ -46,11 +37,11 @@ try:
 except ImportError:  # pragma: no cover
     pysnooper = None
 
-DEFAULT_BASE_CLASS: str = 'pydantic.BaseModel'
+DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
-def load_yaml(stream: Union[str, TextIO]) -> Any:
-    return yaml.load(stream, Loader=SafeLoader)
+def load_yaml(stream: str | TextIO) -> Any:
+    return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
 def load_yaml_from_path(path: Path, encoding: str) -> Any:
@@ -59,22 +50,28 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
 
 
 if TYPE_CHECKING:
+    from collections import defaultdict
+
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.parser.base import Parser
+    from datamodel_code_generator.types import StrictTypes
 
     def get_version() -> str: ...
 
 else:
 
     def get_version() -> str:
-        package = 'datamodel-code-generator'
+        package = "datamodel-code-generator"
 
-        from importlib.metadata import version
+        from importlib.metadata import version  # noqa: PLC0415
 
         return version(package)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
     if not pysnooper:
-        raise Exception("Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option")
+        msg = "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
+        raise Exception(msg)  # noqa: TRY002
 
     pysnooper.tracer.DISABLED = False
 
@@ -82,35 +79,15 @@ def enable_debug_message() -> None:  # pragma: no cover
 DEFAULT_MAX_VARIABLE_LENGTH: int = 100
 
 
-def snooper_to_methods(  # type: ignore
-    output=None,
-    watch=(),
-    watch_explode=(),
-    depth=1,
-    prefix='',
-    overwrite=False,
-    thread_info=False,
-    custom_repr=(),
-    max_variable_length: Optional[int] = DEFAULT_MAX_VARIABLE_LENGTH,
-) -> Callable[..., Any]:
-    def inner(cls: Type[T]) -> Type[T]:
+def snooper_to_methods() -> Callable[..., Any]:
+    def inner(cls: type[T]) -> type[T]:
         if not pysnooper:
             return cls
-        import inspect
+        import inspect  # noqa: PLC0415
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
-            snooper_method = pysnooper.snoop(
-                output,
-                watch,
-                watch_explode,
-                depth,
-                prefix,
-                overwrite,
-                thread_info,
-                custom_repr,
-                max_variable_length if max_variable_length is not None else DEFAULT_MAX_VARIABLE_LENGTH,
-            )(method)
+            snooper_method = pysnooper.snoop(max_variable_length=DEFAULT_MAX_VARIABLE_LENGTH)(method)
             setattr(cls, name, snooper_method)
         return cls
 
@@ -118,7 +95,7 @@ def snooper_to_methods(  # type: ignore
 
 
 @contextlib.contextmanager
-def chdir(path: Optional[Path]) -> Iterator[None]:
+def chdir(path: Path | None) -> Iterator[None]:
     """Changes working directory and returns to previous on exit."""
 
     if path is None:
@@ -133,12 +110,12 @@ def chdir(path: Optional[Path]) -> Iterator[None]:
 
 
 def is_openapi(text: str) -> bool:
-    return 'openapi' in load_yaml(text)
+    return "openapi" in load_yaml(text)
 
 
-JSON_SCHEMA_URLS: Tuple[str, ...] = (
-    'http://json-schema.org/',
-    'https://json-schema.org/',
+JSON_SCHEMA_URLS: tuple[str, ...] = (
+    "http://json-schema.org/",
+    "https://json-schema.org/",
 )
 
 
@@ -146,37 +123,35 @@ def is_schema(text: str) -> bool:
     data = load_yaml(text)
     if not isinstance(data, dict):
         return False
-    schema = data.get('$schema')
+    schema = data.get("$schema")
     if isinstance(schema, str) and any(schema.startswith(u) for u in JSON_SCHEMA_URLS):  # pragma: no cover
         return True
-    if isinstance(data.get('type'), str):
+    if isinstance(data.get("type"), str):
         return True
     if any(
         isinstance(data.get(o), list)
         for o in (
-            'allOf',
-            'anyOf',
-            'oneOf',
+            "allOf",
+            "anyOf",
+            "oneOf",
         )
     ):
         return True
-    if isinstance(data.get('properties'), dict):
-        return True
-    return False
+    return bool(isinstance(data.get("properties"), dict))
 
 
 class InputFileType(Enum):
-    Auto = 'auto'
-    OpenAPI = 'openapi'
-    JsonSchema = 'jsonschema'
-    Json = 'json'
-    Yaml = 'yaml'
-    Dict = 'dict'
-    CSV = 'csv'
-    GraphQL = 'graphql'
+    Auto = "auto"
+    OpenAPI = "openapi"
+    JsonSchema = "jsonschema"
+    Json = "json"
+    Yaml = "yaml"
+    Dict = "dict"
+    CSV = "csv"
+    GraphQL = "graphql"
 
 
-RAW_DATA_TYPES: List[InputFileType] = [
+RAW_DATA_TYPES: list[InputFileType] = [
     InputFileType.Json,
     InputFileType.Yaml,
     InputFileType.Dict,
@@ -186,22 +161,22 @@ RAW_DATA_TYPES: List[InputFileType] = [
 
 
 class DataModelType(Enum):
-    PydanticBaseModel = 'pydantic.BaseModel'
-    PydanticV2BaseModel = 'pydantic_v2.BaseModel'
-    DataclassesDataclass = 'dataclasses.dataclass'
-    TypingTypedDict = 'typing.TypedDict'
-    MsgspecStruct = 'msgspec.Struct'
+    PydanticBaseModel = "pydantic.BaseModel"
+    PydanticV2BaseModel = "pydantic_v2.BaseModel"
+    DataclassesDataclass = "dataclasses.dataclass"
+    TypingTypedDict = "typing.TypedDict"
+    MsgspecStruct = "msgspec.Struct"
 
 
 class OpenAPIScope(Enum):
-    Schemas = 'schemas'
-    Paths = 'paths'
-    Tags = 'tags'
-    Parameters = 'parameters'
+    Schemas = "schemas"
+    Paths = "paths"
+    Tags = "tags"
+    Parameters = "parameters"
 
 
 class GraphQLScope(Enum):
-    Schema = 'schema'
+    Schema = "schema"
 
 
 class Error(Exception):
@@ -215,51 +190,52 @@ class Error(Exception):
 class InvalidClassNameError(Error):
     def __init__(self, class_name: str) -> None:
         self.class_name = class_name
-        message = f'title={repr(class_name)} is invalid class name.'
+        message = f"title={class_name!r} is invalid class name."
         super().__init__(message=message)
 
 
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     if path.is_file():
         return path
-    elif path.is_dir():
-        for child in path.rglob('*'):
+    if path.is_dir():
+        for child in path.rglob("*"):
             if child.is_file():
                 return child
-    raise Error('File not found')
+    msg = "File not found"
+    raise Error(msg)
 
 
-def generate(
-    input_: Union[Path, str, ParseResult, Mapping[str, Any]],
+def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any],
     *,
-    input_filename: Optional[str] = None,
+    input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
-    output: Optional[Path] = None,
+    output: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_38,
-    base_class: str = '',
-    additional_imports: Optional[List[str]] = None,
-    custom_template_dir: Optional[Path] = None,
-    extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+    base_class: str = "",
+    additional_imports: list[str] | None = None,
+    custom_template_dir: Path | None = None,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
     validation: bool = False,
     field_constraints: bool = False,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
-    aliases: Optional[Mapping[str, str]] = None,
+    aliases: Mapping[str, str] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
     allow_population_by_field_name: bool = False,
     allow_extra_fields: bool = False,
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
-    class_name: Optional[str] = None,
+    class_name: str | None = None,
     use_standard_collections: bool = False,
     use_schema_description: bool = False,
     use_field_description: bool = False,
     use_default_kwarg: bool = False,
     reuse_model: bool = False,
-    encoding: str = 'utf-8',
-    enum_field_as_literal: Optional[LiteralType] = None,
+    encoding: str = "utf-8",
+    enum_field_as_literal: LiteralType | None = None,
     use_one_literal_as_default: bool = False,
     set_default_enum_member: bool = False,
     use_subclass_enum: bool = False,
@@ -267,48 +243,48 @@ def generate(
     use_generic_container_types: bool = False,
     enable_faux_immutability: bool = False,
     disable_appending_item_suffix: bool = False,
-    strict_types: Optional[Sequence[StrictTypes]] = None,
-    empty_enum_field_name: Optional[str] = None,
-    custom_class_name_generator: Optional[Callable[[str], str]] = None,
-    field_extra_keys: Optional[Set[str]] = None,
+    strict_types: Sequence[StrictTypes] | None = None,
+    empty_enum_field_name: str | None = None,
+    custom_class_name_generator: Callable[[str], str] | None = None,
+    field_extra_keys: set[str] | None = None,
     field_include_all_keys: bool = False,
-    field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
-    openapi_scopes: Optional[List[OpenAPIScope]] = None,
-    graphql_scopes: Optional[List[GraphQLScope]] = None,
-    wrap_string_literal: Optional[bool] = None,
+    field_extra_keys_without_x_prefix: set[str] | None = None,
+    openapi_scopes: list[OpenAPIScope] | None = None,
+    graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
+    wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
-    http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+    http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
-    original_field_name_delimiter: Optional[str] = None,
+    original_field_name_delimiter: str | None = None,
     use_double_quotes: bool = False,
     use_union_operator: bool = False,
     collapse_root_models: bool = False,
-    special_field_name_prefix: Optional[str] = None,
+    special_field_name_prefix: str | None = None,
     remove_special_field_name_prefix: bool = False,
     capitalise_enum_members: bool = False,
     keep_model_order: bool = False,
-    custom_file_header: Optional[str] = None,
-    custom_file_header_path: Optional[Path] = None,
-    custom_formatters: Optional[List[str]] = None,
-    custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+    custom_file_header: str | None = None,
+    custom_file_header_path: Path | None = None,
+    custom_formatters: list[str] | None = None,
+    custom_formatters_kwargs: dict[str, Any] | None = None,
     use_pendulum: bool = False,
-    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+    http_query_parameters: Sequence[tuple[str, str]] | None = None,
     treat_dots_as_module: bool = False,
     use_exact_imports: bool = False,
-    union_mode: Optional[UnionMode] = None,
-    output_datetime_class: Optional[DatetimeClassType] = None,
+    union_mode: UnionMode | None = None,
+    output_datetime_class: DatetimeClassType | None = None,
     keyword_only: bool = False,
     no_alias: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
-        input_text: Optional[str] = input_
+        input_text: str | None = input_
     elif isinstance(input_, ParseResult):
-        from datamodel_code_generator.http import get_body
+        from datamodel_code_generator.http import get_body  # noqa: PLC0415
 
         input_text = remote_text_cache.get_or_put(
             input_.geturl(),
@@ -326,78 +302,81 @@ def generate(
             )
             assert isinstance(input_text_, str)
             input_file_type = infer_input_type(input_text_)
-            print(
+            print(  # noqa: T201
                 inferred_message.format(input_file_type.value),
                 file=sys.stderr,
             )
-        except:  # noqa
-            raise Error('Invalid file format')
+        except Exception as exc:
+            msg = "Invalid file format"
+            raise Error(msg) from exc
 
-    kwargs: Dict[str, Any] = {}
-    if input_file_type == InputFileType.OpenAPI:
-        from datamodel_code_generator.parser.openapi import OpenAPIParser
+    kwargs: dict[str, Any] = {}
+    if input_file_type == InputFileType.OpenAPI:  # noqa: PLR1702
+        from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
-        parser_class: Type[Parser] = OpenAPIParser
-        kwargs['openapi_scopes'] = openapi_scopes
+        parser_class: type[Parser] = OpenAPIParser
+        kwargs["openapi_scopes"] = openapi_scopes
     elif input_file_type == InputFileType.GraphQL:
-        from datamodel_code_generator.parser.graphql import GraphQLParser
+        from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
-        parser_class: Type[Parser] = GraphQLParser
+        parser_class: type[Parser] = GraphQLParser
     else:
-        from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+        from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
         parser_class = JsonSchemaParser
 
         if input_file_type in RAW_DATA_TYPES:
-            import json
+            import json  # noqa: PLC0415
 
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
-                    raise Error(f'Input must be a file for {input_file_type}')
-                obj: Dict[Any, Any]
+                    msg = f"Input must be a file for {input_file_type}"
+                    raise Error(msg)  # noqa: TRY301
+                obj: dict[Any, Any]
                 if input_file_type == InputFileType.CSV:
-                    import csv
+                    import csv  # noqa: PLC0415
 
-                    def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
+                    def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
-                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))  # type: ignore
+                        assert csv_reader.fieldnames is not None
+                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))
 
                     if isinstance(input_, Path):
                         with input_.open(encoding=encoding) as f:
                             obj = get_header_and_first_line(f)
                     else:
-                        import io
+                        import io  # noqa: PLC0415
 
                         obj = get_header_and_first_line(io.StringIO(input_text))
                 elif input_file_type == InputFileType.Yaml:
-                    obj = load_yaml(
-                        input_.read_text(encoding=encoding)  # type: ignore
-                        if isinstance(input_, Path)
-                        else input_text
-                    )
+                    if isinstance(input_, Path):
+                        obj = load_yaml(input_.read_text(encoding=encoding))
+                    else:
+                        assert input_text is not None
+                        obj = load_yaml(input_text)
                 elif input_file_type == InputFileType.Json:
-                    obj = json.loads(
-                        input_.read_text(encoding=encoding)  # type: ignore
-                        if isinstance(input_, Path)
-                        else input_text
-                    )
+                    if isinstance(input_, Path):
+                        obj = json.loads(input_.read_text(encoding=encoding))
+                    else:
+                        assert input_text is not None
+                        obj = json.loads(input_text)
                 elif input_file_type == InputFileType.Dict:
-                    import ast
+                    import ast  # noqa: PLC0415
 
                     # Input can be a dict object stored in a python file
                     obj = (
-                        ast.literal_eval(
-                            input_.read_text(encoding=encoding)  # type: ignore
-                        )
+                        ast.literal_eval(input_.read_text(encoding=encoding))
                         if isinstance(input_, Path)
-                        else input_
+                        else cast("Dict[Any, Any]", input_)
                     )
                 else:  # pragma: no cover
-                    raise Error(f'Unsupported input file type: {input_file_type}')
-            except:  # noqa
-                raise Error('Invalid file format')
+                    msg = f"Unsupported input file type: {input_file_type}"
+                    raise Error(msg)  # noqa: TRY301
+            except Exception as exc:
+                msg = "Invalid file format"
+                raise Error(msg) from exc
 
-            from genson import SchemaBuilder
+            from genson import SchemaBuilder  # noqa: PLC0415
 
             builder = SchemaBuilder()
             builder.add_object(obj)
@@ -408,13 +387,14 @@ def generate(
 
     if union_mode is not None:
         if output_model_type == DataModelType.PydanticV2BaseModel:
-            default_field_extras = {'union_mode': union_mode}
+            default_field_extras = {"union_mode": union_mode}
         else:  # pragma: no cover
-            raise Error('union_mode is only supported for pydantic_v2.BaseModel')
+            msg = "union_mode is only supported for pydantic_v2.BaseModel"
+            raise Error(msg)
     else:
         default_field_extras = None
 
-    from datamodel_code_generator.model import get_data_model_types
+    from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
     data_model_types = get_data_model_types(output_model_type, target_python_version, output_datetime_class)
     source = input_text or input_
@@ -500,24 +480,27 @@ def generate(
         results = parser.parse()
     if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
-            input_filename = '<stdin>'
+            input_filename = "<stdin>"
         elif isinstance(input_, ParseResult):
             input_filename = input_.geturl()
         elif input_file_type == InputFileType.Dict:
             # input_ might be a dict object provided directly, and missing a name field
-            input_filename = getattr(input_, 'name', '<dict>')
+            input_filename = getattr(input_, "name", "<dict>")
         else:
             assert isinstance(input_, Path)
             input_filename = input_.name
     if not results:
-        raise Error('Models not found in the input data')
-    elif isinstance(results, str):
+        msg = "Models not found in the input data"
+        raise Error(msg)
+    if isinstance(results, str):
         modules = {output: (results, input_filename)}
     else:
         if output is None:
-            raise Error('Modular references require an output directory')
+            msg = "Modular references require an output directory"
+            raise Error(msg)
         if output.suffix:
-            raise Error('Modular references require an output directory, not a file')
+            msg = "Modular references require an output directory, not a file"
+            raise Error(msg)
         modules = {
             output.joinpath(*name): (
                 result.body,
@@ -535,22 +518,22 @@ def generate(
 # generated by datamodel-codegen:
 #   filename:  {}"""
     if not disable_timestamp:
-        header += f'\n#   timestamp: {timestamp}'
+        header += f"\n#   timestamp: {timestamp}"
     if enable_version_header:
-        header += f'\n#   version:   {get_version()}'
+        header += f"\n#   version:   {get_version()}"
 
-    file: Optional[IO[Any]]
+    file: IO[Any] | None
     for path, (body, filename) in modules.items():
         if path is None:
             file = None
         else:
             if not path.parent.exists():
                 path.parent.mkdir(parents=True)
-            file = path.open('wt', encoding=encoding)
+            file = path.open("wt", encoding=encoding)
 
         print(custom_file_header or header.format(filename), file=file)
         if body:
-            print('', file=file)
+            print(file=file)
             print(body.rstrip(), file=file)
 
         if file is not None:
@@ -560,22 +543,22 @@ def generate(
 def infer_input_type(text: str) -> InputFileType:
     if is_openapi(text):
         return InputFileType.OpenAPI
-    elif is_schema(text):
+    if is_schema(text):
         return InputFileType.JsonSchema
     return InputFileType.Json
 
 
 inferred_message = (
-    'The input file type was determined to be: {}\nThis can be specified explicitly with the '
-    '`--input-file-type` option.'
+    "The input file type was determined to be: {}\nThis can be specified explicitly with the "
+    "`--input-file-type` option."
 )
 
 __all__ = [
-    'DefaultPutDict',
-    'Error',
-    'InputFileType',
-    'InvalidClassNameError',
-    'LiteralType',
-    'PythonVersion',
-    'generate',
+    "DefaultPutDict",
+    "Error",
+    "InputFileType",
+    "InvalidClassNameError",
+    "LiteralType",
+    "PythonVersion",
+    "generate",
 ]

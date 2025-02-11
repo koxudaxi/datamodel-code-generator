@@ -11,35 +11,24 @@ from .types import DataTypeManager
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
-    return '\n'.join(f'{class_name}.update_forward_refs()' for class_name in class_names)
+    return "\n".join(f"{class_name}.update_forward_refs()" for class_name in class_names)
 
 
 class Config(_BaseModel):
-    extra: Optional[str] = None
-    title: Optional[str] = None
-    allow_population_by_field_name: Optional[bool] = None
-    allow_extra_fields: Optional[bool] = None
-    allow_mutation: Optional[bool] = None
-    arbitrary_types_allowed: Optional[bool] = None
-    orm_mode: Optional[bool] = None
-
-
-# def get_validator_template() -> Template:
-#     template_file_path: Path = Path('pydantic') / 'one_of_validator.jinja2'
-#     loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
-#     environment: Environment = Environment(loader=loader, autoescape=True)
-#     return environment.get_template(template_file_path.name)
-#
-#
-# VALIDATOR_TEMPLATE: Template = get_validator_template()
+    extra: Optional[str] = None  # noqa: UP045
+    title: Optional[str] = None  # noqa: UP045
+    allow_population_by_field_name: Optional[bool] = None  # noqa: UP045
+    allow_extra_fields: Optional[bool] = None  # noqa: UP045
+    allow_mutation: Optional[bool] = None  # noqa: UP045
+    arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
+    orm_mode: Optional[bool] = None  # noqa: UP045
 
 
 __all__ = [
-    'BaseModel',
-    'DataModelField',
-    'CustomRootType',
-    'DataClass',
-    'dump_resolve_reference_action',
-    'DataTypeManager',
-    # 'VALIDATOR_TEMPLATE',
+    "BaseModel",
+    "CustomRootType",
+    "DataClass",
+    "DataModelField",
+    "DataTypeManager",
+    "dump_resolve_reference_action",
 ]

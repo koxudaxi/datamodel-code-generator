@@ -1,17 +1,14 @@
+from __future__ import annotations
+
 import keyword
-from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
-    DefaultDict,
-    Dict,
     Iterator,
-    List,
-    Optional,
     Tuple,
 )
 
-from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
@@ -20,20 +17,25 @@ from datamodel_code_generator.model.imports import (
     IMPORT_TYPED_DICT,
     IMPORT_TYPED_DICT_BACKPORT,
 )
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
 
-escape_characters = str.maketrans(
-    {
-        '\\': r'\\',
-        "'": r'\'',
-        '\b': r'\b',
-        '\f': r'\f',
-        '\n': r'\n',
-        '\r': r'\r',
-        '\t': r'\t',
-    }
-)
+if TYPE_CHECKING:
+    from collections import defaultdict
+    from pathlib import Path
+
+    from datamodel_code_generator.reference import Reference
+
+from datamodel_code_generator.imports import Import  # noqa: TC001
+
+escape_characters = str.maketrans({
+    "\\": r"\\",
+    "'": r"\'",
+    "\b": r"\b",
+    "\f": r"\f",
+    "\n": r"\n",
+    "\r": r"\r",
+    "\t": r"\t",
+})
 
 
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
@@ -44,23 +46,23 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 
 
 class TypedDict(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'TypedDict.jinja2'
-    BASE_CLASS: ClassVar[str] = 'typing.TypedDict'
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
+    TEMPLATE_FILE_PATH: ClassVar[str] = "TypedDict.jinja2"
+    BASE_CLASS: ClassVar[str] = "typing.TypedDict"
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)  # noqa: UP006
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        methods: Optional[List[str]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
+        methods: list[str] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
@@ -99,8 +101,8 @@ class TypedDict(DataModel):
 
         yield from self.fields
 
-    def render(self, *, class_name: Optional[str] = None) -> str:
-        response = self._render(
+    def render(self, *, class_name: str | None = None) -> str:
+        return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields,
             decorators=self.decorators,
@@ -111,20 +113,19 @@ class TypedDict(DataModel):
             all_fields=self.all_fields,
             **self.extra_template_data,
         )
-        return response
 
 
 class TypedDictBackport(TypedDict):
-    BASE_CLASS: ClassVar[str] = 'typing_extensions.TypedDict'
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT_BACKPORT,)
+    BASE_CLASS: ClassVar[str] = "typing_extensions.TypedDict"
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT_BACKPORT,)  # noqa: UP006
 
 
 class DataModelField(DataModelFieldBase):
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)  # noqa: UP006
 
     @property
     def key(self) -> str:
-        return (self.original_name or self.name or '').translate(  # pragma: no cover
+        return (self.original_name or self.name or "").translate(  # pragma: no cover
             escape_characters
         )
 
@@ -132,7 +133,7 @@ class DataModelField(DataModelFieldBase):
     def type_hint(self) -> str:
         type_hint = super().type_hint
         if self._not_required:
-            return f'{NOT_REQUIRED_PREFIX}{type_hint}]'
+            return f"{NOT_REQUIRED_PREFIX}{type_hint}]"
         return type_hint
 
     @property
@@ -144,7 +145,7 @@ class DataModelField(DataModelFieldBase):
         return not self._not_required
 
     @property
-    def imports(self) -> Tuple[Import, ...]:
+    def imports(self) -> tuple[Import, ...]:
         return (
             *super().imports,
             *(self.DEFAULT_IMPORTS if self._not_required else ()),
@@ -152,4 +153,4 @@ class DataModelField(DataModelFieldBase):
 
 
 class DataModelFieldBackport(DataModelField):
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)  # noqa: UP006

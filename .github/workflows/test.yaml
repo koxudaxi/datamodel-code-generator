@@ -26,7 +26,7 @@ jobs:
           - tox_env: py3.12-black24
           - tox_env: py3.12-black23
           - tox_env: py3.12-black22
-          - tox_env: py3.9-black19
+          - tox_env: py3.8-black19
           - tox_env: py3.8-pydantic18
           - tox_env: py3.8-isort4
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
@@ -38,6 +38,9 @@ jobs:
         fetch-depth: 0
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        cache-suffix: "${{ matrix.py || matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup Python test environment

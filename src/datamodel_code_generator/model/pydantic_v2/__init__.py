@@ -10,27 +10,27 @@ from .types import DataTypeManager
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
-    return '\n'.join(f'{class_name}.model_rebuild()' for class_name in class_names)
+    return "\n".join(f"{class_name}.model_rebuild()" for class_name in class_names)
 
 
 class ConfigDict(_BaseModel):
-    extra: Optional[str] = None
-    title: Optional[str] = None
-    populate_by_name: Optional[bool] = None
-    allow_extra_fields: Optional[bool] = None
-    from_attributes: Optional[bool] = None
-    frozen: Optional[bool] = None
-    arbitrary_types_allowed: Optional[bool] = None
-    protected_namespaces: Optional[Tuple[str, ...]] = None
-    regex_engine: Optional[str] = None
-    use_enum_values: Optional[bool] = None
+    extra: Optional[str] = None  # noqa: UP045
+    title: Optional[str] = None  # noqa: UP045
+    populate_by_name: Optional[bool] = None  # noqa: UP045
+    allow_extra_fields: Optional[bool] = None  # noqa: UP045
+    from_attributes: Optional[bool] = None  # noqa: UP045
+    frozen: Optional[bool] = None  # noqa: UP045
+    arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
+    protected_namespaces: Optional[Tuple[str, ...]] = None  # noqa: UP006, UP045
+    regex_engine: Optional[str] = None  # noqa: UP045
+    use_enum_values: Optional[bool] = None  # noqa: UP045
 
 
 __all__ = [
-    'BaseModel',
-    'DataModelField',
-    'RootModel',
-    'dump_resolve_reference_action',
-    'DataTypeManager',
-    'UnionMode',
+    "BaseModel",
+    "DataModelField",
+    "DataTypeManager",
+    "RootModel",
+    "UnionMode",
+    "dump_resolve_reference_action",
 ]

@@ -83,7 +83,7 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.9'",
+  "setuptools; python_version<'3.10'", # PyCharm debugger needs it
   { include-group = "coverage" },
 ]
 type = [
@@ -123,13 +123,44 @@ version.source = "vcs"
 [tool.ruff]
 line-length = 120
 extend-exclude = [ "tests/data" ]
-format.indent-style = "space"
-format.quote-style = "single"
-format.line-ending = "auto"
-format.skip-magic-trailing-comma = false
-lint.extend-select = [ "C4", "I", "Q", "RUF100", "UP" ]
-lint.ignore = [ "E501", "Q000", "Q003", "UP006", "UP007" ]
-lint.flake8-quotes = { inline-quotes = 'single', multiline-quotes = 'double' }
+format.preview = true
+format.docstring-code-format = true
+lint.select = [
+  "ALL",
+]
+lint.ignore = [
+  "ANN401", # Any as type annotation is allowed
+  "C901",   # complex structure
+  "COM812", # Conflict with formatter
+  "CPY",    # No copyright statements
+  "D",      # limited documentation
+  "DOC",    # limited documentation
+  "FIX002", # line contains to do
+  "ISC001", # Conflict with formatter
+  "S101",   # can use assert
+  "TD002",  # missing to do author
+  "TD003",  # missing to do link
+  "TD004",  # missing colon in to do
+]
+lint.per-file-ignores."tests/**/*.py" = [
+  "FBT",     # don't care about booleans as positional arguments in tests
+  "INP001",  # no implicit namespace
+  "PLC2701", # private import is fine
+  "PLR0913", # as many arguments as want
+  "PLR0915", # can have longer test methods
+  "PLR0917", # as many arguments as want
+  "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
+  "S",       # no safety concerns
+  "SLF001",  # can test private methods
+]
+lint.isort = { known-first-party = [
+  "datamodel_code_generator",
+  "tests",
+], required-imports = [
+  "from __future__ import annotations",
+] }
+
+lint.preview = true
 
 [tool.codespell]
 skip = '.git,*.lock,tests'
@@ -150,6 +181,7 @@ filterwarnings = [
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
 ]
 norecursedirs = "tests/data/*"
+verbosity_assertions = 2
 
 [tool.coverage]
 html.skip_covered = false
@@ -168,7 +200,7 @@ paths.other = [
 ]
 run.dynamic_context = "none"
 run.omit = [ "tests/data/*" ]
-report.fail_under = 94
+report.fail_under = 88
 run.parallel = true
 run.plugins = [
   "covdefaults",

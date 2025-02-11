@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import operator
 import re
 import sys
 from abc import ABC, abstractmethod
@@ -7,20 +10,15 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
-    DefaultDict,
     Dict,
     Iterable,
     Iterator,
-    List,
     Mapping,
     NamedTuple,
     Optional,
     Sequence,
     Set,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
 )
 from urllib.parse import ParseResult
 
@@ -56,25 +54,23 @@ from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 from datamodel_code_generator.util import Protocol, runtime_checkable
 
-SPECIAL_PATH_FORMAT: str = '#-datamodel-code-generator-#-{}-#-special-#'
+SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
 
-def get_special_path(keyword: str, path: List[str]) -> List[str]:
+def get_special_path(keyword: str, path: list[str]) -> list[str]:
     return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
 
 
-escape_characters = str.maketrans(
-    {
-        '\u0000': r'\x00',  # Null byte
-        '\\': r'\\',
-        "'": r'\'',
-        '\b': r'\b',
-        '\f': r'\f',
-        '\n': r'\n',
-        '\r': r'\r',
-        '\t': r'\t',
-    }
-)
+escape_characters = str.maketrans({
+    "\u0000": r"\x00",  # Null byte
+    "\\": r"\\",
+    "'": r"\'",
+    "\b": r"\b",
+    "\f": r"\f",
+    "\n": r"\n",
+    "\r": r"\r",
+    "\t": r"\t",
+})
 
 
 def to_hashable(item: Any) -> Any:
@@ -86,7 +82,7 @@ def to_hashable(item: Any) -> Any:
         ),
     ):
         return tuple(sorted(to_hashable(i) for i in item))
-    elif isinstance(item, dict):
+    if isinstance(item, dict):
         return tuple(
             sorted(
                 (
@@ -96,15 +92,15 @@ def to_hashable(item: Any) -> Any:
                 for k, v in item.items()
             )
         )
-    elif isinstance(item, set):  # pragma: no cover
+    if isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)
-    elif isinstance(item, BaseModel):
+    if isinstance(item, BaseModel):
         return to_hashable(item.dict())
     return item
 
 
-def dump_templates(templates: List[DataModel]) -> str:
-    return '\n\n\n'.join(str(m) for m in templates)
+def dump_templates(templates: list[DataModel]) -> str:
+    return "\n\n\n".join(str(m) for m in templates)
 
 
 ReferenceMapSet = Dict[str, Set[str]]
@@ -113,19 +109,19 @@ SortedDataModels = Dict[str, DataModel]
 MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
 
-def sort_data_models(
-    unsorted_data_models: List[DataModel],
-    sorted_data_models: Optional[SortedDataModels] = None,
-    require_update_action_models: Optional[List[str]] = None,
+def sort_data_models(  # noqa: PLR0912
+    unsorted_data_models: list[DataModel],
+    sorted_data_models: SortedDataModels | None = None,
+    require_update_action_models: list[str] | None = None,
     recursion_count: int = MAX_RECURSION_COUNT,
-) -> Tuple[List[DataModel], SortedDataModels, List[str]]:
+) -> tuple[list[DataModel], SortedDataModels, list[str]]:
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
     if require_update_action_models is None:
         require_update_action_models = []
     sorted_model_count: int = len(sorted_data_models)
 
-    unresolved_references: List[DataModel] = []
+    unresolved_references: list[DataModel] = []
     for model in unsorted_data_models:
         if not model.reference_classes:
             sorted_data_models[model.path] = model
@@ -154,7 +150,7 @@ def sort_data_models(
 
         # sort on base_class dependency
         while True:
-            ordered_models: List[Tuple[int, DataModel]] = []
+            ordered_models: list[tuple[int, DataModel]] = []
             unresolved_reference_model_names = [m.path for m in unresolved_references]
             for model in unresolved_references:
                 indexes = [
@@ -163,20 +159,16 @@ def sort_data_models(
                     if b.reference and b.reference.path in unresolved_reference_model_names
                 ]
                 if indexes:
-                    ordered_models.append(
-                        (
-                            max(indexes),
-                            model,
-                        )
-                    )
+                    ordered_models.append((
+                        max(indexes),
+                        model,
+                    ))
                 else:
-                    ordered_models.append(
-                        (
-                            -1,
-                            model,
-                        )
-                    )
-            sorted_unresolved_models = [m[1] for m in sorted(ordered_models, key=lambda m: m[0])]
+                    ordered_models.append((
+                        -1,
+                        model,
+                    ))
+            sorted_unresolved_models = [m[1] for m in sorted(ordered_models, key=operator.itemgetter(0))]
             if sorted_unresolved_models == unresolved_references:
                 break
             unresolved_references = sorted_unresolved_models
@@ -185,7 +177,7 @@ def sort_data_models(
         unsorted_data_model_names = set(unresolved_reference_model_names)
         for model in unresolved_references:
             unresolved_model = model.reference_classes - {model.path} - set(sorted_data_models)
-            base_models = [getattr(s.reference, 'path', None) for s in model.base_classes]
+            base_models = [getattr(s.reference, "path", None) for s in model.base_classes]
             update_action_parent = set(require_update_action_models).intersection(base_models)
             if not unresolved_model:
                 sorted_data_models[model.path] = model
@@ -197,21 +189,22 @@ def sort_data_models(
                 require_update_action_models.append(model.path)
                 continue
             # unresolved
-            unresolved_classes = ', '.join(
-                f'[class: {item.path} references: {item.reference_classes}]' for item in unresolved_references
+            unresolved_classes = ", ".join(
+                f"[class: {item.path} references: {item.reference_classes}]" for item in unresolved_references
             )
-            raise Exception(f'A Parser can not resolve classes: {unresolved_classes}.')
+            msg = f"A Parser can not resolve classes: {unresolved_classes}."
+            raise Exception(msg)  # noqa: TRY002
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
-def relative(current_module: str, reference: str) -> Tuple[str, str]:
+def relative(current_module: str, reference: str) -> tuple[str, str]:
     """Find relative module path."""
 
-    current_module_path = current_module.split('.') if current_module else []
-    *reference_path, name = reference.split('.')
+    current_module_path = current_module.split(".") if current_module else []
+    *reference_path, name = reference.split(".")
 
     if current_module_path == reference_path:
-        return '', ''
+        return "", ""
 
     i = 0
     for x, y in zip(current_module_path, reference_path):
@@ -219,59 +212,58 @@ def relative(current_module: str, reference: str) -> Tuple[str, str]:
             break
         i += 1
 
-    left = '.' * (len(current_module_path) - i)
-    right = '.'.join(reference_path[i:])
+    left = "." * (len(current_module_path) - i)
+    right = ".".join(reference_path[i:])
 
     if not left:
-        left = '.'
+        left = "."
     if not right:
         right = name
-    elif '.' in right:
-        extra, right = right.rsplit('.', 1)
+    elif "." in right:
+        extra, right = right.rsplit(".", 1)
         left += extra
 
     return left, right
 
 
-def exact_import(from_: str, import_: str, short_name: str) -> Tuple[str, str]:
-    if from_ == len(from_) * '.':
+def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
+    if from_ == len(from_) * ".":
         # Prevents "from . import foo" becoming "from ..foo import Foo"
         # or "from .. import foo" becoming "from ...foo import Foo"
         # when our imported module has the same parent
-        return f'{from_}{import_}', short_name
-    return f'{from_}.{import_}', short_name
+        return f"{from_}{import_}", short_name
+    return f"{from_}.{import_}", short_name
 
 
 @runtime_checkable
 class Child(Protocol):
     @property
-    def parent(self) -> Optional[Any]:
+    def parent(self) -> Any | None:
         raise NotImplementedError
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
-def get_most_of_parent(value: Any, type_: Optional[Type[T]] = None) -> Optional[T]:
+def get_most_of_parent(value: Any, type_: type[T] | None = None) -> T | None:
     if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
         return get_most_of_parent(value.parent, type_)
     return value
 
 
 def title_to_class_name(title: str) -> str:
-    classname = re.sub('[^A-Za-z0-9]+', ' ', title)
-    classname = ''.join(x for x in classname.title() if not x.isspace())
-    return classname
+    classname = re.sub(r"[^A-Za-z0-9]+", " ", title)
+    return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> List[DataModel]:
+def _find_base_classes(model: DataModel) -> list[DataModel]:
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: List[DataModel]) -> Optional[DataModelFieldBase]:
+def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     def _find_field_and_base_classes(
         model_: DataModel,
-    ) -> Tuple[Optional[DataModelFieldBase], List[DataModel]]:
+    ) -> tuple[DataModelFieldBase | None, list[DataModel]]:
         for field_ in model_.fields:
             if field_.original_name == original_name:
                 return field_, []
@@ -281,13 +273,13 @@ def _find_field(original_name: str, models: List[DataModel]) -> Optional[DataMod
         field, base_models = _find_field_and_base_classes(model)
         if field:
             return field
-        models.extend(base_models)  # pragma: no cover
+        models.extend(base_models)  # pragma: no cover  # noqa: B909
 
     return None  # pragma: no cover
 
 
-def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
-    copied_data_types: List[DataType] = []
+def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
+    copied_data_types: list[DataType] = []
     for data_type_ in data_types:
         if data_type_.reference:
             copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
@@ -302,7 +294,7 @@ def _copy_data_types(data_types: List[DataType]) -> List[DataType]:
 
 class Result(BaseModel):
     body: str
-    source: Optional[Path] = None
+    source: Optional[Path] = None  # noqa: UP045
 
 
 class Source(BaseModel):
@@ -310,7 +302,7 @@ class Source(BaseModel):
     text: str
 
     @classmethod
-    def from_path(cls, path: Path, base_path: Path, encoding: str) -> 'Source':
+    def from_path(cls, path: Path, base_path: Path, encoding: str) -> Source:
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),
@@ -318,78 +310,78 @@ class Source(BaseModel):
 
 
 class Parser(ABC):
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
-        source: Union[str, Path, List[Path], ParseResult],
+        source: str | Path | list[Path] | ParseResult,
         *,
-        data_model_type: Type[DataModel] = pydantic_model.BaseModel,
-        data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
-        data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
-        data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
-        base_class: Optional[str] = None,
-        additional_imports: Optional[List[str]] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
+        data_model_type: type[DataModel] = pydantic_model.BaseModel,
+        data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
+        data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
+        data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
+        base_class: str | None = None,
+        additional_imports: list[str] | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersion.PY_38,
-        dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = None,
+        dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,
         snake_case_field: bool = False,
         strip_default_none: bool = False,
-        aliases: Optional[Mapping[str, str]] = None,
+        aliases: Mapping[str, str] | None = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
         allow_extra_fields: bool = False,
         force_optional_for_required_fields: bool = False,
-        class_name: Optional[str] = None,
+        class_name: str | None = None,
         use_standard_collections: bool = False,
-        base_path: Optional[Path] = None,
+        base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
-        encoding: str = 'utf-8',
-        enum_field_as_literal: Optional[LiteralType] = None,
+        encoding: str = "utf-8",
+        enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
-        remote_text_cache: Optional[DefaultPutDict[str, str]] = None,
+        remote_text_cache: DefaultPutDict[str, str] | None = None,
         disable_appending_item_suffix: bool = False,
-        strict_types: Optional[Sequence[StrictTypes]] = None,
-        empty_enum_field_name: Optional[str] = None,
-        custom_class_name_generator: Optional[Callable[[str], str]] = title_to_class_name,
-        field_extra_keys: Optional[Set[str]] = None,
+        strict_types: Sequence[StrictTypes] | None = None,
+        empty_enum_field_name: str | None = None,
+        custom_class_name_generator: Callable[[str], str] | None = title_to_class_name,
+        field_extra_keys: set[str] | None = None,
         field_include_all_keys: bool = False,
-        field_extra_keys_without_x_prefix: Optional[Set[str]] = None,
-        wrap_string_literal: Optional[bool] = None,
+        field_extra_keys_without_x_prefix: set[str] | None = None,
+        wrap_string_literal: bool | None = None,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
-        http_headers: Optional[Sequence[Tuple[str, str]]] = None,
+        http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
-        original_field_name_delimiter: Optional[str] = None,
+        original_field_name_delimiter: str | None = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
-        special_field_name_prefix: Optional[str] = None,
+        special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
-        known_third_party: Optional[List[str]] = None,
-        custom_formatters: Optional[List[str]] = None,
-        custom_formatters_kwargs: Optional[Dict[str, Any]] = None,
+        known_third_party: list[str] | None = None,
+        custom_formatters: list[str] | None = None,
+        custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
-        http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+        http_query_parameters: Sequence[tuple[str, str]] | None = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
-        default_field_extras: Optional[Dict[str, Any]] = None,
-        target_datetime_class: Optional[DatetimeClassType] = DatetimeClassType.Datetime,
+        default_field_extras: dict[str, Any] | None = None,
+        target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
     ) -> None:
@@ -403,18 +395,18 @@ class Parser(ABC):
             use_pendulum=use_pendulum,
             target_datetime_class=target_datetime_class,
         )
-        self.data_model_type: Type[DataModel] = data_model_type
-        self.data_model_root_type: Type[DataModel] = data_model_root_type
-        self.data_model_field_type: Type[DataModelFieldBase] = data_model_field_type
+        self.data_model_type: type[DataModel] = data_model_type
+        self.data_model_root_type: type[DataModel] = data_model_root_type
+        self.data_model_field_type: type[DataModelFieldBase] = data_model_field_type
 
         self.imports: Imports = Imports(use_exact_imports)
         self.use_exact_imports: bool = use_exact_imports
         self._append_additional_imports(additional_imports=additional_imports)
 
-        self.base_class: Optional[str] = base_class
+        self.base_class: str | None = base_class
         self.target_python_version: PythonVersion = target_python_version
-        self.results: List[DataModel] = []
-        self.dump_resolve_reference_action: Optional[Callable[[Iterable[str]], str]] = dump_resolve_reference_action
+        self.results: list[DataModel] = []
+        self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = dump_resolve_reference_action
         self.validation: bool = validation
         self.field_constraints: bool = field_constraints
         self.snake_case_field: bool = snake_case_field
@@ -426,20 +418,20 @@ class Parser(ABC):
         self.use_default_kwarg: bool = use_default_kwarg
         self.reuse_model: bool = reuse_model
         self.encoding: str = encoding
-        self.enum_field_as_literal: Optional[LiteralType] = enum_field_as_literal
+        self.enum_field_as_literal: LiteralType | None = enum_field_as_literal
         self.set_default_enum_member: bool = set_default_enum_member
         self.use_subclass_enum: bool = use_subclass_enum
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
         self.use_union_operator: bool = use_union_operator
         self.enable_faux_immutability: bool = enable_faux_immutability
-        self.custom_class_name_generator: Optional[Callable[[str], str]] = custom_class_name_generator
-        self.field_extra_keys: Set[str] = field_extra_keys or set()
-        self.field_extra_keys_without_x_prefix: Set[str] = field_extra_keys_without_x_prefix or set()
+        self.custom_class_name_generator: Callable[[str], str] | None = custom_class_name_generator
+        self.field_extra_keys: set[str] = field_extra_keys or set()
+        self.field_extra_keys_without_x_prefix: set[str] = field_extra_keys_without_x_prefix or set()
         self.field_include_all_keys: bool = field_include_all_keys
 
         self.remote_text_cache: DefaultPutDict[str, str] = remote_text_cache or DefaultPutDict()
-        self.current_source_path: Optional[Path] = None
+        self.current_source_path: Path | None = None
         self.use_title_as_name: bool = use_title_as_name
         self.use_operation_id_as_name: bool = use_operation_id_as_name
         self.use_unique_items_as_set: bool = use_unique_items_as_set
@@ -451,22 +443,22 @@ class Parser(ABC):
         else:
             self.base_path = Path.cwd()
 
-        self.source: Union[str, Path, List[Path], ParseResult] = source
+        self.source: str | Path | list[Path] | ParseResult = source
         self.custom_template_dir = custom_template_dir
-        self.extra_template_data: DefaultDict[str, Any] = extra_template_data or defaultdict(dict)
+        self.extra_template_data: defaultdict[str, Any] = extra_template_data or defaultdict(dict)
 
         if allow_population_by_field_name:
-            self.extra_template_data[ALL_MODEL]['allow_population_by_field_name'] = True
+            self.extra_template_data[ALL_MODEL]["allow_population_by_field_name"] = True
 
         if allow_extra_fields:
-            self.extra_template_data[ALL_MODEL]['allow_extra_fields'] = True
+            self.extra_template_data[ALL_MODEL]["allow_extra_fields"] = True
 
         if enable_faux_immutability:
-            self.extra_template_data[ALL_MODEL]['allow_mutation'] = False
+            self.extra_template_data[ALL_MODEL]["allow_mutation"] = False
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
-            singular_name_suffix='' if disable_appending_item_suffix else None,
+            singular_name_suffix="" if disable_appending_item_suffix else None,
             aliases=aliases,
             empty_field_name=empty_enum_field_name,
             snake_case_field=snake_case_field,
@@ -478,14 +470,15 @@ class Parser(ABC):
             capitalise_enum_members=capitalise_enum_members,
             no_alias=no_alias,
         )
-        self.class_name: Optional[str] = class_name
-        self.wrap_string_literal: Optional[bool] = wrap_string_literal
-        self.http_headers: Optional[Sequence[Tuple[str, str]]] = http_headers
-        self.http_query_parameters: Optional[Sequence[Tuple[str, str]]] = http_query_parameters
+        self.class_name: str | None = class_name
+        self.wrap_string_literal: bool | None = wrap_string_literal
+        self.http_headers: Sequence[tuple[str, str]] | None = http_headers
+        self.http_query_parameters: Sequence[tuple[str, str]] | None = http_query_parameters
         self.http_ignore_tls: bool = http_ignore_tls
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
-            raise Exception('`use_annotated=True` has to be used with `field_constraints=True`')
+            msg = "`use_annotated=True` has to be used with `field_constraints=True`"
+            raise Exception(msg)  # noqa: TRY002
         self.use_non_positive_negative_number_constrained_types = use_non_positive_negative_number_constrained_types
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
@@ -497,7 +490,7 @@ class Parser(ABC):
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
         self.treat_dots_as_module = treat_dots_as_module
-        self.default_field_extras: Optional[Dict[str, Any]] = default_field_extras
+        self.default_field_extras: dict[str, Any] | None = default_field_extras
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -505,7 +498,7 @@ class Parser(ABC):
             yield Source(path=Path(), text=self.source)
         elif isinstance(self.source, Path):  # pragma: no cover
             if self.source.is_dir():
-                for path in sorted(self.source.rglob('*'), key=lambda p: p.name):
+                for path in sorted(self.source.rglob("*"), key=lambda p: p.name):
                     if path.is_file():
                         yield Source.from_path(path, self.base_path, self.encoding)
             else:
@@ -519,7 +512,7 @@ class Parser(ABC):
                 text=self.remote_text_cache.get_or_put(self.source.geturl(), default_factory=self._get_text_from_url),
             )
 
-    def _append_additional_imports(self, additional_imports: Optional[List[str]]) -> None:
+    def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
         if additional_imports is None:
             additional_imports = []
 
@@ -530,34 +523,34 @@ class Parser(ABC):
             self.imports.append(new_import)
 
     def _get_text_from_url(self, url: str) -> str:
-        from datamodel_code_generator.http import get_body
+        from datamodel_code_generator.http import get_body  # noqa: PLC0415
 
         return self.remote_text_cache.get_or_put(
             url,
-            default_factory=lambda url_: get_body(
+            default_factory=lambda url_: get_body(  # noqa: ARG005
                 url, self.http_headers, self.http_ignore_tls, self.http_query_parameters
             ),
         )
 
     @classmethod
-    def get_url_path_parts(cls, url: ParseResult) -> List[str]:
+    def get_url_path_parts(cls, url: ParseResult) -> list[str]:
         return [
-            f'{url.scheme}://{url.hostname}',
-            *url.path.split('/')[1:],
+            f"{url.scheme}://{url.hostname}",
+            *url.path.split("/")[1:],
         ]
 
     @property
-    def data_type(self) -> Type[DataType]:
+    def data_type(self) -> type[DataType]:
         return self.data_type_manager.data_type
 
     @abstractmethod
     def parse_raw(self) -> None:
         raise NotImplementedError
 
-    def __delete_duplicate_models(self, models: List[DataModel]) -> None:
-        model_class_names: Dict[str, DataModel] = {}
-        model_to_duplicate_models: DefaultDict[DataModel, List[DataModel]] = defaultdict(list)
-        for model in models[:]:
+    def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
+        model_class_names: dict[str, DataModel] = {}
+        model_to_duplicate_models: defaultdict[DataModel, list[DataModel]] = defaultdict(list)
+        for model in models.copy():  # noqa: PLR1702
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
 
@@ -619,18 +612,18 @@ class Parser(ABC):
                     # simplify if introduce duplicate base classes
                     if isinstance(child, DataModel):
                         child.base_classes = list(
-                            {f'{c.module_name}.{c.type_hint}': c for c in child.base_classes}.values()
+                            {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
                         )
                 models.remove(duplicate_model)
 
     @classmethod
-    def __replace_duplicate_name_in_module(cls, models: List[DataModel]) -> None:
+    def __replace_duplicate_name_in_module(cls, models: list[DataModel]) -> None:
         scoped_model_resolver = ModelResolver(
             exclude_names={i.alias or i.import_ for m in models for i in m.imports},
-            duplicate_name_suffix='Model',
+            duplicate_name_suffix="Model",
         )
 
-        model_names: Dict[str, DataModel] = {}
+        model_names: dict[str, DataModel] = {}
         for model in models:
             class_name: str = model.class_name
             generated_name: str = scoped_model_resolver.add([model.path], class_name, unique=True, class_name=True).name
@@ -648,10 +641,10 @@ class Parser(ABC):
 
     def __change_from_import(
         self,
-        models: List[DataModel],
+        models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
-        init: bool,
+        init: bool,  # noqa: FBT001
     ) -> None:
         for model in models:
             scoped_model_resolver.add([model.path], model.class_name)
@@ -668,30 +661,30 @@ class Parser(ABC):
 
                 if isinstance(data_type, BaseClassDataType):
                     left, right = relative(model.module_name, data_type.full_name)
-                    from_ = ''.join([left, right]) if left.endswith('.') else '.'.join([left, right])
+                    from_ = f"{left}{right}" if left.endswith(".") else f"{left}.{right}"
                     import_ = data_type.reference.short_name
                     full_path = from_, import_
                 else:
                     from_, import_ = full_path = relative(model.module_name, data_type.full_name)
                     if imports.use_exact:  # pragma: no cover
                         from_, import_ = exact_import(from_, import_, data_type.reference.short_name)
-                    import_ = import_.replace('-', '_')
+                    import_ = import_.replace("-", "_")
                     if (
                         len(model.module_path) > 1
-                        and model.module_path[-1].count('.') > 0
+                        and model.module_path[-1].count(".") > 0
                         and not self.treat_dots_as_module
                     ):
-                        rel_path_depth = model.module_path[-1].count('.')
+                        rel_path_depth = model.module_path[-1].count(".")
                         from_ = from_[rel_path_depth:]
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
                 name = data_type.reference.short_name
                 if from_ and import_ and alias != name:
-                    data_type.alias = alias if data_type.reference.short_name == import_ else f'{alias}.{name}'
+                    data_type.alias = alias if data_type.reference.short_name == import_ else f"{alias}.{name}"
 
                 if init:
-                    from_ = '.' + from_
+                    from_ = "." + from_
                 imports.append(
                     Import(
                         from_=from_,
@@ -705,11 +698,11 @@ class Parser(ABC):
                 imports.append(after_import)
 
     @classmethod
-    def __extract_inherited_enum(cls, models: List[DataModel]) -> None:
-        for model in models[:]:
+    def __extract_inherited_enum(cls, models: list[DataModel]) -> None:
+        for model in models.copy():
             if model.fields:
                 continue
-            enums: List[Enum] = []
+            enums: list[Enum] = []
             for base_model in model.base_classes:
                 if not base_model.reference:
                     continue
@@ -727,20 +720,20 @@ class Parser(ABC):
                 )
                 models.remove(model)
 
-    def __apply_discriminator_type(
+    def __apply_discriminator_type(  # noqa: PLR0912, PLR0915
         self,
-        models: List[DataModel],
+        models: list[DataModel],
         imports: Imports,
     ) -> None:
-        for model in models:
+        for model in models:  # noqa: PLR1702
             for field in model.fields:
-                discriminator = field.extras.get('discriminator')
+                discriminator = field.extras.get("discriminator")
                 if not discriminator or not isinstance(discriminator, dict):
                     continue
-                property_name = discriminator.get('propertyName')
+                property_name = discriminator.get("propertyName")
                 if not property_name:  # pragma: no cover
                     continue
-                mapping = discriminator.get('mapping', {})
+                mapping = discriminator.get("mapping", {})
                 for data_type in field.data_type.data_types:
                     if not data_type.reference:  # pragma: no cover
                         continue
@@ -757,41 +750,38 @@ class Parser(ABC):
                     ):
                         continue  # pragma: no cover
 
-                    type_names: List[str] = []
+                    type_names: list[str] = []
 
                     def check_paths(
-                        model: Union[
-                            pydantic_model.BaseModel,
-                            pydantic_model_v2.BaseModel,
-                            Reference,
-                        ],
-                        mapping: Dict[str, str],
-                        type_names: List[str] = type_names,
+                        model: pydantic_model.BaseModel | pydantic_model_v2.BaseModel | Reference,
+                        mapping: dict[str, str],
+                        type_names: list[str] = type_names,
                     ) -> None:
                         """Helper function to validate paths for a given model."""
                         for name, path in mapping.items():
-                            if (model.path.split('#/')[-1] != path.split('#/')[-1]) and (
-                                path.startswith('#/') or model.path[:-1] != path.split('/')[-1]
+                            if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
+                                path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
                             ):
-                                t_path = path[str(path).find('/') + 1 :]
-                                t_disc = model.path[: str(model.path).find('#')].lstrip('../')
-                                t_disc_2 = '/'.join(t_disc.split('/')[1:])
-                                if t_path != t_disc and t_path != t_disc_2:
+                                t_path = path[str(path).find("/") + 1 :]
+                                t_disc = model.path[: str(model.path).find("#")].lstrip("../")  # noqa: B005
+                                t_disc_2 = "/".join(t_disc.split("/")[1:])
+                                if t_path not in {t_disc, t_disc_2}:
                                     continue
                             type_names.append(name)
 
                     # Check the main discriminator model path
                     if mapping:
-                        check_paths(discriminator_model, mapping)  # pyright: ignore [reportArgumentType]
+                        check_paths(discriminator_model, mapping)  # pyright: ignore[reportArgumentType]
 
                         # Check the base_classes if they exist
                         if len(type_names) == 0:
                             for base_class in discriminator_model.base_classes:
-                                check_paths(base_class.reference, mapping)  # pyright: ignore [reportArgumentType]
+                                check_paths(base_class.reference, mapping)  # pyright: ignore[reportArgumentType]
                     else:
-                        type_names = [discriminator_model.path.split('/')[-1]]
+                        type_names = [discriminator_model.path.split("/")[-1]]
                     if not type_names:  # pragma: no cover
-                        raise RuntimeError(f'Discriminator type is not found. {data_type.reference.path}')
+                        msg = f"Discriminator type is not found. {data_type.reference.path}"
+                        raise RuntimeError(msg)
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
                         if (discriminator_field.original_name or discriminator_field.name) != property_name:
@@ -800,9 +790,9 @@ class Parser(ABC):
                         if len(literals) == 1 and literals[0] == (type_names[0] if type_names else None):
                             has_one_literal = True
                             if isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
-                                discriminator_model.add_base_class_kwarg('tag_field', f"'{property_name}'")
-                                discriminator_model.add_base_class_kwarg('tag', discriminator_field.represented_default)
-                                discriminator_field.extras['is_classvar'] = True
+                                discriminator_model.add_base_class_kwarg("tag_field", f"'{property_name}'")
+                                discriminator_model.add_base_class_kwarg("tag", discriminator_field.represented_default)
+                                discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
                             break
                         for field_data_type in discriminator_field.data_type.all_data_types:
@@ -822,15 +812,12 @@ class Parser(ABC):
                             )
                         )
                     literal = IMPORT_LITERAL if self.target_python_version.has_literal_type else IMPORT_LITERAL_BACKPORT
-                    has_imported_literal = any(
-                        literal == import_  # type: ignore [comparison-overlap]
-                        for import_ in imports
-                    )
+                    has_imported_literal = any(literal == import_ for import_ in imports)
                     if has_imported_literal:  # pragma: no cover
                         imports.append(literal)
 
     @classmethod
-    def _create_set_from_list(cls, data_type: DataType) -> Optional[DataType]:
+    def _create_set_from_list(cls, data_type: DataType) -> DataType | None:
         if data_type.is_list:
             new_data_type = data_type.copy()
             new_data_type.is_list = False
@@ -838,7 +825,7 @@ class Parser(ABC):
             for data_type_ in new_data_type.data_types:
                 data_type_.parent = new_data_type
             return new_data_type
-        elif data_type.data_types:  # pragma: no cover
+        if data_type.data_types:  # pragma: no cover
             for index, nested_data_type in enumerate(data_type.data_types[:]):
                 set_data_type = cls._create_set_from_list(nested_data_type)
                 if set_data_type:  # pragma: no cover
@@ -846,7 +833,7 @@ class Parser(ABC):
             return data_type
         return None  # pragma: no cover
 
-    def __replace_unique_list_to_set(self, models: List[DataModel]) -> None:
+    def __replace_unique_list_to_set(self, models: list[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
                 if not self.use_unique_items_as_set:
@@ -861,22 +848,25 @@ class Parser(ABC):
                     set_data_type.parent = model_field
 
     @classmethod
-    def __set_reference_default_value_to_field(cls, models: List[DataModel]) -> None:
+    def __set_reference_default_value_to_field(cls, models: list[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
                 if not model_field.data_type.reference or model_field.has_default:
                     continue
-                if isinstance(model_field.data_type.reference.source, DataModel):  # pragma: no cover
-                    if model_field.data_type.reference.source.default != UNDEFINED:
-                        model_field.default = model_field.data_type.reference.source.default
+                if (
+                    isinstance(model_field.data_type.reference.source, DataModel)
+                    and model_field.data_type.reference.source.default != UNDEFINED
+                ):
+                    # pragma: no cover
+                    model_field.default = model_field.data_type.reference.source.default
 
-    def __reuse_model(self, models: List[DataModel], require_update_action_models: List[str]) -> None:
+    def __reuse_model(self, models: list[DataModel], require_update_action_models: list[str]) -> None:
         if not self.reuse_model:
-            return None
-        model_cache: Dict[Tuple[str, ...], Reference] = {}
+            return
+        model_cache: dict[tuple[str, ...], Reference] = {}
         duplicates = []
-        for model in models[:]:
-            model_key = tuple(to_hashable(v) for v in (model.render(class_name='M'), model.imports))
+        for model in models.copy():
+            model_key = tuple(to_hashable(v) for v in (model.render(class_name="M"), model.imports))
             cached_model_reference = model_cache.get(model_key)
             if cached_model_reference:
                 if isinstance(model, Enum):
@@ -895,9 +885,9 @@ class Parser(ABC):
                         description=model.description,
                         reference=Reference(
                             name=model.name,
-                            path=model.reference.path + '/reuse',
+                            path=model.reference.path + "/reuse",
                         ),
-                        custom_template_dir=model._custom_template_dir,
+                        custom_template_dir=model._custom_template_dir,  # noqa: SLF001
                     )
                     if cached_model_reference.path in require_update_action_models:
                         require_update_action_models.append(inherited_model.path)
@@ -910,17 +900,17 @@ class Parser(ABC):
         for duplicate in duplicates:
             models.remove(duplicate)
 
-    def __collapse_root_models(
+    def __collapse_root_models(  # noqa: PLR0912
         self,
-        models: List[DataModel],
-        unused_models: List[DataModel],
+        models: list[DataModel],
+        unused_models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
     ) -> None:
         if not self.collapse_root_models:
-            return None
+            return
 
-        for model in models:
+        for model in models:  # noqa: PLR1702
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
                     reference = data_type.reference
@@ -965,10 +955,10 @@ class Parser(ABC):
                         if isinstance(
                             root_type_field,
                             pydantic_model.DataModelField,
-                        ) and not model_field.extras.get('discriminator'):
-                            discriminator = root_type_field.extras.get('discriminator')
+                        ) and not model_field.extras.get("discriminator"):
+                            discriminator = root_type_field.extras.get("discriminator")
                             if discriminator:
-                                model_field.extras['discriminator'] = discriminator
+                                model_field.extras["discriminator"] = discriminator
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)  # pragma: no cover
                         data_type.parent.data_types.append(copied_data_type)
@@ -991,18 +981,16 @@ class Parser(ABC):
                             d.alias = (
                                 alias.name
                                 if d.reference.short_name == import_
-                                else f'{alias.name}.{d.reference.short_name}'
+                                else f"{alias.name}.{d.reference.short_name}"
                             )
-                            imports.append(
-                                [
-                                    Import(
-                                        from_=from_,
-                                        import_=import_,
-                                        alias=alias.name,
-                                        reference_path=d.reference.path,
-                                    )
-                                ]
-                            )
+                            imports.append([
+                                Import(
+                                    from_=from_,
+                                    import_=import_,
+                                    alias=alias.name,
+                                    reference_path=d.reference.path,
+                                )
+                            ])
 
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
@@ -1012,27 +1000,27 @@ class Parser(ABC):
                     data_type.remove_reference()
 
                     root_type_model.reference.children = [
-                        c for c in root_type_model.reference.children if getattr(c, 'parent', None)
+                        c for c in root_type_model.reference.children if getattr(c, "parent", None)
                     ]
 
                     imports.remove_referenced_imports(root_type_model.path)
                     if not root_type_model.reference.children:
                         unused_models.append(root_type_model)
 
-    def __set_default_enum_member(
+    def __set_default_enum_member(  # noqa: PLR0912
         self,
-        models: List[DataModel],
+        models: list[DataModel],
     ) -> None:
         if not self.set_default_enum_member:
-            return None
-        for model in models:
+            return
+        for model in models:  # noqa: PLR1702
             for model_field in model.fields:
                 if not model_field.default:
                     continue
                 for data_type in model_field.data_type.all_data_types:
                     if data_type.reference and isinstance(data_type.reference.source, Enum):  # pragma: no cover
                         if isinstance(model_field.default, list):
-                            enum_member: Union[List[Member], Optional[Member]] = [
+                            enum_member: list[Member] | (Member | None) = [
                                 e for e in (data_type.reference.source.find_member(d) for d in model_field.default) if e
                             ]
                         else:
@@ -1049,7 +1037,7 @@ class Parser(ABC):
 
     def __override_required_field(
         self,
-        models: List[DataModel],
+        models: list[DataModel],
     ) -> None:
         for model in models:
             if isinstance(model, (Enum, self.data_model_root_type)):
@@ -1057,7 +1045,7 @@ class Parser(ABC):
             for index, model_field in enumerate(model.fields[:]):
                 data_type = model_field.data_type
                 if (
-                    not model_field.original_name
+                    not model_field.original_name  # noqa: PLR0916
                     or data_type.data_types
                     or data_type.reference
                     or data_type.type
@@ -1091,7 +1079,7 @@ class Parser(ABC):
 
     def __sort_models(
         self,
-        models: List[DataModel],
+        models: list[DataModel],
         imports: Imports,
     ) -> None:
         if not self.keep_model_order:
@@ -1100,7 +1088,7 @@ class Parser(ABC):
         models.sort(key=lambda x: x.class_name)
 
         imported = {i for v in imports.values() for i in v}
-        model_class_name_baseclasses: Dict[DataModel, Tuple[str, Set[str]]] = {}
+        model_class_name_baseclasses: dict[DataModel, tuple[str, set[str]]] = {}
         for model in models:
             class_name = model.class_name
             model_class_name_baseclasses[model] = (
@@ -1121,9 +1109,9 @@ class Parser(ABC):
                 models[i], models[i + 1] = models[i + 1], model
                 changed = True
 
-    def __set_one_literal_on_default(self, models: List[DataModel]) -> None:
+    def __set_one_literal_on_default(self, models: list[DataModel]) -> None:
         if not self.use_one_literal_as_default:
-            return None
+            return
         for model in models:
             for model_field in model.fields:
                 if not model_field.required or len(model_field.data_type.literals) != 1:
@@ -1134,34 +1122,34 @@ class Parser(ABC):
                     model_field.nullable = False
 
     @classmethod
-    def __postprocess_result_modules(cls, results):
-        def process(input_tuple) -> Tuple[str, ...]:
+    def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
+        def process(input_tuple: tuple[str, ...]) -> tuple[str, ...]:
             r = []
             for item in input_tuple:
-                p = item.split('.')
+                p = item.split(".")
                 if len(p) > 1:
                     r.extend(p[:-1])
                     r.append(p[-1])
                 else:
                     r.append(item)
 
-            r = r[:-2] + [f'{r[-2]}.{r[-1]}']
+            r = r[:-2] + [f"{r[-2]}.{r[-1]}"]
             return tuple(r)
 
         results = {process(k): v for k, v in results.items()}
 
-        init_result = [v for k, v in results.items() if k[-1] == '__init__.py'][0]
-        folders = {t[:-1] if t[-1].endswith('.py') else t for t in results.keys()}
+        init_result = next(v for k, v in results.items() if k[-1] == "__init__.py")
+        folders = {t[:-1] if t[-1].endswith(".py") else t for t in results}
         for folder in folders:
             for i in range(len(folder)):
                 subfolder = folder[: i + 1]
-                init_file = subfolder + ('__init__.py',)
+                init_file = (*subfolder, "__init__.py")
                 results.update({init_file: init_result})
         return results
 
-    def __change_imported_model_name(
+    def __change_imported_model_name(  # noqa: PLR6301
         self,
-        models: List[DataModel],
+        models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
     ) -> None:
@@ -1175,26 +1163,25 @@ class Parser(ABC):
                 continue
 
             model.reference.name = scoped_model_resolver.add(  # pragma: no cover
-                path=get_special_path('imported_name', model.path.split('/')),
+                path=get_special_path("imported_name", model.path.split("/")),
                 original_name=model.reference.name,
                 unique=True,
                 class_name=True,
             ).name
 
-    def parse(
+    def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
-        with_import: Optional[bool] = True,
-        format_: Optional[bool] = True,
-        settings_path: Optional[Path] = None,
-    ) -> Union[str, Dict[Tuple[str, ...], Result]]:
+        with_import: bool | None = True,  # noqa: FBT001, FBT002
+        format_: bool | None = True,  # noqa: FBT001, FBT002
+        settings_path: Path | None = None,
+    ) -> str | dict[tuple[str, ...], Result]:
         self.parse_raw()
 
-        if with_import:
-            if self.target_python_version != PythonVersion.PY_36:
-                self.imports.append(IMPORT_ANNOTATIONS)
+        if with_import and self.target_python_version != PythonVersion.PY_36:
+            self.imports.append(IMPORT_ANNOTATIONS)
 
         if format_:
-            code_formatter: Optional[CodeFormatter] = CodeFormatter(
+            code_formatter: CodeFormatter | None = CodeFormatter(
                 self.target_python_version,
                 settings_path,
                 self.wrap_string_literal,
@@ -1208,12 +1195,12 @@ class Parser(ABC):
 
         _, sorted_data_models, require_update_action_models = sort_data_models(self.results)
 
-        results: Dict[Tuple[str, ...], Result] = {}
+        results: dict[tuple[str, ...], Result] = {}
 
-        def module_key(data_model: DataModel) -> Tuple[str, ...]:
+        def module_key(data_model: DataModel) -> tuple[str, ...]:
             return tuple(data_model.module_path)
 
-        def sort_key(data_model: DataModel) -> Tuple[int, Tuple[str, ...]]:
+        def sort_key(data_model: DataModel) -> tuple[int, tuple[str, ...]]:
             return (len(data_model.module_path), tuple(data_model.module_path))
 
         # process in reverse order to correctly establish module levels
@@ -1222,57 +1209,54 @@ class Parser(ABC):
             key=module_key,
         )
 
-        module_models: List[Tuple[Tuple[str, ...], List[DataModel]]] = []
-        unused_models: List[DataModel] = []
-        model_to_module_models: Dict[DataModel, Tuple[Tuple[str, ...], List[DataModel]]] = {}
-        module_to_import: Dict[Tuple[str, ...], Imports] = {}
+        module_models: list[tuple[tuple[str, ...], list[DataModel]]] = []
+        unused_models: list[DataModel] = []
+        model_to_module_models: dict[DataModel, tuple[tuple[str, ...], list[DataModel]]] = {}
+        module_to_import: dict[tuple[str, ...], Imports] = {}
 
-        previous_module = ()  # type: Tuple[str, ...]
+        previous_module: tuple[str, ...] = ()
         for module, models in ((k, [*v]) for k, v in grouped_models):
             for model in models:
                 model_to_module_models[model] = module, models
             self.__delete_duplicate_models(models)
             self.__replace_duplicate_name_in_module(models)
             if len(previous_module) - len(module) > 1:
-                for parts in range(len(previous_module) - 1, len(module), -1):
-                    module_models.append(
-                        (
-                            previous_module[:parts],
-                            [],
-                        )
+                module_models.extend(
+                    (
+                        previous_module[:parts],
+                        [],
                     )
-            module_models.append(
-                (
-                    module,
-                    models,
+                    for parts in range(len(previous_module) - 1, len(module), -1)
                 )
-            )
+            module_models.append((
+                module,
+                models,
+            ))
             previous_module = module
 
         class Processed(NamedTuple):
-            module: Tuple[str, ...]
-            models: List[DataModel]
+            module: tuple[str, ...]
+            models: list[DataModel]
             init: bool
             imports: Imports
             scoped_model_resolver: ModelResolver
 
-        processed_models: List[Processed] = []
+        processed_models: list[Processed] = []
 
-        for module, models in module_models:
-            imports = module_to_import[module] = Imports(self.use_exact_imports)
+        for module_, models in module_models:
+            imports = module_to_import[module_] = Imports(self.use_exact_imports)
             init = False
-            if module:
-                parent = (*module[:-1], '__init__.py')
+            if module_:
+                parent = (*module_[:-1], "__init__.py")
                 if parent not in results:
-                    results[parent] = Result(body='')
-                if (*module, '__init__.py') in results:
-                    module = (*module, '__init__.py')
+                    results[parent] = Result(body="")
+                if (*module_, "__init__.py") in results:
+                    module = (*module_, "__init__.py")
                     init = True
                 else:
-                    module = (*module[:-1], f'{module[-1]}.py')
-                    module = tuple(part.replace('-', '_') for part in module)
+                    module = tuple(part.replace("-", "_") for part in (*module_[:-1], f"{module_[-1]}.py"))
             else:
-                module = ('__init__.py',)
+                module = ("__init__.py",)
 
             scoped_model_resolver = ModelResolver()
 
@@ -1303,7 +1287,7 @@ class Parser(ABC):
 
         for processed_model in processed_models:
             # postprocess imports to remove unused imports.
-            model_code = str('\n'.join([str(m) for m in processed_model.models]))
+            model_code = str("\n".join([str(m) for m in processed_model.models]))
             unused_imports = [
                 (from_, import_)
                 for from_, imports_ in processed_model.imports.items()
@@ -1313,46 +1297,44 @@ class Parser(ABC):
             for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:
+        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:
-            result: List[str] = []
+        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
+            result: list[str] = []
             if models:
                 if with_import:
-                    result += [str(self.imports), str(imports), '\n']
+                    result += [str(self.imports), str(imports), "\n"]
 
                 code = dump_templates(models)
                 result += [code]
 
                 if self.dump_resolve_reference_action is not None:
                     result += [
-                        '\n',
+                        "\n",
                         self.dump_resolve_reference_action(
                             m.reference.short_name for m in models if m.path in require_update_action_models
                         ),
                     ]
             if not result and not init:
                 continue
-            body = '\n'.join(result)
+            body = "\n".join(result)
             if code_formatter:
                 body = code_formatter.format_code(body)
 
             results[module] = Result(body=body, source=models[0].file_path if models else None)
 
         # retain existing behaviour
-        if [*results] == [('__init__.py',)]:
-            return results[('__init__.py',)].body
+        if [*results] == [("__init__.py",)]:
+            return results["__init__.py",].body
 
-        results = {tuple(i.replace('-', '_') for i in k): v for k, v in results.items()}
-        results = (
+        results = {tuple(i.replace("-", "_") for i in k): v for k, v in results.items()}
+        return (
             self.__postprocess_result_modules(results)
             if self.treat_dots_as_module
             else {
-                tuple((part[: part.rfind('.')].replace('.', '_') + part[part.rfind('.') :]) for part in k): v
+                tuple((part[: part.rfind(".")].replace(".", "_") + part[part.rfind(".") :]) for part in k): v
                 for k, v in results.items()
             }
         )
-
-        return results
