@@ -139,14 +139,14 @@ lint.ignore = [
   "FA102",  # no from __future__ import annotations
   "FIX002", # line contains to do
   "ISC001", # Conflict with formatter
+  "N805",
   "S101",   # can use assert
+  "TC001",  # breaks models moving stuff into type checking block
   "TD002",  # missing to do author
   "TD003",  # missing to do link
   "TD004",  # missing colon in to do
   "UP006",  # keep using List instead of list
-  "TC001", # breaks models moving stuff into type checking block
   "UP007",  # keep using Union instead of |
-  "N805",
 ]
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
