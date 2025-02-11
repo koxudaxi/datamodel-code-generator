@@ -122,7 +122,7 @@ class Struct(DataModel):
         if self.keyword_only:
             self.add_base_class_kwarg("kw_only", "True")
 
-    def add_base_class_kwarg(self, name: str, value) -> None:
+    def add_base_class_kwarg(self, name: str, value: str) -> None:
         self.extra_template_data["base_class_kwargs"][name] = value
 
 

@@ -82,17 +82,7 @@ def enable_debug_message() -> None:  # pragma: no cover
 DEFAULT_MAX_VARIABLE_LENGTH: int = 100
 
 
-def snooper_to_methods(  # noqa: PLR0913, PLR0917
-    output=None,
-    watch=(),
-    watch_explode=(),
-    depth=1,
-    prefix="",
-    overwrite=False,  # noqa: FBT002
-    thread_info=False,  # noqa: FBT002
-    custom_repr=(),
-    max_variable_length: int | None = DEFAULT_MAX_VARIABLE_LENGTH,
-) -> Callable[..., Any]:
+def snooper_to_methods() -> Callable[..., Any]:
     def inner(cls: Type[T]) -> Type[T]:
         if not pysnooper:
             return cls
@@ -100,17 +90,7 @@ def snooper_to_methods(  # noqa: PLR0913, PLR0917
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
         for name, method in methods:
-            snooper_method = pysnooper.snoop(
-                output,
-                watch,
-                watch_explode,
-                depth,
-                prefix,
-                overwrite,
-                thread_info,
-                custom_repr,
-                max_variable_length if max_variable_length is not None else DEFAULT_MAX_VARIABLE_LENGTH,
-            )(method)
+            snooper_method = pysnooper.snoop(DEFAULT_MAX_VARIABLE_LENGTH)(method)
             setattr(cls, name, snooper_method)
         return cls
 

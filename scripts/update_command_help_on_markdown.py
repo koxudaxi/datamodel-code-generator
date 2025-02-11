@@ -26,7 +26,7 @@ TARGET_MARKDOWN_FILES: list[Path] = [
 REPLACE_MAP = {"(default: UTF-8)": "(default: utf-8)", "'": r"''"}
 
 
-def get_help():
+def get_help() -> str:
     with io.StringIO() as f:
         arg_parser.print_help(file=f)
         output = f.getvalue()

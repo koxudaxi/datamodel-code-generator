@@ -1132,8 +1132,8 @@ class Parser(ABC):
                     model_field.nullable = False
 
     @classmethod
-    def __postprocess_result_modules(cls, results):
-        def process(input_tuple) -> Tuple[str, ...]:
+    def __postprocess_result_modules(cls, results: Dict[Tuple[str, ...], Result]) -> Dict[Tuple[str, ...], Result]:
+        def process(input_tuple: Tuple[str, ...]) -> Tuple[str, ...]:
             r = []
             for item in input_tuple:
                 p = item.split(".")
