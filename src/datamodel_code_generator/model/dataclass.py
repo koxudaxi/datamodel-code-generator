@@ -31,15 +31,15 @@ from datamodel_code_generator.types import DataType, StrictTypes, Types, chain_a
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
     return bool(field.field) or not (
-        field.required or (field.represented_default == 'None' and field.strip_default_none)
+        field.required or (field.represented_default == "None" and field.strip_default_none)
     )
 
 
 class DataClass(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'dataclass.jinja2'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_DATACLASS,)
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
@@ -75,20 +75,20 @@ class DataClass(DataModel):
 
 class DataModelField(DataModelFieldBase):
     _FIELD_KEYS: ClassVar[Set[str]] = {
-        'default_factory',
-        'init',
-        'repr',
-        'hash',
-        'compare',
-        'metadata',
-        'kw_only',
+        "default_factory",
+        "init",
+        "repr",
+        "hash",
+        "compare",
+        "metadata",
+        "kw_only",
     }
     constraints: Optional[Constraints] = None
 
     @property
     def imports(self) -> Tuple[Import, ...]:
         field = self.field
-        if field and field.startswith('field('):
+        if field and field.startswith("field("):
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 
@@ -101,7 +101,7 @@ class DataModelField(DataModelFieldBase):
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         result = str(self)
-        if result == '':
+        if result == "":
             return None
 
         return result
@@ -110,44 +110,44 @@ class DataModelField(DataModelFieldBase):
         data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
 
         if self.default != UNDEFINED and self.default is not None:
-            data['default'] = self.default
+            data["default"] = self.default
 
         if self.required:
             data = {
                 k: v
                 for k, v in data.items()
                 if k
-                not in (
-                    'default',
-                    'default_factory',
-                )
+                not in {
+                    "default",
+                    "default_factory",
+                }
             }
 
         if not data:
-            return ''
+            return ""
 
-        if len(data) == 1 and 'default' in data:
-            default = data['default']
+        if len(data) == 1 and "default" in data:
+            default = data["default"]
 
             if isinstance(default, (list, dict)):
-                return f'field(default_factory=lambda :{repr(default)})'
+                return f"field(default_factory=lambda :{default!r})"
             return repr(default)
-        kwargs = [f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()]
-        return f'field({", ".join(kwargs)})'
+        kwargs = [f"{k}={v if k == 'default_factory' else repr(v)}" for k, v in data.items()]
+        return f"field({', '.join(kwargs)})"
 
 
 class DataTypeManager(_DataTypeManager):
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         python_version: PythonVersion = PythonVersion.PY_38,
-        use_standard_collections: bool = False,
-        use_generic_container_types: bool = False,
+        use_standard_collections: bool = False,  # noqa: FBT001, FBT002
+        use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Optional[Sequence[StrictTypes]] = None,
-        use_non_positive_negative_number_constrained_types: bool = False,
-        use_union_operator: bool = False,
-        use_pendulum: bool = False,
+        use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_union_operator: bool = False,  # noqa: FBT001, FBT002
+        use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-    ):
+    ) -> None:
         super().__init__(
             python_version,
             use_standard_collections,

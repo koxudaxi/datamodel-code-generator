@@ -31,94 +31,94 @@ from datamodel_code_generator.util import field_validator, model_validator
 
 
 class UnionMode(Enum):
-    smart = 'smart'
-    left_to_right = 'left_to_right'
+    smart = "smart"
+    left_to_right = "left_to_right"
 
 
 class Constraints(_Constraints):
     # To override existing pattern alias
-    regex: Optional[str] = Field(None, alias='regex')
-    pattern: Optional[str] = Field(None, alias='pattern')
+    regex: Optional[str] = Field(None, alias="regex")
+    pattern: Optional[str] = Field(None, alias="pattern")
 
-    @model_validator(mode='before')
-    def validate_min_max_items(cls, values: Any) -> Dict[str, Any]:
+    @model_validator(mode="before")
+    def validate_min_max_items(cls, values: Any) -> Dict[str, Any]:  # noqa: N805
         if not isinstance(values, dict):  # pragma: no cover
             return values
-        min_items = values.pop('minItems', None)
+        min_items = values.pop("minItems", None)
         if min_items is not None:
-            values['minLength'] = min_items
-        max_items = values.pop('maxItems', None)
+            values["minLength"] = min_items
+        max_items = values.pop("maxItems", None)
         if max_items is not None:
-            values['maxLength'] = max_items
+            values["maxLength"] = max_items
         return values
 
 
 class DataModelField(DataModelFieldV1):
     _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
-        'alias',
-        'default',
-        'gt',
-        'ge',
-        'lt',
-        'le',
-        'multiple_of',
-        'min_length',
-        'max_length',
-        'pattern',
+        "alias",
+        "default",
+        "gt",
+        "ge",
+        "lt",
+        "le",
+        "multiple_of",
+        "min_length",
+        "max_length",
+        "pattern",
     }
     _DEFAULT_FIELD_KEYS: ClassVar[Set[str]] = {
-        'default',
-        'default_factory',
-        'alias',
-        'alias_priority',
-        'validation_alias',
-        'serialization_alias',
-        'title',
-        'description',
-        'examples',
-        'exclude',
-        'discriminator',
-        'json_schema_extra',
-        'frozen',
-        'validate_default',
-        'repr',
-        'init_var',
-        'kw_only',
-        'pattern',
-        'strict',
-        'gt',
-        'ge',
-        'lt',
-        'le',
-        'multiple_of',
-        'allow_inf_nan',
-        'max_digits',
-        'decimal_places',
-        'min_length',
-        'max_length',
-        'union_mode',
+        "default",
+        "default_factory",
+        "alias",
+        "alias_priority",
+        "validation_alias",
+        "serialization_alias",
+        "title",
+        "description",
+        "examples",
+        "exclude",
+        "discriminator",
+        "json_schema_extra",
+        "frozen",
+        "validate_default",
+        "repr",
+        "init_var",
+        "kw_only",
+        "pattern",
+        "strict",
+        "gt",
+        "ge",
+        "lt",
+        "le",
+        "multiple_of",
+        "allow_inf_nan",
+        "max_digits",
+        "decimal_places",
+        "min_length",
+        "max_length",
+        "union_mode",
     }
     constraints: Optional[Constraints] = None  # pyright: ignore [reportIncompatibleVariableOverride]
-    _PARSE_METHOD: ClassVar[str] = 'model_validate'
+    _PARSE_METHOD: ClassVar[str] = "model_validate"
     can_have_extra_keys: ClassVar[bool] = False
 
-    @field_validator('extras')
-    def validate_extras(cls, values: Any) -> Dict[str, Any]:
+    @field_validator("extras")
+    def validate_extras(cls, values: Any) -> Dict[str, Any]:  # noqa: N805
         if not isinstance(values, dict):  # pragma: no cover
             return values
-        if 'examples' in values:
+        if "examples" in values:
             return values
 
-        if 'example' in values:
-            values['examples'] = [values.pop('example')]
+        if "example" in values:
+            values["examples"] = [values.pop("example")]
         return values
 
     def process_const(self) -> None:
-        if 'const' not in self.extras:
-            return None
+        if "const" not in self.extras:
+            return
         self.const = True
         self.nullable = False
-        const = self.extras['const']
+        const = self.extras["const"]
         self.data_type = self.data_type.__class__(literals=[const])
         if not self.default:
             self.default = const
@@ -126,22 +126,22 @@ class DataModelField(DataModelFieldV1):
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
             # const is removed in pydantic 2.0
-            data.pop('const')
+            data.pop("const")
 
         # unique_items is not supported in pydantic 2.0
-        data.pop('unique_items', None)
+        data.pop("unique_items", None)
 
-        if 'union_mode' in data:
+        if "union_mode" in data:
             if self.data_type.is_union:
-                data['union_mode'] = data.pop('union_mode').value
+                data["union_mode"] = data.pop("union_mode").value
             else:
-                data.pop('union_mode')
+                data.pop("union_mode")
 
         # **extra is not supported in pydantic 2.0
         json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
         if json_schema_extra:
-            data['json_schema_extra'] = json_schema_extra
-            for key in json_schema_extra.keys():
+            data["json_schema_extra"] = json_schema_extra
+            for key in json_schema_extra:
                 data.pop(key)
 
     def _process_annotated_field_arguments(
@@ -158,16 +158,16 @@ class ConfigAttribute(NamedTuple):
 
 
 class BaseModel(BaseModelBase):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'pydantic_v2/BaseModel.jinja2'
-    BASE_CLASS: ClassVar[str] = 'pydantic.BaseModel'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
+    BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     CONFIG_ATTRIBUTES: ClassVar[List[ConfigAttribute]] = [
-        ConfigAttribute('allow_population_by_field_name', 'populate_by_name', False),
-        ConfigAttribute('populate_by_name', 'populate_by_name', False),
-        ConfigAttribute('allow_mutation', 'frozen', True),
-        ConfigAttribute('frozen', 'frozen', False),
+        ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
+        ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
     ]
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
@@ -201,7 +201,7 @@ class BaseModel(BaseModelBase):
 
         extra = self._get_config_extra()
         if extra:
-            config_parameters['extra'] = extra
+            config_parameters["extra"] = extra
 
         for from_, to, invert in self.CONFIG_ATTRIBUTES:
             if from_ in self.extra_template_data:
@@ -210,7 +210,7 @@ class BaseModel(BaseModelBase):
                 )
         for data_type in self.all_data_types:
             if data_type.is_custom_type:  # pragma: no cover
-                config_parameters['arbitrary_types_allowed'] = True
+                config_parameters["arbitrary_types_allowed"] = True
                 break
 
         for field in self.fields:
@@ -218,24 +218,24 @@ class BaseModel(BaseModelBase):
             # Depending on the generation configuration, the pattern may end up in two different places.
             pattern = (isinstance(field.constraints, Constraints) and field.constraints.pattern) or (
                 field.data_type.kwargs or {}
-            ).get('pattern')
-            if pattern and re.search(r'\(\?<?[=!]', pattern):
-                config_parameters['regex_engine'] = '"python-re"'
+            ).get("pattern")
+            if pattern and re.search(r"\(\?<?[=!]", pattern):
+                config_parameters["regex_engine"] = '"python-re"'
                 break
 
-        if isinstance(self.extra_template_data.get('config'), dict):
-            for key, value in self.extra_template_data['config'].items():
+        if isinstance(self.extra_template_data.get("config"), dict):
+            for key, value in self.extra_template_data["config"].items():
                 config_parameters[key] = value
 
         if config_parameters:
-            from datamodel_code_generator.model.pydantic_v2 import ConfigDict
+            from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
-            self.extra_template_data['config'] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore [reportArgumentType]
+            self.extra_template_data["config"] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore [reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
     def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:
-        additionalProperties = self.extra_template_data.get('additionalProperties')
-        allow_extra_fields = self.extra_template_data.get('allow_extra_fields')
+        additionalProperties = self.extra_template_data.get("additionalProperties")
+        allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
         if additionalProperties is not None or allow_extra_fields:
             return "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
         return None

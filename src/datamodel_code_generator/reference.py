@@ -60,7 +60,7 @@ class _BaseModel(BaseModel):
     if not TYPE_CHECKING:
         if PYDANTIC_V2:
 
-            def dict(
+            def dict(  # noqa: PLR0913
                 self,
                 *,
                 include: Union[AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None] = None,
@@ -69,7 +69,7 @@ class _BaseModel(BaseModel):
                 exclude_unset: bool = False,
                 exclude_defaults: bool = False,
                 exclude_none: bool = False,
-            ) -> 'DictStrAny':
+            ) -> "DictStrAny":
                 return self.model_dump(
                     include=include,
                     exclude=set(exclude or ()) | self._exclude_fields,
@@ -81,7 +81,7 @@ class _BaseModel(BaseModel):
 
         else:
 
-            def dict(
+            def dict(  # noqa: PLR0913
                 self,
                 *,
                 include: Union[AbstractSet[Union[int, str]], Mapping[Union[int, str], Any], None] = None,
@@ -91,7 +91,7 @@ class _BaseModel(BaseModel):
                 exclude_unset: bool = False,
                 exclude_defaults: bool = False,
                 exclude_none: bool = False,
-            ) -> 'DictStrAny':
+            ) -> "DictStrAny":
                 return super().dict(
                     include=include,
                     exclude=set(exclude or ()) | self._exclude_fields,
@@ -105,26 +105,26 @@ class _BaseModel(BaseModel):
 
 class Reference(_BaseModel):
     path: str
-    original_name: str = ''
+    original_name: str = ""
     name: str
     duplicate_name: Optional[str] = None
     loaded: bool = True
     source: Optional[Any] = None
     children: List[Any] = []
-    _exclude_fields: ClassVar[Set[str]] = {'children'}
+    _exclude_fields: ClassVar[Set[str]] = {"children"}
 
-    @model_validator(mode='before')
-    def validate_original_name(cls, values: Any) -> Any:
+    @model_validator(mode="before")
+    def validate_original_name(cls, values: Any) -> Any:  # noqa: N805
         """
         If original_name is empty then, `original_name` is assigned `name`
         """
         if not isinstance(values, dict):  # pragma: no cover
             return values
-        original_name = values.get('original_name')
+        original_name = values.get("original_name")
         if original_name:
             return values
 
-        values['original_name'] = values.get('name', original_name)
+        values["original_name"] = values.get("name", original_name)
         return values
 
     if PYDANTIC_V2:
@@ -133,25 +133,25 @@ class Reference(_BaseModel):
         model_config = ConfigDict(  # pyright: ignore [reportAssignmentType]
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
-            revalidate_instances='never',
+            revalidate_instances="never",
         )
     else:
 
         class Config:
             arbitrary_types_allowed = True
             keep_untouched = (cached_property,)
-            copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse('1.9.2') else 'none'
+            copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse("1.9.2") else "none"
 
     @property
     def short_name(self) -> str:
-        return self.name.rsplit('.', 1)[-1]
+        return self.name.rsplit(".", 1)[-1]
 
 
-SINGULAR_NAME_SUFFIX: str = 'Item'
+SINGULAR_NAME_SUFFIX: str = "Item"
 
-ID_PATTERN: Pattern[str] = re.compile(r'^#[^/].*')
+ID_PATTERN: Pattern[str] = re.compile(r"^#[^/].*")
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @contextmanager
@@ -164,34 +164,34 @@ def context_variable(setter: Callable[[T], None], current_value: T, new_value: T
         setter(previous_value)
 
 
-_UNDER_SCORE_1: Pattern[str] = re.compile(r'([^_])([A-Z][a-z]+)')
-_UNDER_SCORE_2: Pattern[str] = re.compile('([a-z0-9])([A-Z])')
+_UNDER_SCORE_1: Pattern[str] = re.compile(r"([^_])([A-Z][a-z]+)")
+_UNDER_SCORE_2: Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
 
 
 @lru_cache
 def camel_to_snake(string: str) -> str:
-    subbed = _UNDER_SCORE_1.sub(r'\1_\2', string)
-    return _UNDER_SCORE_2.sub(r'\1_\2', subbed).lower()
+    subbed = _UNDER_SCORE_1.sub(r"\1_\2", string)
+    return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
 
 
 class FieldNameResolver:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         aliases: Optional[Mapping[str, str]] = None,
-        snake_case_field: bool = False,
+        snake_case_field: bool = False,  # noqa: FBT001, FBT002
         empty_field_name: Optional[str] = None,
         original_delimiter: Optional[str] = None,
         special_field_name_prefix: Optional[str] = None,
-        remove_special_field_name_prefix: bool = False,
-        capitalise_enum_members: bool = False,
-        no_alias: bool = False,
-    ):
+        remove_special_field_name_prefix: bool = False,  # noqa: FBT001, FBT002
+        capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
+        no_alias: bool = False,  # noqa: FBT001, FBT002
+    ) -> None:
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
-        self.empty_field_name: str = empty_field_name or '_'
+        self.empty_field_name: str = empty_field_name or "_"
         self.snake_case_field = snake_case_field
         self.original_delimiter: Optional[str] = original_delimiter
         self.special_field_name_prefix: Optional[str] = (
-            'field' if special_field_name_prefix is None else special_field_name_prefix
+            "field" if special_field_name_prefix is None else special_field_name_prefix
         )
         self.remove_special_field_name_prefix: bool = remove_special_field_name_prefix
         self.capitalise_enum_members: bool = capitalise_enum_members
@@ -201,38 +201,38 @@ class FieldNameResolver:
     def _validate_field_name(cls, field_name: str) -> bool:
         return True
 
-    def get_valid_name(
+    def get_valid_name(  # noqa: PLR0912
         self,
         name: str,
         excludes: Optional[Set[str]] = None,
-        ignore_snake_case_field: bool = False,
-        upper_camel: bool = False,
+        ignore_snake_case_field: bool = False,  # noqa: FBT001, FBT002
+        upper_camel: bool = False,  # noqa: FBT001, FBT002
     ) -> str:
         if not name:
             name = self.empty_field_name
-        if name[0] == '#':
+        if name[0] == "#":
             name = name[1:] or self.empty_field_name
 
         if self.snake_case_field and not ignore_snake_case_field and self.original_delimiter is not None:
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
-        name = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹]|\W', '_', name)
+        name = re.sub(r"[¹²³⁴⁵⁶⁷⁸⁹]|\W", "_", name)
         if name[0].isnumeric():
-            name = f'{self.special_field_name_prefix}_{name}'
+            name = f"{self.special_field_name_prefix}_{name}"
 
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
-        while name.startswith('_'):
+        while name.startswith("_"):
             if self.remove_special_field_name_prefix:
                 name = name[1:]
             else:
-                name = f'{self.special_field_name_prefix}{name}'
+                name = f"{self.special_field_name_prefix}{name}"
                 break
-        if self.capitalise_enum_members or self.snake_case_field and not ignore_snake_case_field:
+        if self.capitalise_enum_members or (self.snake_case_field and not ignore_snake_case_field):
             name = camel_to_snake(name)
         count = 1
         if iskeyword(name) or not self._validate_field_name(name):
-            name += '_'
+            name += "_"
         if upper_camel:
             new_name = snake_to_upper_camel(name)
         elif self.capitalise_enum_members:
@@ -244,7 +244,7 @@ class FieldNameResolver:
             or iskeyword(new_name)
             or (excludes and new_name in excludes)
         ):
-            new_name = f'{name}{count}' if upper_camel else f'{name}_{count}'
+            new_name = f"{name}{count}" if upper_camel else f"{name}_{count}"
             count += 1
         return new_name
 
@@ -272,12 +272,12 @@ class EnumFieldNameResolver(FieldNameResolver):
         self,
         name: str,
         excludes: Optional[Set[str]] = None,
-        ignore_snake_case_field: bool = False,
-        upper_camel: bool = False,
+        ignore_snake_case_field: bool = False,  # noqa: FBT001, FBT002
+        upper_camel: bool = False,  # noqa: FBT001, FBT002
     ) -> str:
         return super().get_valid_name(
-            name='mro_' if name == 'mro' else name,
-            excludes={'mro'} | (excludes or set()),
+            name="mro_" if name == "mro" else name,
+            excludes={"mro"} | (excludes or set()),
             ignore_snake_case_field=ignore_snake_case_field,
             upper_camel=upper_camel,
         )
@@ -303,7 +303,7 @@ class ClassName(NamedTuple):
 
 def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
     if base_path == target_path:
-        return Path('.')
+        return Path()
     if not target_path.is_absolute():
         return target_path
     parent_count: int = 0
@@ -315,27 +315,27 @@ def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
             parent_count += 1
         if target_part:
             children.append(target_part)
-    return Path(*['..' for _ in range(parent_count)], *children)
+    return Path(*[".." for _ in range(parent_count)], *children)
 
 
 class ModelResolver:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         exclude_names: Optional[Set[str]] = None,
         duplicate_name_suffix: Optional[str] = None,
         base_url: Optional[str] = None,
         singular_name_suffix: Optional[str] = None,
         aliases: Optional[Mapping[str, str]] = None,
-        snake_case_field: bool = False,
+        snake_case_field: bool = False,  # noqa: FBT001, FBT002
         empty_field_name: Optional[str] = None,
         custom_class_name_generator: Optional[Callable[[str], str]] = None,
         base_path: Optional[Path] = None,
         field_name_resolver_classes: Optional[Dict[ModelType, Type[FieldNameResolver]]] = None,
         original_field_name_delimiter: Optional[str] = None,
         special_field_name_prefix: Optional[str] = None,
-        remove_special_field_name_prefix: bool = False,
-        capitalise_enum_members: bool = False,
-        no_alias: bool = False,
+        remove_special_field_name_prefix: bool = False,  # noqa: FBT001, FBT002
+        capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
+        no_alias: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         self.references: Dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -421,56 +421,53 @@ class ModelResolver:
         return self._root_id_base_path
 
     def set_root_id(self, root_id: Optional[str]) -> None:
-        if root_id and '/' in root_id:
-            self._root_id_base_path = root_id.rsplit('/', 1)[0]
+        if root_id and "/" in root_id:
+            self._root_id_base_path = root_id.rsplit("/", 1)[0]
         else:
             self._root_id_base_path = None
 
         self._root_id = root_id
 
     def add_id(self, id_: str, path: Sequence[str]) -> None:
-        self.ids['/'.join(self.current_root)][id_] = self.resolve_ref(path)
+        self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def resolve_ref(self, path: Union[Sequence[str], str]) -> str:
-        if isinstance(path, str):
-            joined_path = path
-        else:
-            joined_path = self.join_path(path)
-        if joined_path == '#':
-            return f'{"/".join(self.current_root)}#'
-        if self.current_base_path and not self.base_url and joined_path[0] != '#' and not is_url(joined_path):
+    def resolve_ref(self, path: Union[Sequence[str], str]) -> str:  # noqa: PLR0911, PLR0912
+        joined_path = path if isinstance(path, str) else self.join_path(path)
+        if joined_path == "#":
+            return f"{'/'.join(self.current_root)}#"
+        if self.current_base_path and not self.base_url and joined_path[0] != "#" and not is_url(joined_path):
             # resolve local file path
-            file_path, *object_part = joined_path.split('#', 1)
+            file_path, *object_part = joined_path.split("#", 1)
             resolved_file_path = Path(self.current_base_path, file_path).resolve()
             joined_path = get_relative_path(self._base_path, resolved_file_path).as_posix()
             if object_part:
-                joined_path += f'#{object_part[0]}'
+                joined_path += f"#{object_part[0]}"
         if ID_PATTERN.match(joined_path):
-            ref: str = self.ids['/'.join(self.current_root)][joined_path]
+            ref: str = self.ids["/".join(self.current_root)][joined_path]
         else:
-            if '#' not in joined_path:
-                joined_path += '#'
-            elif joined_path[0] == '#':
-                joined_path = f'{"/".join(self.current_root)}{joined_path}'
+            if "#" not in joined_path:
+                joined_path += "#"
+            elif joined_path[0] == "#":
+                joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
-            delimiter = joined_path.index('#')
-            file_path = ''.join(joined_path[:delimiter])
-            ref = f'{"".join(joined_path[:delimiter])}#{"".join(joined_path[delimiter + 1 :])}'
+            delimiter = joined_path.index("#")
+            file_path = "".join(joined_path[:delimiter])
+            ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1 :])}"
             if self.root_id_base_path and not (is_url(joined_path) or Path(self._base_path, file_path).is_file()):
-                ref = f'{self.root_id_base_path}/{ref}'
+                ref = f"{self.root_id_base_path}/{ref}"
 
         if self.base_url:
-            from .http import join_url
+            from .http import join_url  # noqa: PLC0415
 
             joined_url = join_url(self.base_url, ref)
-            if '#' in joined_url:
+            if "#" in joined_url:
                 return joined_url
-            return f'{joined_url}#'
+            return f"{joined_url}#"
 
         if is_url(ref):
-            file_part, path_part = ref.split('#', 1)
+            file_part, path_part = ref.split("#", 1)
             if file_part == self.root_id:
-                return f'{"/".join(self.current_root)}#{path_part}'
+                return f"{'/'.join(self.current_root)}#{path_part}"
             target_url: ParseResult = urlparse(file_part)
             if not (self.root_id and self.current_base_path):
                 return ref
@@ -483,49 +480,44 @@ class ModelResolver:
                 relative_target_base = get_relative_path(Path(root_id_url.path).parent, target_url_path.parent)
                 target_path = self.current_base_path / relative_target_base / target_url_path.name
                 if target_path.exists():
-                    return f'{target_path.resolve().relative_to(self._base_path)}#{path_part}'
+                    return f"{target_path.resolve().relative_to(self._base_path)}#{path_part}"
 
         return ref
 
     def is_after_load(self, ref: str) -> bool:
         if is_url(ref) or not self.current_base_path:
             return False
-        file_part, *_ = ref.split('#', 1)
+        file_part, *_ = ref.split("#", 1)
         absolute_path = Path(self._base_path, file_part).resolve().as_posix()
-        if self.is_external_root_ref(ref):
-            return absolute_path in self.after_load_files
-        elif self.is_external_ref(ref):
+        if self.is_external_root_ref(ref) or self.is_external_ref(ref):
             return absolute_path in self.after_load_files
         return False  # pragma: no cover
 
     @staticmethod
     def is_external_ref(ref: str) -> bool:
-        return '#' in ref and ref[0] != '#'
+        return "#" in ref and ref[0] != "#"
 
     @staticmethod
     def is_external_root_ref(ref: str) -> bool:
-        return ref[-1] == '#'
+        return ref[-1] == "#"
 
     @staticmethod
     def join_path(path: Sequence[str]) -> str:
-        joined_path = '/'.join(p for p in path if p).replace('/#', '#')
-        if '#' not in joined_path:
-            joined_path += '#'
+        joined_path = "/".join(p for p in path if p).replace("/#", "#")
+        if "#" not in joined_path:
+            joined_path += "#"
         return joined_path
 
-    def add_ref(self, ref: str, resolved: bool = False) -> Reference:
-        if not resolved:
-            path = self.resolve_ref(ref)
-        else:
-            path = ref
+    def add_ref(self, ref: str, resolved: bool = False) -> Reference:  # noqa: FBT001, FBT002
+        path = self.resolve_ref(ref) if not resolved else ref
         reference = self.references.get(path)
         if reference:
             return reference
-        split_ref = ref.rsplit('/', 1)
+        split_ref = ref.rsplit("/", 1)
         if len(split_ref) == 1:
-            original_name = Path(split_ref[0].rstrip('#') if self.is_external_root_ref(path) else split_ref[0]).stem
+            original_name = Path(split_ref[0].rstrip("#") if self.is_external_root_ref(path) else split_ref[0]).stem
         else:
-            original_name = Path(split_ref[1].rstrip('#')).stem if self.is_external_root_ref(path) else split_ref[1]
+            original_name = Path(split_ref[1].rstrip("#")).stem if self.is_external_root_ref(path) else split_ref[1]
         name = self.get_class_name(original_name, unique=False).name
         reference = Reference(
             path=path,
@@ -537,7 +529,7 @@ class ModelResolver:
         self.references[path] = reference
         return reference
 
-    def add(
+    def add(  # noqa: PLR0913
         self,
         path: Sequence[str],
         original_name: str,
@@ -553,7 +545,7 @@ class ModelResolver:
         if reference:
             if loaded and not reference.loaded:
                 reference.loaded = True
-            if not original_name or original_name == reference.original_name or original_name == reference.name:
+            if not original_name or original_name in {reference.original_name, reference.name}:
                 return reference
         name = original_name
         duplicate_name: Optional[str] = None
@@ -607,22 +599,22 @@ class ModelResolver:
     def get_class_name(
         self,
         name: str,
-        unique: bool = True,
+        unique: bool = True,  # noqa: FBT001, FBT002
         reserved_name: Optional[str] = None,
-        singular_name: bool = False,
+        singular_name: bool = False,  # noqa: FBT001, FBT002
         singular_name_suffix: Optional[str] = None,
     ) -> ClassName:
-        if '.' in name:
-            split_name = name.split('.')
-            prefix = '.'.join(
+        if "." in name:
+            split_name = name.split(".")
+            prefix = ".".join(
                 # TODO: create a validate for class name
                 self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)
                 for n in split_name[:-1]
             )
-            prefix += '.'
+            prefix += "."
             class_name = split_name[-1]
         else:
-            prefix = ''
+            prefix = ""
             class_name = name
 
         class_name = self.class_name_generator(class_name)
@@ -638,9 +630,9 @@ class ModelResolver:
             if unique_name != class_name:
                 duplicate_name = class_name
             class_name = unique_name
-        return ClassName(name=f'{prefix}{class_name}', duplicate_name=duplicate_name)
+        return ClassName(name=f"{prefix}{class_name}", duplicate_name=duplicate_name)
 
-    def _get_unique_name(self, name: str, camel: bool = False) -> str:
+    def _get_unique_name(self, name: str, camel: bool = False) -> str:  # noqa: FBT001, FBT002
         unique_name: str = name
         count: int = 1
         reference_names = {r.name for r in self.references.values()} | self.exclude_names
@@ -653,7 +645,7 @@ class ModelResolver:
                 ]
             else:
                 name_parts = [name, count]
-            delimiter = '' if camel else '_'
+            delimiter = "" if camel else "_"
             unique_name = delimiter.join(str(p) for p in name_parts if p)
             count += 1
         return unique_name
@@ -683,22 +675,22 @@ class ModelResolver:
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     singular_name = inflect_engine.singular_noun(name)
     if singular_name is False:
-        singular_name = f'{name}{suffix}'
+        singular_name = f"{name}{suffix}"
     return singular_name  # pyright: ignore [reportReturnType]
 
 
 @lru_cache
-def snake_to_upper_camel(word: str, delimiter: str = '_') -> str:
-    prefix = ''
+def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
+    prefix = ""
     if word.startswith(delimiter):
-        prefix = '_'
+        prefix = "_"
         word = word[1:]
 
-    return prefix + ''.join(x[0].upper() + x[1:] for x in word.split(delimiter) if x)
+    return prefix + "".join(x[0].upper() + x[1:] for x in word.split(delimiter) if x)
 
 
 def is_url(ref: str) -> bool:
-    return ref.startswith(('https://', 'http://'))
+    return ref.startswith(("https://", "http://"))
 
 
 inflect_engine = inflect.engine()

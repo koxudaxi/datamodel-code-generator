@@ -139,7 +139,6 @@ lint.ignore = [
   "FA102",  # no from __future__ import annotations
   "FIX002", # line contains to do
   "ISC001", # Conflict with formatter
-  "N805",
   "S101",   # can use assert
   "TC001",  # breaks models moving stuff into type checking block
   "TD002",  # missing to do author

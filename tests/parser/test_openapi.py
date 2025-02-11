@@ -355,13 +355,13 @@ class UnknownTypeNumber(Enum):
 @pytest.mark.skipif(pydantic.VERSION < "1.9.0", reason="Require Pydantic version 1.9.0 or later ")
 def test_openapi_parser_parse_enum_models() -> None:
     parser = OpenAPIParser(
-        Path(DATA_PATH / "enum_models.yaml").read_text(),
+        Path(DATA_PATH / "enum_models.yaml").read_text(encoding="utf-8"),
     )
     expected_dir = EXPECTED_OPEN_API_PATH / "openapi_parser_parse_enum_models"
     assert parser.parse() == (expected_dir / "output_py37.py").read_text()
 
     parser = OpenAPIParser(
-        Path(DATA_PATH / "enum_models.yaml").read_text(),
+        Path(DATA_PATH / "enum_models.yaml").read_text(encoding="utf-8"),
         target_python_version=PythonVersion.PY_36,
     )
     assert parser.parse() == (expected_dir / "output_py36.py").read_text()
@@ -378,7 +378,7 @@ def test_openapi_parser_parse_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_openapi_parser_parse_nested_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
-        Path(DATA_PATH / "nested_anyof.yaml").read_text(),
+        Path(DATA_PATH / "nested_anyof.yaml").read_text(encoding="utf-8"),
     )
     assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_nested_anyof" / "output.py").read_text()
 
@@ -394,7 +394,7 @@ def test_openapi_parser_parse_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_openapi_parser_parse_nested_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
-        Path(DATA_PATH / "nested_oneof.yaml").read_text(),
+        Path(DATA_PATH / "nested_oneof.yaml").read_text(encoding="utf-8"),
     )
     assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_nested_oneof" / "output.py").read_text()
 
@@ -469,7 +469,7 @@ def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.Monkey
 )
 def test_openapi_parser_parse_additional_properties(with_import: bool, format_: bool, base_class: str | None) -> None:
     parser = OpenAPIParser(
-        Path(DATA_PATH / "additional_properties.yaml").read_text(),
+        Path(DATA_PATH / "additional_properties.yaml").read_text(encoding="utf-8"),
         base_class=base_class,
         data_model_field_type=DataModelFieldBase,
     )

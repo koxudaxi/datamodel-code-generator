@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple
+from typing import Sequence, Tuple
 
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    raise Exception("Please run `$pip install 'datamodel-code-generator[http]`' to resolve URL Reference")
+    msg = "Please run `$pip install 'datamodel-code-generator[http]`' to resolve URL Reference"
+    raise Exception(msg)
 
 
 def get_body(
     url: str,
-    headers: Optional[Sequence[Tuple[str, str]]] = None,
-    ignore_tls: bool = False,
-    query_parameters: Optional[Sequence[Tuple[str, str]]] = None,
+    headers: Sequence[Tuple[str, str]] | None = None,
+    ignore_tls: bool = False,  # noqa: FBT001, FBT002
+    query_parameters: Sequence[Tuple[str, str]] | None = None,
 ) -> str:
     return httpx.get(
         url,
@@ -24,5 +25,5 @@ def get_body(
     ).text
 
 
-def join_url(url: str, ref: str = '.') -> str:
+def join_url(url: str, ref: str = ".") -> str:
     return str(httpx.URL(url).join(ref))

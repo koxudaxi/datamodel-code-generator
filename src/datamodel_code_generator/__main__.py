@@ -20,7 +20,6 @@ from typing import (
     DefaultDict,
     Dict,
     List,
-    Optional,
     Sequence,
     Set,
     Tuple,
@@ -77,7 +76,7 @@ class Exit(IntEnum):
 
 
 def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
-    exit(Exit.OK)
+    sys.exit(Exit.OK)
 
 
 signal.signal(signal.SIGINT, sig_int_handler)
@@ -121,130 +120,137 @@ class Config(BaseModel):
             def get_fields(cls) -> Dict[str, Any]:
                 return cls.__fields__
 
-    @field_validator('aliases', 'extra_template_data', 'custom_formatters_kwargs', mode='before')
-    def validate_file(cls, value: Any) -> Optional[TextIOBase]:
+    @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
+    def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
         if value is None or isinstance(value, TextIOBase):
             return value
-        return cast(TextIOBase, Path(value).expanduser().resolve().open('rt'))
+        return cast("TextIOBase", Path(value).expanduser().resolve().open("rt"))
 
     @field_validator(
-        'input',
-        'output',
-        'custom_template_dir',
-        'custom_file_header_path',
-        mode='before',
+        "input",
+        "output",
+        "custom_template_dir",
+        "custom_file_header_path",
+        mode="before",
     )
-    def validate_path(cls, value: Any) -> Optional[Path]:
+    def validate_path(cls, value: Any) -> Path | None:  # noqa: N805
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
-    @field_validator('url', mode='before')
-    def validate_url(cls, value: Any) -> Optional[ParseResult]:
+    @field_validator("url", mode="before")
+    def validate_url(cls, value: Any) -> ParseResult | None:  # noqa: N805
         if isinstance(value, str) and is_url(value):  # pragma: no cover
             return urlparse(value)
-        elif value is None:  # pragma: no cover
+        if value is None:  # pragma: no cover
             return None
-        raise Error(f"This protocol doesn't support only http/https. --input={value}")  # pragma: no cover
+        msg = f"This protocol doesn't support only http/https. --input={value}"
+        raise Error(msg)  # pragma: no cover
 
-    @model_validator(mode='after')
-    def validate_use_generic_container_types(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('use_generic_container_types'):
-            target_python_version: PythonVersion = values['target_python_version']
+    @model_validator(mode="after")
+    def validate_use_generic_container_types(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        if values.get("use_generic_container_types"):
+            target_python_version: PythonVersion = values["target_python_version"]
             if target_python_version == target_python_version.PY_36:
-                raise Error(
-                    f'`--use-generic-container-types` can not be used with `--target-python-version` {target_python_version.PY_36.value}.\n'
-                    ' The version will be not supported in a future version'
+                msg = (
+                    f"`--use-generic-container-types` can not be used with `--target-python-version` {target_python_version.PY_36.value}.\n"
+                    " The version will be not supported in a future version"
                 )
+                raise Error(msg)
         return values
 
-    @model_validator(mode='after')
-    def validate_original_field_name_delimiter(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('original_field_name_delimiter') is not None:
-            if not values.get('snake_case_field'):
-                raise Error('`--original-field-name-delimiter` can not be used without `--snake-case-field`.')
+    @model_validator(mode="after")
+    def validate_original_field_name_delimiter(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        if values.get("original_field_name_delimiter") is not None and not values.get("snake_case_field"):
+            msg = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
+            raise Error(msg)
         return values
 
-    @model_validator(mode='after')
-    def validate_custom_file_header(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get('custom_file_header') and values.get('custom_file_header_path'):
-            raise Error('`--custom_file_header_path` can not be used with `--custom_file_header`.')  # pragma: no cover
+    @model_validator(mode="after")
+    def validate_custom_file_header(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        if values.get("custom_file_header") and values.get("custom_file_header_path"):
+            msg = "`--custom_file_header_path` can not be used with `--custom_file_header`."
+            raise Error(msg)  # pragma: no cover
         return values
 
-    @model_validator(mode='after')
-    def validate_keyword_only(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        output_model_type: DataModelType = values.get('output_model_type')  # pyright: ignore [reportAssignmentType]
-        python_target: PythonVersion = values.get('target_python_version')  # pyright: ignore [reportAssignmentType]
+    @model_validator(mode="after")
+    def validate_keyword_only(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        output_model_type: DataModelType = values.get("output_model_type")  # pyright: ignore [reportAssignmentType]
+        python_target: PythonVersion = values.get("target_python_version")  # pyright: ignore [reportAssignmentType]
         if (
-            values.get('keyword_only')
+            values.get("keyword_only")
             and output_model_type == DataModelType.DataclassesDataclass
             and not python_target.has_kw_only_dataclass
         ):
-            raise Error(f'`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher.')
+            msg = f"`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
+            raise Error(msg)
         return values
 
-    @model_validator(mode='after')
-    def validate_output_datetime_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        datetime_class_type: Optional[DatetimeClassType] = values.get('output_datetime_class')
+    @model_validator(mode="after")
+    def validate_output_datetime_class(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        datetime_class_type: DatetimeClassType | None = values.get("output_datetime_class")
         if (
             datetime_class_type
             and datetime_class_type is not DatetimeClassType.Datetime
-            and values.get('output_model_type') == DataModelType.DataclassesDataclass
+            and values.get("output_model_type") == DataModelType.DataclassesDataclass
         ):
-            raise Error(
+            msg = (
                 '`--output-datetime-class` only allows "datetime" for '
-                f'`--output-model-type` {DataModelType.DataclassesDataclass.value}'
+                f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
             )
+            raise Error(msg)
         return values
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
-    @field_validator('http_headers', mode='before')
-    def validate_http_headers(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
+    @field_validator("http_headers", mode="before")
+    def validate_http_headers(cls, value: Any) -> List[Tuple[str, str]] | None:  # noqa: N805
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split(':', maxsplit=1)
+                    field_name, field_value = each_item.split(":", maxsplit=1)
                     return field_name, field_value.lstrip()
                 except ValueError:
-                    raise Error(f'Invalid http header: {each_item!r}')
+                    msg = f"Invalid http header: {each_item!r}"
+                    raise Error(msg)
             return each_item  # pragma: no cover
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
-    @field_validator('http_query_parameters', mode='before')
-    def validate_http_query_parameters(cls, value: Any) -> Optional[List[Tuple[str, str]]]:
+    @field_validator("http_query_parameters", mode="before")
+    def validate_http_query_parameters(cls, value: Any) -> List[Tuple[str, str]] | None:  # noqa: N805
         def validate_each_item(each_item: Any) -> Tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
-                    field_name, field_value = each_item.split('=', maxsplit=1)
+                    field_name, field_value = each_item.split("=", maxsplit=1)
                     return field_name, field_value.lstrip()
                 except ValueError:
-                    raise Error(f'Invalid http query parameter: {each_item!r}')
+                    msg = f"Invalid http query parameter: {each_item!r}"
+                    raise Error(msg)
             return each_item  # pragma: no cover
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
         return value  # pragma: no cover
 
-    @model_validator(mode='before')
-    def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        additional_imports = values.get('additional_imports')
+    @model_validator(mode="before")
+    def validate_additional_imports(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        additional_imports = values.get("additional_imports")
         if additional_imports is not None:
-            values['additional_imports'] = additional_imports.split(',')
+            values["additional_imports"] = additional_imports.split(",")
         return values
 
-    @model_validator(mode='before')
-    def validate_custom_formatters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        custom_formatters = values.get('custom_formatters')
+    @model_validator(mode="before")
+    def validate_custom_formatters(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+        custom_formatters = values.get("custom_formatters")
         if custom_formatters is not None:
-            values['custom_formatters'] = custom_formatters.split(',')
+            values["custom_formatters"] = custom_formatters.split(",")
         return values
 
     if PYDANTIC_V2:
 
-        @model_validator(mode='after')  # type: ignore
+        @model_validator(mode="after")
         def validate_root(self: Self) -> Self:
             if self.use_annotated:
                 self.field_constraints = True
@@ -252,42 +258,42 @@ class Config(BaseModel):
 
     else:
 
-        @model_validator(mode='after')
-        def validate_root(cls, values: Any) -> Any:
-            if values.get('use_annotated'):
-                values['field_constraints'] = True
+        @model_validator(mode="after")
+        def validate_root(cls, values: Any) -> Any:  # noqa: N805
+            if values.get("use_annotated"):
+                values["field_constraints"] = True
             return values
 
-    input: Optional[Union[Path, str]] = None
+    input: Union[Path, str] | None = None
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
-    output: Optional[Path] = None
+    output: Path | None = None
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_38
-    base_class: str = ''
-    additional_imports: Optional[List[str]] = None
-    custom_template_dir: Optional[Path] = None
-    extra_template_data: Optional[TextIOBase] = None
+    base_class: str = ""
+    additional_imports: List[str] | None = None
+    custom_template_dir: Path | None = None
+    extra_template_data: TextIOBase | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: Optional[TextIOBase] = None
+    aliases: TextIOBase | None = None
     disable_timestamp: bool = False
     enable_version_header: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     use_default: bool = False
     force_optional: bool = False
-    class_name: Optional[str] = None
+    class_name: str | None = None
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
     encoding: str = DEFAULT_ENCODING
-    enum_field_as_literal: Optional[LiteralType] = None
+    enum_field_as_literal: LiteralType | None = None
     use_one_literal_as_default: bool = False
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
@@ -295,69 +301,69 @@ class Config(BaseModel):
     use_generic_container_types: bool = False
     use_union_operator: bool = False
     enable_faux_immutability: bool = False
-    url: Optional[ParseResult] = None
+    url: ParseResult | None = None
     disable_appending_item_suffix: bool = False
     strict_types: List[StrictTypes] = []
-    empty_enum_field_name: Optional[str] = None
-    field_extra_keys: Optional[Set[str]] = None
+    empty_enum_field_name: str | None = None
+    field_extra_keys: Set[str] | None = None
     field_include_all_keys: bool = False
-    field_extra_keys_without_x_prefix: Optional[Set[str]] = None
-    openapi_scopes: Optional[List[OpenAPIScope]] = [OpenAPIScope.Schemas]
-    wrap_string_literal: Optional[bool] = None
+    field_extra_keys_without_x_prefix: Set[str] | None = None
+    openapi_scopes: List[OpenAPIScope] | None = [OpenAPIScope.Schemas]
+    wrap_string_literal: bool | None = None
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
-    http_headers: Optional[Sequence[Tuple[str, str]]] = None
+    http_headers: Sequence[Tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     use_annotated: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
-    original_field_name_delimiter: Optional[str] = None
+    original_field_name_delimiter: str | None = None
     use_double_quotes: bool = False
     collapse_root_models: bool = False
-    special_field_name_prefix: Optional[str] = None
+    special_field_name_prefix: str | None = None
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
     keep_model_order: bool = False
-    custom_file_header: Optional[str] = None
-    custom_file_header_path: Optional[Path] = None
-    custom_formatters: Optional[List[str]] = None
-    custom_formatters_kwargs: Optional[TextIOBase] = None
+    custom_file_header: str | None = None
+    custom_file_header_path: Path | None = None
+    custom_formatters: List[str] | None = None
+    custom_formatters_kwargs: TextIOBase | None = None
     use_pendulum: bool = False
-    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None
+    http_query_parameters: Sequence[Tuple[str, str]] | None = None
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
-    union_mode: Optional[UnionMode] = None
-    output_datetime_class: Optional[DatetimeClassType] = None
+    union_mode: UnionMode | None = None
+    output_datetime_class: DatetimeClassType | None = None
     keyword_only: bool = False
     no_alias: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
 
-        if set_args.get('output_model_type') == DataModelType.MsgspecStruct.value:
-            set_args['use_annotated'] = True
+        if set_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
+            set_args["use_annotated"] = True
 
-        if set_args.get('use_annotated'):
-            set_args['field_constraints'] = True
+        if set_args.get("use_annotated"):
+            set_args["field_constraints"] = True
 
         parsed_args = Config.parse_obj(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
-def _get_pyproject_toml_config(source: Path) -> Optional[Dict[str, Any]]:
+def _get_pyproject_toml_config(source: Path) -> Dict[str, Any] | None:
     """Find and return the [tool.datamodel-codgen] section of the closest
     pyproject.toml if it exists.
     """
 
     current_path = source
     while current_path != current_path.parent:
-        if (current_path / 'pyproject.toml').is_file():
-            pyproject_toml = load_toml(current_path / 'pyproject.toml')
-            if 'datamodel-codegen' in pyproject_toml.get('tool', {}):
-                return pyproject_toml['tool']['datamodel-codegen']
+        if (current_path / "pyproject.toml").is_file():
+            pyproject_toml = load_toml(current_path / "pyproject.toml")
+            if "datamodel-codegen" in pyproject_toml.get("tool", {}):
+                return pyproject_toml["tool"]["datamodel-codegen"]
 
-        if (current_path / '.git').exists():
+        if (current_path / ".git").exists():
             # Stop early if we see a git repository root.
             return None
 
@@ -365,7 +371,7 @@ def _get_pyproject_toml_config(source: Path) -> Optional[Dict[str, Any]]:
     return None
 
 
-def main(args: Optional[Sequence[str]] = None) -> Exit:
+def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912
     """Main function."""
 
     # add cli completion support
@@ -377,14 +383,14 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
     arg_parser.parse_args(args, namespace=namespace)
 
     if namespace.version:
-        from datamodel_code_generator import get_version
+        from datamodel_code_generator import get_version  # noqa: PLC0415
 
-        print(get_version())
-        exit(0)
+        print(get_version())  # noqa: T201
+        sys.exit(0)
 
-    pyproject_config = _get_pyproject_toml_config(Path().resolve())
+    pyproject_config = _get_pyproject_toml_config(Path.cwd())
     if pyproject_config is not None:
-        pyproject_toml = {k.replace('-', '_'): v for k, v in pyproject_config.items()}
+        pyproject_toml = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
     else:
         pyproject_toml = {}
 
@@ -392,22 +398,22 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         config = Config.parse_obj(pyproject_toml)
         config.merge_args(namespace)
     except Error as e:
-        print(e.message, file=sys.stderr)
+        print(e.message, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
     if not config.input and not config.url and sys.stdin.isatty():
-        print(
-            'Not Found Input: require `stdin` or arguments `--input` or `--url`',
+        print(  # noqa: T201
+            "Not Found Input: require `stdin` or arguments `--input` or `--url`",
             file=sys.stderr,
         )
         arg_parser.print_help()
         return Exit.ERROR
 
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
-        print(
-            f"Installed black doesn't support Python version {config.target_python_version.value}.\n"  # type: ignore
-            f'You have to install a newer black.\n'
-            f'Installed black version: {black.__version__}',
+        print(  # noqa: T201
+            f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
+            f"You have to install a newer black.\n"
+            f"Installed black version: {black.__version__}",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -416,8 +422,8 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         enable_debug_message()
 
     if config.disable_warnings:
-        warnings.simplefilter('ignore')
-    extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]]
+        warnings.simplefilter("ignore")
+    extra_template_data: DefaultDict[str, Dict[str, Any]] | None
     if config.extra_template_data is None:
         extra_template_data = None
     else:
@@ -425,7 +431,7 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             try:
                 extra_template_data = json.load(data, object_hook=lambda d: defaultdict(dict, **d))
             except json.JSONDecodeError as e:
-                print(f'Unable to load extra template data: {e}', file=sys.stderr)
+                print(f"Unable to load extra template data: {e}", file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
 
     if config.aliases is None:
@@ -435,12 +441,12 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             try:
                 aliases = json.load(data)
             except json.JSONDecodeError as e:
-                print(f'Unable to load alias mapping: {e}', file=sys.stderr)
+                print(f"Unable to load alias mapping: {e}", file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
         if not isinstance(aliases, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
-            print(
+            print(  # noqa: T201
                 'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
                 file=sys.stderr,
             )
@@ -453,15 +459,15 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
             try:
                 custom_formatters_kwargs = json.load(data)
             except json.JSONDecodeError as e:  # pragma: no cover
-                print(
-                    f'Unable to load custom_formatters_kwargs mapping: {e}',
+                print(  # noqa: T201
+                    f"Unable to load custom_formatters_kwargs mapping: {e}",
                     file=sys.stderr,
                 )
                 return Exit.ERROR
         if not isinstance(custom_formatters_kwargs, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in custom_formatters_kwargs.items()
         ):  # pragma: no cover
-            print(
+            print(  # noqa: T201
                 'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
                 file=sys.stderr,
             )
@@ -541,17 +547,17 @@ def main(args: Optional[Sequence[str]] = None) -> Exit:
         )
         return Exit.OK
     except InvalidClassNameError as e:
-        print(f'{e} You have to set `--class-name` option', file=sys.stderr)
+        print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     except Error as e:
-        print(str(e), file=sys.stderr)
+        print(str(e), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     except Exception:
-        import traceback
+        import traceback  # noqa: PLC0415
 
-        print(traceback.format_exc(), file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

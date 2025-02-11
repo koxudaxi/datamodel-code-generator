@@ -49,31 +49,31 @@ from datamodel_code_generator.types import (
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return not (field.required or (field.represented_default == 'None' and field.strip_default_none))
+    return not (field.required or (field.represented_default == "None" and field.strip_default_none))
 
 
-DataModelFieldBaseT = TypeVar('DataModelFieldBaseT', bound=DataModelFieldBase)
+DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
 
 
 def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]:
-    original_imports: property = getattr(cls, 'imports', None)  # type: ignore
+    original_imports: property = getattr(cls, "imports", None)
 
-    @wraps(original_imports.fget)  # type: ignore
+    @wraps(original_imports.fget)
     def new_imports(self: DataModelFieldBaseT) -> Tuple[Import, ...]:
         extra_imports = []
         field = self.field
         # TODO: Improve field detection
-        if field and field.startswith('field('):
+        if field and field.startswith("field("):
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
-        if self.field and 'lambda: convert' in self.field:
+        if self.field and "lambda: convert" in self.field:
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if self.annotated:
             extra_imports.append(IMPORT_MSGSPEC_META)
-        if self.extras.get('is_classvar'):
+        if self.extras.get("is_classvar"):
             extra_imports.append(IMPORT_CLASSVAR)
-        return chain_as_tuple(original_imports.fget(self), extra_imports)  # type: ignore
+        return chain_as_tuple(original_imports.fget(self), extra_imports)
 
-    setattr(cls, 'imports', property(new_imports))
+    cls.imports = property(new_imports)
     return cls
 
 
@@ -82,11 +82,11 @@ class RootModel(_RootModel):
 
 
 class Struct(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'msgspec.jinja2'
-    BASE_CLASS: ClassVar[str] = 'msgspec.Struct'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "msgspec.jinja2"
+    BASE_CLASS: ClassVar[str] = "msgspec.Struct"
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
@@ -118,44 +118,44 @@ class Struct(DataModel):
             nullable=nullable,
             keyword_only=keyword_only,
         )
-        self.extra_template_data.setdefault('base_class_kwargs', {})
+        self.extra_template_data.setdefault("base_class_kwargs", {})
         if self.keyword_only:
-            self.add_base_class_kwarg('kw_only', 'True')
+            self.add_base_class_kwarg("kw_only", "True")
 
-    def add_base_class_kwarg(self, name: str, value):
-        self.extra_template_data['base_class_kwargs'][name] = value
+    def add_base_class_kwarg(self, name: str, value) -> None:
+        self.extra_template_data["base_class_kwargs"][name] = value
 
 
 class Constraints(_Constraints):
     # To override existing pattern alias
-    regex: Optional[str] = Field(None, alias='regex')
-    pattern: Optional[str] = Field(None, alias='pattern')
+    regex: Optional[str] = Field(None, alias="regex")
+    pattern: Optional[str] = Field(None, alias="pattern")
 
 
 @import_extender
 class DataModelField(DataModelFieldBase):
     _FIELD_KEYS: ClassVar[Set[str]] = {
-        'default',
-        'default_factory',
+        "default",
+        "default_factory",
     }
     _META_FIELD_KEYS: ClassVar[Set[str]] = {
-        'title',
-        'description',
-        'gt',
-        'ge',
-        'lt',
-        'le',
-        'multiple_of',
+        "title",
+        "description",
+        "gt",
+        "ge",
+        "lt",
+        "le",
+        "multiple_of",
         # 'min_items', # not supported by msgspec
         # 'max_items', # not supported by msgspec
-        'min_length',
-        'max_length',
-        'pattern',
-        'examples',
+        "min_length",
+        "max_length",
+        "pattern",
+        "examples",
         # 'unique_items', # not supported by msgspec
     }
-    _PARSE_METHOD = 'convert'
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {'gt', 'ge', 'lt', 'le', 'multiple_of'}
+    _PARSE_METHOD = "convert"
+    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}
     constraints: Optional[Constraints] = None
 
     def self_reference(self) -> bool:  # pragma: no cover
@@ -164,19 +164,19 @@ class DataModelField(DataModelFieldBase):
         }
 
     def process_const(self) -> None:
-        if 'const' not in self.extras:
-            return None
+        if "const" not in self.extras:
+            return
         self.const = True
         self.nullable = False
-        const = self.extras['const']
-        if self.data_type.type == 'str' and isinstance(const, str):  # pragma: no cover # Literal supports only str
+        const = self.extras["const"]
+        if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover # Literal supports only str
             self.data_type = self.data_type.__class__(literals=[const])
 
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
 
-        if any(data_type.type == 'float' for data_type in self.data_type.all_data_types):
+        if any(data_type.type == "float" for data_type in self.data_type.all_data_types):
             return float(value)
         return int(value)
 
@@ -184,7 +184,7 @@ class DataModelField(DataModelFieldBase):
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         result = str(self)
-        if result == '':
+        if result == "":
             return None
 
         return result
@@ -192,37 +192,37 @@ class DataModelField(DataModelFieldBase):
     def __str__(self) -> str:
         data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
         if self.alias:
-            data['name'] = self.alias
+            data["name"] = self.alias
 
         if self.default != UNDEFINED and self.default is not None:
-            data['default'] = self.default
+            data["default"] = self.default
         elif not self.required:
-            data['default'] = None
+            data["default"] = None
 
         if self.required:
             data = {
                 k: v
                 for k, v in data.items()
                 if k
-                not in (
-                    'default',
-                    'default_factory',
-                )
+                not in {
+                    "default",
+                    "default_factory",
+                }
             }
-        elif self.default and 'default_factory' not in data:
+        elif self.default and "default_factory" not in data:
             default_factory = self._get_default_as_struct_model()
             if default_factory is not None:
-                data.pop('default')
-                data['default_factory'] = default_factory
+                data.pop("default")
+                data["default_factory"] = default_factory
 
         if not data:
-            return ''
+            return ""
 
-        if len(data) == 1 and 'default' in data:
-            return repr(data['default'])
+        if len(data) == 1 and "default" in data:
+            return repr(data["default"])
 
-        kwargs = [f'{k}={v if k == "default_factory" else repr(v)}' for k, v in data.items()]
-        return f'field({", ".join(kwargs)})'
+        kwargs = [f"{k}={v if k == 'default_factory' else repr(v)}" for k, v in data.items()]
+        return f"field({', '.join(kwargs)})"
 
     @property
     def annotated(self) -> Optional[str]:
@@ -240,20 +240,20 @@ class DataModelField(DataModelFieldBase):
                 },
             }
 
-        meta_arguments = sorted(f'{k}={repr(v)}' for k, v in data.items() if v is not None)
+        meta_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
         if not meta_arguments:
             return None
 
-        meta = f'Meta({", ".join(meta_arguments)})'
+        meta = f"Meta({', '.join(meta_arguments)})"
 
-        if not self.required and not self.extras.get('is_classvar'):
+        if not self.required and not self.extras.get("is_classvar"):
             type_hint = self.data_type.type_hint
-            annotated_type = f'Annotated[{type_hint}, {meta}]'
+            annotated_type = f"Annotated[{type_hint}, {meta}]"
             return get_optional_type(annotated_type, self.data_type.use_union_operator)
 
-        annotated_type = f'Annotated[{self.type_hint}, {meta}]'
-        if self.extras.get('is_classvar'):
-            annotated_type = f'ClassVar[{annotated_type}]'
+        annotated_type = f"Annotated[{self.type_hint}, {meta}]"
+        if self.extras.get("is_classvar"):
+            annotated_type = f"ClassVar[{annotated_type}]"
 
         return annotated_type
 
@@ -263,34 +263,31 @@ class DataModelField(DataModelFieldBase):
             if data_type.is_dict or self.data_type.is_union:
                 # TODO: Parse Union and dict model for default
                 continue  # pragma: no cover
-            elif data_type.is_list and len(data_type.data_types) == 1:
+            if data_type.is_list and len(data_type.data_types) == 1:
                 data_type = data_type.data_types[0]
                 if (  # pragma: no cover
                     data_type.reference
-                    and (
-                        isinstance(data_type.reference.source, Struct)
-                        or isinstance(data_type.reference.source, RootModel)
-                    )
+                    and (isinstance(data_type.reference.source, (Struct, RootModel)))
                     and isinstance(self.default, list)
                 ):
-                    return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type=list[{data_type.alias or data_type.reference.source.class_name}])'
+                    return f"lambda: {self._PARSE_METHOD}({self.default!r},  type=list[{data_type.alias or data_type.reference.source.class_name}])"
             elif data_type.reference and isinstance(data_type.reference.source, Struct):
-                return f'lambda: {self._PARSE_METHOD}({repr(self.default)},  type={data_type.alias or data_type.reference.source.class_name})'
+                return f"lambda: {self._PARSE_METHOD}({self.default!r},  type={data_type.alias or data_type.reference.source.class_name})"
         return None
 
 
 class DataTypeManager(_DataTypeManager):
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         python_version: PythonVersion = PythonVersion.PY_38,
-        use_standard_collections: bool = False,
-        use_generic_container_types: bool = False,
+        use_standard_collections: bool = False,  # noqa: FBT001, FBT002
+        use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Optional[Sequence[StrictTypes]] = None,
-        use_non_positive_negative_number_constrained_types: bool = False,
-        use_union_operator: bool = False,
-        use_pendulum: bool = False,
+        use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_union_operator: bool = False,  # noqa: FBT001, FBT002
+        use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-    ):
+    ) -> None:
         super().__init__(
             python_version,
             use_standard_collections,

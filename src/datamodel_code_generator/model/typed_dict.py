@@ -23,17 +23,15 @@ from datamodel_code_generator.model.imports import (
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
 
-escape_characters = str.maketrans(
-    {
-        '\\': r'\\',
-        "'": r'\'',
-        '\b': r'\b',
-        '\f': r'\f',
-        '\n': r'\n',
-        '\r': r'\r',
-        '\t': r'\t',
-    }
-)
+escape_characters = str.maketrans({
+    "\\": r"\\",
+    "'": r"\'",
+    "\b": r"\b",
+    "\f": r"\f",
+    "\n": r"\n",
+    "\r": r"\r",
+    "\t": r"\t",
+})
 
 
 def _is_valid_field_name(field: DataModelFieldBase) -> bool:
@@ -44,11 +42,11 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 
 
 class TypedDict(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'TypedDict.jinja2'
-    BASE_CLASS: ClassVar[str] = 'typing.TypedDict'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "TypedDict.jinja2"
+    BASE_CLASS: ClassVar[str] = "typing.TypedDict"
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
@@ -100,7 +98,7 @@ class TypedDict(DataModel):
         yield from self.fields
 
     def render(self, *, class_name: Optional[str] = None) -> str:
-        response = self._render(
+        return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields,
             decorators=self.decorators,
@@ -111,11 +109,10 @@ class TypedDict(DataModel):
             all_fields=self.all_fields,
             **self.extra_template_data,
         )
-        return response
 
 
 class TypedDictBackport(TypedDict):
-    BASE_CLASS: ClassVar[str] = 'typing_extensions.TypedDict'
+    BASE_CLASS: ClassVar[str] = "typing_extensions.TypedDict"
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT_BACKPORT,)
 
 
@@ -124,7 +121,7 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def key(self) -> str:
-        return (self.original_name or self.name or '').translate(  # pragma: no cover
+        return (self.original_name or self.name or "").translate(  # pragma: no cover
             escape_characters
         )
 
@@ -132,7 +129,7 @@ class DataModelField(DataModelFieldBase):
     def type_hint(self) -> str:
         type_hint = super().type_hint
         if self._not_required:
-            return f'{NOT_REQUIRED_PREFIX}{type_hint}]'
+            return f"{NOT_REQUIRED_PREFIX}{type_hint}]"
         return type_hint
 
     @property

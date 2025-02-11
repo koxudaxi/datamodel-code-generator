@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Iterable
 
 from pydantic import BaseModel as _BaseModel
 
@@ -11,17 +11,17 @@ from .types import DataTypeManager
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
-    return '\n'.join(f'{class_name}.update_forward_refs()' for class_name in class_names)
+    return "\n".join(f"{class_name}.update_forward_refs()" for class_name in class_names)
 
 
 class Config(_BaseModel):
-    extra: Optional[str] = None
-    title: Optional[str] = None
-    allow_population_by_field_name: Optional[bool] = None
-    allow_extra_fields: Optional[bool] = None
-    allow_mutation: Optional[bool] = None
-    arbitrary_types_allowed: Optional[bool] = None
-    orm_mode: Optional[bool] = None
+    extra: str | None = None
+    title: str | None = None
+    allow_population_by_field_name: bool | None = None
+    allow_extra_fields: bool | None = None
+    allow_mutation: bool | None = None
+    arbitrary_types_allowed: bool | None = None
+    orm_mode: bool | None = None
 
 
 # def get_validator_template() -> Template:
@@ -35,11 +35,11 @@ class Config(_BaseModel):
 
 
 __all__ = [
-    'BaseModel',
-    'DataModelField',
-    'CustomRootType',
-    'DataClass',
-    'dump_resolve_reference_action',
-    'DataTypeManager',
+    "BaseModel",
+    "CustomRootType",
+    "DataClass",
+    "DataModelField",
+    "DataTypeManager",
+    "dump_resolve_reference_action",
     # 'VALIDATOR_TEMPLATE',
 ]

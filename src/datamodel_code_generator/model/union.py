@@ -1,39 +1,41 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, DefaultDict, Dict, List, Tuple
 
 from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.reference import Reference
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 class DataTypeUnion(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'Union.jinja2'
-    BASE_CLASS: ClassVar[str] = ''
+    TEMPLATE_FILE_PATH: ClassVar[str] = "Union.jinja2"
+    BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (
         IMPORT_TYPE_ALIAS,
         IMPORT_UNION,
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
         fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        methods: Optional[List[str]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        decorators: List[str] | None = None,
+        base_classes: List[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: DefaultDict[str, Dict[str, Any]] | None = None,
+        methods: List[str] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-    ):
+    ) -> None:
         super().__init__(
             reference=reference,
             fields=fields,

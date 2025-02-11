@@ -6,4 +6,4 @@ from datamodel_code_generator.model import DataModel
 
 
 class RootModel(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'root.jinja2'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "root.jinja2"

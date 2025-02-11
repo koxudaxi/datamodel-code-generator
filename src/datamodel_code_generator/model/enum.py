@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, DefaultDict, Dict, List, Tuple
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -9,10 +8,13 @@ from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
-_INT: str = 'int'
-_FLOAT: str = 'float'
-_BYTES: str = 'bytes'
-_STR: str = 'str'
+if TYPE_CHECKING:
+    from pathlib import Path
+
+_INT: str = "int"
+_FLOAT: str = "float"
+_BYTES: str = "bytes"
+_STR: str = "str"
 
 SUBCLASS_BASE_CLASSES: Dict[Types, str] = {
     Types.int32: _INT,
@@ -27,28 +29,28 @@ SUBCLASS_BASE_CLASSES: Dict[Types, str] = {
 
 
 class Enum(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = 'Enum.jinja2'
-    BASE_CLASS: ClassVar[str] = 'enum.Enum'
+    TEMPLATE_FILE_PATH: ClassVar[str] = "Enum.jinja2"
+    BASE_CLASS: ClassVar[str] = "enum.Enum"
     DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_ENUM,)
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
         fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        methods: Optional[List[str]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
-        type_: Optional[Types] = None,
+        decorators: List[str] | None = None,
+        base_classes: List[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: DefaultDict[str, Dict[str, Any]] | None = None,
+        methods: List[str] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
+        type_: Types | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-    ):
+    ) -> None:
         super().__init__(
             reference=reference,
             fields=fields,
@@ -80,14 +82,14 @@ class Enum(DataModel):
     def get_member(self, field: DataModelFieldBase) -> Member:
         return Member(self, field)
 
-    def find_member(self, value: Any) -> Optional[Member]:
+    def find_member(self, value: Any) -> Member | None:
         repr_value = repr(value)
         # Remove surrounding quotes from the string representation
-        str_value = str(value).strip('\'"')
+        str_value = str(value).strip("'\"")
 
         for field in self.fields:
             # Remove surrounding quotes from field default value
-            field_default = (field.default or '').strip('\'"')
+            field_default = (field.default or "").strip("'\"")
 
             # Compare values after removing quotes
             if field_default == str_value:
@@ -108,7 +110,7 @@ class Member:
     def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
         self.enum: Enum = enum
         self.field: DataModelFieldBase = field
-        self.alias: Optional[str] = None
+        self.alias: str | None = None
 
     def __repr__(self) -> str:
-        return f'{self.alias or self.enum.name}.{self.field.name}'
+        return f"{self.alias or self.enum.name}.{self.field.name}"

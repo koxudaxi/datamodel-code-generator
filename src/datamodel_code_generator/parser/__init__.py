@@ -1,33 +1,34 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, TypeVar
 
-TK = TypeVar('TK')
-TV = TypeVar('TV')
+TK = TypeVar("TK")
+TV = TypeVar("TV")
 
 
 class LiteralType(Enum):
-    All = 'all'
-    One = 'one'
+    All = "all"
+    One = "one"
 
 
 class DefaultPutDict(Dict[TK, TV]):
     def get_or_put(
         self,
         key: TK,
-        default: Optional[TV] = None,
-        default_factory: Optional[Callable[[TK], TV]] = None,
+        default: TV | None = None,
+        default_factory: Callable[[TK], TV] | None = None,
     ) -> TV:
         if key in self:
             return self[key]
-        elif default:  # pragma: no cover
+        if default:  # pragma: no cover
             value = self[key] = default
             return value
-        elif default_factory:
+        if default_factory:
             value = self[key] = default_factory(key)
             return value
-        raise ValueError('Not found default and default_factory')  # pragma: no cover
+        msg = "Not found default and default_factory"
+        raise ValueError(msg)  # pragma: no cover
 
 
-__all__ = ['LiteralType']
+__all__ = ["LiteralType"]

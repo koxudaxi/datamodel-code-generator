@@ -57,7 +57,7 @@ class {{ class_name }}:
 
 
 def test_template_base() -> None:
-    with NamedTemporaryFile("w", delete=False) as dummy_template:
+    with NamedTemporaryFile("w", delete=False, encoding="utf-8") as dummy_template:
         dummy_template.write("abc")
         dummy_template.seek(0)
         dummy_template.close()
@@ -70,7 +70,7 @@ def test_template_base() -> None:
 def test_data_model() -> None:
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="abc", required=True)
 
-    with NamedTemporaryFile("w", delete=False) as dummy_template:
+    with NamedTemporaryFile("w", delete=False, encoding="utf-8") as dummy_template:
         dummy_template.write(template)
         dummy_template.seek(0)
         dummy_template.close()
