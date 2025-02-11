@@ -2488,7 +2488,7 @@ def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.Capt
     ])
     assert return_code == Exit.ERROR
     captured = capsys.readouterr()
-    assert captured.out == ""
+    assert not captured.out
     assert captured.err == "`--keyword-only` requires `--target-python-version` 3.10 or higher.\n"
 
 
@@ -2506,7 +2506,7 @@ def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixtur
     ])
     assert return_code == Exit.ERROR
     captured = capsys.readouterr()
-    assert captured.out == ""
+    assert not captured.out
     assert (
         captured.err
         == '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass\n'

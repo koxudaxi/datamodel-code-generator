@@ -28,7 +28,7 @@ class C(Parser):
     def parse_raw(self, name: str, raw: Dict[str, Any]) -> None:
         pass
 
-    def parse(self) -> str:
+    def parse(self) -> str:  # noqa: PLR6301
         return "parsed"
 
 

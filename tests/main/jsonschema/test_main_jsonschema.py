@@ -2061,7 +2061,7 @@ def test_version(capsys: pytest.CaptureFixture) -> None:
     assert e.value.code == Exit.OK
     captured = capsys.readouterr()
     assert captured.out != "0.0.0\n"
-    assert captured.err == ""
+    assert not captured.err
 
 
 @freeze_time("2019-07-26")
@@ -2380,7 +2380,7 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture) -> None:
         ])
         captured = capsys.readouterr()
         assert return_code == Exit.OK
-        assert captured.err == ""
+        assert not captured.err
 
 
 @pytest.mark.filterwarnings("error")
@@ -2398,7 +2398,7 @@ def test_main_disable_warnings(capsys: pytest.CaptureFixture) -> None:
         ])
         captured = capsys.readouterr()
         assert return_code == Exit.OK
-        assert captured.err == ""
+        assert not captured.err
 
 
 @freeze_time("2019-07-26")
