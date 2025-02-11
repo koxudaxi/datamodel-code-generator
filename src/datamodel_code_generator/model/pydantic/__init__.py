@@ -24,16 +24,6 @@ class Config(_BaseModel):
     orm_mode: bool | None = None
 
 
-# def get_validator_template() -> Template:
-#     template_file_path: Path = Path('pydantic') / 'one_of_validator.jinja2'
-#     loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
-#     environment: Environment = Environment(loader=loader, autoescape=True)
-#     return environment.get_template(template_file_path.name)
-#
-#
-# VALIDATOR_TEMPLATE: Template = get_validator_template()
-
-
 __all__ = [
     "BaseModel",
     "CustomRootType",
@@ -41,5 +31,4 @@ __all__ = [
     "DataModelField",
     "DataTypeManager",
     "dump_resolve_reference_action",
-    # 'VALIDATOR_TEMPLATE',
 ]

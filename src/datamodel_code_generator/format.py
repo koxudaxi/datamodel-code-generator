@@ -196,7 +196,7 @@ class CodeFormatter:
             msg = f"Custom formatter module `{import_.__name__}` must contains object with name Formatter"
             raise NameError(msg)
 
-        formatter_class = import_.__getattribute__("CodeFormatter")
+        formatter_class = import_.__getattribute__("CodeFormatter")  # noqa: PLC2801
 
         if not issubclass(formatter_class, CustomCodeFormatter):
             msg = f"The custom module {custom_formatter_import} must inherit from `datamodel-code-generator`"

@@ -21,7 +21,7 @@ namespace = Namespace(no_color=False)
 
 
 class SortingHelpFormatter(HelpFormatter):
-    def _bold_cyan(self, text: str) -> str:
+    def _bold_cyan(self, text: str) -> str:  # noqa: PLR6301
         return f"\x1b[36;1m{text}\x1b[0m"
 
     def add_arguments(self, actions: Iterable[Action]) -> None:

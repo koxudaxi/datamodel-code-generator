@@ -4,9 +4,9 @@ from typing import Sequence, Tuple
 
 try:
     import httpx
-except ImportError:  # pragma: no cover
+except ImportError as exc:  # pragma: no cover
     msg = "Please run `$pip install 'datamodel-code-generator[http]`' to resolve URL Reference"
-    raise Exception(msg)
+    raise Exception(msg) from exc  # noqa: TRY002
 
 
 def get_body(

@@ -107,11 +107,11 @@ class UnionIntFloat:
         return str(self.value)
 
     @classmethod
-    def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:
+    def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:  # noqa: PLW3201
         yield cls.validate
 
     @classmethod
-    def __get_pydantic_core_schema__(
+    def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _source_type: Any, _handler: "GetCoreSchemaHandler"
     ) -> "core_schema.CoreSchema":
         from_int_schema = core_schema.chain_schema(  # pyright: ignore [reportPossiblyUnboundVariable]
@@ -247,7 +247,7 @@ class DataType(_BaseModel):
 
     type: Optional[str] = None
     reference: Optional[Reference] = None
-    data_types: List["DataType"] = []
+    data_types: List["DataType"] = []  # noqa: RUF012
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]] = None
     import_: Optional[Import] = None
@@ -257,13 +257,13 @@ class DataType(_BaseModel):
     is_list: bool = False
     is_set: bool = False
     is_custom_type: bool = False
-    literals: List[Union[StrictBool, StrictInt, StrictStr]] = []
+    literals: List[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None
     parent: Optional[Any] = None
-    children: List[Any] = []
+    children: List[Any] = []  # noqa: RUF012
     strict: bool = False
     dict_key: Optional["DataType"] = None
 
@@ -306,7 +306,7 @@ class DataType(_BaseModel):
     def replace_reference(self, reference: Optional[Reference]) -> None:
         if not self.reference:  # pragma: no cover
             msg = f"`{self.__class__.__name__}.replace_reference()` can't be called when `reference` field is empty."
-            raise Exception(msg)
+            raise Exception(msg)  # noqa: TRY002
         self_id = id(self)
         self.reference.children = [c for c in self.reference.children if id(c) != self_id]
         self.reference = reference
@@ -408,7 +408,7 @@ class DataType(_BaseModel):
             self.reference.children.append(self)
 
     @property
-    def type_hint(self) -> str:  # noqa: PLR0912
+    def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
         type_: Optional[str] = self.alias or self.type
         if not type_:
             if self.is_union:
@@ -442,7 +442,6 @@ class DataType(_BaseModel):
                 type_ = self.reference.short_name
             else:
                 # TODO support strict Any
-                # type_ = 'Any'
                 type_ = ""
         if self.reference:
             source = self.reference.source
@@ -566,7 +565,7 @@ class DataTypeManager(ABC):
                 "use_generic_container_types can not be used with target_python_version 3.6.\n"
                 " The version will be not supported in a future version"
             )
-            raise Exception(msg)
+            raise Exception(msg)  # noqa: TRY002
 
         if TYPE_CHECKING:
             self.data_type: Type[DataType]

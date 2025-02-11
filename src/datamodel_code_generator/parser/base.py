@@ -196,7 +196,7 @@ def sort_data_models(  # noqa: PLR0912
                 f"[class: {item.path} references: {item.reference_classes}]" for item in unresolved_references
             )
             msg = f"A Parser can not resolve classes: {unresolved_classes}."
-            raise Exception(msg)
+            raise Exception(msg)  # noqa: TRY002
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
@@ -276,7 +276,7 @@ def _find_field(original_name: str, models: List[DataModel]) -> Optional[DataMod
         field, base_models = _find_field_and_base_classes(model)
         if field:
             return field
-        models.extend(base_models)  # pragma: no cover
+        models.extend(base_models)  # pragma: no cover  # noqa: B909
 
     return None  # pragma: no cover
 
@@ -313,7 +313,7 @@ class Source(BaseModel):
 
 
 class Parser(ABC):
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         source: Union[str, Path, List[Path], ParseResult],
         *,
@@ -481,7 +481,7 @@ class Parser(ABC):
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
-            raise Exception(msg)
+            raise Exception(msg)  # noqa: TRY002
         self.use_non_positive_negative_number_constrained_types = use_non_positive_negative_number_constrained_types
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
@@ -530,7 +530,7 @@ class Parser(ABC):
 
         return self.remote_text_cache.get_or_put(
             url,
-            default_factory=lambda url_: get_body(
+            default_factory=lambda url_: get_body(  # noqa: ARG005
                 url, self.http_headers, self.http_ignore_tls, self.http_query_parameters
             ),
         )
@@ -723,7 +723,7 @@ class Parser(ABC):
                 )
                 models.remove(model)
 
-    def __apply_discriminator_type(  # noqa: PLR0912
+    def __apply_discriminator_type(  # noqa: PLR0912, PLR0915
         self,
         models: List[DataModel],
         imports: Imports,
@@ -770,7 +770,7 @@ class Parser(ABC):
                                 path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
                             ):
                                 t_path = path[str(path).find("/") + 1 :]
-                                t_disc = model.path[: str(model.path).find("#")].lstrip("../")
+                                t_disc = model.path[: str(model.path).find("#")].lstrip("../")  # noqa: B005
                                 t_disc_2 = "/".join(t_disc.split("/")[1:])
                                 if t_path not in {t_disc, t_disc_2}:
                                     continue
@@ -863,9 +863,12 @@ class Parser(ABC):
             for model_field in model.fields:
                 if not model_field.data_type.reference or model_field.has_default:
                     continue
-                if isinstance(model_field.data_type.reference.source, DataModel):  # pragma: no cover
-                    if model_field.data_type.reference.source.default != UNDEFINED:
-                        model_field.default = model_field.data_type.reference.source.default
+                if (
+                    isinstance(model_field.data_type.reference.source, DataModel)
+                    and model_field.data_type.reference.source.default != UNDEFINED
+                ):
+                    # pragma: no cover
+                    model_field.default = model_field.data_type.reference.source.default
 
     def __reuse_model(self, models: List[DataModel], require_update_action_models: List[str]) -> None:
         if not self.reuse_model:
@@ -894,7 +897,7 @@ class Parser(ABC):
                             name=model.name,
                             path=model.reference.path + "/reuse",
                         ),
-                        custom_template_dir=model._custom_template_dir,
+                        custom_template_dir=model._custom_template_dir,  # noqa: SLF001
                     )
                     if cached_model_reference.path in require_update_action_models:
                         require_update_action_models.append(inherited_model.path)
@@ -1052,7 +1055,7 @@ class Parser(ABC):
             for index, model_field in enumerate(model.fields[:]):
                 data_type = model_field.data_type
                 if (
-                    not model_field.original_name
+                    not model_field.original_name  # noqa: PLR0916
                     or data_type.data_types
                     or data_type.reference
                     or data_type.type
@@ -1154,7 +1157,7 @@ class Parser(ABC):
                 results.update({init_file: init_result})
         return results
 
-    def __change_imported_model_name(
+    def __change_imported_model_name(  # noqa: PLR6301
         self,
         models: List[DataModel],
         imports: Imports,
@@ -1176,7 +1179,7 @@ class Parser(ABC):
                 class_name=True,
             ).name
 
-    def parse(  # noqa: PLR0912
+    def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         with_import: Optional[bool] = True,  # noqa: FBT001, FBT002
         format_: Optional[bool] = True,  # noqa: FBT001, FBT002
@@ -1250,19 +1253,18 @@ class Parser(ABC):
 
         processed_models: List[Processed] = []
 
-        for module, models in module_models:
-            imports = module_to_import[module] = Imports(self.use_exact_imports)
+        for module_, models in module_models:
+            imports = module_to_import[module_] = Imports(self.use_exact_imports)
             init = False
-            if module:
-                parent = (*module[:-1], "__init__.py")
+            if module_:
+                parent = (*module_[:-1], "__init__.py")
                 if parent not in results:
                     results[parent] = Result(body="")
-                if (*module, "__init__.py") in results:
-                    module = (*module, "__init__.py")
+                if (*module_, "__init__.py") in results:
+                    module = (*module_, "__init__.py")
                     init = True
                 else:
-                    module = (*module[:-1], f"{module[-1]}.py")
-                    module = tuple(part.replace("-", "_") for part in module)
+                    module = tuple(part.replace("-", "_") for part in (*module_[:-1], f"{module_[-1]}.py"))
             else:
                 module = ("__init__.py",)
 
@@ -1305,11 +1307,11 @@ class Parser(ABC):
             for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:
+        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:
+        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: List[str] = []
             if models:
                 if with_import:

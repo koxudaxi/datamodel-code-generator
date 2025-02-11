@@ -40,9 +40,9 @@ from datamodel_code_generator.types import DataTypeManager, StrictTypes, Types
 
 try:
     import graphql
-except ImportError:  # pragma: no cover
+except ImportError as exc:  # pragma: no cover
     msg = "Please run `$pip install 'datamodel-code-generator[graphql]`' to generate data-model from a GraphQL schema."
-    raise Exception(msg)
+    raise Exception(msg) from exc  # noqa: TRY002
 
 from datamodel_code_generator.format import DatetimeClassType
 
@@ -64,7 +64,7 @@ class GraphQLParser(Parser):
     all_graphql_objects: Dict[str, graphql.GraphQLNamedType]
     # a reference for each object
     # mapper from an object name to his reference
-    references: Dict[str, Reference] = {}
+    references: Dict[str, Reference] = {}  # noqa: RUF012
     # mapper from graphql type to all objects with this type
     # `graphql.type.introspection.TypeKind` -- an enum with all supported types
     # `graphql.GraphQLNamedType` -- base type for each graphql object
@@ -72,7 +72,7 @@ class GraphQLParser(Parser):
     support_graphql_types: Dict[graphql.type.introspection.TypeKind, List[graphql.GraphQLNamedType]]
     # graphql types order for render
     # may be as a parameter in the future
-    parse_order: List[graphql.type.introspection.TypeKind] = [
+    parse_order: List[graphql.type.introspection.TypeKind] = [  # noqa: RUF012
         graphql.type.introspection.TypeKind.SCALAR,
         graphql.type.introspection.TypeKind.ENUM,
         graphql.type.introspection.TypeKind.INTERFACE,
@@ -298,7 +298,7 @@ class GraphQLParser(Parser):
             has_default=True,
         )
 
-    def _get_default(
+    def _get_default(  # noqa: PLR6301
         self,
         field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
         final_data_type: DataType,

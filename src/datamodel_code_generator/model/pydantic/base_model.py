@@ -62,11 +62,6 @@ class DataModelField(DataModelFieldBase):
     def validator(self) -> Optional[str]:
         return None
         # TODO refactor this method for other validation logic
-        # from datamodel_code_generator.model.pydantic import VALIDATOR_TEMPLATE
-        #
-        # return VALIDATOR_TEMPLATE.render(
-        #     field_name=self.name, types=','.join([t.type_hint for t in self.data_types])
-        # )
 
     @property
     def field(self) -> Optional[str]:
@@ -81,9 +76,8 @@ class DataModelField(DataModelFieldBase):
             # checkers using @dataclass_transform can infer the field as
             # optional in __init__.
             result = result.replace("Field(", "Field(default=")
-        if result == "":
+        if not result:
             return None
-
         return result
 
     def self_reference(self) -> bool:
@@ -106,22 +100,28 @@ class DataModelField(DataModelFieldBase):
                 # TODO: Parse Union and dict model for default
                 continue
             if data_type.is_list and len(data_type.data_types) == 1:
-                data_type = data_type.data_types[0]
+                data_type_child = data_type.data_types[0]
                 if (
-                    data_type.reference
-                    and isinstance(data_type.reference.source, BaseModelBase)
+                    data_type_child.reference
+                    and isinstance(data_type_child.reference.source, BaseModelBase)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
-                    return f"lambda :[{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}(v) for v in {self.default!r}]"
+                    return (
+                        f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
+                        f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
+                    )
             elif data_type.reference and isinstance(data_type.reference.source, BaseModelBase):  # pragma: no cover
-                return f"lambda :{data_type.alias or data_type.reference.source.class_name}.{self._PARSE_METHOD}({self.default!r})"
+                return (
+                    f"lambda :{data_type.alias or data_type.reference.source.class_name}."
+                    f"{self._PARSE_METHOD}({self.default!r})"
+                )
         return None
 
     def _process_data_in_str(self, data: Dict[str, Any]) -> None:
         if self.const:
             data["const"] = True
 
-    def _process_annotated_field_arguments(self, field_arguments: List[str]) -> List[str]:
+    def _process_annotated_field_arguments(self, field_arguments: List[str]) -> List[str]:  # noqa: PLR6301
         return field_arguments
 
     def __str__(self) -> str:  # noqa: PLR0912
@@ -274,10 +274,12 @@ class BaseModel(BaseModelBase):
         )
         config_parameters: Dict[str, Any] = {}
 
-        additionalProperties = self.extra_template_data.get("additionalProperties")
+        additional_properties = self.extra_template_data.get("additionalProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        if additionalProperties is not None or allow_extra_fields:
-            config_parameters["extra"] = "Extra.allow" if additionalProperties or allow_extra_fields else "Extra.forbid"
+        if additional_properties is not None or allow_extra_fields:
+            config_parameters["extra"] = (
+                "Extra.allow" if additional_properties or allow_extra_fields else "Extra.forbid"
+            )
             self._additional_imports.append(IMPORT_EXTRA)
 
         for config_attribute in "allow_population_by_field_name", "allow_mutation":
@@ -290,7 +292,7 @@ class BaseModel(BaseModelBase):
 
         if isinstance(self.extra_template_data.get("config"), dict):
             for key, value in self.extra_template_data["config"].items():
-                config_parameters[key] = value
+                config_parameters[key] = value  # noqa: PERF403
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config  # noqa: PLC0415

@@ -198,7 +198,7 @@ class FieldNameResolver:
         self.no_alias = no_alias
 
     @classmethod
-    def _validate_field_name(cls, field_name: str) -> bool:
+    def _validate_field_name(cls, field_name: str) -> bool:  # noqa: ARG003
         return True
 
     def get_valid_name(  # noqa: PLR0912
@@ -318,7 +318,7 @@ def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
     return Path(*[".." for _ in range(parent_count)], *children)
 
 
-class ModelResolver:
+class ModelResolver:  # noqa: PLR0904
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         exclude_names: Optional[Set[str]] = None,

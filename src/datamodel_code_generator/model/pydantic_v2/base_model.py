@@ -144,7 +144,7 @@ class DataModelField(DataModelFieldV1):
             for key in json_schema_extra:
                 data.pop(key)
 
-    def _process_annotated_field_arguments(
+    def _process_annotated_field_arguments(  # noqa: PLR6301
         self,
         field_arguments: List[str],
     ) -> List[str]:
@@ -225,7 +225,7 @@ class BaseModel(BaseModelBase):
 
         if isinstance(self.extra_template_data.get("config"), dict):
             for key, value in self.extra_template_data["config"].items():
-                config_parameters[key] = value
+                config_parameters[key] = value  # noqa: PERF403
 
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
@@ -234,8 +234,8 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
     def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:
-        additionalProperties = self.extra_template_data.get("additionalProperties")
+        additional_properties = self.extra_template_data.get("additionalProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        if additionalProperties is not None or allow_extra_fields:
-            return "'allow'" if additionalProperties or allow_extra_fields else "'forbid'"
+        if additional_properties is not None or allow_extra_fields:
+            return "'allow'" if additional_properties or allow_extra_fields else "'forbid'"
         return None

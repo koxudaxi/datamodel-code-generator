@@ -1,10 +1,10 @@
-import io
+import io  # noqa: INP001
 import os
 import re
 import sys
 from pathlib import Path
 
-from datamodel_code_generator.__main__ import Exit, arg_parser
+from datamodel_code_generator.__main__ import Exit, arg_parser  # noqa: PLC2701
 
 os.environ["COLUMNS"] = "94"
 os.environ["LINES"] = "24"

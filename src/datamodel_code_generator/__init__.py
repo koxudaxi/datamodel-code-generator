@@ -49,7 +49,7 @@ DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
 def load_yaml(stream: Union[str, TextIO]) -> Any:
-    return yaml.load(stream, Loader=SafeLoader)
+    return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
 def load_yaml_from_path(path: Path, encoding: str) -> Any:
@@ -74,7 +74,7 @@ else:
 def enable_debug_message() -> None:  # pragma: no cover
     if not pysnooper:
         msg = "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
-        raise Exception(msg)
+        raise Exception(msg)  # noqa: TRY002
 
     pysnooper.tracer.DISABLED = False
 
@@ -82,7 +82,7 @@ def enable_debug_message() -> None:  # pragma: no cover
 DEFAULT_MAX_VARIABLE_LENGTH: int = 100
 
 
-def snooper_to_methods(  # type: ignore  # noqa: PLR0913, PLR0917
+def snooper_to_methods(  # noqa: PLR0913, PLR0917
     output=None,
     watch=(),
     watch_explode=(),
@@ -228,7 +228,7 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise Error(msg)
 
 
-def generate(  # noqa: PLR0912, PLR0913
+def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Union[Path, str, ParseResult, Mapping[str, Any]],
     *,
     input_filename: str | None = None,
@@ -273,7 +273,7 @@ def generate(  # noqa: PLR0912, PLR0913
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: Set[str] | None = None,
     openapi_scopes: List[OpenAPIScope] | None = None,
-    graphql_scopes: List[GraphQLScope] | None = None,
+    graphql_scopes: List[GraphQLScope] | None = None,  # noqa: ARG001
     wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
@@ -329,9 +329,9 @@ def generate(  # noqa: PLR0912, PLR0913
                 inferred_message.format(input_file_type.value),
                 file=sys.stderr,
             )
-        except:  # noqa
+        except Exception as exc:
             msg = "Invalid file format"
-            raise Error(msg)
+            raise Error(msg) from exc
 
     kwargs: Dict[str, Any] = {}
     if input_file_type == InputFileType.OpenAPI:  # noqa: PLR1702
@@ -354,7 +354,7 @@ def generate(  # noqa: PLR0912, PLR0913
             try:
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     msg = f"Input must be a file for {input_file_type}"
-                    raise Error(msg)
+                    raise Error(msg)  # noqa: TRY301
                 obj: Dict[Any, Any]
                 if input_file_type == InputFileType.CSV:
                     import csv  # noqa: PLC0415
@@ -381,10 +381,10 @@ def generate(  # noqa: PLR0912, PLR0913
                     obj = ast.literal_eval(input_.read_text(encoding=encoding)) if isinstance(input_, Path) else input_
                 else:  # pragma: no cover
                     msg = f"Unsupported input file type: {input_file_type}"
-                    raise Error(msg)
-            except:  # noqa
+                    raise Error(msg)  # noqa: TRY301
+            except Exception as exc:
                 msg = "Invalid file format"
-                raise Error(msg)
+                raise Error(msg) from exc
 
             from genson import SchemaBuilder  # noqa: PLC0415
 

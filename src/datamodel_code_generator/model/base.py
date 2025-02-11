@@ -100,7 +100,7 @@ class DataModelFieldBase(_BaseModel):
     strip_default_none: bool = False
     nullable: Optional[bool] = None
     parent: Optional[Any] = None
-    extras: Dict[str, Any] = {}
+    extras: Dict[str, Any] = {}  # noqa: RUF012
     use_annotated: bool = False
     has_default: bool = False
     use_field_description: bool = False
@@ -212,7 +212,7 @@ class DataModelFieldBase(_BaseModel):
 @lru_cache
 def get_template(template_file_path: Path) -> Template:
     loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
-    environment: Environment = Environment(loader=loader)
+    environment: Environment = Environment(loader=loader)  # noqa: S701
     return environment.get_template(template_file_path.name)
 
 
@@ -282,7 +282,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         self.keyword_only = keyword_only
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
-            raise Exception(msg)
+            raise Exception(msg)  # noqa: TRY002
 
         self._custom_template_dir: Optional[Path] = custom_template_dir
         self.decorators: List[str] = decorators or []

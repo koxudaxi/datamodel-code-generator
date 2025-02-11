@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 """
 Main function.
 """
@@ -110,7 +108,6 @@ class Config(BaseModel):
     else:
 
         class Config:
-            # validate_assignment = True
             # Pydantic 1.5.1 doesn't support validate_assignment correctly
             arbitrary_types_allowed = (TextIOBase,)
 
@@ -153,7 +150,8 @@ class Config(BaseModel):
             target_python_version: PythonVersion = values["target_python_version"]
             if target_python_version == target_python_version.PY_36:
                 msg = (
-                    f"`--use-generic-container-types` can not be used with `--target-python-version` {target_python_version.PY_36.value}.\n"
+                    f"`--use-generic-container-types` can not be used with `--target-python-version` "
+                    f"{target_python_version.PY_36.value}.\n"
                     " The version will be not supported in a future version"
                 )
                 raise Error(msg)
@@ -209,9 +207,9 @@ class Config(BaseModel):
                 try:
                     field_name, field_value = each_item.split(":", maxsplit=1)
                     return field_name, field_value.lstrip()
-                except ValueError:
+                except ValueError as exc:
                     msg = f"Invalid http header: {each_item!r}"
-                    raise Error(msg)
+                    raise Error(msg) from exc
             return each_item  # pragma: no cover
 
         if isinstance(value, list):
@@ -225,9 +223,9 @@ class Config(BaseModel):
                 try:
                     field_name, field_value = each_item.split("=", maxsplit=1)
                     return field_name, field_value.lstrip()
-                except ValueError:
+                except ValueError as exc:
                     msg = f"Invalid http query parameter: {each_item!r}"
-                    raise Error(msg)
+                    raise Error(msg) from exc
             return each_item  # pragma: no cover
 
         if isinstance(value, list):
@@ -371,7 +369,7 @@ def _get_pyproject_toml_config(source: Path) -> Dict[str, Any] | None:
     return None
 
 
-def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912
+def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
     """Main function."""
 
     # add cli completion support
@@ -545,18 +543,19 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912
             keyword_only=config.keyword_only,
             no_alias=config.no_alias,
         )
-        return Exit.OK
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
-    except Exception:
+    except Exception:  # noqa: BLE001
         import traceback  # noqa: PLC0415
 
         print(traceback.format_exc(), file=sys.stderr)  # noqa: T201
         return Exit.ERROR
+    else:
+        return Exit.OK
 
 
 if __name__ == "__main__":

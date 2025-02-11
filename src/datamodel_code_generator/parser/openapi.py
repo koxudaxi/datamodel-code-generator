@@ -88,7 +88,7 @@ class ExampleObject(BaseModel):
     summary: str | None = None
     description: str | None = None
     value: Any = None
-    externalValue: str | None = None
+    externalValue: str | None = None  # noqa: N815
 
 
 class MediaObject(BaseModel):
@@ -106,7 +106,7 @@ class ParameterObject(BaseModel):
     schema_: JsonSchemaObject | None = Field(None, alias="schema")
     example: Any = None
     examples: Union[str, ReferenceObject, ExampleObject, None] = None
-    content: Dict[str, MediaObject] = {}
+    content: Dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class HeaderObject(BaseModel):
@@ -116,38 +116,38 @@ class HeaderObject(BaseModel):
     schema_: JsonSchemaObject | None = Field(None, alias="schema")
     example: Any = None
     examples: Union[str, ReferenceObject, ExampleObject, None] = None
-    content: Dict[str, MediaObject] = {}
+    content: Dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class RequestBodyObject(BaseModel):
     description: str | None = None
-    content: Dict[str, MediaObject] = {}
+    content: Dict[str, MediaObject] = {}  # noqa: RUF012
     required: bool = False
 
 
 class ResponseObject(BaseModel):
     description: str | None = None
-    headers: Dict[str, ParameterObject] = {}
-    content: Dict[Union[str, int], MediaObject] = {}
+    headers: Dict[str, ParameterObject] = {}  # noqa: RUF012
+    content: Dict[Union[str, int], MediaObject] = {}  # noqa: RUF012
 
 
 class Operation(BaseModel):
-    tags: List[str] = []
+    tags: List[str] = []  # noqa: RUF012
     summary: str | None = None
     description: str | None = None
-    operationId: str | None = None
-    parameters: List[Union[ReferenceObject, ParameterObject]] = []
-    requestBody: Union[ReferenceObject, RequestBodyObject, None] = None
-    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}
+    operationId: str | None = None  # noqa: N815
+    parameters: List[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012
+    requestBody: Union[ReferenceObject, RequestBodyObject, None] = None  # noqa: N815
+    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
-    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}
-    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}
-    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}
-    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}
-    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}
+    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012
+    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012
+    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012
+    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012
+    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012
 
 
 @snooper_to_methods(max_variable_length=None)
@@ -307,10 +307,7 @@ class OpenAPIParser(JsonSchemaParser):
 
     def get_ref_model(self, ref: str) -> Dict[str, Any]:
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
-        if ref_file:
-            ref_body = self._get_ref_body(ref_file)
-        else:  # pragma: no cover
-            ref_body = self.raw_obj
+        ref_body = self._get_ref_body(ref_file) if ref_file else self.raw_obj
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -406,9 +403,9 @@ class OpenAPIParser(JsonSchemaParser):
     @classmethod
     def parse_tags(
         cls,
-        name: str,
+        name: str,  # noqa: ARG003
         tags: List[str],
-        path: List[str],
+        path: List[str],  # noqa: ARG003
     ) -> List[str]:
         return tags
 
@@ -426,8 +423,8 @@ class OpenAPIParser(JsonSchemaParser):
         fields: List[DataModelFieldBase] = []
         exclude_field_names: Set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
-        for parameter in parameters:
-            parameter = self.resolve_object(parameter, ParameterObject)
+        for parameter_ in parameters:
+            parameter = self.resolve_object(parameter_, ParameterObject)
             parameter_name = parameter.name
             if not parameter_name or parameter.in_ != ParameterLocation.query:
                 continue
@@ -598,10 +595,9 @@ class OpenAPIParser(JsonSchemaParser):
                     if isinstance(p, dict)
                 ]
                 paths_path = [*path_parts, "#/paths"]
-                for path_name, methods in paths.items():
+                for path_name, methods_ in paths.items():
                     # Resolve path items if applicable
-                    if "$ref" in methods:
-                        methods = self.get_ref_model(methods["$ref"])
+                    methods = self.get_ref_model(methods_["$ref"]) if "$ref" in methods_ else methods_
                     paths_parameters = parameters.copy()
                     if "parameters" in methods:
                         paths_parameters.extend(methods["parameters"])

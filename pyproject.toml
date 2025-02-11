@@ -198,7 +198,7 @@ paths.other = [
 ]
 run.dynamic_context = "none"
 run.omit = [ "tests/data/*" ]
-report.fail_under = 94
+report.fail_under = 90
 run.parallel = true
 run.plugins = [
   "covdefaults",

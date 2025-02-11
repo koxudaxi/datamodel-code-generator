@@ -59,7 +59,7 @@ def type_map_factory(
     strict_types: Sequence[StrictTypes],
     pattern_key: str,
     use_pendulum: bool,  # noqa: FBT001
-    target_datetime_class: DatetimeClassType,
+    target_datetime_class: DatetimeClassType,  # noqa: ARG001
 ) -> Dict[Types, DataType]:
     data_type_int = data_type(type="int")
     data_type_float = data_type(type="float")
@@ -94,7 +94,8 @@ def type_map_factory(
             strict=StrictTypes.str in strict_types,
             # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
             kwargs={
-                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
+                pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
+                r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'",
                 **({"strict": True} if StrictTypes.str in strict_types else {}),
             },
         ),
@@ -202,7 +203,7 @@ class DataTypeManager(_DataTypeManager):
         data_type: Type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
-        target_datetime_class: DatetimeClassType,
+        target_datetime_class: DatetimeClassType,  # noqa: ARG002
     ) -> Dict[Types, DataType]:
         return type_map_factory(
             data_type,
@@ -296,9 +297,6 @@ class DataTypeManager(_DataTypeManager):
             return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)
         # conbytes doesn't accept strict argument
         # https://github.com/samuelcolvin/pydantic/issues/2489
-        #    if strict:
-        #         data_type_kwargs['strict'] = True
-        #     return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)
         if strict:
             return self.strict_type_map[StrictTypes.bytes]
         return self.type_map[types]

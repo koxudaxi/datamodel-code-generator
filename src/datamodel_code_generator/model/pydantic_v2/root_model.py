@@ -20,6 +20,6 @@ class RootModel(BaseModel):
 
         super().__init__(**kwargs)
 
-    def _get_config_extra(self) -> Literal["'allow'", "'forbid'"] | None:
+    def _get_config_extra(self) -> Literal["'allow'", "'forbid'"] | None:  # noqa: PLR6301
         # PydanticV2 RootModels cannot have extra fields
         return None

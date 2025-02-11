@@ -184,9 +184,8 @@ class DataModelField(DataModelFieldBase):
     def field(self) -> Optional[str]:
         """for backwards compatibility"""
         result = str(self)
-        if result == "":
+        if not result:
             return None
-
         return result
 
     def __str__(self) -> str:
@@ -264,15 +263,21 @@ class DataModelField(DataModelFieldBase):
                 # TODO: Parse Union and dict model for default
                 continue  # pragma: no cover
             if data_type.is_list and len(data_type.data_types) == 1:
-                data_type = data_type.data_types[0]
+                data_type_child = data_type.data_types[0]
                 if (  # pragma: no cover
-                    data_type.reference
-                    and (isinstance(data_type.reference.source, (Struct, RootModel)))
+                    data_type_child.reference
+                    and (isinstance(data_type_child.reference.source, (Struct, RootModel)))
                     and isinstance(self.default, list)
                 ):
-                    return f"lambda: {self._PARSE_METHOD}({self.default!r},  type=list[{data_type.alias or data_type.reference.source.class_name}])"
+                    return (
+                        f"lambda: {self._PARSE_METHOD}({self.default!r},  "
+                        f"type=list[{data_type_child.alias or data_type_child.reference.source.class_name}])"
+                    )
             elif data_type.reference and isinstance(data_type.reference.source, Struct):
-                return f"lambda: {self._PARSE_METHOD}({self.default!r},  type={data_type.alias or data_type.reference.source.class_name})"
+                return (
+                    f"lambda: {self._PARSE_METHOD}({self.default!r},  "
+                    f"type={data_type.alias or data_type.reference.source.class_name})"
+                )
         return None
 
 
