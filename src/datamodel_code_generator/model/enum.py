@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Tuple
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
 if TYPE_CHECKING:
+    from collections import defaultdict
     from pathlib import Path
+
+    from datamodel_code_generator.reference import Reference
 
 _INT: str = "int"
 _FLOAT: str = "float"
 _BYTES: str = "bytes"
 _STR: str = "str"
 
-SUBCLASS_BASE_CLASSES: Dict[Types, str] = {
+SUBCLASS_BASE_CLASSES: dict[Types, str] = {
     Types.int32: _INT,
     Types.int64: _INT,
     Types.integer: _INT,
@@ -31,19 +33,19 @@ SUBCLASS_BASE_CLASSES: Dict[Types, str] = {
 class Enum(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "Enum.jinja2"
     BASE_CLASS: ClassVar[str] = "enum.Enum"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_ENUM,)
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_ENUM,)  # noqa: UP006
 
     def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: List[str] | None = None,
-        base_classes: List[Reference] | None = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
         custom_base_class: str | None = None,
         custom_template_dir: Path | None = None,
-        extra_template_data: DefaultDict[str, Dict[str, Any]] | None = None,
-        methods: List[str] | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
+        methods: list[str] | None = None,
         path: Path | None = None,
         description: str | None = None,
         type_: Types | None = None,
@@ -70,7 +72,7 @@ class Enum(DataModel):
         if not base_classes and type_:
             base_class = SUBCLASS_BASE_CLASSES.get(type_)
             if base_class:
-                self.base_classes: List[BaseClassDataType] = [
+                self.base_classes: list[BaseClassDataType] = [
                     BaseClassDataType(type=base_class),
                     *self.base_classes,
                 ]
@@ -102,7 +104,7 @@ class Enum(DataModel):
         return None
 
     @property
-    def imports(self) -> Tuple[Import, ...]:
+    def imports(self) -> tuple[Import, ...]:
         return tuple(i for i in super().imports if i != IMPORT_ANY)
 
 

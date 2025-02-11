@@ -83,7 +83,7 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.9'",
+  "setuptools; python_version<'3.10'", # PyCharm debugger needs it
   { include-group = "coverage" },
 ]
 type = [
@@ -133,19 +133,14 @@ lint.ignore = [
   "C901",   # complex structure
   "COM812", # Conflict with formatter
   "CPY",    # No copyright statements
-  "D",      # Limited documentation available
-  "DOC201", # no support for sphinx
-  "FA100",  # no from __future__ import annotations
-  "FA102",  # no from __future__ import annotations
+  "D",      # limited documentation
+  "DOC",    # limited documentation
   "FIX002", # line contains to do
   "ISC001", # Conflict with formatter
   "S101",   # can use assert
-  "TC001",  # breaks models moving stuff into type checking block
   "TD002",  # missing to do author
   "TD003",  # missing to do link
   "TD004",  # missing colon in to do
-  "UP006",  # keep using List instead of list
-  "UP007",  # keep using Union instead of |
 ]
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
@@ -158,6 +153,13 @@ lint.per-file-ignores."tests/**/*.py" = [
   "S",       # no safety concerns
   "SLF001",  # can test private methods
 ]
+lint.isort = { known-first-party = [
+  "datamodel_code_generator",
+  "tests",
+], required-imports = [
+  "from __future__ import annotations",
+] }
+
 lint.preview = true
 
 [tool.codespell]

@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 
 import pytest
 from freezegun import freeze_time
-from pytest_mock import MockerFixture
 
 from datamodel_code_generator import (
     DataModelType,
@@ -13,6 +15,9 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Exit, main
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
 PYTHON_DATA_PATH: Path = DATA_PATH / "python"

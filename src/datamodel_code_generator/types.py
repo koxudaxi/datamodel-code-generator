@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
 from enum import Enum, auto
@@ -9,7 +11,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    FrozenSet,
     Iterable,
     Iterator,
     List,
@@ -17,8 +18,6 @@ from typing import (
     Pattern,
     Sequence,
     Set,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -51,6 +50,9 @@ from datamodel_code_generator.util import (
     Protocol,
     runtime_checkable,
 )
+
+if TYPE_CHECKING:
+    import builtins
 
 if PYDANTIC_V2:
     from pydantic import GetCoreSchemaHandler
@@ -95,7 +97,7 @@ class StrictTypes(Enum):
 
 class UnionIntFloat:
     def __init__(self, value: float) -> None:
-        self.value: Union[int, float] = value
+        self.value: int | float = value
 
     def __int__(self) -> int:
         return int(self.value)
@@ -112,8 +114,8 @@ class UnionIntFloat:
 
     @classmethod
     def __get_pydantic_core_schema__(  # noqa: PLW3201
-        cls, _source_type: Any, _handler: "GetCoreSchemaHandler"
-    ) -> "core_schema.CoreSchema":
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
         from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
             [
                 core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
@@ -138,7 +140,7 @@ class UnionIntFloat:
         )
 
     @classmethod
-    def validate(cls, v: Any) -> "UnionIntFloat":
+    def validate(cls, v: Any) -> UnionIntFloat:
         if isinstance(v, UnionIntFloat):
             return v
         if not isinstance(v, (int, float)):  # pragma: no cover
@@ -158,13 +160,13 @@ class UnionIntFloat:
         return cls(v)
 
 
-def chain_as_tuple(*iterables: Iterable[T]) -> Tuple[T, ...]:
+def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
     return tuple(chain(*iterables))
 
 
 @lru_cache
-def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: str) -> List[str]:
-    types: List[str] = []
+def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: str) -> list[str]:
+    types: list[str] = []
     split_type: str = ""
     inner_count: int = 0
     for part in re.split(split_pattern, type_):
@@ -245,34 +247,34 @@ class DataType(_BaseModel):
             extra = "forbid"
             copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse("1.9.2") else "none"
 
-    type: Optional[str] = None
-    reference: Optional[Reference] = None
-    data_types: List["DataType"] = []  # noqa: RUF012
+    type: Optional[str] = None  # noqa: UP045
+    reference: Optional[Reference] = None  # noqa: UP045
+    data_types: List[DataType] = []  # noqa: RUF012, UP006
     is_func: bool = False
-    kwargs: Optional[Dict[str, Any]] = None
-    import_: Optional[Import] = None
+    kwargs: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
+    import_: Optional[Import] = None  # noqa: UP045
     python_version: PythonVersion = PythonVersion.PY_38
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
     is_set: bool = False
     is_custom_type: bool = False
-    literals: List[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012
+    literals: List[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP006, UP007
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
-    alias: Optional[str] = None
-    parent: Optional[Any] = None
-    children: List[Any] = []  # noqa: RUF012
+    alias: Optional[str] = None  # noqa: UP045
+    parent: Optional[Any] = None  # noqa: UP045
+    children: List[Any] = []  # noqa: RUF012, UP006
     strict: bool = False
-    dict_key: Optional["DataType"] = None
+    dict_key: Optional[DataType] = None  # noqa: UP045
 
-    _exclude_fields: ClassVar[Set[str]] = {"parent", "children"}
-    _pass_fields: ClassVar[Set[str]] = {"parent", "children", "data_types", "reference"}
+    _exclude_fields: ClassVar[Set[str]] = {"parent", "children"}  # noqa: UP006
+    _pass_fields: ClassVar[Set[str]] = {"parent", "children", "data_types", "reference"}  # noqa: UP006
 
     @classmethod
     def from_import(  # noqa: PLR0913
-        cls: Type["DataTypeT"],
+        cls: builtins.type[DataTypeT],
         import_: Import,
         *,
         is_optional: bool = False,
@@ -281,8 +283,8 @@ class DataType(_BaseModel):
         is_set: bool = False,
         is_custom_type: bool = False,
         strict: bool = False,
-        kwargs: Optional[Dict[str, Any]] = None,
-    ) -> "DataTypeT":
+        kwargs: dict[str, Any] | None = None,
+    ) -> DataTypeT:
         return cls(
             type=import_.import_,
             import_=import_,
@@ -297,13 +299,13 @@ class DataType(_BaseModel):
         )
 
     @property
-    def unresolved_types(self) -> FrozenSet[str]:
+    def unresolved_types(self) -> frozenset[str]:
         return frozenset(
             {t.reference.path for data_types in self.data_types for t in data_types.all_data_types if t.reference}
             | ({self.reference.path} if self.reference else set())
         )
 
-    def replace_reference(self, reference: Optional[Reference]) -> None:
+    def replace_reference(self, reference: Reference | None) -> None:
         if not self.reference:  # pragma: no cover
             msg = f"`{self.__class__.__name__}.replace_reference()` can't be called when `reference` field is empty."
             raise Exception(msg)  # noqa: TRY002
@@ -317,7 +319,7 @@ class DataType(_BaseModel):
         self.replace_reference(None)
 
     @property
-    def module_name(self) -> Optional[str]:
+    def module_name(self) -> str | None:
         if self.reference and isinstance(self.reference.source, Modular):
             return self.reference.source.module_name
         return None  # pragma: no cover
@@ -330,7 +332,7 @@ class DataType(_BaseModel):
         return self.reference.short_name if self.reference else ""
 
     @property
-    def all_data_types(self) -> Iterator["DataType"]:
+    def all_data_types(self) -> Iterator[DataType]:
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
@@ -348,7 +350,7 @@ class DataType(_BaseModel):
             yield self.import_
 
         # Define required imports based on type features and conditions
-        imports: Tuple[Tuple[bool, Import], ...] = (
+        imports: tuple[tuple[bool, Import], ...] = (
             (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
             (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
             (
@@ -409,10 +411,10 @@ class DataType(_BaseModel):
 
     @property
     def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
-        type_: Optional[str] = self.alias or self.type
+        type_: str | None = self.alias or self.type
         if not type_:
             if self.is_union:
-                data_types: List[str] = []
+                data_types: list[str] = []
                 for data_type in self.data_types:
                     data_type_type = data_type.type_hint
                     if data_type_type in data_types:  # pragma: no cover
@@ -543,11 +545,11 @@ class DataTypeManager(ABC):
         python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
-        strict_types: Optional[Sequence[StrictTypes]] = None,
+        strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
-        target_datetime_class: Optional[DatetimeClassType] = None,
+        target_datetime_class: DatetimeClassType | None = None,
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
@@ -568,9 +570,9 @@ class DataTypeManager(ABC):
             raise Exception(msg)  # noqa: TRY002
 
         if TYPE_CHECKING:
-            self.data_type: Type[DataType]
+            self.data_type: type[DataType]
         else:
-            self.data_type: Type[DataType] = create_model(
+            self.data_type: type[DataType] = create_model(
                 "ContextDataType",
                 python_version=(PythonVersion, python_version),
                 use_standard_collections=(bool, use_standard_collections),
@@ -587,7 +589,7 @@ class DataTypeManager(ABC):
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
 
     def get_data_type_from_value(self, value: Any) -> DataType:
-        type_: Optional[Types] = None
+        type_: Types | None = None
         if isinstance(value, str):
             type_ = Types.string
         elif isinstance(value, bool):

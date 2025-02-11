@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pydantic.typing
 
 
 def patched_evaluate_forwardref(
-    forward_ref: Any, globalns: Dict[str, Any], localns: Optional[Dict[str, Any]] = None
+    forward_ref: Any, globalns: dict[str, Any], localns: dict[str, Any] | None = None
 ) -> None:  # pragma: no cover
     try:
         return forward_ref._evaluate(globalns, localns or None, set())  # pragma: no cover  # noqa: SLF001

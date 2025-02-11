@@ -1,4 +1,6 @@
-from typing import Optional, Sequence, Tuple
+from __future__ import annotations
+
+from typing import Sequence
 
 import pytest
 
@@ -17,7 +19,7 @@ from datamodel_code_generator.imports import Import, Imports
         ([(None, "foo.baz")], "import foo.baz"),
     ],
 )
-def test_dump(inputs: Sequence[Tuple[Optional[str], str]], value: str) -> None:
+def test_dump(inputs: Sequence[tuple[str | None, str]], value: str) -> None:
     """Test creating import lines."""
 
     imports = Imports()

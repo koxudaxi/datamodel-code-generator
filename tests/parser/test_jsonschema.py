@@ -37,7 +37,7 @@ EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "pa
         ({"a": {"b": {"c": {"foo": "bar"}}}}, "a/b/c", {"foo": "bar"}),
     ],
 )
-def test_get_model_by_path(schema: Dict, path: str, model: Dict) -> None:
+def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     assert get_model_by_path(schema, path.split("/") if path else []) == model
 
 
@@ -494,7 +494,7 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     """
 
     class AltJsonSchemaObject(JsonSchemaObject):
-        properties: Optional[Dict[str, Union[AltJsonSchemaObject, bool]]] = None  # noqa: UP045
+        properties: Optional[Dict[str, Union[AltJsonSchemaObject, bool]]] = None  # noqa: UP006, UP007, UP045
         alt_type: Optional[str] = None  # noqa: UP045
 
         def model_post_init(self, context: Any) -> None:  # noqa: ARG002

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, Dict, Sequence, Type
+from typing import ClassVar, Sequence
 
 from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model.pydantic import DataTypeManager as _DataTypeManager
@@ -17,11 +17,11 @@ class DataTypeManager(_DataTypeManager):
 
     def type_map_factory(
         self,
-        data_type: Type[DataType],
+        data_type: type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
         target_datetime_class: DatetimeClassType | None = None,
-    ) -> Dict[Types, DataType]:
+    ) -> dict[Types, DataType]:
         result = {
             **super().type_map_factory(
                 data_type,

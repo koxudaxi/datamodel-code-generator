@@ -2,19 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
-    DefaultDict,
-    Dict,
     Iterable,
     Iterator,
-    List,
     Mapping,
     Sequence,
-    Set,
-    Tuple,
-    Type,
-    Union,
 )
 from urllib.parse import ParseResult
 
@@ -44,7 +38,11 @@ except ImportError as exc:  # pragma: no cover
     msg = "Please run `$pip install 'datamodel-code-generator[graphql]`' to generate data-model from a GraphQL schema."
     raise Exception(msg) from exc  # noqa: TRY002
 
+
 from datamodel_code_generator.format import DatetimeClassType
+
+if TYPE_CHECKING:
+    from collections import defaultdict
 
 graphql_resolver = graphql.type.introspection.TypeResolvers()
 
@@ -61,18 +59,18 @@ class GraphQLParser(Parser):
     raw_obj: graphql.GraphQLSchema
     # all processed graphql objects
     # mapper from an object name (unique) to an object
-    all_graphql_objects: Dict[str, graphql.GraphQLNamedType]
+    all_graphql_objects: dict[str, graphql.GraphQLNamedType]
     # a reference for each object
     # mapper from an object name to his reference
-    references: Dict[str, Reference] = {}  # noqa: RUF012
+    references: dict[str, Reference] = {}  # noqa: RUF012
     # mapper from graphql type to all objects with this type
     # `graphql.type.introspection.TypeKind` -- an enum with all supported types
     # `graphql.GraphQLNamedType` -- base type for each graphql object
     # see `graphql-core` for more details
-    support_graphql_types: Dict[graphql.type.introspection.TypeKind, List[graphql.GraphQLNamedType]]
+    support_graphql_types: dict[graphql.type.introspection.TypeKind, list[graphql.GraphQLNamedType]]
     # graphql types order for render
     # may be as a parameter in the future
-    parse_order: List[graphql.type.introspection.TypeKind] = [  # noqa: RUF012
+    parse_order: list[graphql.type.introspection.TypeKind] = [  # noqa: RUF012
         graphql.type.introspection.TypeKind.SCALAR,
         graphql.type.introspection.TypeKind.ENUM,
         graphql.type.introspection.TypeKind.INTERFACE,
@@ -83,18 +81,18 @@ class GraphQLParser(Parser):
 
     def __init__(  # noqa: PLR0913
         self,
-        source: Union[str, Path, ParseResult],
+        source: str | Path | ParseResult,
         *,
-        data_model_type: Type[DataModel] = pydantic_model.BaseModel,
-        data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
-        data_model_scalar_type: Type[DataModel] = DataTypeScalar,
-        data_model_union_type: Type[DataModel] = DataTypeUnion,
-        data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
-        data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
+        data_model_type: type[DataModel] = pydantic_model.BaseModel,
+        data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
+        data_model_scalar_type: type[DataModel] = DataTypeScalar,
+        data_model_union_type: type[DataModel] = DataTypeUnion,
+        data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
+        data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,
-        additional_imports: List[str] | None = None,
+        additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
-        extra_template_data: DefaultDict[str, Dict[str, Any]] | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
@@ -125,14 +123,14 @@ class GraphQLParser(Parser):
         strict_types: Sequence[StrictTypes] | None = None,
         empty_enum_field_name: str | None = None,
         custom_class_name_generator: Callable[[str], str] | None = None,
-        field_extra_keys: Set[str] | None = None,
+        field_extra_keys: set[str] | None = None,
         field_include_all_keys: bool = False,
-        field_extra_keys_without_x_prefix: Set[str] | None = None,
+        field_extra_keys_without_x_prefix: set[str] | None = None,
         wrap_string_literal: bool | None = None,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
-        http_headers: Sequence[Tuple[str, str]] | None = None,
+        http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
@@ -146,14 +144,14 @@ class GraphQLParser(Parser):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
-        known_third_party: List[str] | None = None,
-        custom_formatters: List[str] | None = None,
-        custom_formatters_kwargs: Dict[str, Any] | None = None,
+        known_third_party: list[str] | None = None,
+        custom_formatters: list[str] | None = None,
+        custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
-        http_query_parameters: Sequence[Tuple[str, str]] | None = None,
+        http_query_parameters: Sequence[tuple[str, str]] | None = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
-        default_field_extras: Dict[str, Any] | None = None,
+        default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
@@ -237,7 +235,7 @@ class GraphQLParser(Parser):
         self.use_standard_collections = use_standard_collections
         self.use_union_operator = use_union_operator
 
-    def _get_context_source_path_parts(self) -> Iterator[Tuple[Source, List[str]]]:
+    def _get_context_source_path_parts(self) -> Iterator[tuple[Source, list[str]]]:
         # TODO (denisart): Temporarily this method duplicates
         # the method `datamodel_code_generator.parser.jsonschema.JsonSchemaParser._get_context_source_path_parts`.
 
@@ -261,7 +259,7 @@ class GraphQLParser(Parser):
             ), self.model_resolver.current_root_context(path_parts):
                 yield source, path_parts
 
-    def _resolve_types(self, paths: List[str], schema: graphql.GraphQLSchema) -> None:
+    def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
         for type_name, type_ in schema.type_map.items():
             if type_name.startswith("__"):
                 continue
@@ -300,7 +298,7 @@ class GraphQLParser(Parser):
 
     def _get_default(  # noqa: PLR6301
         self,
-        field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
+        field: graphql.GraphQLField | graphql.GraphQLInputField,
         final_data_type: DataType,
         required: bool,  # noqa: FBT001
     ) -> Any:
@@ -325,8 +323,8 @@ class GraphQLParser(Parser):
         )
 
     def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
-        enum_fields: List[DataModelFieldBase] = []
-        exclude_field_names: Set[str] = set()
+        enum_fields: list[DataModelFieldBase] = []
+        exclude_field_names: set[str] = set()
 
         for value_name, value in enum_object.values.items():
             default = f"'{value_name.translate(escape_characters)}'" if isinstance(value_name, str) else value_name
@@ -364,7 +362,7 @@ class GraphQLParser(Parser):
         self,
         field_name: str,
         alias: str | None,
-        field: Union[graphql.GraphQLField, graphql.GraphQLInputField],
+        field: graphql.GraphQLField | graphql.GraphQLInputField,
     ) -> DataModelFieldBase:
         final_data_type = DataType(
             is_optional=True,
@@ -418,14 +416,10 @@ class GraphQLParser(Parser):
 
     def parse_object_like(
         self,
-        obj: Union[
-            graphql.GraphQLInterfaceType,
-            graphql.GraphQLObjectType,
-            graphql.GraphQLInputObjectType,
-        ],
+        obj: graphql.GraphQLInterfaceType | graphql.GraphQLObjectType | graphql.GraphQLInputObjectType,
     ) -> None:
         fields = []
-        exclude_field_names: Set[str] = set()
+        exclude_field_names: set[str] = set()
 
         for field_name, field in obj.fields.items():
             field_name_, alias = self.model_resolver.get_valid_field_name_and_alias(
@@ -480,7 +474,7 @@ class GraphQLParser(Parser):
 
     def parse_raw(self) -> None:
         self.all_graphql_objects = {}
-        self.references: Dict[str, Reference] = {}
+        self.references: dict[str, Reference] = {}
 
         self.support_graphql_types = {
             graphql.type.introspection.TypeKind.SCALAR: [],

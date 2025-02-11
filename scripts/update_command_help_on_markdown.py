@@ -1,4 +1,6 @@
-import io  # noqa: INP001
+from __future__ import annotations  # noqa: INP001
+
+import io
 import os
 import re
 import sys

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import platform
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 import black
 import pydantic
@@ -26,10 +26,10 @@ def get_expected_file(
     test_name: str,
     with_import: bool,
     format_: bool,
-    base_class: Optional[str] = None,
-    prefix: Optional[str] = None,
+    base_class: str | None = None,
+    prefix: str | None = None,
 ) -> Path:
-    params: List[str] = []
+    params: list[str] = []
     if with_import:
         params.append("with_import")
     if format_:

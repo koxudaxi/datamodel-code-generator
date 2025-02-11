@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from datamodel_code_generator import InputFileType, infer_input_type

@@ -11,18 +11,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    DefaultDict,
     Dict,
     Iterator,
-    List,
     Mapping,
     Sequence,
-    Set,
     TextIO,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 from urllib.parse import ParseResult
@@ -31,10 +25,7 @@ import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import DatetimeClassType, PythonVersion
-from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.parser.base import Parser
-from datamodel_code_generator.types import StrictTypes
 from datamodel_code_generator.util import SafeLoader
 
 T = TypeVar("T")
@@ -49,7 +40,7 @@ except ImportError:  # pragma: no cover
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
-def load_yaml(stream: Union[str, TextIO]) -> Any:
+def load_yaml(stream: str | TextIO) -> Any:
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
@@ -59,6 +50,11 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
 
 
 if TYPE_CHECKING:
+    from collections import defaultdict
+
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.parser.base import Parser
+    from datamodel_code_generator.types import StrictTypes
 
     def get_version() -> str: ...
 
@@ -84,7 +80,7 @@ DEFAULT_MAX_VARIABLE_LENGTH: int = 100
 
 
 def snooper_to_methods() -> Callable[..., Any]:
-    def inner(cls: Type[T]) -> Type[T]:
+    def inner(cls: type[T]) -> type[T]:
         if not pysnooper:
             return cls
         import inspect  # noqa: PLC0415
@@ -117,7 +113,7 @@ def is_openapi(text: str) -> bool:
     return "openapi" in load_yaml(text)
 
 
-JSON_SCHEMA_URLS: Tuple[str, ...] = (
+JSON_SCHEMA_URLS: tuple[str, ...] = (
     "http://json-schema.org/",
     "https://json-schema.org/",
 )
@@ -155,7 +151,7 @@ class InputFileType(Enum):
     GraphQL = "graphql"
 
 
-RAW_DATA_TYPES: List[InputFileType] = [
+RAW_DATA_TYPES: list[InputFileType] = [
     InputFileType.Json,
     InputFileType.Yaml,
     InputFileType.Dict,
@@ -210,7 +206,7 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
 
 
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
-    input_: Union[Path, str, ParseResult, Mapping[str, Any]],
+    input_: Path | str | ParseResult | Mapping[str, Any],
     *,
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
@@ -218,9 +214,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersion.PY_38,
     base_class: str = "",
-    additional_imports: List[str] | None = None,
+    additional_imports: list[str] | None = None,
     custom_template_dir: Path | None = None,
-    extra_template_data: DefaultDict[str, Dict[str, Any]] | None = None,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
     validation: bool = False,
     field_constraints: bool = False,
     snake_case_field: bool = False,
@@ -250,16 +246,16 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     strict_types: Sequence[StrictTypes] | None = None,
     empty_enum_field_name: str | None = None,
     custom_class_name_generator: Callable[[str], str] | None = None,
-    field_extra_keys: Set[str] | None = None,
+    field_extra_keys: set[str] | None = None,
     field_include_all_keys: bool = False,
-    field_extra_keys_without_x_prefix: Set[str] | None = None,
-    openapi_scopes: List[OpenAPIScope] | None = None,
-    graphql_scopes: List[GraphQLScope] | None = None,  # noqa: ARG001
+    field_extra_keys_without_x_prefix: set[str] | None = None,
+    openapi_scopes: list[OpenAPIScope] | None = None,
+    graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
     wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
-    http_headers: Sequence[Tuple[str, str]] | None = None,
+    http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
@@ -273,10 +269,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     keep_model_order: bool = False,
     custom_file_header: str | None = None,
     custom_file_header_path: Path | None = None,
-    custom_formatters: List[str] | None = None,
-    custom_formatters_kwargs: Dict[str, Any] | None = None,
+    custom_formatters: list[str] | None = None,
+    custom_formatters_kwargs: dict[str, Any] | None = None,
     use_pendulum: bool = False,
-    http_query_parameters: Sequence[Tuple[str, str]] | None = None,
+    http_query_parameters: Sequence[tuple[str, str]] | None = None,
     treat_dots_as_module: bool = False,
     use_exact_imports: bool = False,
     union_mode: UnionMode | None = None,
@@ -314,16 +310,16 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             msg = "Invalid file format"
             raise Error(msg) from exc
 
-    kwargs: Dict[str, Any] = {}
+    kwargs: dict[str, Any] = {}
     if input_file_type == InputFileType.OpenAPI:  # noqa: PLR1702
         from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
-        parser_class: Type[Parser] = OpenAPIParser
+        parser_class: type[Parser] = OpenAPIParser
         kwargs["openapi_scopes"] = openapi_scopes
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
-        parser_class: Type[Parser] = GraphQLParser
+        parser_class: type[Parser] = GraphQLParser
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
@@ -336,11 +332,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     msg = f"Input must be a file for {input_file_type}"
                     raise Error(msg)  # noqa: TRY301
-                obj: Dict[Any, Any]
+                obj: dict[Any, Any]
                 if input_file_type == InputFileType.CSV:
                     import csv  # noqa: PLC0415
 
-                    def get_header_and_first_line(csv_file: IO[str]) -> Dict[str, Any]:
+                    def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
                         assert csv_reader.fieldnames is not None
                         return dict(zip(csv_reader.fieldnames, next(csv_reader)))

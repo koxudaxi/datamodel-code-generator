@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -25,7 +27,7 @@ class B(DataModel):
 
 
 class C(Parser):
-    def parse_raw(self, name: str, raw: Dict[str, Any]) -> None:
+    def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
         pass
 
     def parse(self) -> str:  # noqa: PLR6301
@@ -185,7 +187,7 @@ def test_sort_data_models_unresolved_raise_recursion_error() -> None:
         ("a.b.c", "Foo", ("...", "Foo")),
     ],
 )
-def test_relative(current_module: str, reference: str, val: Tuple[str, str]) -> None:
+def test_relative(current_module: str, reference: str, val: tuple[str, str]) -> None:
     assert relative(current_module, reference) == val
 
 
@@ -199,7 +201,7 @@ def test_relative(current_module: str, reference: str, val: Tuple[str, str]) -> 
         ("..a.b", "mod", "Foo", ("..a.b.mod", "Foo")),
     ],
 )
-def test_exact_import(from_: str, import_: str, name: str, val: Tuple[str, str]) -> None:
+def test_exact_import(from_: str, import_: str, name: str, val: tuple[str, str]) -> None:
     assert exact_import(from_, import_, name) == val
 
 
@@ -228,7 +230,7 @@ def test_snake_to_upper_camel(word: str, expected: str) -> None:
 
 
 class D(DataModel):
-    def __init__(self, filename: str, data: str, fields: List[DataModelFieldBase]) -> None:  # noqa: ARG002
+    def __init__(self, filename: str, data: str, fields: list[DataModelFieldBase]) -> None:  # noqa: ARG002
         super().__init__(fields=fields, reference=Reference(""))
         self._data = data
 
@@ -413,7 +415,7 @@ def test_find_member_with_mixed_enum() -> None:
 
 
 @pytest.fixture
-def escape_map() -> Dict[str, str]:
+def escape_map() -> dict[str, str]:
     return {
         "\u0000": r"\x00",  # Null byte
         "'": r"\'",

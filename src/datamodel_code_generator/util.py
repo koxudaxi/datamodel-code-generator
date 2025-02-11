@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from yaml import SafeLoader
 
-    def load_toml(path: Path) -> Dict[str, Any]: ...
+    def load_toml(path: Path) -> dict[str, Any]: ...
 
 else:
     try:
@@ -39,7 +39,7 @@ else:
     except ImportError:
         from tomli import load as load_tomllib
 
-    def load_toml(path: Path) -> Dict[str, Any]:
+    def load_toml(path: Path) -> dict[str, Any]:
         with path.open("rb") as f:
             return load_tomllib(f)
 

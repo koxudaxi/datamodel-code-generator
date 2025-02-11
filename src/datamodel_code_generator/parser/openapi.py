@@ -8,7 +8,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    DefaultDict,
     Dict,
     Iterable,
     List,
@@ -16,9 +15,6 @@ from typing import (
     Optional,
     Pattern,
     Sequence,
-    Set,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -59,7 +55,7 @@ if TYPE_CHECKING:
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r"^application/.*json$")
 
-OPERATION_NAMES: List[str] = [
+OPERATION_NAMES: list[str] = [
     "get",
     "put",
     "post",
@@ -93,9 +89,9 @@ class ExampleObject(BaseModel):
 
 
 class MediaObject(BaseModel):
-    schema_: Union[ReferenceObject, JsonSchemaObject, None] = Field(None, alias="schema")
+    schema_: Optional[Union[ReferenceObject, JsonSchemaObject]] = Field(None, alias="schema")  # noqa: UP007, UP045
     example: Any = None
-    examples: Union[str, ReferenceObject, ExampleObject, None] = None
+    examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
 
 
 class ParameterObject(BaseModel):
@@ -106,8 +102,8 @@ class ParameterObject(BaseModel):
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: Any = None
-    examples: Union[str, ReferenceObject, ExampleObject, None] = None
-    content: Dict[str, MediaObject] = {}  # noqa: RUF012
+    examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
+    content: Dict[str, MediaObject] = {}  # noqa: RUF012, UP006
 
 
 class HeaderObject(BaseModel):
@@ -116,57 +112,57 @@ class HeaderObject(BaseModel):
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: Any = None
-    examples: Union[str, ReferenceObject, ExampleObject, None] = None
-    content: Dict[str, MediaObject] = {}  # noqa: RUF012
+    examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
+    content: Dict[str, MediaObject] = {}  # noqa: RUF012, UP006
 
 
 class RequestBodyObject(BaseModel):
     description: Optional[str] = None  # noqa: UP045
-    content: Dict[str, MediaObject] = {}  # noqa: RUF012
+    content: Dict[str, MediaObject] = {}  # noqa: RUF012, UP006
     required: bool = False
 
 
 class ResponseObject(BaseModel):
     description: Optional[str] = None  # noqa: UP045
-    headers: Dict[str, ParameterObject] = {}  # noqa: RUF012
-    content: Dict[Union[str, int], MediaObject] = {}  # noqa: RUF012
+    headers: Dict[str, ParameterObject] = {}  # noqa: RUF012, UP006
+    content: Dict[Union[str, int], MediaObject] = {}  # noqa: RUF012, UP006, UP007
 
 
 class Operation(BaseModel):
-    tags: List[str] = []  # noqa: RUF012
+    tags: List[str] = []  # noqa: RUF012, UP006
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     operationId: Optional[str] = None  # noqa: N815, UP045
-    parameters: List[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012
-    requestBody: Union[ReferenceObject, RequestBodyObject, None] = None  # noqa: N815
-    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012
+    parameters: List[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012, UP006, UP007
+    requestBody: Optional[Union[ReferenceObject, RequestBodyObject]] = None  # noqa: N815, UP007, UP045
+    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP006, UP007
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
-    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012
-    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012
-    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012
-    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012
-    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012
+    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012, UP006, UP007
+    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP006, UP007
+    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012, UP006, UP007
+    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012, UP006, UP007
+    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012, UP006, UP007
 
 
 @snooper_to_methods()
 class OpenAPIParser(JsonSchemaParser):
-    SCHEMA_PATHS: ClassVar[List[str]] = ["#/components/schemas"]
+    SCHEMA_PATHS: ClassVar[List[str]] = ["#/components/schemas"]  # noqa: UP006
 
     def __init__(  # noqa: PLR0913
         self,
-        source: Union[str, Path, List[Path], ParseResult],
+        source: str | Path | list[Path] | ParseResult,
         *,
-        data_model_type: Type[DataModel] = pydantic_model.BaseModel,
-        data_model_root_type: Type[DataModel] = pydantic_model.CustomRootType,
-        data_type_manager_type: Type[DataTypeManager] = pydantic_model.DataTypeManager,
-        data_model_field_type: Type[DataModelFieldBase] = pydantic_model.DataModelField,
+        data_model_type: type[DataModel] = pydantic_model.BaseModel,
+        data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
+        data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
+        data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,
-        additional_imports: List[str] | None = None,
+        additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
-        extra_template_data: DefaultDict[str, Dict[str, Any]] | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersion.PY_38,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
@@ -198,15 +194,15 @@ class OpenAPIParser(JsonSchemaParser):
         strict_types: Sequence[StrictTypes] | None = None,
         empty_enum_field_name: str | None = None,
         custom_class_name_generator: Callable[[str], str] | None = None,
-        field_extra_keys: Set[str] | None = None,
+        field_extra_keys: set[str] | None = None,
         field_include_all_keys: bool = False,
-        field_extra_keys_without_x_prefix: Set[str] | None = None,
-        openapi_scopes: List[OpenAPIScope] | None = None,
+        field_extra_keys_without_x_prefix: set[str] | None = None,
+        openapi_scopes: list[OpenAPIScope] | None = None,
         wrap_string_literal: bool | None = False,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
-        http_headers: Sequence[Tuple[str, str]] | None = None,
+        http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
@@ -219,14 +215,14 @@ class OpenAPIParser(JsonSchemaParser):
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
-        known_third_party: List[str] | None = None,
-        custom_formatters: List[str] | None = None,
-        custom_formatters_kwargs: Dict[str, Any] | None = None,
+        known_third_party: list[str] | None = None,
+        custom_formatters: list[str] | None = None,
+        custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
-        http_query_parameters: Sequence[Tuple[str, str]] | None = None,
+        http_query_parameters: Sequence[tuple[str, str]] | None = None,
         treat_dots_as_module: bool = False,
         use_exact_imports: bool = False,
-        default_field_extras: Dict[str, Any] | None = None,
+        default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
@@ -304,9 +300,9 @@ class OpenAPIParser(JsonSchemaParser):
             keyword_only=keyword_only,
             no_alias=no_alias,
         )
-        self.open_api_scopes: List[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
+        self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
 
-    def get_ref_model(self, ref: str) -> Dict[str, Any]:
+    def get_ref_model(self, ref: str) -> dict[str, Any]:
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
         ref_body = self._get_ref_body(ref_file) if ref_file else self.raw_obj
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
@@ -321,7 +317,7 @@ class OpenAPIParser(JsonSchemaParser):
 
         return super().get_data_type(obj)
 
-    def resolve_object(self, obj: Union[ReferenceObject, BaseModelT], object_type: Type[BaseModelT]) -> BaseModelT:
+    def resolve_object(self, obj: ReferenceObject | BaseModelT, object_type: type[BaseModelT]) -> BaseModelT:
         if isinstance(obj, ReferenceObject):
             ref_obj = self.get_ref_model(obj.ref)
             return object_type.parse_obj(ref_obj)
@@ -331,7 +327,7 @@ class OpenAPIParser(JsonSchemaParser):
         self,
         name: str,
         obj: JsonSchemaObject,
-        path: List[str],
+        path: list[str],
     ) -> DataType:
         if obj.is_array:
             data_type = self.parse_array(name, obj, [*path, name])
@@ -356,7 +352,7 @@ class OpenAPIParser(JsonSchemaParser):
         self,
         name: str,
         request_body: RequestBodyObject,
-        path: List[str],
+        path: list[str],
     ) -> None:
         for (
             media_type,
@@ -368,10 +364,10 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_responses(
         self,
         name: str,
-        responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]],
-        path: List[str],
-    ) -> Dict[Union[str, int], Dict[str, DataType]]:
-        data_types: DefaultDict[Union[str, int], Dict[str, DataType]] = defaultdict(dict)
+        responses: dict[str | int, ReferenceObject | ResponseObject],
+        path: list[str],
+    ) -> dict[str | int, dict[str, DataType]]:
+        data_types: defaultdict[str | int, dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
@@ -405,9 +401,9 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_tags(
         cls,
         name: str,  # noqa: ARG003
-        tags: List[str],
-        path: List[str],  # noqa: ARG003
-    ) -> List[str]:
+        tags: list[str],
+        path: list[str],  # noqa: ARG003
+    ) -> list[str]:
         return tags
 
     @classmethod
@@ -418,11 +414,11 @@ class OpenAPIParser(JsonSchemaParser):
     def parse_all_parameters(
         self,
         name: str,
-        parameters: List[Union[ReferenceObject, ParameterObject]],
-        path: List[str],
+        parameters: list[ReferenceObject | ParameterObject],
+        path: list[str],
     ) -> None:
-        fields: List[DataModelFieldBase] = []
-        exclude_field_names: Set[str] = set()
+        fields: list[DataModelFieldBase] = []
+        exclude_field_names: set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter_ in parameters:
             parameter = self.resolve_object(parameter_, ParameterObject)
@@ -444,7 +440,7 @@ class OpenAPIParser(JsonSchemaParser):
                     )
                 )
             else:
-                data_types: List[DataType] = []
+                data_types: list[DataType] = []
                 object_schema: JsonSchemaObject | None = None
                 for (
                     media_type,
@@ -506,8 +502,8 @@ class OpenAPIParser(JsonSchemaParser):
 
     def parse_operation(
         self,
-        raw_operation: Dict[str, Any],
-        path: List[str],
+        raw_operation: dict[str, Any],
+        path: list[str],
     ) -> None:
         operation = Operation.parse_obj(raw_operation)
         path_name, method = path[-2:]
@@ -574,10 +570,10 @@ class OpenAPIParser(JsonSchemaParser):
                         stacklevel=2,
                     )
 
-            specification: Dict[str, Any] = load_yaml(source.text)
+            specification: dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
-            schemas: Dict[Any, Any] = specification.get("components", {}).get("schemas", {})
-            security: List[Dict[str, List[str]]] | None = specification.get("security")
+            schemas: dict[Any, Any] = specification.get("components", {}).get("schemas", {})
+            security: list[dict[str, list[str]]] | None = specification.get("security")
             if OpenAPIScope.Schemas in self.open_api_scopes:
                 for (
                     obj_name,
@@ -589,8 +585,8 @@ class OpenAPIParser(JsonSchemaParser):
                         [*path_parts, "#/components", "schemas", obj_name],
                     )
             if OpenAPIScope.Paths in self.open_api_scopes:
-                paths: Dict[str, Dict[str, Any]] = specification.get("paths", {})
-                parameters: List[Dict[str, Any]] = [
+                paths: dict[str, dict[str, Any]] = specification.get("paths", {})
+                parameters: list[dict[str, Any]] = [
                     self._get_ref_body(p["$ref"]) if "$ref" in p else p
                     for p in paths.get("parameters", [])
                     if isinstance(p, dict)

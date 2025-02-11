@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from abc import ABC
 from pathlib import Path
-from typing import Any, ClassVar, DefaultDict, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Set
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import (
     ConstraintsBase,
     DataModel,
@@ -16,26 +17,31 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_EXTRA,
     IMPORT_FIELD,
 )
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 from datamodel_code_generator.util import cached_property
 
+if TYPE_CHECKING:
+    from collections import defaultdict
+
+    from datamodel_code_generator.imports import Import
+    from datamodel_code_generator.reference import Reference
+
 
 class Constraints(ConstraintsBase):
-    gt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMinimum")
-    ge: Optional[UnionIntFloat] = Field(None, alias="minimum")
-    lt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMaximum")
-    le: Optional[UnionIntFloat] = Field(None, alias="maximum")
-    multiple_of: Optional[float] = Field(None, alias="multipleOf")
-    min_items: Optional[int] = Field(None, alias="minItems")
-    max_items: Optional[int] = Field(None, alias="maxItems")
-    min_length: Optional[int] = Field(None, alias="minLength")
-    max_length: Optional[int] = Field(None, alias="maxLength")
-    regex: Optional[str] = Field(None, alias="pattern")
+    gt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMinimum")  # noqa: UP045
+    ge: Optional[UnionIntFloat] = Field(None, alias="minimum")  # noqa: UP045
+    lt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMaximum")  # noqa: UP045
+    le: Optional[UnionIntFloat] = Field(None, alias="maximum")  # noqa: UP045
+    multiple_of: Optional[float] = Field(None, alias="multipleOf")  # noqa: UP045
+    min_items: Optional[int] = Field(None, alias="minItems")  # noqa: UP045
+    max_items: Optional[int] = Field(None, alias="maxItems")  # noqa: UP045
+    min_length: Optional[int] = Field(None, alias="minLength")  # noqa: UP045
+    max_length: Optional[int] = Field(None, alias="maxLength")  # noqa: UP045
+    regex: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
 class DataModelField(DataModelFieldBase):
-    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
+    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
         "alias",
         "default",
         "const",
@@ -50,21 +56,21 @@ class DataModelField(DataModelFieldBase):
         "max_length",
         "regex",
     }
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le"}
-    constraints: Optional[Constraints] = None
+    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le"}  # noqa: UP006
+    constraints: Optional[Constraints] = None  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "parse_obj"
 
     @property
-    def method(self) -> Optional[str]:
+    def method(self) -> str | None:
         return self.validator
 
     @property
-    def validator(self) -> Optional[str]:
+    def validator(self) -> str | None:
         return None
         # TODO refactor this method for other validation logic
 
     @property
-    def field(self) -> Optional[str]:
+    def field(self) -> str | None:
         """for backwards compatibility"""
         result = str(self)
         if (
@@ -93,7 +99,7 @@ class DataModelField(DataModelFieldBase):
             return float(value)
         return int(value)
 
-    def _get_default_as_pydantic_model(self) -> Optional[str]:
+    def _get_default_as_pydantic_model(self) -> str | None:
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict or self.data_type.is_union:
@@ -117,15 +123,15 @@ class DataModelField(DataModelFieldBase):
                 )
         return None
 
-    def _process_data_in_str(self, data: Dict[str, Any]) -> None:
+    def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
             data["const"] = True
 
-    def _process_annotated_field_arguments(self, field_arguments: List[str]) -> List[str]:  # noqa: PLR6301
+    def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
 
     def __str__(self) -> str:  # noqa: PLR0912
-        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
+        data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data["alias"] = self.alias
         if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
@@ -179,13 +185,13 @@ class DataModelField(DataModelFieldBase):
         return f"Field({', '.join(field_arguments)})"
 
     @property
-    def annotated(self) -> Optional[str]:
+    def annotated(self) -> str | None:
         if not self.use_annotated or not str(self):
             return None
         return f"Annotated[{self.type_hint}, {self!s}]"
 
     @property
-    def imports(self) -> Tuple[Import, ...]:
+    def imports(self) -> tuple[Import, ...]:
         if self.field:
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
@@ -196,19 +202,19 @@ class BaseModelBase(DataModel, ABC):
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, Any] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
     ) -> None:
-        methods: List[str] = [field.method for field in fields if field.method]
+        methods: list[str] = [field.method for field in fields if field.method]
 
         super().__init__(
             fields=fields,
@@ -246,14 +252,14 @@ class BaseModel(BaseModelBase):
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, Any] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
@@ -272,7 +278,7 @@ class BaseModel(BaseModelBase):
             nullable=nullable,
             keyword_only=keyword_only,
         )
-        config_parameters: Dict[str, Any] = {}
+        config_parameters: dict[str, Any] = {}
 
         additional_properties = self.extra_template_data.get("additionalProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")

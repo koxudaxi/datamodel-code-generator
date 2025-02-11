@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from datamodel_code_generator.types import get_optional_type

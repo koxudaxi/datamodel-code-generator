@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic import DataTypeManager
 from datamodel_code_generator.model.pydantic.dataclass import DataClass

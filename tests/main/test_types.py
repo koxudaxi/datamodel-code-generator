@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_LITERAL,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.reference import Reference

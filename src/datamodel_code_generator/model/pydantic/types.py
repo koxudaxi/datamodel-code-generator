@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, ClassVar, Dict, Sequence, Set, Type
+from typing import Any, ClassVar, Sequence
 
 from datamodel_code_generator.format import DatetimeClassType, PythonVersion
 from datamodel_code_generator.imports import (
@@ -55,12 +55,12 @@ from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
 
 
 def type_map_factory(
-    data_type: Type[DataType],
+    data_type: type[DataType],
     strict_types: Sequence[StrictTypes],
     pattern_key: str,
     use_pendulum: bool,  # noqa: FBT001
     target_datetime_class: DatetimeClassType,  # noqa: ARG001
-) -> Dict[Types, DataType]:
+) -> dict[Types, DataType]:
     data_type_int = data_type(type="int")
     data_type_float = data_type(type="float")
     data_type_str = data_type(type="str")
@@ -118,7 +118,7 @@ def type_map_factory(
     return result
 
 
-def strict_type_map_factory(data_type: Type[DataType]) -> Dict[StrictTypes, DataType]:
+def strict_type_map_factory(data_type: type[DataType]) -> dict[StrictTypes, DataType]:
     return {
         StrictTypes.int: data_type.from_import(IMPORT_STRICT_INT, strict=True),
         StrictTypes.float: data_type.from_import(IMPORT_STRICT_FLOAT, strict=True),
@@ -128,7 +128,7 @@ def strict_type_map_factory(data_type: Type[DataType]) -> Dict[StrictTypes, Data
     }
 
 
-number_kwargs: Set[str] = {
+number_kwargs: set[str] = {
     "exclusiveMinimum",
     "minimum",
     "exclusiveMaximum",
@@ -136,9 +136,9 @@ number_kwargs: Set[str] = {
     "multipleOf",
 }
 
-string_kwargs: Set[str] = {"minItems", "maxItems", "minLength", "maxLength", "pattern"}
+string_kwargs: set[str] = {"minItems", "maxItems", "minLength", "maxLength", "pattern"}
 
-byes_kwargs: Set[str] = {"minLength", "maxLength"}
+byes_kwargs: set[str] = {"minLength", "maxLength"}
 
 escape_characters = str.maketrans({
     "'": r"\'",
@@ -175,17 +175,17 @@ class DataTypeManager(_DataTypeManager):
             target_datetime_class,
         )
 
-        self.type_map: Dict[Types, DataType] = self.type_map_factory(
+        self.type_map: dict[Types, DataType] = self.type_map_factory(
             self.data_type,
             strict_types=self.strict_types,
             pattern_key=self.PATTERN_KEY,
             target_datetime_class=self.target_datetime_class,
         )
-        self.strict_type_map: Dict[StrictTypes, DataType] = strict_type_map_factory(
+        self.strict_type_map: dict[StrictTypes, DataType] = strict_type_map_factory(
             self.data_type,
         )
 
-        self.kwargs_schema_to_model: Dict[str, str] = {
+        self.kwargs_schema_to_model: dict[str, str] = {
             "exclusiveMinimum": "gt",
             "minimum": "ge",
             "exclusiveMaximum": "lt",
@@ -200,11 +200,11 @@ class DataTypeManager(_DataTypeManager):
 
     def type_map_factory(
         self,
-        data_type: Type[DataType],
+        data_type: type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
         target_datetime_class: DatetimeClassType,  # noqa: ARG002
-    ) -> Dict[Types, DataType]:
+    ) -> dict[Types, DataType]:
         return type_map_factory(
             data_type,
             strict_types,
@@ -213,7 +213,7 @@ class DataTypeManager(_DataTypeManager):
             self.target_datetime_class,
         )
 
-    def transform_kwargs(self, kwargs: Dict[str, Any], filter_: Set[str]) -> Dict[str, str]:
+    def transform_kwargs(self, kwargs: dict[str, Any], filter_: set[str]) -> dict[str, str]:
         return {self.kwargs_schema_to_model.get(k, k): v for (k, v) in kwargs.items() if v is not None and k in filter_}
 
     def get_data_int_type(  # noqa: PLR0911
@@ -221,7 +221,7 @@ class DataTypeManager(_DataTypeManager):
         types: Types,
         **kwargs: Any,
     ) -> DataType:
-        data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, number_kwargs)
+        data_type_kwargs: dict[str, Any] = self.transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.int in self.strict_types
         if data_type_kwargs:
             if not strict:
@@ -276,7 +276,7 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_str_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, string_kwargs)
+        data_type_kwargs: dict[str, Any] = self.transform_kwargs(kwargs, string_kwargs)
         strict = StrictTypes.str in self.strict_types
         if data_type_kwargs:
             if strict:
@@ -291,7 +291,7 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_bytes_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs: Dict[str, Any] = self.transform_kwargs(kwargs, byes_kwargs)
+        data_type_kwargs: dict[str, Any] = self.transform_kwargs(kwargs, byes_kwargs)
         strict = StrictTypes.bytes in self.strict_types
         if data_type_kwargs and not strict:
             return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)

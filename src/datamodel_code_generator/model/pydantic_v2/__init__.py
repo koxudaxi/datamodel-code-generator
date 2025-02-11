@@ -21,7 +21,7 @@ class ConfigDict(_BaseModel):
     from_attributes: Optional[bool] = None  # noqa: UP045
     frozen: Optional[bool] = None  # noqa: UP045
     arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
-    protected_namespaces: Optional[Tuple[str, ...]] = None  # noqa: UP045
+    protected_namespaces: Optional[Tuple[str, ...]] = None  # noqa: UP006, UP045
     regex_engine: Optional[str] = None  # noqa: UP045
     use_enum_values: Optional[bool] = None  # noqa: UP045
 

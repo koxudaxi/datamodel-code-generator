@@ -1,27 +1,27 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Callable, Iterable, List, NamedTuple, Type
+from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple
 
 from datamodel_code_generator import DatetimeClassType, PythonVersion
-from datamodel_code_generator.types import DataTypeManager as DataTypeManagerABC
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType
+    from datamodel_code_generator.types import DataTypeManager as DataTypeManagerABC
 
 DEFAULT_TARGET_DATETIME_CLASS = DatetimeClassType.Datetime
 DEFAULT_TARGET_PYTHON_VERSION = PythonVersion(f"{sys.version_info.major}.{sys.version_info.minor}")
 
 
 class DataModelSet(NamedTuple):
-    data_model: Type[DataModel]
-    root_model: Type[DataModel]
-    field_model: Type[DataModelFieldBase]
-    data_type_manager: Type[DataTypeManagerABC]
+    data_model: type[DataModel]
+    root_model: type[DataModel]
+    field_model: type[DataModelFieldBase]
+    data_type_manager: type[DataTypeManagerABC]
     dump_resolve_reference_action: Callable[[Iterable[str]], str] | None
-    known_third_party: List[str] | None = None
+    known_third_party: list[str] | None = None
 
 
 def get_data_model_types(

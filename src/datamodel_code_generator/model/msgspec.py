@@ -1,16 +1,14 @@
+from __future__ import annotations
+
 from functools import wraps
-from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
-    DefaultDict,
-    Dict,
-    List,
     Optional,
     Sequence,
     Set,
     Tuple,
-    Type,
     TypeVar,
 )
 
@@ -38,7 +36,6 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.rootmodel import RootModel as _RootModel
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import type_map_factory
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
     DataType,
     StrictTypes,
@@ -46,6 +43,12 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
+
+if TYPE_CHECKING:
+    from collections import defaultdict
+    from pathlib import Path
+
+    from datamodel_code_generator.reference import Reference
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -55,11 +58,11 @@ def _has_field_assignment(field: DataModelFieldBase) -> bool:
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
 
 
-def import_extender(cls: Type[DataModelFieldBaseT]) -> Type[DataModelFieldBaseT]:
+def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]:
     original_imports: property = cls.imports
 
     @wraps(original_imports.fget)  # pyright: ignore[reportArgumentType]
-    def new_imports(self: DataModelFieldBaseT) -> Tuple[Import, ...]:
+    def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
         extra_imports = []
         field = self.field
         # TODO: Improve field detection
@@ -84,21 +87,21 @@ class RootModel(_RootModel):
 class Struct(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "msgspec.jinja2"
     BASE_CLASS: ClassVar[str] = "msgspec.Struct"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()
+    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()  # noqa: UP006
 
     def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Dict[str, Any]]] = None,
-        methods: Optional[List[str]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
+        methods: list[str] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
@@ -128,17 +131,17 @@ class Struct(DataModel):
 
 class Constraints(_Constraints):
     # To override existing pattern alias
-    regex: Optional[str] = Field(None, alias="regex")
-    pattern: Optional[str] = Field(None, alias="pattern")
+    regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
+    pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
 @import_extender
 class DataModelField(DataModelFieldBase):
-    _FIELD_KEYS: ClassVar[Set[str]] = {
+    _FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
         "default",
         "default_factory",
     }
-    _META_FIELD_KEYS: ClassVar[Set[str]] = {
+    _META_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
         "title",
         "description",
         "gt",
@@ -155,8 +158,8 @@ class DataModelField(DataModelFieldBase):
         # 'unique_items', # not supported by msgspec
     }
     _PARSE_METHOD = "convert"
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}
-    constraints: Optional[Constraints] = None
+    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}  # noqa: UP006
+    constraints: Optional[Constraints] = None  # noqa: UP045
 
     def self_reference(self) -> bool:  # pragma: no cover
         return isinstance(self.parent, Struct) and self.parent.reference.path in {
@@ -181,7 +184,7 @@ class DataModelField(DataModelFieldBase):
         return int(value)
 
     @property
-    def field(self) -> Optional[str]:
+    def field(self) -> str | None:
         """for backwards compatibility"""
         result = str(self)
         if not result:
@@ -189,7 +192,7 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def __str__(self) -> str:
-        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
+        data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
         if self.alias:
             data["name"] = self.alias
 
@@ -224,11 +227,11 @@ class DataModelField(DataModelFieldBase):
         return f"field({', '.join(kwargs)})"
 
     @property
-    def annotated(self) -> Optional[str]:
+    def annotated(self) -> str | None:
         if not self.use_annotated:  # pragma: no cover
             return None
 
-        data: Dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._META_FIELD_KEYS}
+        data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._META_FIELD_KEYS}
         if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
             data = {
                 **data,
@@ -256,7 +259,7 @@ class DataModelField(DataModelFieldBase):
 
         return annotated_type
 
-    def _get_default_as_struct_model(self) -> Optional[str]:
+    def _get_default_as_struct_model(self) -> str | None:
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict or self.data_type.is_union:
@@ -287,7 +290,7 @@ class DataTypeManager(_DataTypeManager):
         python_version: PythonVersion = PythonVersion.PY_38,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
-        strict_types: Optional[Sequence[StrictTypes]] = None,
+        strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
@@ -315,7 +318,7 @@ class DataTypeManager(_DataTypeManager):
             else {}
         )
 
-        self.type_map: Dict[Types, DataType] = {
+        self.type_map: dict[Types, DataType] = {
             **type_map_factory(self.data_type),
             **datetime_map,
         }

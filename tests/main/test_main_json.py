@@ -1,19 +1,24 @@
+from __future__ import annotations
+
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 from unittest.mock import call
 
 import black
 import pytest
 from freezegun import freeze_time
 from packaging import version
-from pytest_mock import MockerFixture
 
 from datamodel_code_generator import (
     chdir,
 )
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 FixtureRequest = pytest.FixtureRequest
 

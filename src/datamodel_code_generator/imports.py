@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from functools import lru_cache
 from itertools import starmap
-from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import DefaultDict, Iterable, Optional, Set
 
 from datamodel_code_generator.util import BaseModel
 
@@ -17,7 +17,7 @@ class Import(BaseModel):
     @classmethod
     @lru_cache
     def from_full_path(cls, class_path: str) -> Import:
-        split_class_path: List[str] = class_path.split(".")
+        split_class_path: list[str] = class_path.split(".")
         return Import(from_=".".join(split_class_path[:-1]) or None, import_=split_class_path[-1])
 
 
@@ -27,18 +27,18 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
     def __init__(self, use_exact: bool = False) -> None:  # noqa: FBT001, FBT002
         super().__init__(set)
-        self.alias: DefaultDict[str | None, Dict[str, str]] = defaultdict(dict)
-        self.counter: Dict[Tuple[str | None, str], int] = defaultdict(int)
-        self.reference_paths: Dict[str, Import] = {}
+        self.alias: defaultdict[str | None, dict[str, str]] = defaultdict(dict)
+        self.counter: dict[tuple[str | None, str], int] = defaultdict(int)
+        self.reference_paths: dict[str, Import] = {}
         self.use_exact: bool = use_exact
 
-    def _set_alias(self, from_: str | None, imports: Set[str]) -> List[str]:
+    def _set_alias(self, from_: str | None, imports: set[str]) -> list[str]:
         return [
             f"{i} as {self.alias[from_][i]}" if i in self.alias[from_] and i != self.alias[from_][i] else i
             for i in sorted(imports)
         ]
 
-    def create_line(self, from_: str | None, imports: Set[str]) -> str:
+    def create_line(self, from_: str | None, imports: set[str]) -> str:
         if from_:
             return f"from {from_} import {', '.join(self._set_alias(from_, imports))}"
         return "\n".join(f"import {i}" for i in self._set_alias(from_, imports))
@@ -46,7 +46,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
     def dump(self) -> str:
         return "\n".join(starmap(self.create_line, self.items()))
 
-    def append(self, imports: Union[Import, Iterable[Import], None]) -> None:
+    def append(self, imports: Import | Iterable[Import] | None) -> None:
         if imports:
             if isinstance(imports, Import):
                 imports = [imports]
@@ -62,7 +62,7 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
                     if import_.alias:
                         self.alias[import_.from_][import_.import_] = import_.alias
 
-    def remove(self, imports: Union[Import, Iterable[Import]]) -> None:
+    def remove(self, imports: Import | Iterable[Import]) -> None:
         if isinstance(imports, Import):  # pragma: no cover
             imports = [imports]
         for import_ in imports:

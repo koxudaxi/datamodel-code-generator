@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 from warnings import warn
 
 import black
@@ -89,9 +89,9 @@ if TYPE_CHECKING:
 
     class _TargetVersion(Enum): ...
 
-    BLACK_PYTHON_VERSION: Dict[PythonVersion, _TargetVersion]
+    BLACK_PYTHON_VERSION: dict[PythonVersion, _TargetVersion]
 else:
-    BLACK_PYTHON_VERSION: Dict[PythonVersion, black.TargetVersion] = {
+    BLACK_PYTHON_VERSION: dict[PythonVersion, black.TargetVersion] = {
         v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
         for v in PythonVersion
         if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
@@ -104,11 +104,11 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no 
 
 def black_find_project_root(sources: Sequence[Path]) -> Path:
     if TYPE_CHECKING:
-        from typing import Iterable, Tuple, Union  # noqa: PLC0415
+        from typing import Iterable  # noqa: PLC0415
 
         def _find_project_root(
-            srcs: Union[Sequence[str], Iterable[str]],
-        ) -> Union[Tuple[Path, str], Path]: ...
+            srcs: Sequence[str] | Iterable[str],
+        ) -> tuple[Path, str] | Path: ...
 
     else:
         from black import find_project_root as _find_project_root  # noqa: PLC0415
@@ -126,9 +126,9 @@ class CodeFormatter:
         settings_path: Path | None = None,
         wrap_string_literal: bool | None = None,  # noqa: FBT001
         skip_string_normalization: bool = True,  # noqa: FBT001, FBT002
-        known_third_party: List[str] | None = None,
-        custom_formatters: List[str] | None = None,
-        custom_formatters_kwargs: Dict[str, Any] | None = None,
+        known_third_party: list[str] | None = None,
+        custom_formatters: list[str] | None = None,
+        custom_formatters_kwargs: dict[str, Any] | None = None,
     ) -> None:
         if not settings_path:
             settings_path = Path.cwd()
@@ -141,7 +141,7 @@ class CodeFormatter:
         else:
             config = {}
 
-        black_kwargs: Dict[str, Any] = {}
+        black_kwargs: dict[str, Any] = {}
         if wrap_string_literal is not None:
             experimental_string_processing = wrap_string_literal
         elif black.__version__ < "24.1.0":
@@ -177,7 +177,7 @@ class CodeFormatter:
 
         self.settings_path: str = str(settings_path)
 
-        self.isort_config_kwargs: Dict[str, Any] = {}
+        self.isort_config_kwargs: dict[str, Any] = {}
         if known_third_party:
             self.isort_config_kwargs["known_third_party"] = known_third_party
 
@@ -204,7 +204,7 @@ class CodeFormatter:
 
         return formatter_class(formatter_kwargs=self.custom_formatters_kwargs)
 
-    def _check_custom_formatters(self, custom_formatters: List[str] | None) -> List[CustomCodeFormatter]:
+    def _check_custom_formatters(self, custom_formatters: list[str] | None) -> list[CustomCodeFormatter]:
         if custom_formatters is None:
             return []
 
@@ -248,7 +248,7 @@ class CodeFormatter:
 
 
 class CustomCodeFormatter:
-    def __init__(self, formatter_kwargs: Dict[str, Any]) -> None:
+    def __init__(self, formatter_kwargs: dict[str, Any]) -> None:
         self.formatter_kwargs = formatter_kwargs
 
     def apply(self, code: str) -> str:

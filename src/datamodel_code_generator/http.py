@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence, Tuple
+from typing import Sequence
 
 try:
     import httpx
@@ -11,9 +11,9 @@ except ImportError as exc:  # pragma: no cover
 
 def get_body(
     url: str,
-    headers: Sequence[Tuple[str, str]] | None = None,
+    headers: Sequence[tuple[str, str]] | None = None,
     ignore_tls: bool = False,  # noqa: FBT001, FBT002
-    query_parameters: Sequence[Tuple[str, str]] | None = None,
+    query_parameters: Sequence[tuple[str, str]] | None = None,
 ) -> str:
     return httpx.get(
         url,

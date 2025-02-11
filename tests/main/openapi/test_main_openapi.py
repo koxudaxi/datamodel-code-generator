@@ -8,7 +8,7 @@ from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List
+from typing import TYPE_CHECKING
 from unittest.mock import call
 
 import black
@@ -17,7 +17,6 @@ import pydantic
 import pytest
 from freezegun import freeze_time
 from packaging import version
-from pytest_mock import MockerFixture
 
 with contextlib.suppress(ImportError):
     pass
@@ -34,6 +33,9 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
@@ -1240,7 +1242,7 @@ def test_main_openapi_pattern(output_model: str, expected_output: str) -> None:
     black.__version__.split(".")[0] < "22",
     reason="Installed black doesn't support Python version 3.10",
 )
-def test_main_openapi_pattern_with_lookaround_pydantic_v2(expected_output: str, args: List[str]) -> None:
+def test_main_openapi_pattern_with_lookaround_pydantic_v2(expected_output: str, args: list[str]) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([

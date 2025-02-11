@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datamodel_code_generator.imports import Import
 
 IMPORT_DATACLASS = Import.from_full_path("dataclasses.dataclass")

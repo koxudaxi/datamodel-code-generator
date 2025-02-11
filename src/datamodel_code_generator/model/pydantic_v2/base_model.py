@@ -1,11 +1,11 @@
+from __future__ import annotations
+
 import re
 from enum import Enum
-from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
-    DefaultDict,
-    Dict,
     List,
     NamedTuple,
     Optional,
@@ -26,8 +26,13 @@ from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
-from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.util import field_validator, model_validator
+
+if TYPE_CHECKING:
+    from collections import defaultdict
+    from pathlib import Path
+
+    from datamodel_code_generator.reference import Reference
 
 
 class UnionMode(Enum):
@@ -37,11 +42,11 @@ class UnionMode(Enum):
 
 class Constraints(_Constraints):
     # To override existing pattern alias
-    regex: Optional[str] = Field(None, alias="regex")
-    pattern: Optional[str] = Field(None, alias="pattern")
+    regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
+    pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
     @model_validator(mode="before")
-    def validate_min_max_items(cls, values: Any) -> Dict[str, Any]:  # noqa: N805
+    def validate_min_max_items(cls, values: Any) -> dict[str, Any]:  # noqa: N805
         if not isinstance(values, dict):  # pragma: no cover
             return values
         min_items = values.pop("minItems", None)
@@ -54,7 +59,7 @@ class Constraints(_Constraints):
 
 
 class DataModelField(DataModelFieldV1):
-    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {
+    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
         "alias",
         "default",
         "gt",
@@ -66,7 +71,7 @@ class DataModelField(DataModelFieldV1):
         "max_length",
         "pattern",
     }
-    _DEFAULT_FIELD_KEYS: ClassVar[Set[str]] = {
+    _DEFAULT_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
         "default",
         "default_factory",
         "alias",
@@ -98,12 +103,12 @@ class DataModelField(DataModelFieldV1):
         "max_length",
         "union_mode",
     }
-    constraints: Optional[Constraints] = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    constraints: Optional[Constraints] = None  # pyright: ignore[reportIncompatibleVariableOverride]  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "model_validate"
     can_have_extra_keys: ClassVar[bool] = False
 
     @field_validator("extras")
-    def validate_extras(cls, values: Any) -> Dict[str, Any]:  # noqa: N805
+    def validate_extras(cls, values: Any) -> dict[str, Any]:  # noqa: N805
         if not isinstance(values, dict):  # pragma: no cover
             return values
         if "examples" in values:
@@ -123,7 +128,7 @@ class DataModelField(DataModelFieldV1):
         if not self.default:
             self.default = const
 
-    def _process_data_in_str(self, data: Dict[str, Any]) -> None:
+    def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
             # const is removed in pydantic 2.0
             data.pop("const")
@@ -146,8 +151,8 @@ class DataModelField(DataModelFieldV1):
 
     def _process_annotated_field_arguments(  # noqa: PLR6301
         self,
-        field_arguments: List[str],
-    ) -> List[str]:
+        field_arguments: list[str],
+    ) -> list[str]:
         return field_arguments
 
 
@@ -160,7 +165,7 @@ class ConfigAttribute(NamedTuple):
 class BaseModel(BaseModelBase):
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
-    CONFIG_ATTRIBUTES: ClassVar[List[ConfigAttribute]] = [
+    CONFIG_ATTRIBUTES: ClassVar[List[ConfigAttribute]] = [  # noqa: UP006
         ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
@@ -171,14 +176,14 @@ class BaseModel(BaseModelBase):
         self,
         *,
         reference: Reference,
-        fields: List[DataModelFieldBase],
-        decorators: Optional[List[str]] = None,
-        base_classes: Optional[List[Reference]] = None,
-        custom_base_class: Optional[str] = None,
-        custom_template_dir: Optional[Path] = None,
-        extra_template_data: Optional[DefaultDict[str, Any]] = None,
-        path: Optional[Path] = None,
-        description: Optional[str] = None,
+        fields: list[DataModelFieldBase],
+        decorators: list[str] | None = None,
+        base_classes: list[Reference] | None = None,
+        custom_base_class: str | None = None,
+        custom_template_dir: Path | None = None,
+        extra_template_data: defaultdict[str, Any] | None = None,
+        path: Path | None = None,
+        description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
@@ -197,7 +202,7 @@ class BaseModel(BaseModelBase):
             nullable=nullable,
             keyword_only=keyword_only,
         )
-        config_parameters: Dict[str, Any] = {}
+        config_parameters: dict[str, Any] = {}
 
         extra = self._get_config_extra()
         if extra:
@@ -233,7 +238,7 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
-    def _get_config_extra(self) -> Optional[Literal["'allow'", "'forbid'"]]:
+    def _get_config_extra(self) -> Literal["'allow'", "'forbid'"] | None:
         additional_properties = self.extra_template_data.get("additionalProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
         if additional_properties is not None or allow_extra_fields:
