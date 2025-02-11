@@ -7,7 +7,7 @@ from datamodel_code_generator.types import UnionIntFloat
 
 
 @pytest.mark.parametrize(
-    ('gt', 'expected'),
+    ("gt", "expected"),
     [
         (None, False),
         (4, True),

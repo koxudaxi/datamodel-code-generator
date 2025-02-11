@@ -3,9 +3,9 @@
 #   timestamp: 2019-07-26T00:00:00+00:00
 
 # MIT License
-# 
+#
 # Copyright (c) 2023 Blah-blah
-# 
+#
 from __future__ import annotations
 
 from typing import List, Optional
