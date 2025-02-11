@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 
 from pydantic import BaseModel as _BaseModel
 
@@ -14,16 +14,16 @@ def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
 
 
 class ConfigDict(_BaseModel):
-    extra: str | None = None
-    title: str | None = None
-    populate_by_name: bool | None = None
-    allow_extra_fields: bool | None = None
-    from_attributes: bool | None = None
-    frozen: bool | None = None
-    arbitrary_types_allowed: bool | None = None
-    protected_namespaces: Tuple[str, ...] | None = None
-    regex_engine: str | None = None
-    use_enum_values: bool | None = None
+    extra: Optional[str] = None  # noqa: UP045
+    title: Optional[str] = None  # noqa: UP045
+    populate_by_name: Optional[bool] = None  # noqa: UP045
+    allow_extra_fields: Optional[bool] = None  # noqa: UP045
+    from_attributes: Optional[bool] = None  # noqa: UP045
+    frozen: Optional[bool] = None  # noqa: UP045
+    arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
+    protected_namespaces: Optional[Tuple[str, ...]] = None  # noqa: UP045
+    regex_engine: Optional[str] = None  # noqa: UP045
+    use_enum_values: Optional[bool] = None  # noqa: UP045
 
 
 __all__ = [

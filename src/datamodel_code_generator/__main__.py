@@ -18,6 +18,7 @@ from typing import (
     DefaultDict,
     Dict,
     List,
+    Optional,
     Sequence,
     Set,
     Tuple,
@@ -262,36 +263,36 @@ class Config(BaseModel):
                 values["field_constraints"] = True
             return values
 
-    input: Union[Path, str] | None = None
+    input: Optional[Union[Path, str]] = None  # noqa: UP045
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
-    output: Path | None = None
+    output: Optional[Path] = None  # noqa: UP045
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersion.PY_38
     base_class: str = ""
-    additional_imports: List[str] | None = None
-    custom_template_dir: Path | None = None
-    extra_template_data: TextIOBase | None = None
+    additional_imports: Optional[List[str]] = None  # noqa: UP045
+    custom_template_dir: Optional[Path] = None  # noqa: UP045
+    extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: TextIOBase | None = None
+    aliases: Optional[TextIOBase] = None  # noqa: UP045
     disable_timestamp: bool = False
     enable_version_header: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     use_default: bool = False
     force_optional: bool = False
-    class_name: str | None = None
+    class_name: Optional[str] = None  # noqa: UP045
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
     encoding: str = DEFAULT_ENCODING
-    enum_field_as_literal: LiteralType | None = None
+    enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
     use_one_literal_as_default: bool = False
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
@@ -299,39 +300,39 @@ class Config(BaseModel):
     use_generic_container_types: bool = False
     use_union_operator: bool = False
     enable_faux_immutability: bool = False
-    url: ParseResult | None = None
+    url: Optional[ParseResult] = None  # noqa: UP045
     disable_appending_item_suffix: bool = False
     strict_types: List[StrictTypes] = []
-    empty_enum_field_name: str | None = None
-    field_extra_keys: Set[str] | None = None
+    empty_enum_field_name: Optional[str] = None  # noqa: UP045
+    field_extra_keys: Optional[Set[str]] = None  # noqa: UP045
     field_include_all_keys: bool = False
-    field_extra_keys_without_x_prefix: Set[str] | None = None
-    openapi_scopes: List[OpenAPIScope] | None = [OpenAPIScope.Schemas]
-    wrap_string_literal: bool | None = None
+    field_extra_keys_without_x_prefix: Optional[Set[str]] = None  # noqa: UP045
+    openapi_scopes: Optional[List[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
+    wrap_string_literal: Optional[bool] = None  # noqa: UP045
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
-    http_headers: Sequence[Tuple[str, str]] | None = None
+    http_headers: Optional[Sequence[Tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     use_annotated: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
-    original_field_name_delimiter: str | None = None
+    original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
-    special_field_name_prefix: str | None = None
+    special_field_name_prefix: Optional[str] = None  # noqa: UP045
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
     keep_model_order: bool = False
-    custom_file_header: str | None = None
-    custom_file_header_path: Path | None = None
-    custom_formatters: List[str] | None = None
-    custom_formatters_kwargs: TextIOBase | None = None
+    custom_file_header: Optional[str] = None  # noqa: UP045
+    custom_file_header_path: Optional[Path] = None  # noqa: UP045
+    custom_formatters: Optional[List[str]] = None  # noqa: UP045
+    custom_formatters_kwargs: Optional[TextIOBase] = None  # noqa: UP045
     use_pendulum: bool = False
-    http_query_parameters: Sequence[Tuple[str, str]] | None = None
+    http_query_parameters: Optional[Sequence[Tuple[str, str]]] = None  # noqa: UP045
     treat_dot_as_module: bool = False
     use_exact_imports: bool = False
-    union_mode: UnionMode | None = None
-    output_datetime_class: DatetimeClassType | None = None
+    union_mode: Optional[UnionMode] = None  # noqa: UP045
+    output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     keyword_only: bool = False
     no_alias: bool = False
 

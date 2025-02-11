@@ -17,6 +17,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    Optional,
     Sequence,
     Set,
     Tuple,
@@ -150,7 +151,7 @@ class JSONReference(_enum.Enum):
 
 class Discriminator(BaseModel):
     propertyName: str  # noqa: N815
-    mapping: Dict[str, str] | None = None
+    mapping: Optional[Dict[str, str]] = None  # noqa: UP045
 
 
 class JsonSchemaObject(BaseModel):
@@ -216,40 +217,40 @@ class JsonSchemaObject(BaseModel):
         return value
 
     items: Union[List[JsonSchemaObject], JsonSchemaObject, bool, None] = None
-    uniqueItems: bool | None = None  # noqa: N815
+    uniqueItems: Optional[bool] = None  # noqa: N815, UP045
     type: Union[str, List[str], None] = None
-    format: str | None = None
-    pattern: str | None = None
-    minLength: int | None = None  # noqa: N815
-    maxLength: int | None = None  # noqa: N815
-    minimum: UnionIntFloat | None = None
-    maximum: UnionIntFloat | None = None
-    minItems: int | None = None  # noqa: N815
-    maxItems: int | None = None  # noqa: N815
-    multipleOf: float | None = None  # noqa: N815
+    format: Optional[str] = None  # noqa: UP045
+    pattern: Optional[str] = None  # noqa: UP045
+    minLength: Optional[int] = None  # noqa:  N815,UP045
+    maxLength: Optional[int] = None  # noqa:  N815,UP045
+    minimum: Optional[UnionIntFloat] = None  # noqa:  UP045
+    maximum: Optional[UnionIntFloat] = None  # noqa:  UP045
+    minItems: Optional[int] = None  # noqa:  N815,UP045
+    maxItems: Optional[int] = None  # noqa:  N815,UP045
+    multipleOf: Optional[float] = None  # noqa: N815, UP045
     exclusiveMaximum: Union[float, bool, None] = None  # noqa: N815
     exclusiveMinimum: Union[float, bool, None] = None  # noqa: N815
     additionalProperties: Union[JsonSchemaObject, bool, None] = None  # noqa: N815
-    patternProperties: Dict[str, JsonSchemaObject] | None = None  # noqa: N815
+    patternProperties: Optional[Dict[str, JsonSchemaObject]] = None  # noqa: N815, UP045
     oneOf: List[JsonSchemaObject] = []  # noqa: N815, RUF012
     anyOf: List[JsonSchemaObject] = []  # noqa: N815, RUF012
     allOf: List[JsonSchemaObject] = []  # noqa: N815, RUF012
     enum: List[Any] = []  # noqa: RUF012
-    writeOnly: bool | None = None  # noqa: N815
-    readOnly: bool | None = None  # noqa: N815
-    properties: Dict[str, Union[JsonSchemaObject, bool]] | None = None
+    writeOnly: Optional[bool] = None  # noqa: N815, UP045
+    readOnly: Optional[bool] = None  # noqa: N815, UP045
+    properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: UP045
     required: List[str] = []  # noqa: RUF012
-    ref: str | None = Field(default=None, alias="$ref")
-    nullable: bool | None = False
+    ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
+    nullable: Optional[bool] = False  # noqa: UP045
     x_enum_varnames: List[str] = Field(default=[], alias="x-enum-varnames")
-    description: str | None = None
-    title: str | None = None
+    description: Optional[str] = None  # noqa: UP045
+    title: Optional[str] = None  # noqa: UP045
     example: Any = None
     examples: Any = None
     default: Any = None
-    id: str | None = Field(default=None, alias="$id")
-    custom_type_path: str | None = Field(default=None, alias="customTypePath")
-    custom_base_path: str | None = Field(default=None, alias="customBasePath")
+    id: Optional[str] = Field(default=None, alias="$id")  # noqa: UP045
+    custom_type_path: Optional[str] = Field(default=None, alias="customTypePath")  # noqa: UP045
+    custom_base_path: Optional[str] = Field(default=None, alias="customBasePath")  # noqa: UP045
     extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Union[Discriminator, str, None] = None
     if PYDANTIC_V2:
@@ -514,8 +515,8 @@ class JsonSchemaParser(Parser):
 
         self.remote_object_cache: DefaultPutDict[str, Dict[str, Any]] = DefaultPutDict()
         self.raw_obj: Dict[Any, Any] = {}
-        self._root_id: str | None = None
-        self._root_id_base_path: str | None = None
+        self._root_id: Optional[str] = None  # noqa: UP045
+        self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self.reserved_refs: DefaultDict[Tuple[str, ...], Set[str]] = defaultdict(set)
         self.field_keys: Set[str] = {
             *DEFAULT_FIELD_KEYS,
@@ -867,7 +868,10 @@ class JsonSchemaParser(Parser):
         return self.data_type(reference=reference)
 
     def parse_object_fields(
-        self, obj: JsonSchemaObject, path: List[str], module_name: str | None = None
+        self,
+        obj: JsonSchemaObject,
+        path: List[str],
+        module_name: Optional[str] = None,  # noqa: UP045
     ) -> List[DataModelFieldBase]:
         properties: Dict[str, Union[JsonSchemaObject, bool]] = {} if obj.properties is None else obj.properties
         requires: Set[str] = {*()} if obj.required is None else {*obj.required}
@@ -1105,7 +1109,7 @@ class JsonSchemaParser(Parser):
     ) -> DataModelFieldBase:
         if self.force_optional_for_required_fields:
             required: bool = False
-            nullable: bool | None = None
+            nullable: Optional[bool] = None  # noqa: UP045
         else:
             required = not (obj.has_default and self.apply_default_values_for_required_fields)
             if self.strict_nullable:

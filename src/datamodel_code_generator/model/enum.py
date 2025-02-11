@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, DefaultDict, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, DefaultDict, Dict, List, Optional, Tuple
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -110,7 +110,7 @@ class Member:
     def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
         self.enum: Enum = enum
         self.field: DataModelFieldBase = field
-        self.alias: str | None = None
+        self.alias: Optional[str] = None  # noqa: UP045
 
     def __repr__(self) -> str:
         return f"{self.alias or self.enum.name}.{self.field.name}"

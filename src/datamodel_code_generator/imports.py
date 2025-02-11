@@ -9,10 +9,10 @@ from datamodel_code_generator.util import BaseModel
 
 
 class Import(BaseModel):
-    from_: str | None = None
+    from_: Optional[str] = None  # noqa: UP045
     import_: str
-    alias: str | None = None
-    reference_path: str | None = None
+    alias: Optional[str] = None  # noqa: UP045
+    reference_path: Optional[str] = None  # noqa: UP045
 
     @classmethod
     @lru_cache

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 from unittest.mock import call
 
 import pydantic
@@ -494,8 +494,8 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     """
 
     class AltJsonSchemaObject(JsonSchemaObject):
-        properties: Dict[str, Union[AltJsonSchemaObject, bool]] | None = None
-        alt_type: str | None = None
+        properties: Optional[Dict[str, Union[AltJsonSchemaObject, bool]]] = None  # noqa: UP045
+        alt_type: Optional[str] = None  # noqa: UP045
 
         def model_post_init(self, context: Any) -> None:  # noqa: ARG002
             if self.alt_type:

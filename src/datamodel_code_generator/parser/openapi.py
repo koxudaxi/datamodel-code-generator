@@ -13,6 +13,7 @@ from typing import (
     Iterable,
     List,
     Mapping,
+    Optional,
     Pattern,
     Sequence,
     Set,
@@ -85,10 +86,10 @@ class ReferenceObject(BaseModel):
 
 
 class ExampleObject(BaseModel):
-    summary: str | None = None
-    description: str | None = None
+    summary: Optional[str] = None  # noqa: UP045
+    description: Optional[str] = None  # noqa: UP045
     value: Any = None
-    externalValue: str | None = None  # noqa: N815
+    externalValue: Optional[str] = None  # noqa: N815, UP045
 
 
 class MediaObject(BaseModel):
@@ -98,44 +99,44 @@ class MediaObject(BaseModel):
 
 
 class ParameterObject(BaseModel):
-    name: str | None = None
-    in_: ParameterLocation | None = Field(None, alias="in")
-    description: str | None = None
+    name: Optional[str] = None  # noqa: UP045
+    in_: Optional[ParameterLocation] = Field(None, alias="in")  # noqa: UP045
+    description: Optional[str] = None  # noqa: UP045
     required: bool = False
     deprecated: bool = False
-    schema_: JsonSchemaObject | None = Field(None, alias="schema")
+    schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: Any = None
     examples: Union[str, ReferenceObject, ExampleObject, None] = None
     content: Dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class HeaderObject(BaseModel):
-    description: str | None = None
+    description: Optional[str] = None  # noqa: UP045
     required: bool = False
     deprecated: bool = False
-    schema_: JsonSchemaObject | None = Field(None, alias="schema")
+    schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: Any = None
     examples: Union[str, ReferenceObject, ExampleObject, None] = None
     content: Dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class RequestBodyObject(BaseModel):
-    description: str | None = None
+    description: Optional[str] = None  # noqa: UP045
     content: Dict[str, MediaObject] = {}  # noqa: RUF012
     required: bool = False
 
 
 class ResponseObject(BaseModel):
-    description: str | None = None
+    description: Optional[str] = None  # noqa: UP045
     headers: Dict[str, ParameterObject] = {}  # noqa: RUF012
     content: Dict[Union[str, int], MediaObject] = {}  # noqa: RUF012
 
 
 class Operation(BaseModel):
     tags: List[str] = []  # noqa: RUF012
-    summary: str | None = None
-    description: str | None = None
-    operationId: str | None = None  # noqa: N815
+    summary: Optional[str] = None  # noqa: UP045
+    description: Optional[str] = None  # noqa: UP045
+    operationId: Optional[str] = None  # noqa: N815, UP045
     parameters: List[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012
     requestBody: Union[ReferenceObject, RequestBodyObject, None] = None  # noqa: N815
     responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012

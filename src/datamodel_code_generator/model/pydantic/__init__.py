@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from pydantic import BaseModel as _BaseModel
 
@@ -15,13 +15,13 @@ def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
 
 
 class Config(_BaseModel):
-    extra: str | None = None
-    title: str | None = None
-    allow_population_by_field_name: bool | None = None
-    allow_extra_fields: bool | None = None
-    allow_mutation: bool | None = None
-    arbitrary_types_allowed: bool | None = None
-    orm_mode: bool | None = None
+    extra: Optional[str] = None  # noqa: UP045
+    title: Optional[str] = None  # noqa: UP045
+    allow_population_by_field_name: Optional[bool] = None  # noqa: UP045
+    allow_extra_fields: Optional[bool] = None  # noqa: UP045
+    allow_mutation: Optional[bool] = None  # noqa: UP045
+    arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
+    orm_mode: Optional[bool] = None  # noqa: UP045
 
 
 __all__ = [
