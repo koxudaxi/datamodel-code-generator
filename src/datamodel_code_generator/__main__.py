@@ -77,6 +77,7 @@ def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
 
 signal.signal(signal.SIGINT, sig_int_handler)
 
+CI_TEST = ""
 
 class Config(BaseModel):
     if PYDANTIC_V2:
