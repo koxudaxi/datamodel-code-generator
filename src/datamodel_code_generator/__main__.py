@@ -79,6 +79,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 CI_TEST = ""
 
+
 class Config(BaseModel):
     if PYDANTIC_V2:
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
