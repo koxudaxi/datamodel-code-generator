@@ -1,0 +1,9 @@
+enum Color {
+  RED
+  GREEN
+  BLUE
+}
+
+input Car {
+  type: [Color!] = [RED]
+}
