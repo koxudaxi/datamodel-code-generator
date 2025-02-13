@@ -28,5 +28,6 @@ class Color(Enum):
 
 
 class Car(BaseModel):
-    type: Optional[List[Color]] = [Color.RED]
+    colorList: Optional[List[Color]] = [Color.RED]
+    colorOne: Optional[Color] = Color.GREEN
     typename__: Optional[Literal['Car']] = Field('Car', alias='__typename')
