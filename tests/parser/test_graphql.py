@@ -15,6 +15,7 @@ from tests.main.test_main_general import DATA_PATH
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 EXPECTED_GRAPHQL_PATH: Path = DATA_PATH / "expected" / "parser" / "graphql"
 
+
 @freeze_time("2019-07-26")
 def test_graphql_field_enum() -> None:
     with TemporaryDirectory() as output_dir:
@@ -30,4 +31,3 @@ def test_graphql_field_enum() -> None:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
-
