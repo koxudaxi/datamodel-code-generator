@@ -26,6 +26,7 @@ def test_graphql_field_enum() -> None:
             str(output_file),
             "--input-file-type",
             "graphql",
+            "--set-default-enum-member",
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
