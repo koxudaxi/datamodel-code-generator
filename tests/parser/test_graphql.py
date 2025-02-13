@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import black
-import isort
-import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
