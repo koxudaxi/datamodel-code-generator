@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import wraps
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
     Optional,
-    Sequence,
     Set,
     Tuple,
     TypeVar,
@@ -14,7 +14,7 @@ from typing import (
 
 from pydantic import Field
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator import DatetimeClassType, PythonVersionMin, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_DATE,
     IMPORT_DATETIME,
@@ -287,7 +287,7 @@ class DataModelField(DataModelFieldBase):
 class DataTypeManager(_DataTypeManager):
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        python_version: PythonVersion = PythonVersion.PY_38,
+        python_version: PythonVersion = PythonVersionMin,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,

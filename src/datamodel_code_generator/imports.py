@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import lru_cache
 from itertools import starmap
-from typing import DefaultDict, Iterable, Optional, Set
+from typing import DefaultDict, Optional, Set
 
 from datamodel_code_generator.util import BaseModel
 
@@ -89,7 +90,6 @@ class Imports(DefaultDict[Optional[str], Set[str]]):
 
 
 IMPORT_ANNOTATED = Import.from_full_path("typing.Annotated")
-IMPORT_ANNOTATED_BACKPORT = Import.from_full_path("typing_extensions.Annotated")
 IMPORT_ANY = Import.from_full_path("typing.Any")
 IMPORT_LIST = Import.from_full_path("typing.List")
 IMPORT_SET = Import.from_full_path("typing.Set")
@@ -97,7 +97,6 @@ IMPORT_UNION = Import.from_full_path("typing.Union")
 IMPORT_OPTIONAL = Import.from_full_path("typing.Optional")
 IMPORT_LITERAL = Import.from_full_path("typing.Literal")
 IMPORT_TYPE_ALIAS = Import.from_full_path("typing.TypeAlias")
-IMPORT_LITERAL_BACKPORT = Import.from_full_path("typing_extensions.Literal")
 IMPORT_SEQUENCE = Import.from_full_path("typing.Sequence")
 IMPORT_FROZEN_SET = Import.from_full_path("typing.FrozenSet")
 IMPORT_MAPPING = Import.from_full_path("typing.Mapping")

@@ -9,7 +9,7 @@ import black
 import pytest
 from freezegun import freeze_time
 
-from datamodel_code_generator import chdir, inferred_message
+from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 
 DATA_PATH: Path = Path(__file__).parent / "data"
@@ -68,7 +68,7 @@ def test_target_python_version() -> None:
             "--output",
             str(output_file),
             "--target-python-version",
-            "3.6",
+            f"3.{MIN_VERSION}",
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()

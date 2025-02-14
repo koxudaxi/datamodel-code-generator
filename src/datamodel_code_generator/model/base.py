@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Iterator
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -10,7 +11,6 @@ from typing import (
     Any,
     ClassVar,
     Dict,
-    Iterator,
     Optional,
     Set,
     Tuple,
@@ -23,7 +23,6 @@ from pydantic import Field
 
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
-    IMPORT_ANNOTATED_BACKPORT,
     IMPORT_OPTIONAL,
     IMPORT_UNION,
     Import,
@@ -163,10 +162,7 @@ class DataModelFieldBase(_BaseModel):
         elif self.nullable and not self.data_type.use_union_operator:  # pragma: no cover
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated and self.annotated:
-            import_annotated = (
-                IMPORT_ANNOTATED if self.data_type.python_version.has_annotated_type else IMPORT_ANNOTATED_BACKPORT
-            )
-            imports.append((import_annotated,))
+            imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
 
     @property

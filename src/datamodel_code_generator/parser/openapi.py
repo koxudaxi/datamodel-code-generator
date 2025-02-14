@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from collections.abc import Iterable, Mapping, Sequence
 from enum import Enum
+from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
     Dict,
-    Iterable,
     List,
-    Mapping,
     Optional,
-    Pattern,
-    Sequence,
     TypeVar,
     Union,
 )
@@ -28,6 +26,7 @@ from datamodel_code_generator import (
     LiteralType,
     OpenAPIScope,
     PythonVersion,
+    PythonVersionMin,
     load_yaml,
     snooper_to_methods,
 )
@@ -163,7 +162,7 @@ class OpenAPIParser(JsonSchemaParser):
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersion.PY_38,
+        target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,

@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, Literal, Union
+from typing import Annotated, ClassVar, Literal, Union
 
 from msgspec import Meta, Struct
-from typing_extensions import Annotated
 
 from .. import type_4
 from ..subfolder import type_5

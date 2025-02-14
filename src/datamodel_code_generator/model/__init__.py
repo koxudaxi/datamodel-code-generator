@@ -62,7 +62,7 @@ def get_data_model_types(
         )
     if data_model_type == DataModelType.TypingTypedDict:
         return DataModelSet(
-            data_model=(typed_dict.TypedDict if target_python_version.has_typed_dict else typed_dict.TypedDictBackport),
+            data_model=typed_dict.TypedDict,
             root_model=rootmodel.RootModel,
             field_model=(
                 typed_dict.DataModelField

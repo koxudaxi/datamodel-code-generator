@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import Decimal
-from typing import Any, ClassVar, Sequence
+from typing import Any, ClassVar
 
-from datamodel_code_generator.format import DatetimeClassType, PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersionMin, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,
@@ -155,7 +156,7 @@ class DataTypeManager(_DataTypeManager):
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        python_version: PythonVersion = PythonVersion.PY_38,
+        python_version: PythonVersion = PythonVersionMin,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,

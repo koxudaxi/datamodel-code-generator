@@ -2,21 +2,19 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator, Sequence
 from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
+from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
     Dict,
-    Iterable,
-    Iterator,
     List,
     Optional,
-    Pattern,
-    Sequence,
     Set,
     TypeVar,
     Union,
@@ -26,7 +24,7 @@ import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
-from datamodel_code_generator.format import DatetimeClassType, PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersionMin, PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -35,7 +33,6 @@ from datamodel_code_generator.imports import (
     IMPORT_FROZEN_SET,
     IMPORT_LIST,
     IMPORT_LITERAL,
-    IMPORT_LITERAL_BACKPORT,
     IMPORT_MAPPING,
     IMPORT_OPTIONAL,
     IMPORT_SEQUENCE,
@@ -253,7 +250,7 @@ class DataType(_BaseModel):
     is_func: bool = False
     kwargs: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
     import_: Optional[Import] = None  # noqa: UP045
-    python_version: PythonVersion = PythonVersion.PY_38
+    python_version: PythonVersion = PythonVersionMin
     is_optional: bool = False
     is_dict: bool = False
     is_list: bool = False
@@ -353,10 +350,7 @@ class DataType(_BaseModel):
         imports: tuple[tuple[bool, Import], ...] = (
             (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
             (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
-            (
-                bool(self.literals),
-                IMPORT_LITERAL if self.python_version.has_literal_type else IMPORT_LITERAL_BACKPORT,
-            ),
+            (bool(self.literals), IMPORT_LITERAL),
         )
 
         if self.use_generic_container:
@@ -449,8 +443,6 @@ class DataType(_BaseModel):
             source = self.reference.source
             if isinstance(source, Nullable) and source.nullable:
                 self.is_optional = True
-        if self.reference and self.python_version == PythonVersion.PY_36:
-            type_ = f"'{type_}'"
         if self.is_list:
             if self.use_generic_container:
                 list_ = SEQUENCE
@@ -542,7 +534,7 @@ class Types(Enum):
 class DataTypeManager(ABC):
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        python_version: PythonVersion = PythonVersion.PY_38,
+        python_version: PythonVersion = PythonVersionMin,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,
@@ -561,13 +553,6 @@ class DataTypeManager(ABC):
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
         self.target_datetime_class: DatetimeClassType = target_datetime_class or DatetimeClassType.Datetime
-
-        if use_generic_container_types and python_version == PythonVersion.PY_36:  # pragma: no cover
-            msg = (
-                "use_generic_container_types can not be used with target_python_version 3.6.\n"
-                " The version will be not supported in a future version"
-            )
-            raise Exception(msg)  # noqa: TRY002
 
         if TYPE_CHECKING:
             self.data_type: type[DataType]

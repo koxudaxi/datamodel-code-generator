@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum as _enum
 from collections import defaultdict
+from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
@@ -11,13 +12,8 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Generator,
-    Iterable,
-    Iterator,
     List,
-    Mapping,
     Optional,
-    Sequence,
     Set,
     Type,
     Union,
@@ -35,7 +31,7 @@ from datamodel_code_generator import (
     load_yaml_from_path,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import PythonVersion
+from datamodel_code_generator.format import PythonVersion, PythonVersionMin
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name
@@ -374,7 +370,7 @@ class JsonSchemaParser(Parser):
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersion.PY_38,
+        target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -1449,8 +1445,9 @@ class JsonSchemaParser(Parser):
                 relative_path, object_path = ref.split("#")
             relative_paths = relative_path.split("/")
             base_path = Path(*relative_paths).parent
-        with self.model_resolver.current_base_path_context(base_path), self.model_resolver.base_url_context(
-            relative_path
+        with (
+            self.model_resolver.current_base_path_context(base_path),
+            self.model_resolver.base_url_context(relative_path),
         ):
             self._parse_file(
                 self._get_ref_body(relative_path),
@@ -1565,9 +1562,10 @@ class JsonSchemaParser(Parser):
                 path_parts = list(source.path.parts)
             if self.current_source_path is not None:
                 self.current_source_path = source.path
-            with self.model_resolver.current_base_path_context(
-                source.path.parent
-            ), self.model_resolver.current_root_context(path_parts):
+            with (
+                self.model_resolver.current_base_path_context(source.path.parent),
+                self.model_resolver.current_root_context(path_parts),
+            ):
                 yield source, path_parts
 
     def parse_raw(self) -> None:
@@ -1602,9 +1600,10 @@ class JsonSchemaParser(Parser):
             if self.current_source_path is not None:
                 self.current_source_path = source.path
 
-            with self.model_resolver.current_base_path_context(
-                source.path.parent
-            ), self.model_resolver.current_root_context(path_parts):
+            with (
+                self.model_resolver.current_base_path_context(source.path.parent),
+                self.model_resolver.current_root_context(path_parts),
+            ):
                 for reserved_ref in sorted(reserved_refs):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue

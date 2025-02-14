@@ -5,18 +5,15 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import groupby
 from pathlib import Path
 from typing import (
     Any,
     Callable,
     Dict,
-    Iterable,
-    Iterator,
-    Mapping,
     NamedTuple,
     Optional,
-    Sequence,
     Set,
     TypeVar,
 )
@@ -24,15 +21,10 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import (
-    CodeFormatter,
-    DatetimeClassType,
-    PythonVersion,
-)
+from datamodel_code_generator.format import CodeFormatter, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
-    IMPORT_LITERAL_BACKPORT,
     Import,
     Imports,
 )
@@ -322,7 +314,7 @@ class Parser(ABC):
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersion.PY_38,
+        target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -811,10 +803,9 @@ class Parser(ABC):
                                 required=True,
                             )
                         )
-                    literal = IMPORT_LITERAL if self.target_python_version.has_literal_type else IMPORT_LITERAL_BACKPORT
-                    has_imported_literal = any(literal == import_ for import_ in imports)
+                    has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
                     if has_imported_literal:  # pragma: no cover
-                        imports.append(literal)
+                        imports.append(IMPORT_LITERAL)
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> DataType | None:
@@ -1177,7 +1168,7 @@ class Parser(ABC):
     ) -> str | dict[tuple[str, ...], Result]:
         self.parse_raw()
 
-        if with_import and self.target_python_version != PythonVersion.PY_36:
+        if with_import:
             self.imports.append(IMPORT_ANNOTATIONS)
 
         if format_:

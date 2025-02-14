@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import keyword
+from collections.abc import Iterator
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Iterator,
     Tuple,
 )
 
@@ -15,7 +15,6 @@ from datamodel_code_generator.model.imports import (
     IMPORT_NOT_REQUIRED,
     IMPORT_NOT_REQUIRED_BACKPORT,
     IMPORT_TYPED_DICT,
-    IMPORT_TYPED_DICT_BACKPORT,
 )
 from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
 
@@ -113,11 +112,6 @@ class TypedDict(DataModel):
             all_fields=self.all_fields,
             **self.extra_template_data,
         )
-
-
-class TypedDictBackport(TypedDict):
-    BASE_CLASS: ClassVar[str] = "typing_extensions.TypedDict"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT_BACKPORT,)  # noqa: UP006
 
 
 class DataModelField(DataModelFieldBase):

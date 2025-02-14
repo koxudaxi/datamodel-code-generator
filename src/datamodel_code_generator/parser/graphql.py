@@ -1,14 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
 )
 from urllib.parse import ParseResult
 
@@ -16,6 +13,7 @@ from datamodel_code_generator import (
     DefaultPutDict,
     LiteralType,
     PythonVersion,
+    PythonVersionMin,
     snooper_to_methods,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -93,7 +91,7 @@ class GraphQLParser(Parser):
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersion.PY_38,
+        target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,
@@ -254,9 +252,10 @@ class GraphQLParser(Parser):
                 path_parts = list(source.path.parts)
             if self.current_source_path is not None:  # pragma: no cover
                 self.current_source_path = source.path
-            with self.model_resolver.current_base_path_context(
-                source.path.parent
-            ), self.model_resolver.current_root_context(path_parts):
+            with (
+                self.model_resolver.current_base_path_context(source.path.parent),
+                self.model_resolver.current_root_context(path_parts),
+            ):
                 yield source, path_parts
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:

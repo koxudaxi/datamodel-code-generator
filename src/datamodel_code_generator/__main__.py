@@ -9,6 +9,7 @@ import signal
 import sys
 import warnings
 from collections import defaultdict
+from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
@@ -17,7 +18,6 @@ from typing import (
     Any,
     List,
     Optional,
-    Sequence,
     Set,
     Tuple,
     Union,
@@ -47,6 +47,7 @@ from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, nam
 from datamodel_code_generator.format import (
     DatetimeClassType,
     PythonVersion,
+    PythonVersionMin,
     is_supported_in_black,
 )
 from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 # needed for pydantic
@@ -141,19 +142,6 @@ class Config(BaseModel):
             return None
         msg = f"This protocol doesn't support only http/https. --input={value}"
         raise Error(msg)  # pragma: no cover
-
-    @model_validator(mode="after")
-    def validate_use_generic_container_types(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        if values.get("use_generic_container_types"):
-            target_python_version: PythonVersion = values["target_python_version"]
-            if target_python_version == target_python_version.PY_36:
-                msg = (
-                    f"`--use-generic-container-types` can not be used with `--target-python-version` "
-                    f"{target_python_version.PY_36.value}.\n"
-                    " The version will be not supported in a future version"
-                )
-                raise Error(msg)
-        return values
 
     @model_validator(mode="after")
     def validate_original_field_name_delimiter(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
@@ -266,7 +254,7 @@ class Config(BaseModel):
     output: Optional[Path] = None  # noqa: UP045
     debug: bool = False
     disable_warnings: bool = False
-    target_python_version: PythonVersion = PythonVersion.PY_38
+    target_python_version: PythonVersion = PythonVersionMin
     base_class: str = ""
     additional_imports: Optional[List[str]] = None  # noqa: UP006, UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
