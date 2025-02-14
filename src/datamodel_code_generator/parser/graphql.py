@@ -386,13 +386,15 @@ class GraphQLParser(Parser):
             elif graphql.is_non_null_type(obj):  # pragma: no cover
                 data_type.is_optional = False
 
-            obj = obj.of_type  # pyright: ignore[reportAttributeAccessIssue]
+            obj = graphql.assert_wrapping_type(obj)
+            obj = obj.of_type
 
         if graphql.is_enum_type(obj):
-            assert isinstance(obj, graphql.GraphQLNamedType)
+            obj = graphql.assert_enum_type(obj)
             data_type.reference = self.references[obj.name]
 
-        data_type.type = obj.name  # pyright: ignore[reportAttributeAccessIssue]
+        obj = graphql.assert_named_type(obj)
+        data_type.type = obj.name
 
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
 
