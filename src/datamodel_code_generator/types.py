@@ -2,29 +2,17 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator, Sequence
 from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
 from re import Pattern
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TypeVar, Union, runtime_checkable
 
 import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
-from datamodel_code_generator.format import DatetimeClassType, PythonVersionMin, PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -41,15 +29,11 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.util import (
-    PYDANTIC_V2,
-    ConfigDict,
-    Protocol,
-    runtime_checkable,
-)
+from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 
 if TYPE_CHECKING:
     import builtins
+    from collections.abc import Iterable, Iterator, Sequence
 
 if PYDANTIC_V2:
     from pydantic import GetCoreSchemaHandler
@@ -246,9 +230,9 @@ class DataType(_BaseModel):
 
     type: Optional[str] = None  # noqa: UP045
     reference: Optional[Reference] = None  # noqa: UP045
-    data_types: List[DataType] = []  # noqa: RUF012, UP006
+    data_types: list[DataType] = []  # noqa: RUF012
     is_func: bool = False
-    kwargs: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
+    kwargs: Optional[dict[str, Any]] = None  # noqa: UP045
     import_: Optional[Import] = None  # noqa: UP045
     python_version: PythonVersion = PythonVersionMin
     is_optional: bool = False
@@ -256,18 +240,18 @@ class DataType(_BaseModel):
     is_list: bool = False
     is_set: bool = False
     is_custom_type: bool = False
-    literals: List[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP006, UP007
+    literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None  # noqa: UP045
     parent: Optional[Any] = None  # noqa: UP045
-    children: List[Any] = []  # noqa: RUF012, UP006
+    children: list[Any] = []  # noqa: RUF012
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
 
-    _exclude_fields: ClassVar[Set[str]] = {"parent", "children"}  # noqa: UP006
-    _pass_fields: ClassVar[Set[str]] = {"parent", "children", "data_types", "reference"}  # noqa: UP006
+    _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
+    _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
 
     @classmethod
     def from_import(  # noqa: PLR0913

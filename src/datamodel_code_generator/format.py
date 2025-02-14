@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import cached_property
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -9,7 +10,7 @@ from warnings import warn
 import black
 import isort
 
-from datamodel_code_generator.util import cached_property, load_toml
+from datamodel_code_generator.util import load_toml
 
 try:
     import black.mode

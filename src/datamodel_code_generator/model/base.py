@@ -2,20 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Iterator
 from copy import deepcopy
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Dict,
-    Optional,
-    Set,
-    Tuple,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
@@ -37,7 +27,10 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, cached_property
+from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
@@ -48,7 +41,7 @@ ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
 
 class ConstraintsBase(_BaseModel):
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
-    _exclude_fields: ClassVar[Set[str]] = {"has_constraints"}  # noqa: UP006
+    _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
     if PYDANTIC_V2:
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             arbitrary_types_allowed=True, ignored_types=(cached_property,)
@@ -97,7 +90,7 @@ class DataModelFieldBase(_BaseModel):
     strip_default_none: bool = False
     nullable: Optional[bool] = None  # noqa: UP045
     parent: Optional[Any] = None  # noqa: UP045
-    extras: Dict[str, Any] = {}  # noqa: RUF012, UP006
+    extras: dict[str, Any] = {}  # noqa: RUF012
     use_annotated: bool = False
     has_default: bool = False
     use_field_description: bool = False
@@ -105,8 +98,8 @@ class DataModelFieldBase(_BaseModel):
     original_name: Optional[str] = None  # noqa: UP045
     use_default_kwarg: bool = False
     use_one_literal_as_default: bool = False
-    _exclude_fields: ClassVar[Set[str]] = {"parent"}  # noqa: UP006
-    _pass_fields: ClassVar[Set[str]] = {"parent", "data_type"}  # noqa: UP006
+    _exclude_fields: ClassVar[set[str]] = {"parent"}
+    _pass_fields: ClassVar[set[str]] = {"parent", "data_type"}
     can_have_extra_keys: ClassVar[bool] = True
     type_has_null: Optional[bool] = None  # noqa: UP045
 
@@ -254,7 +247,7 @@ UNDEFINED: Any = object()
 class DataModel(TemplateBase, Nullable, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
 
     def __init__(  # noqa: PLR0913
         self,

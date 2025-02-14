@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC
+from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Set
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from pydantic import Field
 
@@ -18,7 +19,6 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_FIELD,
 )
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
-from datamodel_code_generator.util import cached_property
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -41,7 +41,7 @@ class Constraints(ConstraintsBase):
 
 
 class DataModelField(DataModelFieldBase):
-    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+    _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",
         "const",
@@ -56,7 +56,7 @@ class DataModelField(DataModelFieldBase):
         "max_length",
         "regex",
     }
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le"}  # noqa: UP006
+    _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
     constraints: Optional[Constraints] = None  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "parse_obj"
 

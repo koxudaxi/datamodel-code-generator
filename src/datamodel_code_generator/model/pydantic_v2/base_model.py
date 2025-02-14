@@ -2,15 +2,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    List,
-    NamedTuple,
-    Optional,
-    Set,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional
 
 from pydantic import Field
 from typing_extensions import Literal
@@ -59,7 +51,7 @@ class Constraints(_Constraints):
 
 
 class DataModelField(DataModelFieldV1):
-    _EXCLUDE_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+    _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",
         "gt",
@@ -71,7 +63,7 @@ class DataModelField(DataModelFieldV1):
         "max_length",
         "pattern",
     }
-    _DEFAULT_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+    _DEFAULT_FIELD_KEYS: ClassVar[set[str]] = {
         "default",
         "default_factory",
         "alias",
@@ -165,7 +157,7 @@ class ConfigAttribute(NamedTuple):
 class BaseModel(BaseModelBase):
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
-    CONFIG_ATTRIBUTES: ClassVar[List[ConfigAttribute]] = [  # noqa: UP006
+    CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = [
         ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003

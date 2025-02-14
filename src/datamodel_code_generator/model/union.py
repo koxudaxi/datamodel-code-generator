@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class DataTypeUnion(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "Union.jinja2"
     BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
         IMPORT_TYPE_ALIAS,
         IMPORT_UNION,
     )

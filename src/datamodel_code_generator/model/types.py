@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
@@ -11,6 +10,9 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:

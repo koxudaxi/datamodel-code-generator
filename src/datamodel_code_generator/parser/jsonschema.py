@@ -2,22 +2,10 @@ from __future__ import annotations
 
 import enum as _enum
 from collections import defaultdict
-from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union
 from urllib.parse import ParseResult
 from warnings import warn
 
@@ -57,7 +45,6 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     BaseModel,
-    cached_property,
     field_validator,
     model_validator,
 )
@@ -66,6 +53,9 @@ if PYDANTIC_V2:
     from pydantic import ConfigDict
 
 from datamodel_code_generator.format import DatetimeClassType
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 
 
 def get_model_by_path(schema: dict[str, Any] | list[Any], keys: list[str] | list[int]) -> dict[Any, Any]:
@@ -145,7 +135,7 @@ class JSONReference(_enum.Enum):
 
 class Discriminator(BaseModel):
     propertyName: str  # noqa: N815
-    mapping: Optional[Dict[str, str]] = None  # noqa: UP006, UP045
+    mapping: Optional[dict[str, str]] = None  # noqa: UP045
 
 
 class JsonSchemaObject(BaseModel):
@@ -166,7 +156,7 @@ class JsonSchemaObject(BaseModel):
             def model_rebuild(cls) -> None:
                 cls.update_forward_refs()
 
-    __constraint_fields__: Set[str] = {  # noqa: RUF012, UP006
+    __constraint_fields__: set[str] = {  # noqa: RUF012
         "exclusiveMinimum",
         "minimum",
         "exclusiveMaximum",
@@ -210,9 +200,9 @@ class JsonSchemaObject(BaseModel):
             return value.replace("#", "#/")
         return value
 
-    items: Optional[Union[List[JsonSchemaObject], JsonSchemaObject, bool]] = None  # noqa: UP006, UP007, UP045
+    items: Optional[Union[list[JsonSchemaObject], JsonSchemaObject, bool]] = None  # noqa: UP007, UP045
     uniqueItems: Optional[bool] = None  # noqa: N815, UP045
-    type: Optional[Union[str, List[str]]] = None  # noqa: UP006, UP007, UP045
+    type: Optional[Union[str, list[str]]] = None  # noqa: UP007, UP045
     format: Optional[str] = None  # noqa: UP045
     pattern: Optional[str] = None  # noqa: UP045
     minLength: Optional[int] = None  # noqa:  N815,UP045
@@ -225,18 +215,18 @@ class JsonSchemaObject(BaseModel):
     exclusiveMaximum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
     exclusiveMinimum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
     additionalProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
-    patternProperties: Optional[Dict[str, JsonSchemaObject]] = None  # noqa: N815, UP006, UP045
-    oneOf: List[JsonSchemaObject] = []  # noqa: N815, RUF012, UP006
-    anyOf: List[JsonSchemaObject] = []  # noqa: N815, RUF012, UP006
-    allOf: List[JsonSchemaObject] = []  # noqa: N815, RUF012, UP006
-    enum: List[Any] = []  # noqa: RUF012, UP006
+    patternProperties: Optional[dict[str, JsonSchemaObject]] = None  # noqa: N815, UP045
+    oneOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
+    anyOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
+    allOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
+    enum: list[Any] = []  # noqa: RUF012
     writeOnly: Optional[bool] = None  # noqa: N815, UP045
     readOnly: Optional[bool] = None  # noqa: N815, UP045
-    properties: Optional[Dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: UP006, UP007, UP045
-    required: List[str] = []  # noqa: RUF012, UP006
+    properties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
+    required: list[str] = []  # noqa: RUF012
     ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
     nullable: Optional[bool] = False  # noqa: UP045
-    x_enum_varnames: List[str] = Field(default=[], alias="x-enum-varnames")  # noqa: UP006
+    x_enum_varnames: list[str] = Field(default=[], alias="x-enum-varnames")
     description: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
     example: Any = None
@@ -245,7 +235,7 @@ class JsonSchemaObject(BaseModel):
     id: Optional[str] = Field(default=None, alias="$id")  # noqa: UP045
     custom_type_path: Optional[str] = Field(default=None, alias="customTypePath")  # noqa: UP045
     custom_base_path: Optional[str] = Field(default=None, alias="customBasePath")  # noqa: UP045
-    extras: Dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)  # noqa: UP006
+    extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
     if PYDANTIC_V2:
         model_config = ConfigDict(  # pyright: ignore[reportPossiblyUnboundVariable]
@@ -355,8 +345,8 @@ EXCLUDE_FIELD_KEYS = (
 
 @snooper_to_methods()  # noqa: PLR0904
 class JsonSchemaParser(Parser):
-    SCHEMA_PATHS: ClassVar[List[str]] = ["#/definitions", "#/$defs"]  # noqa: UP006
-    SCHEMA_OBJECT_TYPE: ClassVar[Type[JsonSchemaObject]] = JsonSchemaObject  # noqa: UP006
+    SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
+    SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
 
     def __init__(  # noqa: PLR0913
         self,

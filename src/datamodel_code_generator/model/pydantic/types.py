@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from decimal import Decimal
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.format import DatetimeClassType, PythonVersionMin, PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DATE,
@@ -53,6 +52,9 @@ from datamodel_code_generator.model.pydantic.imports import (
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types, UnionIntFloat
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def type_map_factory(

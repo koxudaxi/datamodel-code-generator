@@ -26,7 +26,7 @@ from datamodel_code_generator import (
     DataModelType,
     InputFileType,
     OpenAPIScope,
-    PythonVersion,
+    PythonVersionMin,
     chdir,
     generate,
     get_version,
@@ -2544,7 +2544,7 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data() -> None:
             input_file_type=InputFileType.OpenAPI,
             output_model_type=DataModelType.MsgspecStruct,
             keyword_only=True,
-            target_python_version=PythonVersion.PY_39,
+            target_python_version=PythonVersionMin,
             extra_template_data=defaultdict(dict, extra_data),
             # Following values are defaults in the CLI, but not in the API
             openapi_scopes=[OpenAPIScope.Schemas],

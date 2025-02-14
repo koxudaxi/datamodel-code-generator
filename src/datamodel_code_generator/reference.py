@@ -4,26 +4,12 @@ import re
 from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum, auto
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from itertools import zip_longest
 from keyword import iskeyword
 from pathlib import Path, PurePath
-from typing import (
-    TYPE_CHECKING,
-    AbstractSet,
-    Any,
-    Callable,
-    ClassVar,
-    Generator,
-    List,
-    Mapping,
-    NamedTuple,
-    Optional,
-    Pattern,
-    Sequence,
-    Set,
-    TypeVar,
-)
+from re import Pattern
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, NamedTuple, Optional, TypeVar
 from urllib.parse import ParseResult, urlparse
 
 import inflect
@@ -31,20 +17,18 @@ import pydantic
 from packaging import version
 from pydantic import BaseModel
 
-from datamodel_code_generator.util import (
-    PYDANTIC_V2,
-    ConfigDict,
-    cached_property,
-    model_validator,
-)
+from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Mapping, Sequence
+    from collections.abc import Set as AbstractSet
+
     from pydantic.typing import DictStrAny
 
 
 class _BaseModel(BaseModel):
-    _exclude_fields: ClassVar[Set[str]] = set()  # noqa: UP006
-    _pass_fields: ClassVar[Set[str]] = set()  # noqa: UP006
+    _exclude_fields: ClassVar[set[str]] = set()
+    _pass_fields: ClassVar[set[str]] = set()
 
     if not TYPE_CHECKING:
 
@@ -107,8 +91,8 @@ class Reference(_BaseModel):
     duplicate_name: Optional[str] = None  # noqa: UP045
     loaded: bool = True
     source: Optional[Any] = None  # noqa: UP045
-    children: List[Any] = []  # noqa: UP006
-    _exclude_fields: ClassVar[Set[str]] = {"children"}  # noqa: UP006
+    children: list[Any] = []
+    _exclude_fields: ClassVar[set[str]] = {"children"}
 
     @model_validator(mode="before")
     def validate_original_name(cls, values: Any) -> Any:  # noqa: N805

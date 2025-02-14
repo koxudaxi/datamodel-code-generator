@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel as _BaseModel
 
 from .base_model import BaseModel, DataModelField, UnionMode
 from .root_model import RootModel
 from .types import DataTypeManager
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
@@ -21,7 +24,7 @@ class ConfigDict(_BaseModel):
     from_attributes: Optional[bool] = None  # noqa: UP045
     frozen: Optional[bool] = None  # noqa: UP045
     arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
-    protected_namespaces: Optional[Tuple[str, ...]] = None  # noqa: UP006, UP045
+    protected_namespaces: Optional[tuple[str, ...]] = None  # noqa: UP045
     regex_engine: Optional[str] = None  # noqa: UP045
     use_enum_values: Optional[bool] = None  # noqa: UP045
 

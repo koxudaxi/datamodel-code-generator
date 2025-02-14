@@ -20,7 +20,7 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
     InputFileType,
-    PythonVersion,
+    PythonVersionMin,
     chdir,
     generate,
 )
@@ -3054,7 +3054,7 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data() -> None:
             input_file_type=InputFileType.JsonSchema,
             output_model_type=DataModelType.MsgspecStruct,
             keyword_only=True,
-            target_python_version=PythonVersion.PY_313,
+            target_python_version=PythonVersionMin,
             extra_template_data=defaultdict(dict, extra_data),
             # Following values are implied by `msgspec.Struct` in the CLI
             use_annotated=True,

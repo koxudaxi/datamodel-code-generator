@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -41,6 +40,7 @@ from datamodel_code_generator.format import DatetimeClassType
 
 if TYPE_CHECKING:
     from collections import defaultdict
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
 graphql_resolver = graphql.type.introspection.TypeResolvers()
 

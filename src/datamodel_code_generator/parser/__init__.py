@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Dict, TypeVar
+from typing import Callable, TypeVar
 
 TK = TypeVar("TK")
 TV = TypeVar("TV")
@@ -12,7 +12,7 @@ class LiteralType(Enum):
     One = "one"
 
 
-class DefaultPutDict(Dict[TK, TV]):
+class DefaultPutDict(dict[TK, TV]):
     def get_or_put(
         self,
         key: TK,
@@ -31,4 +31,7 @@ class DefaultPutDict(Dict[TK, TV]):
         raise ValueError(msg)  # pragma: no cover
 
 
-__all__ = ["LiteralType"]
+__all__ = [
+    "DefaultPutDict",
+    "LiteralType",
+]

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
 from functools import lru_cache
 from itertools import starmap
-from typing import DefaultDict, Optional, Set
+from typing import TYPE_CHECKING, Optional
 
 from datamodel_code_generator.util import BaseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class Import(BaseModel):
@@ -22,7 +24,7 @@ class Import(BaseModel):
         return Import(from_=".".join(split_class_path[:-1]) or None, import_=split_class_path[-1])
 
 
-class Imports(DefaultDict[Optional[str], Set[str]]):
+class Imports(defaultdict[Optional[str], set[str]]):
     def __str__(self) -> str:
         return self.dump()
 

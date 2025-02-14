@@ -1,13 +1,7 @@
 from __future__ import annotations
 
 import keyword
-from collections.abc import Iterator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
@@ -20,6 +14,7 @@ from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
 
 if TYPE_CHECKING:
     from collections import defaultdict
+    from collections.abc import Iterator
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
@@ -47,7 +42,7 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 class TypedDict(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypedDict.jinja2"
     BASE_CLASS: ClassVar[str] = "typing.TypedDict"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPED_DICT,)  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
 
     def __init__(  # noqa: PLR0913
         self,
@@ -115,7 +110,7 @@ class TypedDict(DataModel):
 
 
 class DataModelField(DataModelFieldBase):
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
 
     @property
     def key(self) -> str:
@@ -147,4 +142,4 @@ class DataModelField(DataModelFieldBase):
 
 
 class DataModelFieldBackport(DataModelField):
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)

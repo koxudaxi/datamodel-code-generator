@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple
+from typing import TYPE_CHECKING, Callable, NamedTuple
 
 from datamodel_code_generator import DatetimeClassType, PythonVersion
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from datamodel_code_generator import DataModelType
     from datamodel_code_generator.types import DataTypeManager as DataTypeManagerABC
 

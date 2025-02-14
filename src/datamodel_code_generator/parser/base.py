@@ -5,18 +5,9 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import groupby
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    NamedTuple,
-    Optional,
-    Set,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, runtime_checkable
 from urllib.parse import ParseResult
 
 from pydantic import BaseModel
@@ -44,7 +35,9 @@ from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
-from datamodel_code_generator.util import Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
@@ -95,8 +88,8 @@ def dump_templates(templates: list[DataModel]) -> str:
     return "\n\n\n".join(str(m) for m in templates)
 
 
-ReferenceMapSet = Dict[str, Set[str]]
-SortedDataModels = Dict[str, DataModel]
+ReferenceMapSet = dict[str, set[str]]
+SortedDataModels = dict[str, DataModel]
 
 MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
