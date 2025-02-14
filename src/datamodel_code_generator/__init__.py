@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+from collections.abc import Iterator, Mapping, Sequence
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -11,10 +12,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
-    Iterator,
-    Mapping,
-    Sequence,
+    Final,
     TextIO,
     TypeVar,
     cast,
@@ -24,9 +22,12 @@ from urllib.parse import ParseResult
 import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
-from datamodel_code_generator.format import DatetimeClassType, PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.util import SafeLoader
+
+MIN_VERSION: Final[int] = 9
+MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
 
@@ -212,7 +213,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
-    target_python_version: PythonVersion = PythonVersion.PY_38,
+    target_python_version: PythonVersion = PythonVersionMin,
     base_class: str = "",
     additional_imports: list[str] | None = None,
     custom_template_dir: Path | None = None,
@@ -367,7 +368,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                     obj = (
                         ast.literal_eval(input_.read_text(encoding=encoding))
                         if isinstance(input_, Path)
-                        else cast("Dict[Any, Any]", input_)
+                        else cast("dict[Any, Any]", input_)
                     )
                 else:  # pragma: no cover
                     msg = f"Unsupported input file type: {input_file_type}"
@@ -554,6 +555,8 @@ inferred_message = (
 )
 
 __all__ = [
+    "MAX_VERSION",
+    "MIN_VERSION",
     "DefaultPutDict",
     "Error",
     "InputFileType",

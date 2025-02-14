@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 from msgspec import Meta, Struct
-from typing_extensions import Annotated
 
 
 class Pet(Struct):

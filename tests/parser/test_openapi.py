@@ -10,7 +10,7 @@ import pydantic
 import pytest
 from packaging import version
 
-from datamodel_code_generator import OpenAPIScope, PythonVersion
+from datamodel_code_generator import OpenAPIScope, PythonVersionMin
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic import DataModelField
 from datamodel_code_generator.parser.base import dump_templates
@@ -358,15 +358,10 @@ class UnknownTypeNumber(Enum):
 def test_openapi_parser_parse_enum_models() -> None:
     parser = OpenAPIParser(
         Path(DATA_PATH / "enum_models.yaml").read_text(encoding="utf-8"),
+        target_python_version=PythonVersionMin,
     )
     expected_dir = EXPECTED_OPEN_API_PATH / "openapi_parser_parse_enum_models"
-    assert parser.parse() == (expected_dir / "output_py37.py").read_text()
-
-    parser = OpenAPIParser(
-        Path(DATA_PATH / "enum_models.yaml").read_text(encoding="utf-8"),
-        target_python_version=PythonVersion.PY_36,
-    )
-    assert parser.parse() == (expected_dir / "output_py36.py").read_text()
+    assert parser.parse() == (expected_dir / "output.py").read_text()
 
 
 def test_openapi_parser_parse_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

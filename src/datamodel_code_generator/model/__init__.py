@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple
+from typing import TYPE_CHECKING, Callable, NamedTuple
 
 from datamodel_code_generator import DatetimeClassType, PythonVersion
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from datamodel_code_generator import DataModelType
     from datamodel_code_generator.types import DataTypeManager as DataTypeManagerABC
 
@@ -62,7 +64,7 @@ def get_data_model_types(
         )
     if data_model_type == DataModelType.TypingTypedDict:
         return DataModelSet(
-            data_model=(typed_dict.TypedDict if target_python_version.has_typed_dict else typed_dict.TypedDictBackport),
+            data_model=typed_dict.TypedDict,
             root_model=rootmodel.RootModel,
             field_model=(
                 typed_dict.DataModelField

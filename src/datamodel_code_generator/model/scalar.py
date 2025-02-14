@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, ClassVar, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -32,7 +32,7 @@ DEFAULT_GRAPHQL_SCALAR_TYPES: dict[str, str] = {
 class DataTypeScalar(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "Scalar.jinja2"
     BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)
 
     def __init__(  # noqa: PLR0913
         self,

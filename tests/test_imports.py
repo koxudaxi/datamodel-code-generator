@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import pytest
 
 from datamodel_code_generator.imports import Import, Imports
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 @pytest.mark.parametrize(

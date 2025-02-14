@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, Sequence
+from typing import TYPE_CHECKING, ClassVar
 
 from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model.pydantic import DataTypeManager as _DataTypeManager
@@ -10,6 +10,9 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_NAIVE_DATETIME,
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class DataTypeManager(_DataTypeManager):

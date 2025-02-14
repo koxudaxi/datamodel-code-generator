@@ -9,7 +9,7 @@ from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
-from unittest.mock import call
+from unittest.mock import Mock, call
 
 import black
 import isort
@@ -22,10 +22,11 @@ with contextlib.suppress(ImportError):
     pass
 
 from datamodel_code_generator import (
+    MIN_VERSION,
     DataModelType,
     InputFileType,
     OpenAPIScope,
-    PythonVersion,
+    PythonVersionMin,
     chdir,
     generate,
     get_version,
@@ -174,7 +175,7 @@ def test_target_python_version() -> None:
             "--output",
             str(output_file),
             "--target-python-version",
-            "3.6",
+            f"3.{MIN_VERSION}",
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "target_python_version.py").read_text()
@@ -915,25 +916,6 @@ def test_main_use_generic_container_types_standard_collections(
         assert result == path.read_text()
 
 
-def test_main_use_generic_container_types_py36(capsys: pytest.CaptureFixture) -> None:
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-
-    return_code: Exit = main([
-        "--input",
-        str(input_filename),
-        "--use-generic-container-types",
-        "--target-python-version",
-        "3.6",
-    ])
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert (
-        captured.err == "`--use-generic-container-types` can not be used with "
-        "`--target-python-version` 3.6.\n "
-        "The version will be not supported in a future version\n"
-    )
-
-
 def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pytest.CaptureFixture) -> None:
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
 
@@ -1030,7 +1012,7 @@ def test_main_models_not_found(capsys: pytest.CaptureFixture) -> None:
     reason="Require Pydantic version 1.9.0 or later ",
 )
 @freeze_time("2019-07-26")
-def test_main_openapi_enum_models_as_literal_one() -> None:
+def test_main_openapi_enum_models_as_literal_one(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -1043,7 +1025,7 @@ def test_main_openapi_enum_models_as_literal_one() -> None:
             "--enum-field-as-literal",
             "one",
             "--target-python-version",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "one.py").read_text()
@@ -1054,7 +1036,7 @@ def test_main_openapi_enum_models_as_literal_one() -> None:
     reason="Require Pydantic version 1.9.0 or later ",
 )
 @freeze_time("2019-07-26")
-def test_main_openapi_use_one_literal_as_default() -> None:
+def test_main_openapi_use_one_literal_as_default(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -1067,7 +1049,7 @@ def test_main_openapi_use_one_literal_as_default() -> None:
             "--enum-field-as-literal",
             "one",
             "--target-python-version",
-            "3.8",
+            min_version,
             "--use-one-literal-as-default",
         ])
         assert return_code == Exit.OK
@@ -1085,7 +1067,7 @@ def test_main_openapi_use_one_literal_as_default() -> None:
     reason="Installed black doesn't support the old style",
 )
 @freeze_time("2019-07-26")
-def test_main_openapi_enum_models_as_literal_all() -> None:
+def test_main_openapi_enum_models_as_literal_all(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -1098,7 +1080,7 @@ def test_main_openapi_enum_models_as_literal_all() -> None:
             "--enum-field-as-literal",
             "all",
             "--target-python-version",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "all.py").read_text()
@@ -1113,7 +1095,7 @@ def test_main_openapi_enum_models_as_literal_all() -> None:
     reason="Installed black doesn't support the old style",
 )
 @freeze_time("2019-07-26")
-def test_main_openapi_enum_models_as_literal_py37() -> None:
+def test_main_openapi_enum_models_as_literal() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -1126,11 +1108,11 @@ def test_main_openapi_enum_models_as_literal_py37() -> None:
             "--enum-field-as-literal",
             "all",
             "--target-python-version",
-            "3.7",
+            f"3.{MIN_VERSION}",
         ])
 
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal_py37.py").read_text()
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -1291,7 +1273,7 @@ def test_main_generate_custom_class_name_generator_modular(
 
 @freeze_time("2019-07-26")
 def test_main_http_openapi(mocker: MockerFixture) -> None:
-    def get_mock_response(path: str) -> mocker.Mock:
+    def get_mock_response(path: str) -> Mock:
         mock = mocker.Mock()
         mock.text = (OPEN_API_DATA_PATH / path).read_text()
         return mock
@@ -1505,7 +1487,7 @@ def test_main_openapi_json_pointer() -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_use_annotated_with_field_constraints(output_model: str, expected_output: str) -> None:
+def test_main_use_annotated_with_field_constraints(output_model: str, expected_output: str, min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -1516,32 +1498,12 @@ def test_main_use_annotated_with_field_constraints(output_model: str, expected_o
             "--field-constraints",
             "--use-annotated",
             "--target-python-version",
-            "3.9",
+            min_version,
             "--output-model",
             output_model,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_use_annotated_with_field_constraints_py38() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api_constrained.yaml"),
-            "--output",
-            str(output_file),
-            "--use-annotated",
-            "--target-python-version",
-            "3.8",
-        ])
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            == (EXPECTED_OPENAPI_PATH / "use_annotated_with_field_constraints_py38.py").read_text()
-        )
 
 
 @freeze_time("2019-07-26")
@@ -2113,7 +2075,7 @@ def test_main_typed_dict() -> None:
 
 
 @freeze_time("2019-07-26")
-def test_main_typed_dict_py_38() -> None:
+def test_main_typed_dict_py(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2124,10 +2086,10 @@ def test_main_typed_dict_py_38() -> None:
             "--output-model-type",
             "typing.TypedDict",
             "--target-python-version",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "typed_dict_py_38.py").read_text()
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "typed_dict_py.py").read_text()
 
 
 @pytest.mark.skipif(
@@ -2344,7 +2306,7 @@ def test_main_openapi_all_of_with_relative_ref() -> None:
 
 
 @freeze_time("2019-07-26")
-def test_main_openapi_msgspec_struct() -> None:
+def test_main_openapi_msgspec_struct(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2352,9 +2314,8 @@ def test_main_openapi_msgspec_struct() -> None:
             str(OPEN_API_DATA_PATH / "api.yaml"),
             "--output",
             str(output_file),
-            # min msgspec python version is 3.8
             "--target-python-version",
-            "3.8",
+            min_version,
             "--output-model-type",
             "msgspec.Struct",
         ])
@@ -2363,7 +2324,7 @@ def test_main_openapi_msgspec_struct() -> None:
 
 
 @freeze_time("2019-07-26")
-def test_main_openapi_msgspec_struct_snake_case() -> None:
+def test_main_openapi_msgspec_struct_snake_case(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2371,9 +2332,8 @@ def test_main_openapi_msgspec_struct_snake_case() -> None:
             str(OPEN_API_DATA_PATH / "api_ordered_required_fields.yaml"),
             "--output",
             str(output_file),
-            # min msgspec python version is 3.8
             "--target-python-version",
-            "3.8",
+            min_version,
             "--snake-case-field",
             "--output-model-type",
             "msgspec.Struct",
@@ -2522,7 +2482,7 @@ def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixtur
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_msgspec() -> None:
+def test_main_openapi_keyword_only_msgspec(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2536,7 +2496,7 @@ def test_main_openapi_keyword_only_msgspec() -> None:
             "msgspec.Struct",
             "--keyword-only",
             "--target-python-version",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only.py").read_text()
@@ -2547,7 +2507,7 @@ def test_main_openapi_keyword_only_msgspec() -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_msgspec_with_extra_data() -> None:
+def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2561,7 +2521,7 @@ def test_main_openapi_keyword_only_msgspec_with_extra_data() -> None:
             "msgspec.Struct",
             "--keyword-only",
             "--target-python-version",
-            "3.8",
+            min_version,
             "--extra-template-data",
             str(OPEN_API_DATA_PATH / "extra_data_msgspec.json"),
         ])
@@ -2584,7 +2544,7 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data() -> None:
             input_file_type=InputFileType.OpenAPI,
             output_model_type=DataModelType.MsgspecStruct,
             keyword_only=True,
-            target_python_version=PythonVersion.PY_38,
+            target_python_version=PythonVersionMin,
             extra_template_data=defaultdict(dict, extra_data),
             # Following values are defaults in the CLI, but not in the API
             openapi_scopes=[OpenAPIScope.Schemas],

@@ -4,8 +4,7 @@
 
 from __future__ import annotations
 
-from msgspec import Meta, Struct
-from typing_extensions import Annotated
+from msgspec import Annotated, Meta, Struct
 
 
 class Test(Struct):
