@@ -389,7 +389,8 @@ class GraphQLParser(Parser):
             obj = obj.of_type  # pyright: ignore[reportAttributeAccessIssue]
 
         if graphql.is_enum_type(obj):
-            data_type.reference = self.references[obj.name]  # pyright: ignore[reportAttributeAccessIssue]
+            assert isinstance(obj, graphql.GraphQLNamedType)
+            data_type.reference = self.references[obj.name]
 
         data_type.type = obj.name  # pyright: ignore[reportAttributeAccessIssue]
 
