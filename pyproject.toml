@@ -12,13 +12,12 @@ readme.content-type = "text/markdown"
 readme.file = "README.md"
 license = "MIT"
 authors = [ { name = "Koudai Aono", email = "koxudaxi@gmail.com" } ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
   "Natural Language :: English",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -98,13 +97,10 @@ docs = [
   "mkdocs>=1.6",
   "mkdocs-material>=9.5.31",
 ]
-black19-pydantic18 = [ "black==19.10b0", "pydantic==1.8.2" ]
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
-pydantic18 = [ "pydantic==1.8.2" ]
-isort4-pydantic15 = [ "isort[pyproject]==4.3.21", "pydantic==1.5.1" ]
-fix = [ "pre-commit>=3.5" ]
+fix = [ "pre-commit-uv>=4.1.4" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
   "covdefaults>=2.3",
@@ -220,18 +216,6 @@ conflicts = [
     { group = "black24" },
     { group = "black22" },
     { group = "black23" },
-    { group = "black19-pydantic18" },
-    { group = "pydantic18" },
-    { group = "isort4-pydantic15" },
-    { group = "pkg-meta" },
-  ],
-  [
-    { group = "black24" },
-    { group = "black22" },
-    { group = "black23" },
-    { group = "black19-pydantic18" },
-    { group = "pydantic18" },
-    { group = "isort4-pydantic15" },
     { group = "dev" },
   ],
 ]

@@ -454,8 +454,8 @@ Model customization:
                         pydantic: datetime, dataclass: str, ...)
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
-  --target-python-version {3.6,3.7,3.8,3.9,3.10,3.11,3.12,3.13}
-                        target python version (default: 3.8)
+  --target-python-version {3.9,3.10,3.11,3.12,3.13}
+                        target python version
   --treat-dot-as-module
                         treat dotted module names as modules
   --use-exact-imports   import exact types instead of modules, for example: "from .foo

@@ -1,20 +1,11 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from pydantic import Field
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_DATE,
     IMPORT_DATETIME,
@@ -46,6 +37,7 @@ from datamodel_code_generator.types import (
 
 if TYPE_CHECKING:
     from collections import defaultdict
+    from collections.abc import Sequence
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
@@ -87,7 +79,7 @@ class RootModel(_RootModel):
 class Struct(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "msgspec.jinja2"
     BASE_CLASS: ClassVar[str] = "msgspec.Struct"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = ()  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
 
     def __init__(  # noqa: PLR0913
         self,
@@ -108,7 +100,7 @@ class Struct(DataModel):
     ) -> None:
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=_has_field_assignment, reverse=False),
+            fields=sorted(fields, key=_has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -137,11 +129,11 @@ class Constraints(_Constraints):
 
 @import_extender
 class DataModelField(DataModelFieldBase):
-    _FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+    _FIELD_KEYS: ClassVar[set[str]] = {
         "default",
         "default_factory",
     }
-    _META_FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+    _META_FIELD_KEYS: ClassVar[set[str]] = {
         "title",
         "description",
         "gt",
@@ -158,7 +150,7 @@ class DataModelField(DataModelFieldBase):
         # 'unique_items', # not supported by msgspec
     }
     _PARSE_METHOD = "convert"
-    _COMPARE_EXPRESSIONS: ClassVar[Set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}  # noqa: UP006
+    _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}
     constraints: Optional[Constraints] = None  # noqa: UP045
 
     def self_reference(self) -> bool:  # pragma: no cover
@@ -287,7 +279,7 @@ class DataModelField(DataModelFieldBase):
 class DataTypeManager(_DataTypeManager):
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        python_version: PythonVersion = PythonVersion.PY_38,
+        python_version: PythonVersion = PythonVersionMin,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,

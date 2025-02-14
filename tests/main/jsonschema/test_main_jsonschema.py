@@ -17,9 +17,10 @@ from freezegun import freeze_time
 from packaging import version
 
 from datamodel_code_generator import (
+    MIN_VERSION,
     DataModelType,
     InputFileType,
-    PythonVersion,
+    PythonVersionMin,
     chdir,
     generate,
 )
@@ -1049,7 +1050,7 @@ def test_main_root_model_with_additional_properties_use_standard_collections() -
 
 
 @freeze_time("2019-07-26")
-def test_main_root_model_with_additional_properties_literal() -> None:
+def test_main_root_model_with_additional_properties_literal(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -1062,7 +1063,7 @@ def test_main_root_model_with_additional_properties_literal() -> None:
             "--enum-field-as-literal",
             "all",
             "--target-python-version",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert (
@@ -2380,7 +2381,7 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture) -> None:
             "jsonschema",
             "--use-union-operator",
             "--target-python-version",
-            "3.6",
+            f"3.{MIN_VERSION}",
             "--disable-warnings",
         ])
         captured = capsys.readouterr()
@@ -2639,7 +2640,7 @@ def test_main_typed_dict_not_required_nullable() -> None:
     int(black.__version__.split(".")[0]) < 24,
     reason="Installed black doesn't support the new style",
 )
-def test_main_jsonschema_discriminator_literals(output_model: str, expected_output: str) -> None:
+def test_main_jsonschema_discriminator_literals(output_model: str, expected_output: str, min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2650,7 +2651,7 @@ def test_main_jsonschema_discriminator_literals(output_model: str, expected_outp
             "--output-model-type",
             output_model,
             "--target-python",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
@@ -2670,7 +2671,7 @@ def test_main_jsonschema_discriminator_literals(output_model: str, expected_outp
     ],
 )
 @freeze_time("2019-07-26")
-def test_main_jsonschema_external_discriminator(output_model: str, expected_output: str) -> None:
+def test_main_jsonschema_external_discriminator(output_model: str, expected_output: str, min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2681,7 +2682,7 @@ def test_main_jsonschema_external_discriminator(output_model: str, expected_outp
             "--output-model-type",
             output_model,
             "--target-python",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text(), (
@@ -2703,7 +2704,9 @@ def test_main_jsonschema_external_discriminator(output_model: str, expected_outp
     ],
 )
 @freeze_time("2019-07-26")
-def test_main_jsonschema_external_discriminator_folder(output_model: str, expected_output: str) -> None:
+def test_main_jsonschema_external_discriminator_folder(
+    output_model: str, expected_output: str, min_version: str
+) -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main([
@@ -2714,7 +2717,7 @@ def test_main_jsonschema_external_discriminator_folder(output_model: str, expect
             "--output-model-type",
             output_model,
             "--target-python",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / expected_output
@@ -2745,52 +2748,28 @@ def test_main_duplicate_field_constraints() -> None:
             assert result == path.read_text()
 
 
-@pytest.mark.parametrize(
-    ("collapse_root_models", "python_version", "expected_output"),
-    [
-        (
-            "--collapse-root-models",
-            "3.8",
-            "duplicate_field_constraints_msgspec_py38_collapse_root_models",
-        ),
-        (
-            None,
-            "3.9",
-            "duplicate_field_constraints_msgspec",
-        ),
-    ],
-)
 @freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_duplicate_field_constraints_msgspec(
-    collapse_root_models: str | None,
-    python_version: str,
-    expected_output: str,
-) -> None:
+def test_main_duplicate_field_constraints_msgspec(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_path: Path = Path(output_dir)
         return_code: Exit = main([
-            a
-            for a in [
-                "--input",
-                str(JSON_SCHEMA_DATA_PATH / "duplicate_field_constraints"),
-                "--output",
-                str(output_path),
-                "--input-file-type",
-                "jsonschema",
-                "--output-model-type",
-                "msgspec.Struct",
-                "--target-python-version",
-                python_version,
-                collapse_root_models,
-            ]
-            if a
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "duplicate_field_constraints"),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            min_version,
         ])
         assert return_code == Exit.OK
-        main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / expected_output
+        main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "duplicate_field_constraints_msgspec"
         for path in main_modular_dir.rglob("*.py"):
             result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
             assert result == path.read_text()
@@ -2985,7 +2964,7 @@ def test_main_imports_correct() -> None:
     ],
 )
 @freeze_time("2019-07-26")
-def test_main_jsonschema_duration(output_model: str, expected_output: str) -> None:
+def test_main_jsonschema_duration(output_model: str, expected_output: str, min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -2996,7 +2975,7 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str) -> No
             "--output-model-type",
             output_model,
             "--target-python",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
@@ -3007,7 +2986,7 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str) -> No
     int(black.__version__.split(".")[0]) < 24,
     reason="Installed black doesn't support the new style",
 )
-def test_main_jsonschema_keyword_only_msgspec() -> None:
+def test_main_jsonschema_keyword_only_msgspec(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -3021,7 +3000,7 @@ def test_main_jsonschema_keyword_only_msgspec() -> None:
             "msgspec.Struct",
             "--keyword-only",
             "--target-python-version",
-            "3.8",
+            min_version,
         ])
         assert return_code == Exit.OK
         assert (
@@ -3035,7 +3014,7 @@ def test_main_jsonschema_keyword_only_msgspec() -> None:
     int(black.__version__.split(".")[0]) < 24,
     reason="Installed black doesn't support the new style",
 )
-def test_main_jsonschema_keyword_only_msgspec_with_extra_data() -> None:
+def test_main_jsonschema_keyword_only_msgspec_with_extra_data(min_version: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
@@ -3049,7 +3028,7 @@ def test_main_jsonschema_keyword_only_msgspec_with_extra_data() -> None:
             "msgspec.Struct",
             "--keyword-only",
             "--target-python-version",
-            "3.8",
+            min_version,
             "--extra-template-data",
             str(JSON_SCHEMA_DATA_PATH / "extra_data_msgspec.json"),
         ])
@@ -3075,7 +3054,7 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data() -> None:
             input_file_type=InputFileType.JsonSchema,
             output_model_type=DataModelType.MsgspecStruct,
             keyword_only=True,
-            target_python_version=PythonVersion.PY_38,
+            target_python_version=PythonVersionMin,
             extra_template_data=defaultdict(dict, extra_data),
             # Following values are implied by `msgspec.Struct` in the CLI
             use_annotated=True,

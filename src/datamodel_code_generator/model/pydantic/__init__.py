@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel as _BaseModel
 
@@ -8,6 +8,9 @@ from .base_model import BaseModel, DataModelField
 from .custom_root_type import CustomRootType
 from .dataclass import DataClass
 from .types import DataTypeManager
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:

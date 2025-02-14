@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DECIMAL,
@@ -10,6 +10,9 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
@@ -57,7 +60,7 @@ def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
 class DataTypeManager(_DataTypeManager):
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        python_version: PythonVersion = PythonVersion.PY_38,
+        python_version: PythonVersion = PythonVersionMin,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,

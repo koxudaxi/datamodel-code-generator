@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -33,7 +33,7 @@ SUBCLASS_BASE_CLASSES: dict[Types, str] = {
 class Enum(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "Enum.jinja2"
     BASE_CLASS: ClassVar[str] = "enum.Enum"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_ENUM,)  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_ENUM,)
 
     def __init__(  # noqa: PLR0913
         self,

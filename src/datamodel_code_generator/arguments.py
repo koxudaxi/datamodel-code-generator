@@ -13,7 +13,7 @@ from datamodel_code_generator.types import StrictTypes
 
 if TYPE_CHECKING:
     from argparse import Action
-    from typing import Iterable
+    from collections.abc import Iterable
 
 DEFAULT_ENCODING = locale.getpreferredencoding()
 
@@ -161,7 +161,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--target-python-version",
-    help="target python version (default: 3.8)",
+    help="target python version",
     choices=[v.value for v in PythonVersion],
 )
 model_options.add_argument(

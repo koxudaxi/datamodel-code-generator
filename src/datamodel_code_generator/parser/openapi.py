@@ -3,37 +3,25 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Pattern,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from re import Pattern
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
 from pydantic import Field
 
 from datamodel_code_generator import (
-    DefaultPutDict,
     Error,
     LiteralType,
     OpenAPIScope,
     PythonVersion,
+    PythonVersionMin,
     load_yaml,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.parser import DefaultPutDict  # noqa: TC001 # needed for type check
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -50,6 +38,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from pathlib import Path
     from urllib.parse import ParseResult
 
@@ -103,7 +92,7 @@ class ParameterObject(BaseModel):
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: Any = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
-    content: Dict[str, MediaObject] = {}  # noqa: RUF012, UP006
+    content: dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class HeaderObject(BaseModel):
@@ -113,43 +102,43 @@ class HeaderObject(BaseModel):
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: Any = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
-    content: Dict[str, MediaObject] = {}  # noqa: RUF012, UP006
+    content: dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class RequestBodyObject(BaseModel):
     description: Optional[str] = None  # noqa: UP045
-    content: Dict[str, MediaObject] = {}  # noqa: RUF012, UP006
+    content: dict[str, MediaObject] = {}  # noqa: RUF012
     required: bool = False
 
 
 class ResponseObject(BaseModel):
     description: Optional[str] = None  # noqa: UP045
-    headers: Dict[str, ParameterObject] = {}  # noqa: RUF012, UP006
-    content: Dict[Union[str, int], MediaObject] = {}  # noqa: RUF012, UP006, UP007
+    headers: dict[str, ParameterObject] = {}  # noqa: RUF012
+    content: dict[Union[str, int], MediaObject] = {}  # noqa: RUF012, UP007
 
 
 class Operation(BaseModel):
-    tags: List[str] = []  # noqa: RUF012, UP006
+    tags: list[str] = []  # noqa: RUF012
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     operationId: Optional[str] = None  # noqa: N815, UP045
-    parameters: List[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012, UP006, UP007
+    parameters: list[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012, UP007
     requestBody: Optional[Union[ReferenceObject, RequestBodyObject]] = None  # noqa: N815, UP007, UP045
-    responses: Dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP006, UP007
+    responses: dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
-    schemas: Dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012, UP006, UP007
-    responses: Dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP006, UP007
-    examples: Dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012, UP006, UP007
-    requestBodies: Dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012, UP006, UP007
-    headers: Dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012, UP006, UP007
+    schemas: dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012, UP007
+    responses: dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
+    examples: dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012, UP007
+    requestBodies: dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012, UP007
+    headers: dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012, UP007
 
 
 @snooper_to_methods()
 class OpenAPIParser(JsonSchemaParser):
-    SCHEMA_PATHS: ClassVar[List[str]] = ["#/components/schemas"]  # noqa: UP006
+    SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
 
     def __init__(  # noqa: PLR0913
         self,
@@ -163,7 +152,7 @@ class OpenAPIParser(JsonSchemaParser):
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersion.PY_38,
+        target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
         field_constraints: bool = False,

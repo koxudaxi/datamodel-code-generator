@@ -1,16 +1,8 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_DATE,
     IMPORT_DATETIME,
@@ -27,6 +19,7 @@ from datamodel_code_generator.types import DataType, StrictTypes, Types, chain_a
 
 if TYPE_CHECKING:
     from collections import defaultdict
+    from collections.abc import Sequence
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
@@ -42,7 +35,7 @@ def _has_field_assignment(field: DataModelFieldBase) -> bool:
 
 class DataClass(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
-    DEFAULT_IMPORTS: ClassVar[Tuple[Import, ...]] = (IMPORT_DATACLASS,)  # noqa: UP006
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
 
     def __init__(  # noqa: PLR0913
         self,
@@ -63,7 +56,7 @@ class DataClass(DataModel):
     ) -> None:
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=_has_field_assignment, reverse=False),
+            fields=sorted(fields, key=_has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -79,7 +72,7 @@ class DataClass(DataModel):
 
 
 class DataModelField(DataModelFieldBase):
-    _FIELD_KEYS: ClassVar[Set[str]] = {  # noqa: UP006
+    _FIELD_KEYS: ClassVar[set[str]] = {
         "default_factory",
         "init",
         "repr",
@@ -143,7 +136,7 @@ class DataModelField(DataModelFieldBase):
 class DataTypeManager(_DataTypeManager):
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        python_version: PythonVersion = PythonVersion.PY_38,
+        python_version: PythonVersion = PythonVersionMin,
         use_standard_collections: bool = False,  # noqa: FBT001, FBT002
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,

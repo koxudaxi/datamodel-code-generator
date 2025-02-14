@@ -19,16 +19,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py: ["3.13", "3.12", "3.11", "3.10", "3.9", "3.8"]
+        py: ["3.13", "3.12", "3.11", "3.10", "3.9"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
         tox_env: ['']
         include:
           - tox_env: py3.12-black24
           - tox_env: py3.12-black23
           - tox_env: py3.12-black22
-          - tox_env: py3.8-black19
-          - tox_env: py3.8-pydantic18
-          - tox_env: py3.8-isort4
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
