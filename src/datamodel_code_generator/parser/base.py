@@ -1242,12 +1242,7 @@ class Parser(ABC):
             else:
                 module = ("__init__.py",)
 
-            all_module_fields = {
-                field.name
-                for model in models
-                for field in model.fields
-                if field.name is not None
-            }
+            all_module_fields = {field.name for model in models for field in model.fields if field.name is not None}
             scoped_model_resolver = ModelResolver(exclude_names=all_module_fields)
 
             self.__override_required_field(models)
