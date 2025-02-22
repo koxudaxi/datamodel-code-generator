@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from typing import NotRequired, TypedDict
 
-from . import foo, models
-from .nested import foo as foo_1
+from . import foo as foo_1
+from . import models
+from .nested import foo as foo_2
 
 Optional = str
 
@@ -29,5 +30,5 @@ class Source(TypedDict):
 
 
 class DifferentTea(TypedDict):
-    foo: NotRequired[foo.Tea]
-    nested: NotRequired[foo_1.Tea]
+    foo: NotRequired[foo_1.Tea]
+    nested: NotRequired[foo_2.Tea]

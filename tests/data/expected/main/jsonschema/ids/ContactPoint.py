@@ -8,11 +8,11 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
-from . import type
+from . import type as type_1
 
 
 class Schema(BaseModel):
-    type: type.Schema
+    type: type_1.Schema
     contactType: Optional[str] = None
     email: EmailStr
     telephone: Optional[str] = None

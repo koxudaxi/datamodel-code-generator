@@ -5,14 +5,14 @@
 from __future__ import annotations
 
 from ... import person
-from .. import food
+from .. import food as food_1
 from ..drink import coffee
-from ..relative.animal.pet import pet
+from ..relative.animal.pet import pet as pet_1
 from ..relative.animal.pet.pet import Pet
 
 
 class Robot(Pet):
     friends: person.Person | None = None
     drink: coffee.Coffee | None = None
-    food: food.Noodle | None = None
-    pet: pet.Pet | None = None
+    food: food_1.Noodle | None = None
+    pet: pet_1.Pet | None = None

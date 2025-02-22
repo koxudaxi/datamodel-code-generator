@@ -8,10 +8,10 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from .. import fur
+from .. import fur as fur_1
 
 
 class Pet(BaseModel):
     name: Optional[str] = None
     age: Optional[int] = None
-    fur: Optional[fur.Fur] = None
+    fur: Optional[fur_1.Fur] = None

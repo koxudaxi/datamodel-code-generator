@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from .. import fur
+from .. import fur as fur_1
 
 
 class Pet(BaseModel):
     name: str | None = None
     age: int | None = None
-    fur: fur.Fur | None = None
+    fur: fur_1.Fur | None = None

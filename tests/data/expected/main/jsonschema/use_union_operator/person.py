@@ -8,9 +8,10 @@ from typing import List
 
 from pydantic import BaseModel, Field, conint
 
-from .definitions import food, friends
+from .definitions import food as food_1
+from .definitions import friends as friends_1
 from .definitions.drink import coffee, tea
-from .definitions.machine import robot
+from .definitions.machine import robot as robot_1
 from .definitions.relative.animal.pet import pet
 
 
@@ -19,11 +20,11 @@ class Person(BaseModel):
     last_name: str = Field(..., description="The person's last name.")
     age: conint(ge=0) | None = Field(None, description='Age in years.')
     pets: List[pet.Pet] | None = None
-    friends: friends.Friends | None = None
-    robot: robot.Robot | None = None
+    friends: friends_1.Friends | None = None
+    robot: robot_1.Robot | None = None
     comment: None = None
     drink: List[coffee.Coffee | tea.Tea] | None = None
-    food: List[food.Noodle | food.Soup] | None = None
+    food: List[food_1.Noodle | food_1.Soup] | None = None
 
 
 Person.update_forward_refs()
