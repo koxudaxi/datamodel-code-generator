@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import UserDict
 from enum import Enum
 from typing import Callable, TypeVar
 
@@ -12,7 +13,7 @@ class LiteralType(Enum):
     One = "one"
 
 
-class DefaultPutDict(dict[TK, TV]):
+class DefaultPutDict(UserDict[TK, TV]):
     def get_or_put(
         self,
         key: TK,
