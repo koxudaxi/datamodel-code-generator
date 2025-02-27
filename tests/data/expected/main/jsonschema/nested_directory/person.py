@@ -8,9 +8,10 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
-from .definitions import food, friends
+from .definitions import food as food_1
+from .definitions import friends as friends_1
 from .definitions.drink import coffee, tea
-from .definitions.machine import robot
+from .definitions.machine import robot as robot_1
 from .definitions.relative.animal.pet import pet
 
 
@@ -19,11 +20,11 @@ class Person(BaseModel):
     last_name: str = Field(..., description="The person's last name.")
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
     pets: Optional[List[pet.Pet]] = None
-    friends: Optional[friends.Friends] = None
-    robot: Optional[robot.Robot] = None
+    friends: Optional[friends_1.Friends] = None
+    robot: Optional[robot_1.Robot] = None
     comment: None = None
     drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
-    food: Optional[List[Union[food.Noodle, food.Soup]]] = None
+    food: Optional[List[Union[food_1.Noodle, food_1.Soup]]] = None
 
 
 Person.update_forward_refs()

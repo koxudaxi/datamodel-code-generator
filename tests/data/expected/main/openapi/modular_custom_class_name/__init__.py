@@ -8,8 +8,9 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from . import foo, models
-from .nested import foo as foo_1
+from . import foo as foo_1
+from . import models
+from .nested import foo as foo_2
 
 
 class CustomOptional(BaseModel):
@@ -34,5 +35,5 @@ class CustomSource(BaseModel):
 
 
 class CustomDifferentTea(BaseModel):
-    foo: Optional[foo.CustomTea] = None
-    nested: Optional[foo_1.CustomTea] = None
+    foo: Optional[foo_1.CustomTea] = None
+    nested: Optional[foo_2.CustomTea] = None

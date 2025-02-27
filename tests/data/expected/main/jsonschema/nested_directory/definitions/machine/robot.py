@@ -7,14 +7,14 @@ from __future__ import annotations
 from typing import Optional
 
 from ... import person
-from .. import food
+from .. import food as food_1
 from ..drink import coffee
-from ..relative.animal.pet import pet
+from ..relative.animal.pet import pet as pet_1
 from ..relative.animal.pet.pet import Pet
 
 
 class Robot(Pet):
     friends: Optional[person.Person] = None
     drink: Optional[coffee.Coffee] = None
-    food: Optional[food.Noodle] = None
-    pet: Optional[pet.Pet] = None
+    food: Optional[food_1.Noodle] = None
+    pet: Optional[pet_1.Pet] = None

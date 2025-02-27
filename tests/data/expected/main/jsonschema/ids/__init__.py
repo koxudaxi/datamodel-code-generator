@@ -8,13 +8,17 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from . import URI, ContactPoint, id, name, sameAs, type
+from . import URI, ContactPoint
+from . import id as id_1
+from . import name as name_1
+from . import sameAs as sameAs_1
+from . import type as type_1
 
 
 class Organization(BaseModel):
-    id: Optional[id.Schema] = None
-    type: type.Schema
-    name: name.Schema
+    id: Optional[id_1.Schema] = None
+    type: type_1.Schema
+    name: name_1.Schema
     contactPoint: Optional[ContactPoint.Schema] = None
-    sameAs: Optional[sameAs.Schema] = None
+    sameAs: Optional[sameAs_1.Schema] = None
     url: Optional[URI.Schema] = None
