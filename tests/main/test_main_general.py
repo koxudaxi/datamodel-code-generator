@@ -14,7 +14,7 @@ from datamodel_code_generator import (
     generate,
     snooper_to_methods,
 )
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Config, Exit, main
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -69,6 +69,19 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     assert return_code == Exit.ERROR
     assert isatty_mock.called
     assert print_help_mock.called
+
+
+def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    No argument should have a default value set because it would override pyproject.toml values.
+
+    Default values are set in __main__.Config class.
+    """
+    namespace = Namespace()
+    monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace)
+    main([])
+    for field in Config.get_fields():
+        assert getattr(namespace, field, None) is None
 
 
 @freeze_time("2019-07-26")
