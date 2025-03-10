@@ -168,7 +168,7 @@ model_options.add_argument(
     "--treat-dot-as-module",
     help="treat dotted module names as modules",
     action="store_true",
-    default=False,
+    default=None,
 )
 model_options.add_argument(
     "--use-schema-description",
@@ -186,14 +186,14 @@ model_options.add_argument(
     "--use-pendulum",
     help="use pendulum instead of datetime",
     action="store_true",
-    default=False,
+    default=None,
 )
 model_options.add_argument(
     "--use-exact-imports",
     help='import exact types instead of modules, for example: "from .foo import Bar" instead of '
     '"from . import foo" with "foo.Bar"',
     action="store_true",
-    default=False,
+    default=None,
 )
 model_options.add_argument(
     "--output-datetime-class",
