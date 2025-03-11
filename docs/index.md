@@ -348,6 +348,8 @@ Options:
                         "datetime.date,datetime.datetime"
   --custom-formatters CUSTOM_FORMATTERS
                         List of modules with custom formatter (delimited list input).
+  --formatters {black,isort,ruff-check,ruff-format} [{black,isort,ruff-check,ruff-format} ...]
+                        Formatters for output (default: [black, isort])
   --http-headers HTTP_HEADER [HTTP_HEADER ...]
                         Set headers in HTTP requests to the remote host. (example:
                         "Authorization: Basic dXNlcjpwYXNz")
