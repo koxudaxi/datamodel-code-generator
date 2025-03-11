@@ -19,7 +19,7 @@ from datamodel_code_generator import (
     load_yaml_from_path,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import DEFAULT_FORMATTERS, Formatter, PythonVersion, PythonVersionMin
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name
@@ -422,6 +422,7 @@ class JsonSchemaParser(Parser):
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
+        formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
         super().__init__(
             source=source,
@@ -495,6 +496,7 @@ class JsonSchemaParser(Parser):
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
             no_alias=no_alias,
+            formatters=formatters,
         )
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, Any]] = DefaultPutDict()

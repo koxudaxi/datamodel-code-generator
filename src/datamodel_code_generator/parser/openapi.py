@@ -18,7 +18,7 @@ from datamodel_code_generator import (
     load_yaml,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import DatetimeClassType
+from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.parser import DefaultPutDict  # noqa: TC001 # needed for type check
@@ -215,6 +215,7 @@ class OpenAPIParser(JsonSchemaParser):
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
+        formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
         super().__init__(
             source=source,
@@ -288,6 +289,7 @@ class OpenAPIParser(JsonSchemaParser):
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
             no_alias=no_alias,
+            formatters=formatters,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
 

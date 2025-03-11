@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess  # noqa: S404
 from enum import Enum
 from functools import cached_property
 from importlib import import_module
@@ -89,6 +90,16 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
     return project_root
 
 
+class Formatter(Enum):
+    BLACK = "black"
+    ISORT = "isort"
+    RUFF_CHECK = "ruff-check"
+    RUFF_FORMAT = "ruff-format"
+
+
+DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
+
+
 class CodeFormatter:
     def __init__(  # noqa: PLR0912, PLR0913, PLR0917
         self,
@@ -99,6 +110,8 @@ class CodeFormatter:
         known_third_party: list[str] | None = None,
         custom_formatters: list[str] | None = None,
         custom_formatters_kwargs: dict[str, Any] | None = None,
+        encoding: str = "utf-8",
+        formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
         if not settings_path:
             settings_path = Path.cwd()
@@ -158,6 +171,8 @@ class CodeFormatter:
 
         self.custom_formatters_kwargs = custom_formatters_kwargs or {}
         self.custom_formatters = self._check_custom_formatters(custom_formatters)
+        self.encoding = encoding
+        self.formatters = formatters
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         import_ = import_module(custom_formatter_import)
@@ -184,8 +199,16 @@ class CodeFormatter:
         self,
         code: str,
     ) -> str:
-        code = self.apply_isort(code)
-        code = self.apply_black(code)
+        if Formatter.ISORT in self.formatters:
+            code = self.apply_isort(code)
+        if Formatter.BLACK in self.formatters:
+            code = self.apply_black(code)
+
+        if Formatter.RUFF_CHECK in self.formatters:
+            code = self.apply_ruff_lint(code)
+
+        if Formatter.RUFF_FORMAT in self.formatters:
+            code = self.apply_ruff_formatter(code)
 
         for formatter in self.custom_formatters:
             code = formatter.apply(code)
@@ -197,6 +220,24 @@ class CodeFormatter:
             code,
             mode=self.black_mode,
         )
+
+    def apply_ruff_lint(self, code: str) -> str:
+        result = subprocess.run(  # noqa: S603
+            ("ruff", "check", "--fix", "-"),
+            input=code.encode(self.encoding),
+            capture_output=True,
+            check=False,
+        )
+        return result.stdout.decode(self.encoding)
+
+    def apply_ruff_formatter(self, code: str) -> str:
+        result = subprocess.run(  # noqa: S603
+            ("ruff", "format", "-"),
+            input=code.encode(self.encoding),
+            capture_output=True,
+            check=False,
+        )
+        return result.stdout.decode(self.encoding)
 
     if TYPE_CHECKING:
 

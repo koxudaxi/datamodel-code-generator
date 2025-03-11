@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
-from datamodel_code_generator.format import CodeFormatter, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion, PythonVersionMin
 
 EXAMPLE_LICENSE_FILE = str(Path(__file__).parent / "data/python/custom_formatters/license_example.txt")
 
@@ -125,3 +126,29 @@ x = 1
 y = 2
 """
     )
+
+
+def test_format_code_ruff_format_formatter() -> None:
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_FORMAT],
+    )
+    with mock.patch("subprocess.run") as mock_run:
+        mock_run.return_value.stdout = b"output"
+        formatted_code = formatter.format_code("input")
+
+    assert formatted_code == "output"
+    mock_run.assert_called_once_with(("ruff", "format", "-"), input=b"input", capture_output=True, check=False)
+
+
+def test_format_code_ruff_check_formatter() -> None:
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+    )
+    with mock.patch("subprocess.run") as mock_run:
+        mock_run.return_value.stdout = b"output"
+        formatted_code = formatter.format_code("input")
+
+    assert formatted_code == "output"
+    mock_run.assert_called_once_with(("ruff", "check", "--fix", "-"), input=b"input", capture_output=True, check=False)

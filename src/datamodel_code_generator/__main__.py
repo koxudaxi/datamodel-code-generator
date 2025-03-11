@@ -36,7 +36,9 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.format import (
+    DEFAULT_FORMATTERS,
     DatetimeClassType,
+    Formatter,
     PythonVersion,
     PythonVersionMin,
     is_supported_in_black,
@@ -311,6 +313,7 @@ class Config(BaseModel):
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     keyword_only: bool = False
     no_alias: bool = False
+    formatters: list[Formatter] = DEFAULT_FORMATTERS
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
@@ -519,6 +522,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             output_datetime_class=config.output_datetime_class,
             keyword_only=config.keyword_only,
             no_alias=config.no_alias,
+            formatters=config.formatters,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
