@@ -97,7 +97,7 @@ class Formatter(Enum):
     RUFF_FORMAT = "ruff-format"
 
 
-DEFAULT_FORMATTERS = (Formatter.BLACK, Formatter.ISORT)
+DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 
 
 class CodeFormatter:
@@ -221,6 +221,24 @@ class CodeFormatter:
             mode=self.black_mode,
         )
 
+    def apply_ruff_lint(self, code: str) -> str:
+        result = subprocess.run(  # noqa: S603
+            ("ruff", "check", "--fix", "-"),
+            input=code.encode(self.encoding),
+            capture_output=True,
+            check=False,
+        )
+        return result.stdout.decode(self.encoding)
+
+    def apply_ruff_formatter(self, code: str) -> str:
+        result = subprocess.run(  # noqa: S603
+            ("ruff", "format", "-"),
+            input=code.encode(self.encoding),
+            capture_output=True,
+            check=False,
+        )
+        return result.stdout.decode(self.encoding)
+
     if TYPE_CHECKING:
 
         def apply_isort(self, code: str) -> str: ...
@@ -238,24 +256,6 @@ class CodeFormatter:
 
         def apply_isort(self, code: str) -> str:
             return isort.code(code, config=self.isort_config)
-
-        def apply_ruff_lint(self, code: str) -> str:
-            result = subprocess.run(  # noqa: S603
-                ("ruff", "check", "--fix", "-"),
-                input=code.encode(self.encoding),
-                capture_output=True,
-                check=False,
-            )
-            return result.stdout.decode(self.encoding)
-
-        def apply_ruff_formatter(self, code: str) -> str:
-            result = subprocess.run(  # noqa: S603
-                ("ruff", "format", "-"),
-                input=code.encode(self.encoding),
-                capture_output=True,
-                check=False,
-            )
-            return result.stdout.decode(self.encoding)
 
 
 class CustomCodeFormatter:
