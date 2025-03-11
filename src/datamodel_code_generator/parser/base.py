@@ -12,7 +12,14 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator.format import CodeFormatter, DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import (
+    DEFAULT_FORMATTERS,
+    CodeFormatter,
+    DatetimeClassType,
+    Formatter,
+    PythonVersion,
+    PythonVersionMin,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
@@ -369,6 +376,7 @@ class Parser(ABC):
         target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
+        formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
         self.keyword_only = keyword_only
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -476,6 +484,7 @@ class Parser(ABC):
         self.custom_formatters_kwargs = custom_formatters_kwargs
         self.treat_dots_as_module = treat_dots_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
+        self.formatters: list[Formatter] = formatters
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -1173,6 +1182,8 @@ class Parser(ABC):
                 known_third_party=self.known_third_party,
                 custom_formatters=self.custom_formatter,
                 custom_formatters_kwargs=self.custom_formatters_kwargs,
+                encoding=self.encoding,
+                formatters=self.formatters,
             )
         else:
             code_formatter = None

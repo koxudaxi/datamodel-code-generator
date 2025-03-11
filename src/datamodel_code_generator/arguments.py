@@ -6,7 +6,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
-from datamodel_code_generator.format import DatetimeClassType, PythonVersion
+from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
@@ -438,6 +438,13 @@ base_options.add_argument(
     "--additional-imports",
     help='Custom imports for output (delimited list input). For example "datetime.date,datetime.datetime"',
     type=str,
+    default=None,
+)
+base_options.add_argument(
+    "--formatters",
+    help="Formatters for output (default: [black, isort])",
+    choices=[f.value for f in Formatter],
+    nargs="+",
     default=None,
 )
 base_options.add_argument(

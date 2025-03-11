@@ -44,6 +44,7 @@ optional-dependencies.all = [
   "datamodel-code-generator[debug]",
   "datamodel-code-generator[graphql]",
   "datamodel-code-generator[http]",
+  "datamodel-code-generator[ruff]",
   "datamodel-code-generator[validation]",
 ]
 optional-dependencies.debug = [
@@ -54,6 +55,9 @@ optional-dependencies.graphql = [
 ]
 optional-dependencies.http = [
   "httpx>=0.24.1",
+]
+optional-dependencies.ruff = [
+  "ruff>=0.9.10",
 ]
 optional-dependencies.validation = [
   "openapi-spec-validator>=0.2.8,<0.7",

@@ -22,7 +22,13 @@ from urllib.parse import ParseResult
 import yaml
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
-from datamodel_code_generator.format import DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import (
+    DEFAULT_FORMATTERS,
+    DatetimeClassType,
+    Formatter,
+    PythonVersion,
+    PythonVersionMin,
+)
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.util import SafeLoader
 
@@ -280,6 +286,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     output_datetime_class: DatetimeClassType | None = None,
     keyword_only: bool = False,
     no_alias: bool = False,
+    formatters: list[Formatter] = DEFAULT_FORMATTERS,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -474,6 +481,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         target_datetime_class=output_datetime_class,
         keyword_only=keyword_only,
         no_alias=no_alias,
+        formatters=formatters,
         **kwargs,
     )
 

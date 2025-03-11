@@ -36,7 +36,7 @@ except ImportError as exc:  # pragma: no cover
     raise Exception(msg) from exc  # noqa: TRY002
 
 
-from datamodel_code_generator.format import DatetimeClassType
+from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -153,6 +153,7 @@ class GraphQLParser(Parser):
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
         no_alias: bool = False,
+        formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
         super().__init__(
             source=source,
@@ -226,6 +227,7 @@ class GraphQLParser(Parser):
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
             no_alias=no_alias,
+            formatters=formatters,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
