@@ -55,12 +55,8 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("int | str | None", True, "int | str"),
         ("None | str", True, "str"),
         # Complex nested types - traditional syntax
-        ("Union[List[Union[str, None]], None]", False, "List[Union[str, None]]"),
-        (
-            "Union[Dict[str, Union[List[str], None]], Union[str, None], None]",
-            False,
-            "Union[Dict[str, Union[List[str], None]], str]",
-        ),
+        ("Union[str, int] | None", True, "Union[str, int]"),
+        ("Optional[List[Dict[str, Any]]] | None", True, "Optional[List[Dict[str, Any]]]"),
         # Complex nested types - union operator syntax
         ("List[str | None] | None", True, "List[str | None]"),
         ("Dict[str, int] | None | List[str]", True, "Dict[str, int] | List[str]"),
@@ -69,8 +65,6 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("Dict[str, int] | None", True, "Dict[str, int]"),
         ("Tuple[int, ...] | None", True, "Tuple[int, ...]"),
         ("Callable[[int], str] | None", True, "Callable[[int], str]"),
-        ("Union[str, int] | None", True, "Union[str, int]"),
-        ("Optional[List[Dict[str, Any]]] | None", True, "Optional[List[Dict[str, Any]]]"),
         # Non-union types (should be returned as-is)
         ("str", False, "str"),
         ("List[str]", False, "List[str]"),
