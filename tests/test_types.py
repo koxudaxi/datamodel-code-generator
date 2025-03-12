@@ -50,10 +50,14 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("Union[str, None]", False, "str"),
         ("Union[str, int, None]", False, "Union[str, int]"),
         ("Union[None, str]", False, "str"),
+        ("Union[None]", False, "None"),
+        ("Union[None, None]", False, "None"),
+        ("Union[Union[str, None], int]", False, "Union[str, int]"),
         # Union operator syntax
         ("str | None", True, "str"),
         ("int | str | None", True, "int | str"),
         ("None | str", True, "str"),
+        ("None | None", True, "None"),
         # Complex nested types - traditional syntax
         ("Union[str, int] | None", True, "Union[str, int]"),
         ("Optional[List[Dict[str, Any]]] | None", True, "Optional[List[Dict[str, Any]]]"),
