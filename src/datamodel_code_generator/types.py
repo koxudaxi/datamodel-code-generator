@@ -180,11 +180,8 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
                 continue
 
             # Check if this part contains a nested union
-            if " | " in part:
-                processed_part = _remove_none_from_union(part, use_union_operator=True)
-                processed_parts.append(processed_part)
-            else:
-                processed_parts.append(part)
+            processed_part = _remove_none_from_union(part, use_union_operator=True) if " | " in part else part
+            processed_parts.append(processed_part)
 
         if not processed_parts:
             return NONE
@@ -214,12 +211,11 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
                 parts.append(part)
             current_part = ""
 
-    if current_part:
-        part = current_part.strip()
-        if part != NONE:
-            if part.startswith(UNION_PREFIX):
-                part = _remove_none_from_union(part, use_union_operator=False)
-            parts.append(part)
+    part = current_part.strip()
+    if current_part and part != NONE:
+        if part.startswith(UNION_PREFIX):
+            part = _remove_none_from_union(part, use_union_operator=False)
+        parts.append(part)
 
     if not parts:
         return NONE
