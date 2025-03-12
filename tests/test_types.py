@@ -77,4 +77,4 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
     ],
 )
 def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
-    assert _remove_none_from_union(type_str, use_union_operator) == expected
+    assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
