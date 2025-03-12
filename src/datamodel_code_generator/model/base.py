@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
@@ -203,11 +204,19 @@ def get_template(template_file_path: Path) -> Template:
     return environment.get_template(template_file_path.name)
 
 
+def sanitize_module_name(name: str) -> str:
+    sanitized = re.sub(r"[^0-9a-zA-Z_]", "_", name)
+    if sanitized and sanitized[0].isdigit():
+        sanitized = "_" + sanitized
+    return sanitized
+
+
 def get_module_path(name: str, file_path: Path | None) -> list[str]:
     if file_path:
+        sanitized_stem = sanitize_module_name(file_path.stem)
         return [
             *file_path.parts[:-1],
-            file_path.stem,
+            sanitized_stem,
             *name.split(".")[:-1],
         ]
     return name.split(".")[:-1]

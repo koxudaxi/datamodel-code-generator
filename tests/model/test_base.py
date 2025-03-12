@@ -10,6 +10,8 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
+    get_module_path,
+    sanitize_module_name,
 )
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
@@ -263,3 +265,37 @@ def test_data_field() -> None:
 
     field = DataModelFieldBase(name="a", data_type=DataType(is_list=True), required=False)
     assert field.type_hint == "Optional[List]"
+
+
+def test_sanitize_module_name() -> None:
+    assert sanitize_module_name("array-commons.schema") == "array_commons_schema"
+    assert sanitize_module_name("123filename") == "_123filename"
+    assert sanitize_module_name("normal_filename") == "normal_filename"
+    assert sanitize_module_name("file!name") == "file_name"
+    assert not sanitize_module_name("")
+
+
+def test_get_module_path_with_file_path() -> None:
+    file_path = Path("inputs/array-commons.schema.json")
+    expected = ["inputs", "array_commons_schema", "array-commons"]
+    result = get_module_path("array-commons.schema", file_path)
+    assert result == expected
+
+
+def test_get_module_path_without_file_path() -> None:
+    result = get_module_path("my_module.submodule", None)
+    expected = ["my_module"]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("a.b.c", ["a", "b"]),
+        ("simple", []),
+        ("with.dot", ["with"]),
+    ],
+)
+def test_get_module_path_without_file_path_parametrized(name: str, expected: str) -> None:
+    result = get_module_path(name, None)
+    assert result == expected
