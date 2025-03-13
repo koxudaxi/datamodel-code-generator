@@ -167,26 +167,67 @@ def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: s
     return types
 
 
-def _remove_none_from_union(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0911, PLR0912
     if use_union_operator:
-        if not re.match(r"^\w+ | ", type_):
+        if " | " not in type_:
             return type_
-        return UNION_OPERATOR_DELIMITER.join(
-            _remove_none_from_type(type_, UNION_OPERATOR_PATTERN, UNION_OPERATOR_DELIMITER)
-        )
 
+        # Process each part of the union
+        parts = UNION_OPERATOR_PATTERN.split(type_)
+        processed_parts = []
+        for part in parts:
+            if part == NONE:
+                continue
+
+            # Check if this part contains a nested union
+            processed_part = _remove_none_from_union(part, use_union_operator=True) if " | " in part else part
+            processed_parts.append(processed_part)
+
+        if not processed_parts:
+            return NONE
+
+        return UNION_OPERATOR_DELIMITER.join(processed_parts)
     if not type_.startswith(UNION_PREFIX):
         return type_
-    inner_types = _remove_none_from_type(type_[len(UNION_PREFIX) :][:-1], UNION_PATTERN, UNION_DELIMITER)
 
-    if len(inner_types) == 1:
-        return inner_types[0]
-    return f"{UNION_PREFIX}{UNION_DELIMITER.join(inner_types)}]"
+    inner_text = type_[len(UNION_PREFIX) : -1]
+    parts = []
+    inner_count = 0
+    current_part = ""
+
+    # Parse union parts carefully to handle nested structures
+    for char in inner_text:
+        current_part += char
+        if char == "[":
+            inner_count += 1
+        elif char == "]":
+            inner_count -= 1
+        elif char == "," and inner_count == 0:
+            part = current_part[:-1].strip()
+            if part != NONE:
+                # Process nested unions recursively
+                if part.startswith(UNION_PREFIX):
+                    part = _remove_none_from_union(part, use_union_operator=False)
+                parts.append(part)
+            current_part = ""
+
+    part = current_part.strip()
+    if current_part and part != NONE:
+        if part.startswith(UNION_PREFIX):
+            part = _remove_none_from_union(part, use_union_operator=False)
+        parts.append(part)
+
+    if not parts:
+        return NONE
+    if len(parts) == 1:
+        return parts[0]
+
+    return f"{UNION_PREFIX}{UNION_DELIMITER.join(parts)}]"
 
 
 @lru_cache
 def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
-    type_ = _remove_none_from_union(type_, use_union_operator)
+    type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
 
     if not type_ or type_ == NONE:
         return NONE
@@ -402,7 +443,9 @@ class DataType(_BaseModel):
                         self.is_optional = True
                         continue
 
-                    non_optional_data_type_type = _remove_none_from_union(data_type_type, self.use_union_operator)
+                    non_optional_data_type_type = _remove_none_from_union(
+                        data_type_type, use_union_operator=self.use_union_operator
+                    )
 
                     if non_optional_data_type_type != data_type_type:
                         self.is_optional = True
