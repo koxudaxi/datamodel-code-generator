@@ -62,6 +62,17 @@ class DataModelField(DataModelFieldBase):
     }
     constraints: Optional[Constraints] = None  # noqa: UP045
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        ref = self.data_type.reference
+        if ref:
+            ref_name = ref.short_name
+            # Append "Id" to the reference name
+            self.name = ref_name[0].lower() + ref_name[1:] + "Id"
+            # and set the data type to int.
+            self.data_type.type = "int"
+
     @property
     def imports(self) -> tuple[Import, ...]:
         field = self.field
