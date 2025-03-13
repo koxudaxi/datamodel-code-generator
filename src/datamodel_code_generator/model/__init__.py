@@ -33,7 +33,7 @@ def get_data_model_types(
 ) -> DataModelSet:
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
-    from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict  # noqa: PLC0415
+    from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, sqlmodel, typed_dict  # noqa: PLC0415
     from .types import DataTypeManager  # noqa: PLC0415
 
     if target_datetime_class is None:
@@ -53,6 +53,14 @@ def get_data_model_types(
             field_model=pydantic_v2.DataModelField,
             data_type_manager=pydantic_v2.DataTypeManager,
             dump_resolve_reference_action=pydantic_v2.dump_resolve_reference_action,
+        )
+    if data_model_type == DataModelType.SQLModelBase:
+        return DataModelSet(
+            data_model=sqlmodel.BaseModel,
+            root_model=sqlmodel.RootModel,
+            field_model=sqlmodel.DataModelField,
+            data_type_manager=sqlmodel.DataTypeManager,
+            dump_resolve_reference_action=None,
         )
     if data_model_type == DataModelType.DataclassesDataclass:
         return DataModelSet(
