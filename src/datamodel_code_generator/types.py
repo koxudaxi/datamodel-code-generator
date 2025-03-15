@@ -290,6 +290,7 @@ class DataType(_BaseModel):
     children: list[Any] = []  # noqa: RUF012
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
+    treat_dot_as_module: bool = False
 
     _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
@@ -569,6 +570,7 @@ class DataTypeManager(ABC):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
@@ -580,6 +582,7 @@ class DataTypeManager(ABC):
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
         self.target_datetime_class: DatetimeClassType = target_datetime_class or DatetimeClassType.Datetime
+        self.treat_dot_as_module: bool = treat_dot_as_module
 
         if TYPE_CHECKING:
             self.data_type: type[DataType]
@@ -590,6 +593,7 @@ class DataTypeManager(ABC):
                 use_standard_collections=(bool, use_standard_collections),
                 use_generic_container=(bool, use_generic_container_types),
                 use_union_operator=(bool, use_union_operator),
+                treat_dot_as_module=(bool, treat_dot_as_module),
                 __base__=DataType,
             )
 

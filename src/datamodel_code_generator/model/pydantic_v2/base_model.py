@@ -179,6 +179,7 @@ class BaseModel(BaseModelBase):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -193,6 +194,7 @@ class BaseModel(BaseModelBase):
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,
+            treat_dot_as_module=treat_dot_as_module,
         )
         config_parameters: dict[str, Any] = {}
 

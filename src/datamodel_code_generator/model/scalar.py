@@ -50,6 +50,7 @@ class DataTypeScalar(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        treat_dot_as_module: bool = False,
     ) -> None:
         extra_template_data = extra_template_data or defaultdict(dict)
 
@@ -78,4 +79,5 @@ class DataTypeScalar(DataModel):
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,
+            treat_dot_as_module=treat_dot_as_module,
         )

@@ -53,6 +53,7 @@ class DataClass(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -68,6 +69,7 @@ class DataClass(DataModel):
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,
+            treat_dot_as_module=treat_dot_as_module,
         )
 
 
@@ -144,6 +146,7 @@ class DataTypeManager(_DataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         super().__init__(
             python_version,
@@ -154,6 +157,7 @@ class DataTypeManager(_DataTypeManager):
             use_union_operator,
             use_pendulum,
             target_datetime_class,
+            treat_dot_as_module,
         )
 
         datetime_map = (
