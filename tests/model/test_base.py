@@ -282,6 +282,7 @@ def test_sanitize_module_name(name: str, expected_true: str, expected_false: str
     expected = expected_true if treat_dot_as_module else expected_false
     assert sanitize_module_name(name, treat_dot_as_module=treat_dot_as_module) == expected
 
+
 @pytest.mark.parametrize(
     ("treat_dot_as_module", "expected"),
     [
