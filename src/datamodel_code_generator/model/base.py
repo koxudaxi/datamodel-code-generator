@@ -208,7 +208,7 @@ def sanitize_module_name(name: str, *, treat_dot_as_module: bool) -> str:
     pattern = r"[^0-9a-zA-Z_.]" if treat_dot_as_module else r"[^0-9a-zA-Z_]"
     sanitized = re.sub(pattern, "_", name)
     if sanitized and sanitized[0].isdigit():
-        sanitized = "_" + sanitized
+        sanitized = f"_{sanitized}"
     return sanitized
 
 

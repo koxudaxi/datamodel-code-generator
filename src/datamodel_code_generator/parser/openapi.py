@@ -299,20 +299,12 @@ class OpenAPIParser(JsonSchemaParser):
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
-        """
-        Handle nullable types properly in OpenAPI schemas,
-        with better handling for edge cases where type might be None.
-        """
         # OpenAPI 3.0 doesn't allow `null` in the `type` field and list of types
         # https://swagger.io/docs/specification/data-models/data-types/#null
         # OpenAPI 3.1 does allow `null` in the `type` field and is equivalent to
         # a `nullable` flag on the property itself
-        if obj.nullable and self.strict_nullable:
-            if isinstance(obj.type, str):
-                obj.type = [obj.type, "null"]
-            elif obj.type is None:
-                # Handle case where type is None but nullable is True
-                obj.type = ["null"]
+        if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
+            obj.type = [obj.type, "null"]
 
         return super().get_data_type(obj)
 

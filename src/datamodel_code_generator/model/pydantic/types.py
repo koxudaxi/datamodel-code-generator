@@ -166,7 +166,7 @@ class DataTypeManager(_DataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
-        treat_dot_as_module: bool = False,  # noqa: FBT
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         super().__init__(
             python_version,
