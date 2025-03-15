@@ -267,35 +267,54 @@ def test_data_field() -> None:
     assert field.type_hint == "Optional[List]"
 
 
-def test_sanitize_module_name() -> None:
-    assert sanitize_module_name("array-commons.schema") == "array_commons_schema"
-    assert sanitize_module_name("123filename") == "_123filename"
-    assert sanitize_module_name("normal_filename") == "normal_filename"
-    assert sanitize_module_name("file!name") == "file_name"
-    assert not sanitize_module_name("")
+@pytest.mark.parametrize(
+    ("name", "expected_true", "expected_false"),
+    [
+        ("array-commons.schema", "array_commons.schema", "array_commons_schema"),
+        ("123filename", "_123filename", "_123filename"),
+        ("normal_filename", "normal_filename", "normal_filename"),
+        ("file!name", "file_name", "file_name"),
+        ("", "", ""),
+    ],
+)
+@pytest.mark.parametrize("treat_dot_as_module", [True, False])
+def test_sanitize_module_name(name: str, expected_true: str, expected_false: str, treat_dot_as_module: bool) -> None:
+    expected = expected_true if treat_dot_as_module else expected_false
+    assert sanitize_module_name(name, treat_dot_as_module=treat_dot_as_module) == expected
 
-
-def test_get_module_path_with_file_path() -> None:
+@pytest.mark.parametrize(
+    ("treat_dot_as_module", "expected"),
+    [
+        (True, ["inputs", "array_commons.schema", "array-commons"]),
+        (False, ["inputs", "array_commons_schema", "array-commons"]),
+    ],
+)
+def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: list[str]) -> None:
     file_path = Path("inputs/array-commons.schema.json")
-    expected = ["inputs", "array_commons_schema", "array-commons"]
-    result = get_module_path("array-commons.schema", file_path)
+    result = get_module_path("array-commons.schema", file_path, treat_dot_as_module=treat_dot_as_module)
     assert result == expected
 
 
-def test_get_module_path_without_file_path() -> None:
-    result = get_module_path("my_module.submodule", None)
+@pytest.mark.parametrize("treat_dot_as_module", [True, False])
+def test_get_module_path_without_file_path(treat_dot_as_module: bool) -> None:
+    result = get_module_path("my_module.submodule", None, treat_dot_as_module=treat_dot_as_module)
     expected = ["my_module"]
     assert result == expected
 
 
 @pytest.mark.parametrize(
-    ("name", "expected"),
+    ("treat_dot_as_module", "name", "expected"),
     [
-        ("a.b.c", ["a", "b"]),
-        ("simple", []),
-        ("with.dot", ["with"]),
+        (True, "a.b.c", ["a", "b"]),
+        (True, "simple", []),
+        (True, "with.dot", ["with"]),
+        (False, "a.b.c", ["a", "b"]),
+        (False, "simple", []),
+        (False, "with.dot", ["with"]),
     ],
 )
-def test_get_module_path_without_file_path_parametrized(name: str, expected: str) -> None:
-    result = get_module_path(name, None)
+def test_get_module_path_without_file_path_parametrized(
+    treat_dot_as_module: bool, name: str, expected: list[str]
+) -> None:
+    result = get_module_path(name, None, treat_dot_as_module=treat_dot_as_module)
     assert result == expected

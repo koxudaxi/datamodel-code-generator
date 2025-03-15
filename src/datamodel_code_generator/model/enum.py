@@ -52,6 +52,7 @@ class Enum(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -67,6 +68,7 @@ class Enum(DataModel):
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,
+            treat_dot_as_module=treat_dot_as_module,
         )
 
         if not base_classes and type_:

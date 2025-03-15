@@ -204,16 +204,17 @@ def get_template(template_file_path: Path) -> Template:
     return environment.get_template(template_file_path.name)
 
 
-def sanitize_module_name(name: str) -> str:
-    sanitized = re.sub(r"[^0-9a-zA-Z_]", "_", name)
+def sanitize_module_name(name: str, *, treat_dot_as_module: bool) -> str:
+    pattern = r"[^0-9a-zA-Z_.]" if treat_dot_as_module else r"[^0-9a-zA-Z_]"
+    sanitized = re.sub(pattern, "_", name)
     if sanitized and sanitized[0].isdigit():
         sanitized = "_" + sanitized
     return sanitized
 
 
-def get_module_path(name: str, file_path: Path | None) -> list[str]:
+def get_module_path(name: str, file_path: Path | None, *, treat_dot_as_module: bool) -> list[str]:
     if file_path:
-        sanitized_stem = sanitize_module_name(file_path.stem)
+        sanitized_stem = sanitize_module_name(file_path.stem, treat_dot_as_module=treat_dot_as_module)
         return [
             *file_path.parts[:-1],
             sanitized_stem,
@@ -222,8 +223,8 @@ def get_module_path(name: str, file_path: Path | None) -> list[str]:
     return name.split(".")[:-1]
 
 
-def get_module_name(name: str, file_path: Path | None) -> str:
-    return ".".join(get_module_path(name, file_path))
+def get_module_name(name: str, file_path: Path | None, *, treat_dot_as_module: bool) -> str:
+    return ".".join(get_module_path(name, file_path, treat_dot_as_module=treat_dot_as_module))
 
 
 class TemplateBase(ABC):
@@ -274,6 +275,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        treat_dot_as_module: bool = False,
     ) -> None:
         self.keyword_only = keyword_only
         if not self.TEMPLATE_FILE_PATH:
@@ -322,6 +324,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
         self.default: Any = default
         self._nullable: bool = nullable
+        self._treat_dot_as_module: bool = treat_dot_as_module
 
     def _validate_fields(self, fields: list[DataModelFieldBase]) -> list[DataModelFieldBase]:
         names: set[str] = set()
@@ -402,11 +405,11 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def module_path(self) -> list[str]:
-        return get_module_path(self.name, self.file_path)
+        return get_module_path(self.name, self.file_path, treat_dot_as_module=self._treat_dot_as_module)
 
     @property
     def module_name(self) -> str:
-        return get_module_name(self.name, self.file_path)
+        return get_module_name(self.name, self.file_path, treat_dot_as_module=self._treat_dot_as_module)
 
     @property
     def all_data_types(self) -> Iterator[DataType]:

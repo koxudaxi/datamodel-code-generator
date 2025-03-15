@@ -209,7 +209,7 @@ class OpenAPIParser(JsonSchemaParser):
         custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dots_as_module: bool = False,
+        treat_dot_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
@@ -283,7 +283,7 @@ class OpenAPIParser(JsonSchemaParser):
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
-            treat_dots_as_module=treat_dots_as_module,
+            treat_dot_as_module=treat_dot_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
@@ -299,12 +299,20 @@ class OpenAPIParser(JsonSchemaParser):
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+        """
+        Handle nullable types properly in OpenAPI schemas,
+        with better handling for edge cases where type might be None.
+        """
         # OpenAPI 3.0 doesn't allow `null` in the `type` field and list of types
         # https://swagger.io/docs/specification/data-models/data-types/#null
         # OpenAPI 3.1 does allow `null` in the `type` field and is equivalent to
         # a `nullable` flag on the property itself
-        if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
-            obj.type = [obj.type, "null"]
+        if obj.nullable and self.strict_nullable:
+            if isinstance(obj.type, str):
+                obj.type = [obj.type, "null"]
+            elif obj.type is None:
+                # Handle case where type is None but nullable is True
+                obj.type = ["null"]
 
         return super().get_data_type(obj)
 
@@ -488,6 +496,7 @@ class OpenAPIParser(JsonSchemaParser):
                     custom_base_class=self.base_class,
                     custom_template_dir=self.custom_template_dir,
                     keyword_only=self.keyword_only,
+                    treat_dot_as_module=self.treat_dot_as_module,
                 )
             )
 
