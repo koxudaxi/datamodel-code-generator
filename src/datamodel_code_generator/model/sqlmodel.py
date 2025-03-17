@@ -40,7 +40,22 @@ FILTERS["snake_case"] = camelcase_to_snake_case
 class BaseModel(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "sqlmodel.jinja2"
     BASE_CLASS: ClassVar[str] = "sqlmodel.SQLModel"
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_SQLMODEL, IMPORT_FIELD)
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_SQLMODEL,)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        existing_fields = {f.name for f in self.fields}
+        if self.fields and "id" not in existing_fields:
+            self.fields.insert(
+                0,
+                DataModelField(
+                    name="id",
+                    data_type=DataType(type="int"),
+                    extras={"primary_key": True},
+                    required=True,
+                )
+            )
 
 
 class RootModel(BaseModel):
@@ -61,17 +76,6 @@ class DataModelField(DataModelFieldBase):
         "foreign_key",
     }
     constraints: Optional[Constraints] = None  # noqa: UP045
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        ref = self.data_type.reference
-        if ref:
-            ref_name = ref.short_name
-            # Append "Id" to the reference name
-            self.name = ref_name[0].lower() + ref_name[1:] + "Id"
-            # and set the data type to int.
-            self.data_type.type = "int"
 
     @property
     def imports(self) -> tuple[Import, ...]:

@@ -13,8 +13,6 @@ class {{ class_name }}({{ base_class }}{%- if fields %}, table=True{%- endif %})
 {%- if fields %}
     __tablename__: str = '{{ class_name | snake_case }}'
 
-    id: int = Field(primary_key=True)
-
 {%- endif %}
 {%- for field in fields -%}
     {%- if field.field %}
