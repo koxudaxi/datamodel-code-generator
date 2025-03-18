@@ -780,7 +780,7 @@ class Parser(ABC):
                         raise RuntimeError(msg)
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
-                        if discriminator_field.original_name != field_name and discriminator_field.name != field_name:
+                        if field_name not in {discriminator_field.original_name, discriminator_field.name}:
                             continue
                         literals = discriminator_field.data_type.literals
                         if len(literals) == 1 and literals[0] == (type_names[0] if type_names else None):
