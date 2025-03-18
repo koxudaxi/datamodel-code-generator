@@ -6,28 +6,28 @@ components:
         - $ref: '#/components/schemas/UserContextVariable'
         - $ref: '#/components/schemas/IssueContextVariable'
       properties:
-        type:
+        "@type":
           description: Type of custom context variable.
           type: string
       discriminator:
         mapping:
           user: '#/components/schemas/UserContextVariable'
           issue: '#/components/schemas/IssueContextVariable'
-        propertyName: type
+        propertyName: "@type"
       required:
-        - type
+        - "@type"
       type: object
     UserContextVariable:
       properties:
         accountId:
           description: The account ID of the user.
           type: string
-        type:
+        "@type":
           description: Type of custom context variable.
           type: string
       required:
         - accountId
-        - type
+        - "@type"
       type: object
     IssueContextVariable:
       properties:
@@ -38,9 +38,9 @@ components:
         key:
           description: The issue key.
           type: string
-        type:
+        "@type":
           description: Type of custom context variable.
           type: string
       required:
-        - type
+        - "@type"
       type: object
