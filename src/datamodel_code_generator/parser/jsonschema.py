@@ -416,7 +416,7 @@ class JsonSchemaParser(Parser):
         custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dots_as_module: bool = False,
+        treat_dot_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
@@ -490,7 +490,7 @@ class JsonSchemaParser(Parser):
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
-            treat_dots_as_module=treat_dots_as_module,
+            treat_dot_as_module=treat_dot_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
@@ -695,7 +695,11 @@ class JsonSchemaParser(Parser):
         required: list[str],
     ) -> DataType:
         if obj.properties:
-            fields.extend(self.parse_object_fields(obj, path, get_module_name(name, None)))
+            fields.extend(
+                self.parse_object_fields(
+                    obj, path, get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
+                )
+            )
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
@@ -737,6 +741,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
             keyword_only=self.keyword_only,
+            treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_type)
 
@@ -756,7 +761,7 @@ class JsonSchemaParser(Parser):
             if all_of_item.ref:  # $ref
                 base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
             else:
-                module_name = get_module_name(name, None)
+                module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
                 object_fields = self.parse_object_fields(
                     all_of_item,
                     path,
@@ -849,6 +854,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
             nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_root)
         return self.data_type(reference=reference)
@@ -935,7 +941,9 @@ class JsonSchemaParser(Parser):
         )
         class_name = reference.name
         self.set_title(class_name, obj)
-        fields = self.parse_object_fields(obj, path, get_module_name(class_name, None))
+        fields = self.parse_object_fields(
+            obj, path, get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module)
+        )
         if fields or not isinstance(obj.additionalProperties, JsonSchemaObject):
             data_model_type_class = self.data_model_type
         else:
@@ -972,6 +980,7 @@ class JsonSchemaParser(Parser):
             description=obj.description if self.use_schema_description else None,
             nullable=obj.type_has_null,
             keyword_only=self.keyword_only,
+            treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
@@ -1185,6 +1194,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
             nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_root)
         return self.data_type(reference=reference)
@@ -1264,6 +1274,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
@@ -1386,6 +1397,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             default=obj.default if obj.has_default else UNDEFINED,
             nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
