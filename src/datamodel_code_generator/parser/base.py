@@ -370,7 +370,7 @@ class Parser(ABC):
         custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dots_as_module: bool = False,
+        treat_dot_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
@@ -387,6 +387,7 @@ class Parser(ABC):
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
             target_datetime_class=target_datetime_class,
+            treat_dot_as_module=treat_dot_as_module,
         )
         self.data_model_type: type[DataModel] = data_model_type
         self.data_model_root_type: type[DataModel] = data_model_root_type
@@ -482,7 +483,7 @@ class Parser(ABC):
         self.known_third_party = known_third_party
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
-        self.treat_dots_as_module = treat_dots_as_module
+        self.treat_dot_as_module = treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
 
@@ -666,7 +667,7 @@ class Parser(ABC):
                     if (
                         len(model.module_path) > 1
                         and model.module_path[-1].count(".") > 0
-                        and not self.treat_dots_as_module
+                        and not self.treat_dot_as_module
                     ):
                         rel_path_depth = model.module_path[-1].count(".")
                         from_ = from_[rel_path_depth:]
@@ -1328,7 +1329,7 @@ class Parser(ABC):
         results = {tuple(i.replace("-", "_") for i in k): v for k, v in results.items()}
         return (
             self.__postprocess_result_modules(results)
-            if self.treat_dots_as_module
+            if self.treat_dot_as_module
             else {
                 tuple((part[: part.rfind(".")].replace(".", "_") + part[part.rfind(".") :]) for part in k): v
                 for k, v in results.items()

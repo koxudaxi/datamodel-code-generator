@@ -209,7 +209,7 @@ class OpenAPIParser(JsonSchemaParser):
         custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dots_as_module: bool = False,
+        treat_dot_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
@@ -283,7 +283,7 @@ class OpenAPIParser(JsonSchemaParser):
             custom_formatters_kwargs=custom_formatters_kwargs,
             use_pendulum=use_pendulum,
             http_query_parameters=http_query_parameters,
-            treat_dots_as_module=treat_dots_as_module,
+            treat_dot_as_module=treat_dot_as_module,
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
@@ -488,6 +488,7 @@ class OpenAPIParser(JsonSchemaParser):
                     custom_base_class=self.base_class,
                     custom_template_dir=self.custom_template_dir,
                     keyword_only=self.keyword_only,
+                    treat_dot_as_module=self.treat_dot_as_module,
                 )
             )
 

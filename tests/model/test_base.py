@@ -10,6 +10,8 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
+    get_module_path,
+    sanitize_module_name,
 )
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
@@ -263,3 +265,57 @@ def test_data_field() -> None:
 
     field = DataModelFieldBase(name="a", data_type=DataType(is_list=True), required=False)
     assert field.type_hint == "Optional[List]"
+
+
+@pytest.mark.parametrize(
+    ("name", "expected_true", "expected_false"),
+    [
+        ("array-commons.schema", "array_commons.schema", "array_commons_schema"),
+        ("123filename", "_123filename", "_123filename"),
+        ("normal_filename", "normal_filename", "normal_filename"),
+        ("file!name", "file_name", "file_name"),
+        ("", "", ""),
+    ],
+)
+@pytest.mark.parametrize("treat_dot_as_module", [True, False])
+def test_sanitize_module_name(name: str, expected_true: str, expected_false: str, treat_dot_as_module: bool) -> None:
+    expected = expected_true if treat_dot_as_module else expected_false
+    assert sanitize_module_name(name, treat_dot_as_module=treat_dot_as_module) == expected
+
+
+@pytest.mark.parametrize(
+    ("treat_dot_as_module", "expected"),
+    [
+        (True, ["inputs", "array_commons.schema", "array-commons"]),
+        (False, ["inputs", "array_commons_schema", "array-commons"]),
+    ],
+)
+def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: list[str]) -> None:
+    file_path = Path("inputs/array-commons.schema.json")
+    result = get_module_path("array-commons.schema", file_path, treat_dot_as_module=treat_dot_as_module)
+    assert result == expected
+
+
+@pytest.mark.parametrize("treat_dot_as_module", [True, False])
+def test_get_module_path_without_file_path(treat_dot_as_module: bool) -> None:
+    result = get_module_path("my_module.submodule", None, treat_dot_as_module=treat_dot_as_module)
+    expected = ["my_module"]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("treat_dot_as_module", "name", "expected"),
+    [
+        (True, "a.b.c", ["a", "b"]),
+        (True, "simple", []),
+        (True, "with.dot", ["with"]),
+        (False, "a.b.c", ["a", "b"]),
+        (False, "simple", []),
+        (False, "with.dot", ["with"]),
+    ],
+)
+def test_get_module_path_without_file_path_parametrized(
+    treat_dot_as_module: bool, name: str, expected: list[str]
+) -> None:
+    result = get_module_path(name, None, treat_dot_as_module=treat_dot_as_module)
+    assert result == expected
