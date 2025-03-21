@@ -11,26 +11,34 @@ from pydantic import BaseModel, Field, RootModel
 
 class UserContextVariable(BaseModel):
     accountId: str = Field(..., description='The account ID of the user.')
-    type: str = Field(..., description='Type of custom context variable.')
+    field_type: str = Field(
+        ..., alias='@type', description='Type of custom context variable.'
+    )
 
 
 class IssueContextVariable(BaseModel):
     id: Optional[int] = Field(None, description='The issue ID.')
     key: Optional[str] = Field(None, description='The issue key.')
-    type: str = Field(..., description='Type of custom context variable.')
+    field_type: str = Field(
+        ..., alias='@type', description='Type of custom context variable.'
+    )
 
 
 class CustomContextVariable1(UserContextVariable):
-    type: Literal['user'] = Field(..., description='Type of custom context variable.')
+    field_type: Literal['user'] = Field(
+        ..., alias='@type', description='Type of custom context variable.'
+    )
 
 
 class CustomContextVariable2(IssueContextVariable):
-    type: Literal['issue'] = Field(..., description='Type of custom context variable.')
+    field_type: Literal['issue'] = Field(
+        ..., alias='@type', description='Type of custom context variable.'
+    )
 
 
 class CustomContextVariable(
     RootModel[Union[CustomContextVariable1, CustomContextVariable2]]
 ):
     root: Union[CustomContextVariable1, CustomContextVariable2] = Field(
-        ..., discriminator='type'
+        ..., discriminator='field_type'
     )
