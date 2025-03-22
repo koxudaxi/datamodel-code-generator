@@ -1275,6 +1275,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
+            default=obj.default if obj.has_default else UNDEFINED,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
