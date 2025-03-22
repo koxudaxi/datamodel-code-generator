@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, runtime_checkable, cast
 from urllib.parse import ParseResult
 
 from pydantic import BaseModel
@@ -1116,7 +1116,7 @@ class Parser(ABC):
                 for data_type in field.data_type.all_data_types:
                     if data_type.reference:
                         filed_name_resolver.exclude_names.add(data_type.reference.short_name)
-                new_filed_name = filed_name_resolver.add(["field"], filed_name).name
+                new_filed_name = filed_name_resolver.add(["field"], cast(str, filed_name)).name
                 if filed_name != new_filed_name:
                     field.alias = filed_name
                     field.name = new_filed_name
