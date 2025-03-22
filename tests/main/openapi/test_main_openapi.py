@@ -2553,3 +2553,21 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data() -> None:
             field_constraints=True,
         )
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_referenced_default() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(OPEN_API_DATA_PATH / "referenced_default.yaml"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "openapi",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "referenced_default.py").read_text()
