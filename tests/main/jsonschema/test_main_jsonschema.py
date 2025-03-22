@@ -3083,3 +3083,34 @@ def test_main_invalid_import_name() -> None:
         for path in main_modular_dir.rglob("*.py"):
             result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
             assert result == path.read_text()
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "field_has_same_name_v2.py",
+        ),
+        (
+            "pydantic.BaseModel",
+            "field_has_same_name.py",
+        ),
+    ],
+)
+@freeze_time("2019-07-26")
+def test_main_jsonschema_field_has_same_name(output_model: str, expected_output: str) -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "field_has_same_name.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            output_model,
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
