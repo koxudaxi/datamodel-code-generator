@@ -317,6 +317,7 @@ class ModelResolver:  # noqa: PLR0904
         remove_special_field_name_prefix: bool = False,  # noqa: FBT001, FBT002
         capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
         no_alias: bool = False,  # noqa: FBT001, FBT002
+        remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         self.references: dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -349,6 +350,7 @@ class ModelResolver:  # noqa: PLR0904
         self.class_name_generator = custom_class_name_generator or self.default_class_name_generator
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
+        self.remove_suffix_number: bool = remove_suffix_number
 
     @property
     def current_base_path(self) -> Path | None:
@@ -615,7 +617,7 @@ class ModelResolver:  # noqa: PLR0904
 
     def _get_unique_name(self, name: str, camel: bool = False) -> str:  # noqa: FBT001, FBT002
         unique_name: str = name
-        count: int = 1
+        count: int = 0 if self.remove_suffix_number else 1
         reference_names = {r.name for r in self.references.values()} | self.exclude_names
         while unique_name in reference_names:
             if self.duplicate_name_suffix:
@@ -627,7 +629,7 @@ class ModelResolver:  # noqa: PLR0904
             else:
                 name_parts = [name, count]
             delimiter = "" if camel else "_"
-            unique_name = delimiter.join(str(p) for p in name_parts if p)
+            unique_name = delimiter.join(str(p) for p in name_parts if p) if count else name
             count += 1
         return unique_name
 
