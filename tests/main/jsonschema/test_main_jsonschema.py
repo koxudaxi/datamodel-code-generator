@@ -3099,7 +3099,7 @@ def test_main_invalid_import_name() -> None:
     ],
 )
 @freeze_time("2019-07-26")
-def test_main_jsonschema_field_has_same_name(output_model, expected_output) -> None:
+def test_main_jsonschema_field_has_same_name(output_model: str, expected_output: str) -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"
         return_code: Exit = main([
