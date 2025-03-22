@@ -2571,4 +2571,3 @@ def test_main_openapi_referenced_default() -> None:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "referenced_default.py").read_text()
-
