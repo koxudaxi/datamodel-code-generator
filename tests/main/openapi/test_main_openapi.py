@@ -126,10 +126,7 @@ def test_main_openapi_discriminator_with_properties() -> None:
         ])
         assert return_code == Exit.OK
 
-        assert (
-            output_file.read_text()
-            == (EXPECTED_OPENAPI_PATH / "discriminator" / "discriminator_with_properties.py").read_text()
-        )
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
 
 
 @freeze_time("2019-07-26")
