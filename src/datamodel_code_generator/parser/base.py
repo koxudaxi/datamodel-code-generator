@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
 from itertools import groupby
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
 
 from pydantic import BaseModel
@@ -370,7 +370,7 @@ class Parser(ABC):
         custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dots_as_module: bool = False,
+        treat_dot_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
@@ -387,6 +387,7 @@ class Parser(ABC):
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
             target_datetime_class=target_datetime_class,
+            treat_dot_as_module=treat_dot_as_module,
         )
         self.data_model_type: type[DataModel] = data_model_type
         self.data_model_root_type: type[DataModel] = data_model_root_type
@@ -482,7 +483,7 @@ class Parser(ABC):
         self.known_third_party = known_third_party
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
-        self.treat_dots_as_module = treat_dots_as_module
+        self.treat_dot_as_module = treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
 
@@ -666,7 +667,7 @@ class Parser(ABC):
                     if (
                         len(model.module_path) > 1
                         and model.module_path[-1].count(".") > 0
-                        and not self.treat_dots_as_module
+                        and not self.treat_dot_as_module
                     ):
                         rel_path_depth = model.module_path[-1].count(".")
                         from_ = from_[rel_path_depth:]
@@ -1105,6 +1106,24 @@ class Parser(ABC):
                 models[i], models[i + 1] = models[i + 1], model
                 changed = True
 
+    def __change_field_name(
+        self,
+        models: list[DataModel],
+    ) -> None:
+        if self.data_model_type != pydantic_model_v2.BaseModel:
+            return
+        for model in models:
+            for field in model.fields:
+                filed_name = field.name
+                filed_name_resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
+                for data_type in field.data_type.all_data_types:
+                    if data_type.reference:
+                        filed_name_resolver.exclude_names.add(data_type.reference.short_name)
+                new_filed_name = filed_name_resolver.add(["field"], cast("str", filed_name)).name
+                if filed_name != new_filed_name:
+                    field.alias = filed_name
+                    field.name = new_filed_name
+
     def __set_one_literal_on_default(self, models: list[DataModel]) -> None:
         if not self.use_one_literal_as_default:
             return
@@ -1268,6 +1287,7 @@ class Parser(ABC):
             self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
             self.__set_default_enum_member(models)
             self.__sort_models(models, imports)
+            self.__change_field_name(models)
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
 
@@ -1331,7 +1351,7 @@ class Parser(ABC):
         results = {tuple(i.replace("-", "_") for i in k): v for k, v in results.items()}
         return (
             self.__postprocess_result_modules(results)
-            if self.treat_dots_as_module
+            if self.treat_dot_as_module
             else {
                 tuple((part[: part.rfind(".")].replace(".", "_") + part[part.rfind(".") :]) for part in k): v
                 for k, v in results.items()
