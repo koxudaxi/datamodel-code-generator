@@ -128,7 +128,7 @@ def test_main_openapi_discriminator_with_properties() -> None:
 
         assert (
             output_file.read_text()
-            == (EXPECTED_OPENAPI_PATH / "discriminator" / "discriminator_with_properties.py").read_text()
+            == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
         )
 
 
