@@ -329,7 +329,7 @@ class Config(BaseModel):
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
-def _get_pyproject_toml_config(source: Path) -> dict[str, Any] | None:
+def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
     """Find and return the [tool.datamodel-codgen] section of the closest
     pyproject.toml if it exists.
     """
@@ -347,10 +347,10 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any] | None:
 
         if (current_path / ".git").exists():
             # Stop early if we see a git repository root.
-            return None
+            return {}
 
         current_path = current_path.parent
-    return None
+    return {}
 
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
@@ -371,10 +371,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         sys.exit(0)
 
     pyproject_config = _get_pyproject_toml_config(Path.cwd())
-    if pyproject_config is not None:
-        pyproject_toml = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
-    else:
-        pyproject_toml = {}
+    pyproject_toml = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
 
     try:
         config = Config.parse_obj(pyproject_toml)
