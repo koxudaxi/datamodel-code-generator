@@ -340,6 +340,8 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
             pyproject_toml = load_toml(current_path / "pyproject.toml")
             if "datamodel-codegen" in pyproject_toml.get("tool", {}):
                 pyproject_config = pyproject_toml["tool"]["datamodel-codegen"]
+                # Convert options from kebap- to snake-case
+                pyproject_config = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
                 # Replace US-american spelling if present (ignore if british spelling is present)
                 if "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config:
                     pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
@@ -371,10 +373,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         sys.exit(0)
 
     pyproject_config = _get_pyproject_toml_config(Path.cwd())
-    pyproject_toml = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
 
     try:
-        config = Config.parse_obj(pyproject_toml)
+        config = Config.parse_obj(pyproject_config)
         config.merge_args(namespace)
     except Error as e:
         print(e.message, file=sys.stderr)  # noqa: T201
