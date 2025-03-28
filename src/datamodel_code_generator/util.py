@@ -16,12 +16,12 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from yaml import SafeLoader
+    from yaml import SafeLoader # noqa: F811
 
     def load_toml(path: Path) -> dict[str, Any]: ...
 
 else:
-    try:
+    try: # noqa: SIM105
         from yaml import CSafeLoader as SafeLoader
     except ImportError:  # pragma: no cover
         from yaml import SafeLoader
