@@ -3114,3 +3114,23 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+
+
+@freeze_time("2025-03-28")
+def test_main_scientific_notation() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "scientific_notation.py"
+        expected_output: Path = EXPECTED_JSON_SCHEMA_PATH / "scientific_notation.py"
+        return_code: Exit = main([
+            "--extend-yaml-scientifc-notation",
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "scientific_notation.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
