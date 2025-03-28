@@ -48,6 +48,7 @@ DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 g_extend_yaml_scientifc_notation: bool = False
 
+
 def get_safeloader_wrapper(safeloader: type[SafeLoader]) -> type[SafeLoader]:
     return get_safeloader(safeloader, extend_yaml_scientifc_notation=g_extend_yaml_scientifc_notation)
 
@@ -294,7 +295,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
 ) -> None:
-    global g_extend_yaml_scientifc_notation # noqa: PLW0603
+    global g_extend_yaml_scientifc_notation  # noqa: PLW0603
     g_extend_yaml_scientifc_notation = extend_yaml_scientifc_notation
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):

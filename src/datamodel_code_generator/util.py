@@ -16,15 +16,16 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from yaml import SafeLoader # noqa: F811
+    from yaml import CSafeLoader as SafeLoader
+    from yaml import SafeLoader  # noqa: F811
 
     def load_toml(path: Path) -> dict[str, Any]: ...
 
 else:
-    try: # noqa: SIM105
-        from yaml import CSafeLoader as SafeLoader
+    try:  # noqa: SIM105
+        pass
     except ImportError:  # pragma: no cover
-        from yaml import SafeLoader
+        pass
 
     try:
         from tomllib import load as load_tomllib
@@ -34,6 +35,7 @@ else:
     def load_toml(path: Path) -> dict[str, Any]:
         with path.open("rb") as f:
             return load_tomllib(f)
+
 
 def get_safeloader(safeloader: type[SafeLoader], *, extend_yaml_scientifc_notation: bool) -> type[SafeLoader]:
     safeloadertemp = copy.deepcopy(safeloader)
