@@ -229,7 +229,9 @@ class MyEnum(Enum):
             output_file.as_posix(),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == expected_output, f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text()}"
+        assert output_file.read_text() == expected_output, (
+            f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text()}"
+        )
 
 
 @pytest.mark.skipif(
