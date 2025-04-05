@@ -377,6 +377,7 @@ class Parser(ABC):
         keyword_only: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        parent_scoped_naming: bool = False,
     ) -> None:
         self.keyword_only = keyword_only
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -463,6 +464,7 @@ class Parser(ABC):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             no_alias=no_alias,
+            parent_scoped_naming=parent_scoped_naming,
         )
         self.class_name: str | None = class_name
         self.wrap_string_literal: bool | None = wrap_string_literal

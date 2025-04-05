@@ -202,6 +202,12 @@ model_options.add_argument(
     choices=[i.value for i in DatetimeClassType],
     default=None,
 )
+model_options.add_argument(
+    "--parent-scoped-naming",
+    help="Set name of models defined inline from the parent model",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Typing options for generated models

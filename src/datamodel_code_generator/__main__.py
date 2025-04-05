@@ -314,6 +314,7 @@ class Config(BaseModel):
     keyword_only: bool = False
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
+    parent_scoped_naming: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
@@ -523,6 +524,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             keyword_only=config.keyword_only,
             no_alias=config.no_alias,
             formatters=config.formatters,
+            parent_scoped_naming=config.parent_scoped_naming,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
