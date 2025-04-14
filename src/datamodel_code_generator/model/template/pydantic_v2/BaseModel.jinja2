@@ -1,6 +1,6 @@
 {% if base_class != "BaseModel" and "," not in base_class and not fields and not config -%}
 
-{# if this is just going to be `class Foo(Bar): pass`, then migh as well just make Foo
+{# if this is just going to be `class Foo(Bar): pass`, then might as well just make Foo
 an alias for Bar: every pydantic model class consumes considerable memory. #}
 {{ class_name }} = {{ base_class }}
 
