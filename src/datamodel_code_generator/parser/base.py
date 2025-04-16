@@ -1184,6 +1184,24 @@ class Parser(ABC):
                 class_name=True,
             ).name
 
+    def __alias_shadowed_imports(  # noqa: PLR6301
+        self,
+        models: list[DataModel],
+        all_model_field_names: set[str],
+    ) -> None:
+        for model in models:
+            for model_field in model.fields:
+                if model_field.data_type.type in all_model_field_names:
+                    alias = model_field.data_type.type + "_aliased"
+                    model_field.data_type.type = alias
+                    if model_field.data_type.import_:
+                        model_field.data_type.import_ = Import(
+                            from_=model_field.data_type.import_.from_,
+                            import_=model_field.data_type.import_.import_,
+                            alias=alias,
+                            reference_path=model_field.data_type.import_.reference_path,
+                        )
+
     def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
@@ -1278,6 +1296,7 @@ class Parser(ABC):
             all_module_fields = {field.name for model in models for field in model.fields if field.name is not None}
             scoped_model_resolver = ModelResolver(exclude_names=all_module_fields)
 
+            self.__alias_shadowed_imports(models, all_module_fields)
             self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
             self.__change_from_import(models, imports, scoped_model_resolver, init)
