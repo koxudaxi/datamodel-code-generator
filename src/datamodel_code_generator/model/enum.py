@@ -52,6 +52,7 @@ class Enum(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
             reference=reference,
@@ -67,6 +68,7 @@ class Enum(DataModel):
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,
+            treat_dot_as_module=treat_dot_as_module,
         )
 
         if not base_classes and type_:
@@ -91,7 +93,7 @@ class Enum(DataModel):
 
         for field in self.fields:
             # Remove surrounding quotes from field default value
-            field_default = (field.default or "").strip("'\"")
+            field_default = str(field.default or "").strip("'\"")
 
             # Compare values after removing quotes
             if field_default == str_value:
