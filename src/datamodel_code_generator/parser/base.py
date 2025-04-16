@@ -1194,13 +1194,12 @@ class Parser(ABC):
                 if model_field.data_type.type in all_model_field_names:
                     alias = model_field.data_type.type + "_aliased"
                     model_field.data_type.type = alias
-                    if model_field.data_type.import_:
-                        model_field.data_type.import_ = Import(
-                            from_=model_field.data_type.import_.from_,
-                            import_=model_field.data_type.import_.import_,
-                            alias=alias,
-                            reference_path=model_field.data_type.import_.reference_path,
-                        )
+                    model_field.data_type.import_ = Import(
+                        from_=model_field.data_type.import_.from_,
+                        import_=model_field.data_type.import_.import_,
+                        alias=alias,
+                        reference_path=model_field.data_type.import_.reference_path,
+                    )
 
     def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
