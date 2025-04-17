@@ -115,6 +115,25 @@ def test_main_json_reuse_model() -> None:
 
 
 @freeze_time("2019-07-26")
+def test_main_json_reuse_model_pydantic2() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(JSON_DATA_PATH / "duplicate_models.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "json",
+            "--reuse-model",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_JSON_PATH / "json_reuse_model_pydantic2.py").read_text()
+
+
+@freeze_time("2019-07-26")
 def test_simple_json_snake_case_field() -> None:
     with TemporaryDirectory() as output_dir:
         output_file: Path = Path(output_dir) / "output.py"

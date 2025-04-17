@@ -318,6 +318,7 @@ class ModelResolver:  # noqa: PLR0904
         capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
         no_alias: bool = False,  # noqa: FBT001, FBT002
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
+        parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         self.references: dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
@@ -351,6 +352,7 @@ class ModelResolver:  # noqa: PLR0904
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
         self.remove_suffix_number: bool = remove_suffix_number
+        self.parent_scoped_naming = parent_scoped_naming
 
     @property
     def current_base_path(self) -> Path | None:
@@ -512,6 +514,19 @@ class ModelResolver:  # noqa: PLR0904
         self.references[path] = reference
         return reference
 
+    def _check_parent_scope_option(self, name: str, path: Sequence[str]) -> str:
+        if self.parent_scoped_naming:
+            parent_reference = None
+            parent_path = path[:-1]
+            while parent_path:
+                parent_reference = self.references.get(self.join_path(parent_path))
+                if parent_reference is not None:
+                    break
+                parent_path = parent_path[:-1]
+            if parent_reference:
+                name = f"{parent_reference.name}_{name}"
+        return name
+
     def add(  # noqa: PLR0913
         self,
         path: Sequence[str],
@@ -533,6 +548,7 @@ class ModelResolver:  # noqa: PLR0904
         name = original_name
         duplicate_name: str | None = None
         if class_name:
+            name = self._check_parent_scope_option(name, path)
             name, duplicate_name = self.get_class_name(
                 name=name,
                 unique=unique,
