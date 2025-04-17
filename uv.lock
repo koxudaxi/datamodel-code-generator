@@ -1,13 +1,14 @@
 version = 1
+revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.9.17'",
     "python_full_version < '3.9.17'",
 ]
 conflicts = [[
-    { package = "datamodel-code-generator", group = "black24" },
     { package = "datamodel-code-generator", group = "black22" },
     { package = "datamodel-code-generator", group = "black23" },
+    { package = "datamodel-code-generator", group = "black24" },
     { package = "datamodel-code-generator", group = "dev" },
 ]]
 
@@ -749,9 +750,9 @@ coverage = [
 dev = [
     { name = "check-wheel-contents" },
     { name = "covdefaults" },
-    { name = "coverage", extra = ["toml"] },
-    { name = "diff-cover", version = "9.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9.17'" },
-    { name = "diff-cover", version = "9.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9.17'" },
+    { name = "coverage", extra = ["toml"], marker = "(extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev')" },
+    { name = "diff-cover", version = "9.2.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.9.17' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev')" },
+    { name = "diff-cover", version = "9.2.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.9.17' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev')" },
     { name = "freezegun" },
     { name = "mkdocs" },
     { name = "mkdocs-material" },
@@ -826,7 +827,7 @@ requires-dist = [
     { name = "graphql-core", marker = "extra == 'graphql'", specifier = ">=3.2.3" },
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.24.1" },
     { name = "httpx", marker = "extra == 'http'", specifier = ">=0.24.1" },
-    { name = "inflect", specifier = ">=4.1,<6" },
+    { name = "inflect", specifier = ">=4.1,<8" },
     { name = "isort", specifier = ">=4.3.21,<7" },
     { name = "jinja2", specifier = ">=2.10.1,<4" },
     { name = "openapi-spec-validator", marker = "extra == 'all'", specifier = ">=0.2.8,<0.7" },
@@ -842,6 +843,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'ruff'", specifier = ">=0.9.10" },
     { name = "tomli", marker = "python_full_version < '3.12'", specifier = ">=2.2.1,<3" },
 ]
+provides-extras = ["all", "debug", "graphql", "http", "ruff", "validation"]
 
 [package.metadata.requires-dev]
 black22 = [{ name = "black", specifier = "==22.1" }]
