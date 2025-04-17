@@ -483,6 +483,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         keyword_only=keyword_only,
         no_alias=no_alias,
         formatters=formatters,
+        encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
         **kwargs,
     )

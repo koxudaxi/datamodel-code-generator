@@ -30,6 +30,4 @@ class UpdateObjectRequest(ObjectBase):
 
 
 class Demo(BaseModel):
-    myArray: List[Union[ObjectBase, CreateObjectRequest, UpdateObjectRequest]] = Field(
-        ..., discriminator='type'
-    )
+    myArray: List[Union[ObjectBase, CreateObjectRequest, UpdateObjectRequest]]
