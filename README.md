@@ -462,6 +462,8 @@ Model customization:
                         Choose Datetime class between AwareDatetime, NaiveDatetime or
                         datetime. Each output model has its default mapping (for example
                         pydantic: datetime, dataclass: str, ...)
+  --parent-scoped-naming
+                        Set name of models defined inline from the parent model
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
   --target-python-version {3.9,3.10,3.11,3.12,3.13}

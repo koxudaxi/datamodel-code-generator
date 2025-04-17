@@ -287,6 +287,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     keyword_only: bool = False,
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
+    parent_scoped_naming: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -483,6 +484,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         no_alias=no_alias,
         formatters=formatters,
         encoding=encoding,
+        parent_scoped_naming=parent_scoped_naming,
         **kwargs,
     )
 
