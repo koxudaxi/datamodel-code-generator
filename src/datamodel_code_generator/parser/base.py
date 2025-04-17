@@ -1148,7 +1148,7 @@ class Parser(ABC):
                 else:
                     r.append(item)
 
-            r = r[:-2] + [f"{r[-2]}.{r[-1]}"]
+            r = [*r[:-2], f"{r[-2]}.{r[-1]}"]
             return tuple(r)
 
         results = {process(k): v for k, v in results.items()}
