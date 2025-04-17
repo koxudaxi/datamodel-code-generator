@@ -88,6 +88,8 @@ def to_hashable(item: Any) -> Any:
         return frozenset(to_hashable(i) for i in item)
     if isinstance(item, BaseModel):
         return to_hashable(item.dict())
+    if item is None:
+        return ""
     return item
 
 
