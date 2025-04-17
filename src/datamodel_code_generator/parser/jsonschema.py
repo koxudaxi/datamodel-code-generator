@@ -423,6 +423,7 @@ class JsonSchemaParser(Parser):
         keyword_only: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        parent_scoped_naming: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -497,6 +498,7 @@ class JsonSchemaParser(Parser):
             keyword_only=keyword_only,
             no_alias=no_alias,
             formatters=formatters,
+            parent_scoped_naming=parent_scoped_naming,
         )
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, Any]] = DefaultPutDict()

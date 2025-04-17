@@ -2568,3 +2568,43 @@ def test_main_openapi_referenced_default() -> None:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "referenced_default.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_duplicate_models() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(OPEN_API_DATA_PATH / "duplicate_models2.yaml"),
+            "--output",
+            str(output_file),
+            "--use-operation-id-as-name",
+            "--openapi-scopes",
+            "paths",
+            "schemas",
+            "parameters",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--parent-scoped-naming",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "duplicate_models2.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_shadowed_imports() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(OPEN_API_DATA_PATH / "shadowed_imports.yaml"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "openapi",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "shadowed_imports.py").read_text()

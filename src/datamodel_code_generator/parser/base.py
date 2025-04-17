@@ -377,6 +377,7 @@ class Parser(ABC):
         keyword_only: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        parent_scoped_naming: bool = False,
     ) -> None:
         self.keyword_only = keyword_only
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -463,6 +464,7 @@ class Parser(ABC):
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
             no_alias=no_alias,
+            parent_scoped_naming=parent_scoped_naming,
         )
         self.class_name: str | None = class_name
         self.wrap_string_literal: bool | None = wrap_string_literal
@@ -949,10 +951,14 @@ class Parser(ABC):
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-                        if isinstance(
-                            root_type_field,
-                            pydantic_model.DataModelField,
-                        ) and not model_field.extras.get("discriminator"):
+                        if (
+                            isinstance(
+                                root_type_field,
+                                pydantic_model.DataModelField,
+                            )
+                            and not model_field.extras.get("discriminator")
+                            and not any(t.is_list for t in model_field.data_type.data_types)
+                        ):
                             discriminator = root_type_field.extras.get("discriminator")
                             if discriminator:
                                 model_field.extras["discriminator"] = discriminator
@@ -1148,7 +1154,7 @@ class Parser(ABC):
                 else:
                     r.append(item)
 
-            r = r[:-2] + [f"{r[-2]}.{r[-1]}"]
+            r = [*r[:-2], f"{r[-2]}.{r[-1]}"]
             return tuple(r)
 
         results = {process(k): v for k, v in results.items()}
@@ -1183,6 +1189,24 @@ class Parser(ABC):
                 unique=True,
                 class_name=True,
             ).name
+
+    def __alias_shadowed_imports(  # noqa: PLR6301
+        self,
+        models: list[DataModel],
+        all_model_field_names: set[str],
+    ) -> None:
+        for model in models:
+            for model_field in model.fields:
+                if model_field.data_type.type in all_model_field_names:
+                    alias = model_field.data_type.type + "_aliased"
+                    model_field.data_type.type = alias
+                    if model_field.data_type.import_:  # pragma: no cover
+                        model_field.data_type.import_ = Import(
+                            from_=model_field.data_type.import_.from_,
+                            import_=model_field.data_type.import_.import_,
+                            alias=alias,
+                            reference_path=model_field.data_type.import_.reference_path,
+                        )
 
     def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
@@ -1278,6 +1302,7 @@ class Parser(ABC):
             all_module_fields = {field.name for model in models for field in model.fields if field.name is not None}
             scoped_model_resolver = ModelResolver(exclude_names=all_module_fields)
 
+            self.__alias_shadowed_imports(models, all_module_fields)
             self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
             self.__change_from_import(models, imports, scoped_model_resolver, init)

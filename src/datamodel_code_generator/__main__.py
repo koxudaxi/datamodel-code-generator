@@ -314,6 +314,7 @@ class Config(BaseModel):
     keyword_only: bool = False
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
+    parent_scoped_naming: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
@@ -329,7 +330,7 @@ class Config(BaseModel):
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
-def _get_pyproject_toml_config(source: Path) -> dict[str, Any] | None:
+def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
     """Find and return the [tool.datamodel-codgen] section of the closest
     pyproject.toml if it exists.
     """
@@ -339,14 +340,20 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any] | None:
         if (current_path / "pyproject.toml").is_file():
             pyproject_toml = load_toml(current_path / "pyproject.toml")
             if "datamodel-codegen" in pyproject_toml.get("tool", {}):
-                return pyproject_toml["tool"]["datamodel-codegen"]
+                pyproject_config = pyproject_toml["tool"]["datamodel-codegen"]
+                # Convert options from kebap- to snake-case
+                pyproject_config = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
+                # Replace US-american spelling if present (ignore if british spelling is present)
+                if "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config:
+                    pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
+                return pyproject_config
 
         if (current_path / ".git").exists():
             # Stop early if we see a git repository root.
-            return None
+            return {}
 
         current_path = current_path.parent
-    return None
+    return {}
 
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
@@ -367,13 +374,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         sys.exit(0)
 
     pyproject_config = _get_pyproject_toml_config(Path.cwd())
-    if pyproject_config is not None:
-        pyproject_toml = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
-    else:
-        pyproject_toml = {}
 
     try:
-        config = Config.parse_obj(pyproject_toml)
+        config = Config.parse_obj(pyproject_config)
         config.merge_args(namespace)
     except Error as e:
         print(e.message, file=sys.stderr)  # noqa: T201
@@ -523,6 +526,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             keyword_only=config.keyword_only,
             no_alias=config.no_alias,
             formatters=config.formatters,
+            parent_scoped_naming=config.parent_scoped_naming,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
