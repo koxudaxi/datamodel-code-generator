@@ -356,9 +356,9 @@ class EnumSystems(Enum):
         "--capitalise-enum-members",
         "--snake-case-field",
         "--input",
-        input_file.as_posix(),
+        str(input_file),
         "--output",
-        output_file.as_posix(),
+        str(output_file),
     ])
     assert return_code == Exit.OK
     assert output_file.read_text() == expected_output, (
