@@ -346,38 +346,18 @@ from pydantic import Field
 
 
 class EnumSystems(Enum):
-    linux = "linux"
-    osx = "osx"
-    windows = "windows"
+    linux = 'linux'
+    osx = 'osx'
+    windows = 'windows'
 """
 
         output_file: Path = output_path / "output.py"
         return_code: Exit = main([
-            "--input-file-type",
-            "openapi",
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--encoding",
-            "UTF-8",
             "--disable-timestamp",
-            "--use-schema-description",
-            "--use-standard-collections",
-            "--use-union-operator",
-            "--use-default-kwarg",
-            "--field-constraints",
-            "--output-datetime-class",
-            "AwareDatetime",
             "--capitalise-enum-members",
-            "--enum-field-as-literal",
-            "one",
-            "--set-default-enum-member",
-            "--use-subclass-enum",
-            "--allow-population-by-field-name",
             "--snake-case-field",
-            "--strict-nullable",
-            "--use-double-quotes",
-            "--target-python-version",
-            "3.11",
             "--input",
             input_file.as_posix(),
             "--output",
