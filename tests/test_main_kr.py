@@ -343,9 +343,9 @@ from pydantic import Field
 
 
 class EnumSystems(Enum):
-    linux = 'linux'
-    osx = 'osx'
-    windows = 'windows'
+    LINUX = 'linux'
+    OSX = 'osx'
+    WINDOWS = 'windows'
 """
 
     output_file: Path = tmp_path / "output.py"
