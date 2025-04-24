@@ -1121,6 +1121,9 @@ class Parser(ABC):
         if self.data_model_type != pydantic_model_v2.BaseModel:
             return
         for model in models:
+            if model.base_class == "Enum":
+                continue
+
             for field in model.fields:
                 filed_name = field.name
                 filed_name_resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
