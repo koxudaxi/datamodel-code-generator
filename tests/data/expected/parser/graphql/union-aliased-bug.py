@@ -42,4 +42,4 @@ class UserMetadata(BaseModel):
 Metadata: TypeAlias = Union[
     'GroupMetadata',
     'UserMetadata',
-] 
+]
