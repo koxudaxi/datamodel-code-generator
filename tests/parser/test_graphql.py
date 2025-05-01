@@ -45,8 +45,5 @@ def test_graphql_union_aliased_bug() -> None:
         actual = output_file.read_text().rstrip()
         expected = (EXPECTED_GRAPHQL_PATH / "union-aliased-bug.py").read_text().rstrip()
         if actual != expected:
-            print("Actual output:")
-            print(repr(actual))
-            print("\nExpected output:")
-            print(repr(expected))
+            pass
         assert actual == expected
