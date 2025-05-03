@@ -12,6 +12,7 @@ from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
+        coerce_numbers_to_str=True,
     )
     id: int
     name: str
