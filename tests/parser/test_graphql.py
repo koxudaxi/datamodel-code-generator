@@ -27,3 +27,23 @@ def test_graphql_field_enum() -> None:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_graphql_union_aliased_bug() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(GRAPHQL_DATA_PATH / "union-aliased-bug.graphql"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "graphql",
+        ])
+        assert return_code == Exit.OK
+        actual = output_file.read_text().rstrip()
+        expected = (EXPECTED_GRAPHQL_PATH / "union-aliased-bug.py").read_text().rstrip()
+        if actual != expected:
+            pass
+        assert actual == expected

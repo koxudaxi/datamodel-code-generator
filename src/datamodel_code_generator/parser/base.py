@@ -1202,7 +1202,10 @@ class Parser(ABC):
     ) -> None:
         for model in models:
             for model_field in model.fields:
-                if model_field.data_type.type in all_model_field_names:
+                if (
+                    model_field.data_type.type in all_model_field_names
+                    and model_field.data_type.type == model_field.name
+                ):
                     alias = model_field.data_type.type + "_aliased"
                     model_field.data_type.type = alias
                     if model_field.data_type.import_:  # pragma: no cover
