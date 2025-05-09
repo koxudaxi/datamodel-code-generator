@@ -6,9 +6,9 @@ resolution-markers = [
     "python_full_version < '3.9.17'",
 ]
 conflicts = [[
+    { package = "datamodel-code-generator", group = "black24" },
     { package = "datamodel-code-generator", group = "black22" },
     { package = "datamodel-code-generator", group = "black23" },
-    { package = "datamodel-code-generator", group = "black24" },
     { package = "datamodel-code-generator", group = "dev" },
 ]]
 
