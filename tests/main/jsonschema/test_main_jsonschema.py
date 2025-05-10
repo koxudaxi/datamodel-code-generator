@@ -3114,3 +3114,20 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+
+
+@pytest.mark.benchmark
+@freeze_time("2019-07-26")
+def test_main_jsonschema_required_and_any_of_required() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "required_and_any_of_required.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "required_and_any_of_required.py").read_text()
