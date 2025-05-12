@@ -57,9 +57,11 @@ from datamodel_code_generator.format import DatetimeClassType
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 
+
 def unescape_json_pointer_segment(segment: str) -> str:
     # Unescape ~1, ~0, and percent-encoding
-    return unquote(segment.replace('~1', '/').replace('~0', '~'))
+    return unquote(segment.replace("~1", "/").replace("~0", "~"))
+
 
 def get_model_by_path(schema: dict[str, Any] | list[Any], keys: list[str] | list[int]) -> dict[Any, Any]:
     model: dict[Any, Any] | list[Any]
