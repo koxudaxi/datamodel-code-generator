@@ -222,7 +222,7 @@ class CodeFormatter:
         )
 
     def apply_ruff_lint(self, code: str) -> str:
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             ("ruff", "check", "--fix", "-"),
             input=code.encode(self.encoding),
             capture_output=True,
@@ -231,7 +231,7 @@ class CodeFormatter:
         return result.stdout.decode(self.encoding)
 
     def apply_ruff_formatter(self, code: str) -> str:
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             ("ruff", "format", "-"),
             input=code.encode(self.encoding),
             capture_output=True,
