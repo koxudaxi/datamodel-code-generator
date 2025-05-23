@@ -195,14 +195,28 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
     inner_count = 0
     current_part = ""
 
+    # With this variable we count any non-escaped round bracket, whenever we are inside a
+    # constraint string expression. Once found a part starting with `constr(`, we increment
+    # this counter for each non-escaped opening round bracket and decrement it for each
+    # non-escaped closing round bracket.
+    in_constr = 0
+
     # Parse union parts carefully to handle nested structures
     for char in inner_text:
         current_part += char
-        if char == "[":
+        if char == "[" and not in_constr:
             inner_count += 1
-        elif char == "]":
+        elif char == "]" and not in_constr:
             inner_count -= 1
-        elif char == "," and inner_count == 0:
+        elif char == "(":
+            if current_part.strip().startswith('constr(') and current_part[-2] != '\\':
+                # non-escaped opening round bracket found inside constraint string expression
+                in_constr += 1
+        elif char == ")":
+            if in_constr > 0 and current_part[-2] != '\\':
+                # non-escaped closing round bracket found inside constraint string expression
+                in_constr -= 1
+        elif char == "," and inner_count == 0 and not in_constr:
             part = current_part[:-1].strip()
             if part != NONE:
                 # Process nested unions recursively
