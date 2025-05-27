@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import pydantic
@@ -15,15 +16,16 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from yaml import SafeLoader
+    from yaml import CSafeLoader as SafeLoader
+    from yaml import SafeLoader  # noqa: F811
 
     def load_toml(path: Path) -> dict[str, Any]: ...
 
 else:
-    try:
-        from yaml import CSafeLoader as SafeLoader
+    try:  # noqa: SIM105
+        pass
     except ImportError:  # pragma: no cover
-        from yaml import SafeLoader
+        pass
 
     try:
         from tomllib import load as load_tomllib
@@ -35,13 +37,30 @@ else:
             return load_tomllib(f)
 
 
-SafeLoaderTemp = copy.deepcopy(SafeLoader)
-SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
-SafeLoaderTemp.add_constructor(
-    "tag:yaml.org,2002:timestamp",
-    SafeLoaderTemp.yaml_constructors["tag:yaml.org,2002:str"],
-)
-SafeLoader = SafeLoaderTemp
+def get_safeloader(safeloader: type[SafeLoader], *, extend_yaml_scientifc_notation: bool) -> type[SafeLoader]:
+    safeloadertemp = copy.deepcopy(safeloader)
+    safeloadertemp.yaml_constructors = copy.deepcopy(safeloader.yaml_constructors)
+    safeloadertemp.add_constructor(
+        "tag:yaml.org,2002:timestamp",
+        safeloadertemp.yaml_constructors["tag:yaml.org,2002:str"],
+    )
+    if extend_yaml_scientifc_notation is True:
+        safeloadertemp.add_implicit_resolver(
+            "tag:yaml.org,2002:float",
+            re.compile(
+                r"""^(?:
+            [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+            |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+            |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+            |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+            |[-+]?\\.(?:inf|Inf|INF)
+            |\\.(?:nan|NaN|NAN))$""",
+                re.VERBOSE,
+            ),
+            list("-+0123456789."),
+        )
+    return safeloadertemp
+
 
 Model = TypeVar("Model", bound=_BaseModel)
 
