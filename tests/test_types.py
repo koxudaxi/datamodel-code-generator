@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from datamodel_code_generator.types import _remove_none_from_union, get_optional_type
 
 
@@ -38,9 +39,7 @@ from datamodel_code_generator.types import _remove_none_from_union, get_optional
         ),
     ],
 )
-def test_get_optional_type(
-    input_: str, use_union_operator: bool, expected: str
-) -> None:
+def test_get_optional_type(input_: str, use_union_operator: bool, expected: str) -> None:
     assert get_optional_type(input_, use_union_operator) == expected
 
 
@@ -111,10 +110,5 @@ def test_get_optional_type(
         ("List[str]", False, "List[str]"),
     ],
 )
-def test_remove_none_from_union(
-    type_str: str, use_union_operator: bool, expected: str
-) -> None:
-    assert (
-        _remove_none_from_union(type_str, use_union_operator=use_union_operator)
-        == expected
-    )
+def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
+    assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
