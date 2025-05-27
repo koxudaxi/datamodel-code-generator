@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from datamodel_code_generator.types import _remove_none_from_union, get_optional_type
 
 
@@ -39,7 +38,9 @@ from datamodel_code_generator.types import _remove_none_from_union, get_optional
         ),
     ],
 )
-def test_get_optional_type(input_: str, use_union_operator: bool, expected: str) -> None:
+def test_get_optional_type(
+    input_: str, use_union_operator: bool, expected: str
+) -> None:
     assert get_optional_type(input_, use_union_operator) == expected
 
 
@@ -53,6 +54,27 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("Union[None]", False, "None"),
         ("Union[None, None]", False, "None"),
         ("Union[Union[str, None], int]", False, "Union[str, int]"),
+        # Union for constraint strings with pattern or regex
+        (
+            "Union[constr(pattern=r'^a,b$'), None]",
+            False,
+            "constr(pattern=r'^a,b$')",
+        ),
+        (
+            "Union[constr(regex=r'^a,b$'), None]",
+            False,
+            "constr(regex=r'^a,b$')",
+        ),
+        (
+            "Union[constr(pattern=r'^\\d+,\\w+$'), None]",
+            False,
+            "constr(pattern=r'^\\d+,\\w+$')",
+        ),
+        (
+            "Union[constr(regex=r'^\\d+,\\w+$'), None]",
+            False,
+            "constr(regex=r'^\\d+,\\w+$')",
+        ),
         # Union operator syntax
         ("str | None", True, "str"),
         ("int | str | None", True, "int | str"),
@@ -60,7 +82,22 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("None | None", True, "None"),
         # Complex nested types - traditional syntax
         ("Union[str, int] | None", True, "Union[str, int]"),
-        ("Optional[List[Dict[str, Any]]] | None", True, "Optional[List[Dict[str, Any]]]"),
+        (
+            "Optional[List[Dict[str, Any]]] | None",
+            True,
+            "Optional[List[Dict[str, Any]]]",
+        ),
+        # Union for constraint strings with pattern or regex on nested types
+        (
+            "Union[constr(pattern=r'\\['), Union[str, None], int]",
+            False,
+            "Union[constr(pattern=r'\\['), str, int]",
+        ),
+        (
+            "Union[constr(regex=r'\\['), Union[str, None], int]",
+            False,
+            "Union[constr(regex=r'\\['), str, int]",
+        ),
         # Complex nested types - union operator syntax
         ("List[str | None] | None", True, "List[str | None]"),
         ("Dict[str, int] | None | List[str]", True, "Dict[str, int] | List[str]"),
@@ -74,5 +111,10 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("List[str]", False, "List[str]"),
     ],
 )
-def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
-    assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
+def test_remove_none_from_union(
+    type_str: str, use_union_operator: bool, expected: str
+) -> None:
+    assert (
+        _remove_none_from_union(type_str, use_union_operator=use_union_operator)
+        == expected
+    )
