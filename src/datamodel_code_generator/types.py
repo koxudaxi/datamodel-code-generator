@@ -114,10 +114,7 @@ class UnionIntFloat:
         from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
             [
                 core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    [
-                        core_schema.int_schema(),
-                        core_schema.float_schema(),
-                    ]  # pyright: ignore[reportPossiblyUnboundVariable]
+                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore[reportPossiblyUnboundVariable]
                 ),
                 core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore[reportPossiblyUnboundVariable]
             ]
