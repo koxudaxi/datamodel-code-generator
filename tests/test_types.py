@@ -79,6 +79,8 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ("int | str | None", True, "int | str"),
         ("None | str", True, "str"),
         ("None | None", True, "None"),
+        ("constr(pattern='0|1') | None", True, "constr(pattern='0|1')"),
+        ("constr(pattern='0  |1') | int | None", True, "constr(pattern='0  |1') | int"),
         # Complex nested types - traditional syntax
         ("Union[str, int] | None", True, "Union[str, int]"),
         (
@@ -99,6 +101,21 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
         ),
         # Complex nested types - union operator syntax
         ("List[str | None] | None", True, "List[str | None]"),
+        (
+            "List[constr(pattern='0|1') | None] | None",
+            True,
+            "List[constr(pattern='0|1') | None]",
+        ),
+        (
+            "List[constr(pattern='0 | 1') | None] | None",
+            True,
+            "List[constr(pattern='0 | 1') | None]",
+        ),
+        (
+            "List[constr(pattern='0  | 1') | None] | None",
+            True,
+            "List[constr(pattern='0  | 1') | None]",
+        ),
         ("Dict[str, int] | None | List[str]", True, "Dict[str, int] | List[str]"),
         # Edge cases that test the fixed regex pattern issue
         ("List[str] | None", True, "List[str]"),
