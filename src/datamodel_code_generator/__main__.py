@@ -312,6 +312,7 @@ class Config(BaseModel):
     union_mode: Optional[UnionMode] = None  # noqa: UP045
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     keyword_only: bool = False
+    frozen_dataclasses: bool = False
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
@@ -524,6 +525,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             union_mode=config.union_mode,
             output_datetime_class=config.output_datetime_class,
             keyword_only=config.keyword_only,
+            frozen_dataclasses=config.frozen_dataclasses,
             no_alias=config.no_alias,
             formatters=config.formatters,
             parent_scoped_naming=config.parent_scoped_naming,

@@ -17,6 +17,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
@@ -152,6 +153,7 @@ class GraphQLParser(Parser):
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        frozen_dataclasses: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
@@ -227,6 +229,7 @@ class GraphQLParser(Parser):
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
+            frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
@@ -282,6 +285,13 @@ class GraphQLParser(Parser):
                 )
 
                 self.support_graphql_types[resolved_type].append(type_)
+
+    def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
+        """Create data model instance with conditional frozen parameter for DataClass."""
+        data_model_class = model_type or self.data_model_type
+        if issubclass(data_model_class, DataClass):
+            kwargs["frozen"] = self.frozen_dataclasses
+        return data_model_class(**kwargs)
 
     def _typename_field(self, name: str) -> DataModelFieldBase:
         return self.data_model_field_type(
@@ -445,7 +455,7 @@ class GraphQLParser(Parser):
         if hasattr(obj, "interfaces"):  # pragma: no cover
             base_classes = [self.references[i.name] for i in obj.interfaces]  # pyright: ignore[reportAttributeAccessIssue]
 
-        data_model_type = self.data_model_type(
+        data_model_type = self._create_data_model(
             reference=self.references[obj.name],
             fields=fields,
             base_classes=base_classes,

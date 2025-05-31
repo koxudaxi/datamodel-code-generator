@@ -275,9 +275,11 @@ class DataModel(TemplateBase, Nullable, ABC):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        frozen: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
         self.keyword_only = keyword_only
+        self.frozen = frozen
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
             raise Exception(msg)  # noqa: TRY002
@@ -434,5 +436,6 @@ class DataModel(TemplateBase, Nullable, ABC):
             methods=self.methods,
             description=self.description,
             keyword_only=self.keyword_only,
+            frozen=self.frozen,
             **self.extra_template_data,
         )
