@@ -637,7 +637,7 @@ class JsonSchemaParser(Parser):
                     result[key] = self._deep_merge(result[key], value)
                     continue
                 if isinstance(result[key], list) and isinstance(value, list):
-                    result[key] += value
+                    result[key] = result[key] + value  # noqa: PLR6104
                     continue
             result[key] = value
         return result
