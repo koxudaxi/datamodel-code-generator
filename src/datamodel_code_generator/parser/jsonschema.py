@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union
-from urllib.parse import ParseResult
+from urllib.parse import ParseResult, unquote
 from warnings import warn
 
 from pydantic import (
@@ -58,16 +58,26 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 
 
+def unescape_json_pointer_segment(segment: str) -> str:
+    # Unescape ~1, ~0, and percent-encoding
+    return unquote(segment.replace("~1", "/").replace("~0", "~"))
+
+
 def get_model_by_path(schema: dict[str, Any] | list[Any], keys: list[str] | list[int]) -> dict[Any, Any]:
     model: dict[Any, Any] | list[Any]
     if not keys:
         model = schema
-    elif len(keys) == 1:
-        model = schema.get(str(keys[0]), {}) if isinstance(schema, dict) else schema[int(keys[0])]
-    elif isinstance(schema, dict):
-        model = get_model_by_path(schema[str(keys[0])], keys[1:])
     else:
-        model = get_model_by_path(schema[int(keys[0])], keys[1:])
+        # Unescape the key if it's a string (JSON pointer segment)
+        key = keys[0]
+        if isinstance(key, str):
+            key = unescape_json_pointer_segment(key)
+        if len(keys) == 1:
+            model = schema.get(str(key), {}) if isinstance(schema, dict) else schema[int(key)]
+        elif isinstance(schema, dict):
+            model = get_model_by_path(schema[str(key)], keys[1:])
+        else:
+            model = get_model_by_path(schema[int(key)], keys[1:])
     if isinstance(model, dict):
         return model
     msg = f"Does not support json pointer to array. schema={schema}, key={keys}"
@@ -627,7 +637,7 @@ class JsonSchemaParser(Parser):
                     result[key] = self._deep_merge(result[key], value)
                     continue
                 if isinstance(result[key], list) and isinstance(value, list):
-                    result[key] += value
+                    result[key] = result[key] + value  # noqa: PLR6104
                     continue
             result[key] = value
         return result
@@ -874,7 +884,7 @@ class JsonSchemaParser(Parser):
         exclude_field_names: set[str] = set()
         for original_field_name, field in properties.items():
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                original_field_name, exclude_field_names
+                original_field_name, excludes=exclude_field_names
             )
             modular_name = f"{module_name}.{field_name}" if module_name else field_name
 
