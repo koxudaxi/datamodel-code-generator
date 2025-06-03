@@ -6,13 +6,27 @@ from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TypeVar, Union, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
 
-from datamodel_code_generator.format import DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import (
+    DatetimeClassType,
+    PythonVersion,
+    PythonVersionMin,
+)
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -167,53 +181,57 @@ def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: s
     return types
 
 
-def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0911, PLR0912
+def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
     if use_union_operator:
         if " | " not in type_:
             return type_
+        separator = "|"
+        inner_text = type_
+    else:
+        if not type_.startswith(UNION_PREFIX):
+            return type_
+        separator = ","
+        inner_text = type_[len(UNION_PREFIX) : -1]
 
-        # Process each part of the union
-        parts = UNION_OPERATOR_PATTERN.split(type_)
-        processed_parts = []
-        for part in parts:
-            if part == NONE:
-                continue
-
-            # Check if this part contains a nested union
-            processed_part = _remove_none_from_union(part, use_union_operator=True) if " | " in part else part
-            processed_parts.append(processed_part)
-
-        if not processed_parts:
-            return NONE
-
-        return UNION_OPERATOR_DELIMITER.join(processed_parts)
-    if not type_.startswith(UNION_PREFIX):
-        return type_
-
-    inner_text = type_[len(UNION_PREFIX) : -1]
     parts = []
     inner_count = 0
     current_part = ""
 
+    # With this variable we count any non-escaped round bracket, whenever we are inside a
+    # constraint string expression. Once found a part starting with `constr(`, we increment
+    # this counter for each non-escaped opening round bracket and decrement it for each
+    # non-escaped closing round bracket.
+    in_constr = 0
+
     # Parse union parts carefully to handle nested structures
     for char in inner_text:
         current_part += char
-        if char == "[":
+        if char == "[" and in_constr == 0:
             inner_count += 1
-        elif char == "]":
+        elif char == "]" and in_constr == 0:
             inner_count -= 1
-        elif char == "," and inner_count == 0:
+        elif char == "(":
+            if current_part.strip().startswith("constr(") and current_part[-2] != "\\":
+                # non-escaped opening round bracket found inside constraint string expression
+                in_constr += 1
+        elif char == ")":
+            if in_constr > 0 and current_part[-2] != "\\":
+                # non-escaped closing round bracket found inside constraint string expression
+                in_constr -= 1
+        elif char == separator and inner_count == 0 and in_constr == 0:
             part = current_part[:-1].strip()
             if part != NONE:
                 # Process nested unions recursively
-                if part.startswith(UNION_PREFIX):
+                # only UNION_PREFIX might be nested but not union_operator
+                if not use_union_operator and part.startswith(UNION_PREFIX):
                     part = _remove_none_from_union(part, use_union_operator=False)
                 parts.append(part)
             current_part = ""
 
     part = current_part.strip()
     if current_part and part != NONE:
-        if part.startswith(UNION_PREFIX):
+        # only UNION_PREFIX might be nested but not union_operator
+        if not use_union_operator and part.startswith(UNION_PREFIX):
             part = _remove_none_from_union(part, use_union_operator=False)
         parts.append(part)
 
@@ -221,6 +239,9 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
         return NONE
     if len(parts) == 1:
         return parts[0]
+
+    if use_union_operator:
+        return UNION_OPERATOR_DELIMITER.join(parts)
 
     return f"{UNION_PREFIX}{UNION_DELIMITER.join(parts)}]"
 
