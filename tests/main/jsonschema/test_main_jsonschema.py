@@ -2657,6 +2657,28 @@ def test_main_jsonschema_discriminator_literals(output_model: str, expected_outp
         assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
 
 
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str) -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "discriminator_no_mapping.json"),
+            "--output",
+            str(output_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python",
+            min_version,
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "discriminator_no_mapping.py").read_text()
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

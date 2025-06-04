@@ -770,19 +770,31 @@ class Parser(ABC):
                                     continue
                             type_names.append(name)
 
-                    # Check the main discriminator model path
-                    if mapping:
-                        check_paths(discriminator_model, mapping)  # pyright: ignore[reportArgumentType]
+                    # First try to get the discriminator value from the const field
+                    for discriminator_field in discriminator_model.fields:
+                        if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                            continue
+                        if discriminator_field.extras.get("const"):
+                            type_names = [discriminator_field.extras["const"]]
+                            break
 
-                        # Check the base_classes if they exist
-                        if len(type_names) == 0:
-                            for base_class in discriminator_model.base_classes:
-                                check_paths(base_class.reference, mapping)  # pyright: ignore[reportArgumentType]
-                    else:
-                        type_names = [discriminator_model.path.split("/")[-1]]
+                    # If no const value found, try to get it from the mapping
+                    if not type_names:
+                        # Check the main discriminator model path
+                        if mapping:
+                            check_paths(discriminator_model, mapping)  # pyright: ignore[reportArgumentType]
+
+                            # Check the base_classes if they exist
+                            if len(type_names) == 0:
+                                for base_class in discriminator_model.base_classes:
+                                    check_paths(base_class.reference, mapping)  # pyright: ignore[reportArgumentType]
+                        else:
+                            type_names = [discriminator_model.path.split("/")[-1]]
+
                     if not type_names:  # pragma: no cover
                         msg = f"Discriminator type is not found. {data_type.reference.path}"
                         raise RuntimeError(msg)
+
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
