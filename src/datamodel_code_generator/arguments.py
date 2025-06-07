@@ -154,6 +154,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--frozen-dataclasses",
+    help="Generate frozen dataclasses (dataclass(frozen=True)). Only applies to dataclass output.",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
     "--reuse-model",
     help="Reuse models on the field when a module has the model with the same content",
     action="store_true",

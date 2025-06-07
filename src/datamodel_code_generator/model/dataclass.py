@@ -53,6 +53,7 @@ class DataClass(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
+        frozen: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
@@ -69,6 +70,7 @@ class DataClass(DataModel):
             default=default,
             nullable=nullable,
             keyword_only=keyword_only,
+            frozen=frozen,
             treat_dot_as_module=treat_dot_as_module,
         )
 

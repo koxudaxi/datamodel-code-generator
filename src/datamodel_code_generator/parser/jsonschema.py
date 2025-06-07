@@ -23,6 +23,7 @@ from datamodel_code_generator.format import DEFAULT_FORMATTERS, Formatter, Pytho
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name
+from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -431,6 +432,7 @@ class JsonSchemaParser(Parser):
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        frozen_dataclasses: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
@@ -506,6 +508,7 @@ class JsonSchemaParser(Parser):
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
+            frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
@@ -696,6 +699,13 @@ class JsonSchemaParser(Parser):
     def parse_one_of(self, name: str, obj: JsonSchemaObject, path: list[str]) -> list[DataType]:
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
+    def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
+        """Create data model instance with conditional frozen parameter for DataClass."""
+        data_model_class = model_type or self.data_model_type
+        if issubclass(data_model_class, DataClass):
+            kwargs["frozen"] = self.frozen_dataclasses
+        return data_model_class(**kwargs)
+
     def _parse_object_common_part(  # noqa: PLR0913, PLR0917
         self,
         name: str,
@@ -743,7 +753,8 @@ class JsonSchemaParser(Parser):
             name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.name, obj)
-        data_model_type = self.data_model_type(
+
+        data_model_type = self._create_data_model(
             reference=reference,
             fields=fields,
             base_classes=base_classes,
@@ -982,7 +993,9 @@ class JsonSchemaParser(Parser):
             data_model_type_class = self.data_model_root_type
 
         self.set_additional_properties(class_name, obj)
-        data_model_type = data_model_type_class(
+
+        data_model_type = self._create_data_model(
+            model_type=data_model_type_class,
             reference=reference,
             fields=fields,
             custom_base_class=obj.custom_base_path or self.base_class,

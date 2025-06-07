@@ -455,6 +455,8 @@ Model customization:
                         Enable faux immutability
   --enable-version-header
                         Enable package version on file headers
+  --frozen-dataclasses  Generate frozen dataclasses (dataclass(frozen=True)). Only applies
+                        to dataclass output.
   --keep-model-order    Keep generated models'' order
   --keyword-only        Defined models as keyword only (for example
                         dataclass(kw_only=True)).
