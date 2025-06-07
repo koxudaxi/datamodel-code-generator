@@ -377,11 +377,13 @@ class Parser(ABC):
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        frozen_dataclasses: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
     ) -> None:
         self.keyword_only = keyword_only
+        self.frozen_dataclasses = frozen_dataclasses
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
             use_standard_collections=use_standard_collections,
@@ -1202,7 +1204,10 @@ class Parser(ABC):
     ) -> None:
         for model in models:
             for model_field in model.fields:
-                if model_field.data_type.type in all_model_field_names:
+                if (
+                    model_field.data_type.type in all_model_field_names
+                    and model_field.data_type.type == model_field.name
+                ):
                     alias = model_field.data_type.type + "_aliased"
                     model_field.data_type.type = alias
                     if model_field.data_type.import_:  # pragma: no cover

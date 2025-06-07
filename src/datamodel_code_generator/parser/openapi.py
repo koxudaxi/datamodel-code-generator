@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
+
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r"^application/.*json$")
 
 OPERATION_NAMES: list[str] = [
@@ -214,6 +215,7 @@ class OpenAPIParser(JsonSchemaParser):
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         keyword_only: bool = False,
+        frozen_dataclasses: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
@@ -289,6 +291,7 @@ class OpenAPIParser(JsonSchemaParser):
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
             keyword_only=keyword_only,
+            frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
@@ -483,8 +486,10 @@ class OpenAPIParser(JsonSchemaParser):
                 )
 
         if OpenAPIScope.Parameters in self.open_api_scopes and fields:
+            # Using _create_data_model from parent class JsonSchemaParser
+            # This method automatically adds frozen=True for DataClass types
             self.results.append(
-                self.data_model_type(
+                self._create_data_model(
                     fields=fields,
                     reference=reference,
                     custom_base_class=self.base_class,
