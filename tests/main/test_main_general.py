@@ -15,6 +15,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Config, Exit, main
+from datamodel_code_generator.format import PythonVersion
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -112,3 +113,79 @@ def test_direct_input_dict() -> None:
             snake_case_field=True,
         )
         assert output_file.read_text() == (EXPECTED_MAIN_PATH / "direct_input_dict.py").read_text()
+
+
+@freeze_time(TIMESTAMP)
+def test_frozen_dataclasses() -> None:
+    """Test --frozen-dataclasses flag functionality."""
+    with TemporaryDirectory() as output_dir:
+        output_file = Path(output_dir) / "output.py"
+        generate(
+            DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            output_model_type=DataModelType.DataclassesDataclass,
+            frozen_dataclasses=True,
+        )
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
+
+
+@freeze_time(TIMESTAMP)
+def test_frozen_dataclasses_with_keyword_only() -> None:
+    """Test --frozen-dataclasses with --keyword-only flag combination."""
+
+    with TemporaryDirectory() as output_dir:
+        output_file = Path(output_dir) / "output.py"
+        generate(
+            DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            output_model_type=DataModelType.DataclassesDataclass,
+            frozen_dataclasses=True,
+            keyword_only=True,
+            target_python_version=PythonVersion.PY_310,
+        )
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
+
+
+@freeze_time(TIMESTAMP)
+def test_frozen_dataclasses_command_line() -> None:
+    """Test --frozen-dataclasses flag via command line."""
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--frozen-dataclasses",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
+
+
+@freeze_time(TIMESTAMP)
+def test_frozen_dataclasses_with_keyword_only_command_line() -> None:
+    """Test --frozen-dataclasses with --keyword-only flag via command line."""
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--frozen-dataclasses",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
