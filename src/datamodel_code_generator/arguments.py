@@ -97,7 +97,7 @@ base_options.add_argument(
 # ======================================================================================
 extra_fields_model_options.add_argument(
     "--allow-extra-fields",
-    help="Deprecated: Allow passing extra fields, if this flag is not passed, extra fields are forbidden."
+    help="Deprecated: Allow passing extra fields, if this flag is not passed, extra fields are forbidden. "
     "This flag is deprecated. Use `--extra-fields=allow` instead.",
     action="store_true",
     default=None,
