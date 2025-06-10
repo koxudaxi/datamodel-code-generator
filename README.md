@@ -439,9 +439,8 @@ Field customization:
                         Use schema description to populate field docstring
 
 Model customization:
-  --allow-extra-fields  Deprecated: Allow passing extra fields, if this flag is not passed,
-                        extra fields are forbidden. This flag is deprecated. Use `--extra-
-                        fields=allow` instead.
+  --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is deprecated. Use
+                        `--extra-fields=allow` instead.
   --allow-population-by-field-name
                         Allow population by field name
   --class-name CLASS_NAME
