@@ -3247,3 +3247,21 @@ def test_main_json_pointer_percent_encoded_segments() -> None:
         result = output_file.read_text()
         # Normalize whitespace for comparison
         assert "".join(result.split()) == "".join(expected.split())
+
+
+@freeze_time("2019-07-26")
+def test_main_extra_fields_ignore() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "extra_fields_ignore.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--extra-fields",
+            "ignore",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "extra_fields_ignore.py").read_text()
