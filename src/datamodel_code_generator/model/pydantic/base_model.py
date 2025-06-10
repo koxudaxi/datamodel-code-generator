@@ -286,10 +286,25 @@ class BaseModel(BaseModelBase):
 
         additional_properties = self.extra_template_data.get("additionalProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        if additional_properties is not None or allow_extra_fields:
-            config_parameters["extra"] = (
-                "Extra.allow" if additional_properties or allow_extra_fields else "Extra.forbid"
-            )
+        extra_fields = self.extra_template_data.get("extra_fields")
+
+        if allow_extra_fields:
+            config_parameters["extra"] = "Extra.allow"
+            self._additional_imports.append(IMPORT_EXTRA)
+        elif extra_fields == "ignore":
+            config_parameters["extra"] = "Extra.ignore"
+            self._additional_imports.append(IMPORT_EXTRA)
+        elif extra_fields == "allow":
+            config_parameters["extra"] = "Extra.allow"
+            self._additional_imports.append(IMPORT_EXTRA)
+        elif extra_fields == "forbid":
+            config_parameters["extra"] = "Extra.forbid"
+            self._additional_imports.append(IMPORT_EXTRA)
+        elif additional_properties is True:
+            config_parameters["extra"] = "Extra.allow"
+            self._additional_imports.append(IMPORT_EXTRA)
+        elif additional_properties is False:
+            config_parameters["extra"] = "Extra.forbid"
             self._additional_imports.append(IMPORT_EXTRA)
 
         for config_attribute in "allow_population_by_field_name", "allow_mutation":
