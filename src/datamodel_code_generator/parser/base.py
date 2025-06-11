@@ -1135,7 +1135,7 @@ class Parser(ABC):
         if self.data_model_type != pydantic_model_v2.BaseModel:
             return
         for model in models:
-            if model.base_class == "Enum":
+            if "Enum" in model.base_class:
                 continue
 
             for field in model.fields:
