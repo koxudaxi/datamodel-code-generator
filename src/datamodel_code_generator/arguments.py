@@ -43,6 +43,7 @@ base_options = arg_parser.add_argument_group("Options")
 typing_options = arg_parser.add_argument_group("Typing customization")
 field_options = arg_parser.add_argument_group("Field customization")
 model_options = arg_parser.add_argument_group("Model customization")
+extra_fields_model_options = model_options.add_mutually_exclusive_group()
 template_options = arg_parser.add_argument_group("Template customization")
 openapi_options = arg_parser.add_argument_group("OpenAPI-only options")
 general_options = arg_parser.add_argument_group("General options")
@@ -94,9 +95,10 @@ base_options.add_argument(
 # ======================================================================================
 # Customization options for generated models
 # ======================================================================================
-model_options.add_argument(
+extra_fields_model_options.add_argument(
     "--allow-extra-fields",
-    help="Allow passing extra fields, if this flag is not passed, extra fields are forbidden.",
+    help="Deprecated: Allow passing extra fields, if this flag is not passed, extra fields are forbidden. "
+    "This flag is deprecated. Use `--extra-fields=allow` instead.",
     action="store_true",
     default=None,
 )
@@ -139,6 +141,12 @@ model_options.add_argument(
     "--enable-version-header",
     help="Enable package version on file headers",
     action="store_true",
+    default=None,
+)
+extra_fields_model_options.add_argument(
+    "--extra-fields",
+    help="Set the generated models to allow, forbid, or ignore extra fields.",
+    choices=["allow", "ignore", "forbid"],
     default=None,
 )
 model_options.add_argument(

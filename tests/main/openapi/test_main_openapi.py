@@ -2608,3 +2608,21 @@ def test_main_openapi_shadowed_imports() -> None:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "shadowed_imports.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_extra_fields_forbid() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(OPEN_API_DATA_PATH / "additional_properties.yaml"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "openapi",
+            "--extra-fields",
+            "forbid",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "additional_properties.py").read_text()
