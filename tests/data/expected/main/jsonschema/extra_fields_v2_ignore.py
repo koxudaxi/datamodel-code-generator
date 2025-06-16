@@ -6,34 +6,34 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict
 
 
 class Foo(BaseModel):
-    class Config:
-        extra = Extra.ignore
-
+    model_config = ConfigDict(
+        extra='ignore',
+    )
     x: Optional[int] = None
 
 
 class Bar(BaseModel):
-    class Config:
-        extra = Extra.ignore
-
+    model_config = ConfigDict(
+        extra='ignore',
+    )
     y: Optional[int] = None
 
 
 class Baz(BaseModel):
-    class Config:
-        extra = Extra.ignore
-
+    model_config = ConfigDict(
+        extra='ignore',
+    )
     z: Optional[int] = None
 
 
 class Test(BaseModel):
-    class Config:
-        extra = Extra.ignore
-
+    model_config = ConfigDict(
+        extra='ignore',
+    )
     foo: Foo
     bar: Optional[Bar] = None
     baz: Optional[Baz] = None

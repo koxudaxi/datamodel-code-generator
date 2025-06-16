@@ -3249,39 +3249,56 @@ def test_main_json_pointer_percent_encoded_segments() -> None:
         assert "".join(result.split()) == "".join(expected.split())
 
 
-@freeze_time("2019-07-26")
-def test_main_extra_fields_ignore() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(JSON_SCHEMA_DATA_PATH / "extra_fields_ignore.json"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--extra-fields",
+@pytest.mark.parametrize(
+    ("extra_fields", "output_model", "expected_output"),
+    [
+        (
+            "allow",
+            "pydantic.BaseModel",
+            "extra_fields_allow.py",
+        ),
+        (
+            "forbid",
+            "pydantic.BaseModel",
+            "extra_fields_forbid.py",
+        ),
+        (
             "ignore",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "extra_fields_ignore.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_extra_fields_ignore_pydantic_v2() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(JSON_SCHEMA_DATA_PATH / "extra_fields_ignore.json"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--extra-fields",
-            "ignore",
-            "--output-model-type",
+            "pydantic.BaseModel",
+            "extra_fields_ignore.py",
+        ),
+        (
+            "allow",
             "pydantic_v2.BaseModel",
+            "extra_fields_v2_allow.py",
+        ),
+        (
+            "forbid",
+            "pydantic_v2.BaseModel",
+            "extra_fields_v2_forbid.py",
+        ),
+        (
+            "ignore",
+            "pydantic_v2.BaseModel",
+            "extra_fields_v2_ignore.py",
+        ),
+    ],
+)
+@freeze_time("2019-07-26")
+def test_main_extra_fields(extra_fields: str, output_model: str, expected_output: str) -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "extra_fields.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--extra-fields",
+            extra_fields,
+            "--output-model-type",
+            output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "extra_fields_ignore_pydantic_v2.py").read_text()
+        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()

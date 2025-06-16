@@ -11,28 +11,28 @@ from pydantic import BaseModel, Extra
 
 class Foo(BaseModel):
     class Config:
-        extra = Extra.ignore
+        extra = Extra.allow
 
     x: Optional[int] = None
 
 
 class Bar(BaseModel):
     class Config:
-        extra = Extra.ignore
+        extra = Extra.allow
 
     y: Optional[int] = None
 
 
 class Baz(BaseModel):
     class Config:
-        extra = Extra.ignore
+        extra = Extra.allow
 
     z: Optional[int] = None
 
 
 class Test(BaseModel):
     class Config:
-        extra = Extra.ignore
+        extra = Extra.allow
 
     foo: Foo
     bar: Optional[Bar] = None
