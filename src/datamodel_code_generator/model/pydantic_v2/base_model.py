@@ -232,9 +232,20 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
-    def _get_config_extra(self) -> Literal["'allow'", "'forbid'"] | None:
+    def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
         additional_properties = self.extra_template_data.get("additionalProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
-        if additional_properties is not None or allow_extra_fields:
-            return "'allow'" if additional_properties or allow_extra_fields else "'forbid'"
-        return None
+        extra_fields = self.extra_template_data.get("extra_fields")
+
+        config_extra = None
+        if allow_extra_fields or extra_fields == "allow":
+            config_extra = "'allow'"
+        elif extra_fields == "forbid":
+            config_extra = "'forbid'"
+        elif extra_fields == "ignore":
+            config_extra = "'ignore'"
+        elif additional_properties is True:
+            config_extra = "'allow'"
+        elif additional_properties is False:
+            config_extra = "'forbid'"
+        return config_extra
