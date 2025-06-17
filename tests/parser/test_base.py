@@ -443,3 +443,10 @@ def escape_map() -> dict[str, str]:
 )
 def test_character_escaping(input_str: str, expected: str) -> None:
     assert input_str.translate(escape_characters) == expected
+
+
+@pytest.mark.parametrize("flag", [True, False])
+def test_use_non_positive_negative_number_constrained_types(flag: bool) -> None:
+    instance = C(source="", use_non_positive_negative_number_constrained_types=flag)
+
+    assert instance.data_type_manager.use_non_positive_negative_number_constrained_types == flag
