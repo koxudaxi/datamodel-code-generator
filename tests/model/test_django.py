@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.django import DataModelField, DjangoModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
@@ -69,17 +68,25 @@ def test_django_field_help_text() -> None:
         name="disposition",
         data_type=DataType(type="str"),
         required=False,
-        extras={"description": "The state that a message should be left in after it has been forwarded."}
+        extras={"description": "The state that a message should be left in after it has been forwarded."},
     )
-    assert "help_text='The state that a message should be left in after it has been forwarded.'" in field_with_description.django_field_options
-    assert "help_text='The state that a message should be left in after it has been forwarded.'" in field_with_description.field
+    assert (
+        "help_text='The state that a message should be left in after it has been forwarded.'"
+        in field_with_description.django_field_options
+    )
+    assert (
+        "help_text='The state that a message should be left in after it has been forwarded.'"
+        in field_with_description.field
+    )
 
     # Test field with description containing single quotes
     field_with_quotes = DataModelField(
         name="email_address",
         data_type=DataType(type="str"),
         required=False,
-        extras={"description": "Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses."}
+        extras={
+            "description": "Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses."
+        },
     )
     expected_help_text = "help_text='Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses.'"
     assert expected_help_text in field_with_quotes.django_field_options
@@ -89,17 +96,13 @@ def test_django_field_help_text() -> None:
         name="test_field",
         data_type=DataType(type="str"),
         required=False,
-        extras={"description": "This is a 'test' description with quotes."}
+        extras={"description": "This is a 'test' description with quotes."},
     )
     expected_escaped_help_text = "help_text='This is a \\'test\\' description with quotes.'"
     assert expected_escaped_help_text in field_with_escaped_quotes.django_field_options
 
     # Test field without description (no help_text)
-    field_without_description = DataModelField(
-        name="simple_field",
-        data_type=DataType(type="str"),
-        required=False
-    )
+    field_without_description = DataModelField(name="simple_field", data_type=DataType(type="str"), required=False)
     assert "help_text" not in field_without_description.django_field_options
 
 
@@ -109,27 +112,29 @@ def test_django_model_with_help_text() -> None:
         name="disposition",
         data_type=DataType(type="str"),
         required=False,
-        extras={"description": "The state that a message should be left in after it has been forwarded."}
+        extras={"description": "The state that a message should be left in after it has been forwarded."},
     )
 
     email_field = DataModelField(
         name="email_address",
         data_type=DataType(type="str"),
         required=False,
-        extras={"description": "Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses."}
+        extras={
+            "description": "Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses."
+        },
     )
 
     enabled_field = DataModelField(
         name="enabled",
         data_type=DataType(type="bool"),
         required=False,
-        extras={"description": "Whether all incoming mail is automatically forwarded to another address."}
+        extras={"description": "Whether all incoming mail is automatically forwarded to another address."},
     )
 
     django_model = DjangoModel(
         fields=[disposition_field, email_field, enabled_field],
         reference=Reference(name="AutoForwarding", path="AutoForwarding"),
-        description="Auto-forwarding settings for an account."
+        description="Auto-forwarding settings for an account.",
     )
 
     rendered = django_model.render()
@@ -139,6 +144,15 @@ def test_django_model_with_help_text() -> None:
     assert "Auto-forwarding settings for an account." in rendered
 
     # Check that fields with help_text are rendered correctly
-    assert "disposition = models.CharField(null=True, blank=True, max_length=255, help_text='The state that a message should be left in after it has been forwarded.')" in rendered
-    assert "email_address = models.EmailField(null=True, blank=True, max_length=255, help_text='Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses.')" in rendered
-    assert "enabled = models.BooleanField(null=True, blank=True, help_text='Whether all incoming mail is automatically forwarded to another address.')" in rendered
+    assert (
+        "disposition = models.CharField(null=True, blank=True, max_length=255, help_text='The state that a message should be left in after it has been forwarded.')"
+        in rendered
+    )
+    assert (
+        "email_address = models.EmailField(null=True, blank=True, max_length=255, help_text='Email address to which all incoming messages are forwarded. This email address must be a verified member of the forwarding addresses.')"
+        in rendered
+    )
+    assert (
+        "enabled = models.BooleanField(null=True, blank=True, help_text='Whether all incoming mail is automatically forwarded to another address.')"
+        in rendered
+    )

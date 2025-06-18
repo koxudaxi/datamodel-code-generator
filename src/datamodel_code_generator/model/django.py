@@ -14,7 +14,7 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import type_map_factory
-from datamodel_code_generator.types import DataType, StrictTypes, Types, chain_as_tuple
+from datamodel_code_generator.types import DataType, StrictTypes, Types
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -80,7 +80,6 @@ class DjangoModel(DataModel):
 
         # For Django models, we don't need to create an additional import
         # since we already import django.db.models as models
-        from datamodel_code_generator.model.base import BaseClassDataType  # noqa: PLC0415
         from datamodel_code_generator.types import DataType  # noqa: PLC0415
 
         # Create a simple DataType for the base class without additional imports
@@ -106,60 +105,59 @@ class DataModelField(DataModelFieldBase):
         # Handle basic types
         if type_hint == "str":
             # Check if this is a datetime field based on field name or format
-            if hasattr(self, 'extras') and self.extras:
-                format_type = self.extras.get('format')
-                if format_type == 'date-time':
+            if hasattr(self, "extras") and self.extras:
+                format_type = self.extras.get("format")
+                if format_type == "date-time":
                     return "models.DateTimeField"
-                elif format_type == 'date':
+                if format_type == "date":
                     return "models.DateField"
-                elif format_type == 'time':
+                if format_type == "time":
                     return "models.TimeField"
-                elif format_type == 'email':
+                if format_type == "email":
                     return "models.EmailField"
 
             # Check field name patterns
-            field_name = getattr(self, 'name', '').lower()
-            if 'email' in field_name:
+            field_name = getattr(self, "name", "").lower()
+            if "email" in field_name:
                 return "models.EmailField"
-            elif field_name.endswith('_at') or field_name.endswith('_time') or 'date' in field_name:
+            if field_name.endswith(("_at", "_time")) or "date" in field_name:
                 return "models.DateTimeField"
 
             return "models.CharField"
-        elif type_hint == "int":
+        if type_hint == "int":
             return "models.IntegerField"
-        elif type_hint == "float":
+        if type_hint == "float":
             return "models.FloatField"
-        elif type_hint == "bool":
+        if type_hint == "bool":
             return "models.BooleanField"
-        elif type_hint == "datetime":
+        if type_hint == "datetime":
             return "models.DateTimeField"
-        elif type_hint == "date":
+        if type_hint == "date":
             return "models.DateField"
-        elif type_hint == "time":
+        if type_hint == "time":
             return "models.TimeField"
-        elif type_hint == "timedelta":
+        if type_hint == "timedelta":
             return "models.DurationField"
-        elif type_hint == "Decimal":
+        if type_hint == "Decimal":
             return "models.DecimalField"
-        elif type_hint == "bytes":
+        if type_hint == "bytes":
             return "models.BinaryField"
 
         # Handle Optional types
         if type_hint.startswith("Optional["):
             inner_type = type_hint[9:-1]  # Remove "Optional[" and "]"
-            field_type = self._get_field_type_for_inner(inner_type)
-            return field_type
+            return self._get_field_type_for_inner(inner_type)
 
         # Handle Union types (simplified)
         if type_hint.startswith("Union["):
             return "models.TextField"  # Default to TextField for complex unions
 
         # Handle List types
-        if type_hint.startswith("List[") or type_hint.startswith("list["):
+        if type_hint.startswith(("List[", "list[")):
             return "models.JSONField"  # Use JSONField for lists
 
         # Handle Dict types
-        if type_hint.startswith("Dict[") or type_hint.startswith("dict["):
+        if type_hint.startswith(("Dict[", "dict[")):
             return "models.JSONField"  # Use JSONField for dicts
 
         # Default to TextField for unknown types
@@ -169,45 +167,44 @@ class DataModelField(DataModelFieldBase):
         """Get Django field type for inner type (used for Optional types)."""
         if inner_type == "str":
             # Check if this is a datetime field based on field name or format
-            if hasattr(self, 'extras') and self.extras:
-                format_type = self.extras.get('format')
-                if format_type == 'date-time':
+            if hasattr(self, "extras") and self.extras:
+                format_type = self.extras.get("format")
+                if format_type == "date-time":
                     return "models.DateTimeField"
-                elif format_type == 'date':
+                if format_type == "date":
                     return "models.DateField"
-                elif format_type == 'time':
+                if format_type == "time":
                     return "models.TimeField"
-                elif format_type == 'email':
+                if format_type == "email":
                     return "models.EmailField"
 
             # Check field name patterns
-            field_name = getattr(self, 'name', '').lower()
-            if 'email' in field_name:
+            field_name = getattr(self, "name", "").lower()
+            if "email" in field_name:
                 return "models.EmailField"
-            elif field_name.endswith('_at') or field_name.endswith('_time') or 'date' in field_name:
+            if field_name.endswith(("_at", "_time")) or "date" in field_name:
                 return "models.DateTimeField"
 
             return "models.CharField"
-        elif inner_type == "int":
+        if inner_type == "int":
             return "models.IntegerField"
-        elif inner_type == "float":
+        if inner_type == "float":
             return "models.FloatField"
-        elif inner_type == "bool":
+        if inner_type == "bool":
             return "models.BooleanField"
-        elif inner_type == "datetime":
+        if inner_type == "datetime":
             return "models.DateTimeField"
-        elif inner_type == "date":
+        if inner_type == "date":
             return "models.DateField"
-        elif inner_type == "time":
+        if inner_type == "time":
             return "models.TimeField"
-        elif inner_type == "timedelta":
+        if inner_type == "timedelta":
             return "models.DurationField"
-        elif inner_type == "Decimal":
+        if inner_type == "Decimal":
             return "models.DecimalField"
-        elif inner_type == "bytes":
+        if inner_type == "bytes":
             return "models.BinaryField"
-        else:
-            return "models.TextField"
+        return "models.TextField"
 
     @property
     def django_field_options(self) -> str:
@@ -216,18 +213,16 @@ class DataModelField(DataModelFieldBase):
 
         # Handle nullable fields
         if not self.required:
-            options.append("null=True")
-            options.append("blank=True")
+            options.extend(("null=True", "blank=True"))
 
         # Handle max_length for CharField and EmailField
         field_type = self.django_field_type
-        if field_type in ("models.CharField", "models.EmailField"):
+        if field_type in {"models.CharField", "models.EmailField"}:
             options.append("max_length=255")  # Default max_length
 
         # Handle decimal places for DecimalField
         if field_type == "models.DecimalField":
-            options.append("max_digits=10")
-            options.append("decimal_places=2")
+            options.extend(("max_digits=10", "decimal_places=2"))
 
         # Handle default values
         if self.default != UNDEFINED and self.default is not None:
@@ -253,8 +248,7 @@ class DataModelField(DataModelFieldBase):
 
         if options:
             return f"{field_type}({options})"
-        else:
-            return f"{field_type}()"
+        return f"{field_type}()"
 
 
 class DataTypeManager(_DataTypeManager):
