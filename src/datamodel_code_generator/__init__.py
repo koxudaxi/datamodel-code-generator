@@ -173,6 +173,7 @@ class DataModelType(Enum):
     DataclassesDataclass = "dataclasses.dataclass"
     TypingTypedDict = "typing.TypedDict"
     MsgspecStruct = "msgspec.Struct"
+    DjangoModel = "django.Model"
 
 
 class OpenAPIScope(Enum):
