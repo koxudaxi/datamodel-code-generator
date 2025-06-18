@@ -389,6 +389,7 @@ class Parser(ABC):
             python_version=target_python_version,
             use_standard_collections=use_standard_collections,
             use_generic_container_types=use_generic_container_types,
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
             strict_types=strict_types,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
