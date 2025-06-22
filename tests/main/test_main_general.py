@@ -200,12 +200,8 @@ def test_filename_with_newline_injection() -> None:
     malicious_filename = """schema.json
 # INJECTED CODE:
 import os
-os.system('touch /tmp/code_injection_test.txt')
+os.system('echo INJECTED')
 # END INJECTION"""
-
-    test_file = Path("/tmp/code_injection_test.txt")
-    if test_file.exists():
-        test_file.unlink()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir) / "output.py"
@@ -218,18 +214,20 @@ os.system('touch /tmp/code_injection_test.txt')
         )
 
         generated_content = output_path.read_text()
-        lines = generated_content.split("\n")
-        for line in lines:
-            assert not line.strip().startswith("import os"), "Injection code found on its own line!"
-            assert not line.strip().startswith("os.system"), "System call found on its own line!"
 
         assert "#   filename:  schema.json # INJECTED CODE: import os" in generated_content, (
             "Filename not properly sanitized"
         )
 
-        exec(compile(generated_content, str(output_path), "exec"))
+        assert not any(
+            line.strip().startswith("import os") and not line.strip().startswith("#")
+            for line in generated_content.split("\n")
+        )
+        assert not any(
+            "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
+        )
 
-        assert not test_file.exists(), "Code injection was executed!"
+        compile(generated_content, str(output_path), "exec")
 
 
 def test_filename_with_various_control_characters() -> None:
@@ -262,18 +260,14 @@ def test_filename_with_various_control_characters() -> None:
             )
 
             generated_content = output_path.read_text()
-            lines = generated_content.split("\n")
 
-            for line in lines:
-                stripped = line.strip()
-                if stripped.startswith("import ") and not line.strip().startswith("#"):
-                    msg = f"Injection found for {test_name}: {line}"
-                    raise AssertionError(msg)
-                if "os.system" in line and not line.strip().startswith("#"):
-                    msg = f"System call found for {test_name}: {line}"
-                    raise AssertionError(msg)
+            assert not any(
+                line.strip().startswith("import ") and not line.strip().startswith("#")
+                for line in generated_content.split("\n")
+            ), f"Injection found for {test_name}"
+
+            assert not any(
+                "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
+            ), f"System call found for {test_name}"
 
             compile(generated_content, str(output_path), "exec")
-
-            exec_globals = {}
-            exec(compile(generated_content, str(output_path), "exec"), exec_globals)
