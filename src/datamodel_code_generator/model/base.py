@@ -274,10 +274,10 @@ class DataModel(TemplateBase, Nullable, ABC):
         description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
-        keyword_only: bool = False,
+        dataclass_parameters: str | None = None,
         treat_dot_as_module: bool = False,
     ) -> None:
-        self.keyword_only = keyword_only
+        self.dataclass_parameters = dataclass_parameters
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
             raise Exception(msg)  # noqa: TRY002
@@ -433,6 +433,6 @@ class DataModel(TemplateBase, Nullable, ABC):
             base_class=self.base_class,
             methods=self.methods,
             description=self.description,
-            keyword_only=self.keyword_only,
+            dataclass_parameters=self.dataclass_parameters,
             **self.extra_template_data,
         )

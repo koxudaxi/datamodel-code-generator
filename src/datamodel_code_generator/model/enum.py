@@ -51,7 +51,7 @@ class Enum(DataModel):
         type_: Types | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
-        keyword_only: bool = False,
+        dataclass_parameters: str | None = None,
         treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
@@ -67,7 +67,7 @@ class Enum(DataModel):
             description=description,
             default=default,
             nullable=nullable,
-            keyword_only=keyword_only,
+            dataclass_parameters=dataclass_parameters,
             treat_dot_as_module=treat_dot_as_module,
         )
 

@@ -284,7 +284,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_exact_imports: bool = False,
     union_mode: UnionMode | None = None,
     output_datetime_class: DatetimeClassType | None = None,
-    keyword_only: bool = False,
+    dataclass_parameters: str | None = None,
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
 ) -> None:
@@ -479,7 +479,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_exact_imports=use_exact_imports,
         default_field_extras=default_field_extras,
         target_datetime_class=output_datetime_class,
-        keyword_only=keyword_only,
+        dataclass_parameters=dataclass_parameters,
         no_alias=no_alias,
         formatters=formatters,
         **kwargs,

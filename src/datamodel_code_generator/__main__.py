@@ -151,15 +151,26 @@ class Config(BaseModel):
         return values
 
     @model_validator()
-    def validate_keyword_only(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-        output_model_type: DataModelType = values.get("output_model_type")  # pyright: ignore[reportAssignmentType]
-        python_target: PythonVersion = values.get("target_python_version")  # pyright: ignore[reportAssignmentType]
+    def validate_dataclass_parameters(cls, values: dict[str, Any]) -> dict[str, Any]:
+        output_model_type = values.get("output_model_type")
+        python_target = values.get("target_python_version")
+        
+        # Skip validation if necessary values are missing
+        if not output_model_type or not python_target:
+            return values
+        
+        # Check if kw_only is specified in dataclass_parameters
+        has_kw_only = False
+        if "dataclass_parameters" in values and values["dataclass_parameters"]:
+            params = str(values["dataclass_parameters"]).lower()
+            has_kw_only = "kw_only=true" in params
+        
         if (
-            values.get("keyword_only")
+            has_kw_only
             and output_model_type == DataModelType.DataclassesDataclass
             and not python_target.has_kw_only_dataclass
         ):
-            msg = f"`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
+            msg = f"`kw_only=True` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
             raise Error(msg)
         return values
 
@@ -311,7 +322,7 @@ class Config(BaseModel):
     use_exact_imports: bool = False
     union_mode: Optional[UnionMode] = None  # noqa: UP045
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
-    keyword_only: bool = False
+    dataclass_parameters: Optional[str] = None
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
 
@@ -328,6 +339,24 @@ class Config(BaseModel):
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
 
+@property
+def dataclass_kwargs(self) -> dict[str, Any]:
+    if not self.dataclass_parameters:
+        return {}
+    
+    kwargs = {}
+    for param in self.dataclass_parameters.split(","):
+        if "=" in param:
+            key, value = param.strip().split("=", 1)
+            # Convert string values to appropriate Python types
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+            elif value.isdigit():
+                value = int(value)
+            kwargs[key] = value
+    return kwargs
 
 def _get_pyproject_toml_config(source: Path) -> dict[str, Any] | None:
     """Find and return the [tool.datamodel-codgen] section of the closest
@@ -520,7 +549,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_exact_imports=config.use_exact_imports,
             union_mode=config.union_mode,
             output_datetime_class=config.output_datetime_class,
-            keyword_only=config.keyword_only,
+            dataclass_parameters=config.dataclass_parameters,
             no_alias=config.no_alias,
             formatters=config.formatters,
         )

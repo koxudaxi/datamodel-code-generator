@@ -374,11 +374,11 @@ class Parser(ABC):
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = DatetimeClassType.Datetime,
-        keyword_only: bool = False,
+        dataclass_parameters: str | None = None,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
-        self.keyword_only = keyword_only
+        self.dataclass_parameters = dataclass_parameters
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
             use_standard_collections=use_standard_collections,

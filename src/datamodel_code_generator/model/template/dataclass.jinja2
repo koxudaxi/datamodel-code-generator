@@ -1,7 +1,7 @@
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
-@dataclass{%- if keyword_only -%}(kw_only=True){%- endif %}
+@dataclass{% if dataclass_kwargs -%}({% for key, value in dataclass_kwargs.items() %}{{ key }}={{ value }}{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}
 {%- if base_class %}
 class {{ class_name }}({{ base_class }}):
 {%- else %}

@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug with OpenAPI test file",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/datamodel_code_generator/__main__.py",
+            "args": [
+                "--input", "${workspaceFolder}/tests/data/openapi/alias.yaml",
+                "--output", "${workspaceFolder}/output_models",
+                "--input-file-type", "openapi",
+                "--output-model-type", "dataclasses.dataclass",
+                "--dataclass-parameters", "frozen=True,slots=True,keyword_only=True"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

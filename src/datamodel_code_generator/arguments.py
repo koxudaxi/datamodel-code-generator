@@ -147,10 +147,16 @@ model_options.add_argument(
     action="store_true",
     default=None,
 )
+# model_options.add_argument(
+#     "--keyword-only",
+#     help="Defined models as keyword only (for example dataclass(kw_only=True)).",
+#     action="store_true",
+#     default=None,
+# )
 model_options.add_argument(
-    "--keyword-only",
-    help="Defined models as keyword only (for example dataclass(kw_only=True)).",
-    action="store_true",
+    "--dataclass-parameters",
+    help="Parameters to pass to the dataclass decorator (e.g., 'frozen=True,kw_only=True,slots=True')",
+    type=str,
     default=None,
 )
 model_options.add_argument(

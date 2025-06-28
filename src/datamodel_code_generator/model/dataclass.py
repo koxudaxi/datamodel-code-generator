@@ -52,7 +52,7 @@ class DataClass(DataModel):
         description: str | None = None,
         default: Any = UNDEFINED,
         nullable: bool = False,
-        keyword_only: bool = False,
+        dataclass_parameters: str | None = None,
         treat_dot_as_module: bool = False,
     ) -> None:
         super().__init__(
@@ -68,9 +68,25 @@ class DataClass(DataModel):
             description=description,
             default=default,
             nullable=nullable,
-            keyword_only=keyword_only,
+            dataclass_parameters=dataclass_parameters,
             treat_dot_as_module=treat_dot_as_module,
         )
+
+        self.dataclass_kwargs = {}
+        if dataclass_parameters:
+            for param in dataclass_parameters.split(","):
+                if "=" in param:
+                    key, value = param.strip().split("=", 1)
+                    if value.lower() == "true":
+                        value = True
+                    elif value.lower() == "false":
+                        value = False
+                    elif value.isdigit():
+                        value = int(value)
+                    self.dataclass_kwargs[key] = value
+
+        if self.dataclass_kwargs:
+            self.extra_template_data["dataclass_kwargs"] = self.dataclass_kwargs
 
 
 class DataModelField(DataModelFieldBase):

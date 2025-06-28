@@ -213,7 +213,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-        keyword_only: bool = False,
+        dataclass_parameters: str | None = None,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
@@ -287,7 +287,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
-            keyword_only=keyword_only,
+            dataclass_parameters=dataclass_parameters,
             no_alias=no_alias,
             formatters=formatters,
         )

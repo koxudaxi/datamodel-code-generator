@@ -420,7 +420,7 @@ class JsonSchemaParser(Parser):
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-        keyword_only: bool = False,
+        dataclass_parameters: str | None = None,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
@@ -494,7 +494,7 @@ class JsonSchemaParser(Parser):
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
-            keyword_only=keyword_only,
+            dataclass_parameters=dataclass_parameters,
             no_alias=no_alias,
             formatters=formatters,
         )
@@ -740,7 +740,7 @@ class JsonSchemaParser(Parser):
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
-            keyword_only=self.keyword_only,
+            dataclass_parameters=self.dataclass_parameters,
             treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_type)
@@ -979,7 +979,7 @@ class JsonSchemaParser(Parser):
             path=self.current_source_path,
             description=obj.description if self.use_schema_description else None,
             nullable=obj.type_has_null,
-            keyword_only=self.keyword_only,
+            dataclass_parameters=self.dataclass_parameters,
             treat_dot_as_module=self.treat_dot_as_module,
         )
         self.results.append(data_model_type)
