@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 import locale
 from argparse import ArgumentParser, FileType, HelpFormatter, Namespace
 from operator import attrgetter
 from typing import TYPE_CHECKING
-import json
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion

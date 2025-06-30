@@ -309,7 +309,6 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     dataclass_arguments.setdefault("frozen", frozen_dataclasses)
     dataclass_arguments.setdefault("kw_only", keyword_only)
 
-    
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
     if input_file_type == InputFileType.Auto:

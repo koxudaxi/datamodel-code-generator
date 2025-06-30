@@ -158,7 +158,7 @@ class GraphQLParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None
+        dataclass_arguments: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             source=source,

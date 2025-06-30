@@ -220,7 +220,7 @@ class OpenAPIParser(JsonSchemaParser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None
+        dataclass_arguments: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             source=source,
@@ -298,7 +298,7 @@ class OpenAPIParser(JsonSchemaParser):
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
-            dataclass_arguments=dataclass_arguments
+            dataclass_arguments=dataclass_arguments,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
 

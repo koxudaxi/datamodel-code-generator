@@ -72,7 +72,7 @@ class DataClass(DataModel):
             nullable=nullable,
             keyword_only=keyword_only,
             frozen=frozen,
-            treat_dot_as_module=treat_dot_as_module
+            treat_dot_as_module=treat_dot_as_module,
         )
         if dataclass_arguments is not None:
             self.dataclass_arguments = dataclass_arguments

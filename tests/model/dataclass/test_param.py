@@ -147,7 +147,7 @@ def test_dataclass_kw_only_true_only() -> None:
     assert dataclass.keyword_only is True
 
 
-def test_dataclass_legacy_keyword_only():
+def test_dataclass_legacy_keyword_only() -> None:
     """Test that legacy 'frozen' argument is supported if dataclass_arguments is not set."""
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
@@ -166,7 +166,7 @@ def test_dataclass_legacy_keyword_only():
     assert "@dataclass(kw_only=True)" in rendered
 
 
-def test_dataclass_legacy_frozen():
+def test_dataclass_legacy_frozen() -> None:
     """Test that legacy 'frozen' argument is supported if dataclass_arguments is not set."""
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
@@ -185,7 +185,7 @@ def test_dataclass_legacy_frozen():
     assert "@dataclass(frozen=True)" in rendered
 
 
-def test_dataclass_with_custom_dataclass_arguments():
+def test_dataclass_with_custom_dataclass_arguments() -> None:
     """Test that custom dataclass_arguments are rendered correctly."""
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
@@ -204,7 +204,8 @@ def test_dataclass_with_custom_dataclass_arguments():
     assert "@dataclass(slots=True, order=True)" in rendered
     assert "repr=False" not in rendered
 
-def test_dataclass_both_legacy_and_dataclass_arguments():
+
+def test_dataclass_both_legacy_and_dataclass_arguments() -> None:
     """Test that dataclass_arguments take precedence over legacy flags."""
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
@@ -217,7 +218,7 @@ def test_dataclass_both_legacy_and_dataclass_arguments():
         reference=reference,
         fields=[field],
         frozen=True,  # legacy flag
-        keyword_only=True, # legacy flag
+        keyword_only=True,  # legacy flag
         dataclass_arguments={"frozen": False, "order": True},
     )
 
@@ -227,4 +228,3 @@ def test_dataclass_both_legacy_and_dataclass_arguments():
     assert "@dataclass(frozen=True)" not in rendered
     assert "@dataclass(kw_only=False)" not in rendered
     assert "@dataclass(kw_only=True)" not in rendered
-
