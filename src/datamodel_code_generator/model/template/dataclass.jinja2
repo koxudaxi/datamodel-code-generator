@@ -1,13 +1,16 @@
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
+{%- set args = [] %}
+{%- for k, v in (dataclass_arguments or {}).items() %}
+    {%- if v is not none and v is not false %}
+        {%- set _ = args.append(k ~ '=' ~ (v|pprint)) %}
+    {%- endif %}
+{%- endfor %}
+{%- if args %}
+@dataclass({{ args | join(', ') }})
+{%- else %}
 @dataclass
-{%- if keyword_only or frozen -%}
-(
-{%- if keyword_only -%}kw_only=True{%- endif -%}
-{%- if keyword_only and frozen -%}, {% endif -%}
-{%- if frozen -%}frozen=True{%- endif -%}
-)
 {%- endif %}
 {%- if base_class %}
 class {{ class_name }}({{ base_class }}):

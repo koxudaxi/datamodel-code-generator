@@ -4,6 +4,7 @@ import locale
 from argparse import ArgumentParser, FileType, HelpFormatter, Namespace
 from operator import attrgetter
 from typing import TYPE_CHECKING
+import json
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
@@ -165,6 +166,16 @@ model_options.add_argument(
     help="Generate frozen dataclasses (dataclass(frozen=True)). Only applies to dataclass output.",
     action="store_true",
     default=None,
+)
+model_options.add_argument(
+    "--dataclass-arguments",
+    type=json.loads,
+    default=None,
+    help=(
+        "Custom dataclass arguments as a JSON dictionary, "
+        'e.g. \'{"frozen": true, "kw_only": true}\'. '
+        "Overrides --frozen-dataclasses and similar flags."
+    ),
 )
 model_options.add_argument(
     "--reuse-model",

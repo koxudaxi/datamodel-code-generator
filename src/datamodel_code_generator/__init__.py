@@ -290,6 +290,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
+    dataclass_arguments: dict[str, Any] | None = None,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -304,6 +305,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     else:
         input_text = None
 
+    dataclass_arguments = dict(dataclass_arguments or {})
+    dataclass_arguments.setdefault("frozen", frozen_dataclasses)
+    dataclass_arguments.setdefault("kw_only", keyword_only)
+
+    
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
     if input_file_type == InputFileType.Auto:
@@ -489,6 +495,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
+        dataclass_arguments=dataclass_arguments,
         **kwargs,
     )
 
