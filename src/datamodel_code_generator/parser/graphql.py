@@ -158,6 +158,7 @@ class GraphQLParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        exclude_typename_field: bool = False,
     ) -> None:
         super().__init__(
             source=source,
@@ -241,6 +242,7 @@ class GraphQLParser(Parser):
         self.data_model_union_type = data_model_union_type
         self.use_standard_collections = use_standard_collections
         self.use_union_operator = use_union_operator
+        self.exclude_typename_field = exclude_typename_field
 
     def _get_context_source_path_parts(self) -> Iterator[tuple[Source, list[str]]]:
         # TODO (denisart): Temporarily this method duplicates
@@ -450,8 +452,8 @@ class GraphQLParser(Parser):
 
             data_model_field_type = self.parse_field(field_name_, alias, field)
             fields.append(data_model_field_type)
-
-        fields.append(self._typename_field(obj.name))
+        if not self.exclude_typename_field:
+            fields.append(self._typename_field(obj.name))
 
         base_classes = []
         if hasattr(obj, "interfaces"):  # pragma: no cover
