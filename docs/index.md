@@ -242,6 +242,7 @@ class Apis(BaseModel):
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
 - [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
 - [msgspec.Struct](https://github.com/jcrist/msgspec);
+- [django.Model](https://docs.djangoproject.com/en/stable/topics/db/models/);
 - Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x) template;
 
 ## Sponsors
@@ -269,13 +270,13 @@ class Apis(BaseModel):
 </table>
 ## Projects that use datamodel-code-generator
 
-These OSS projects use datamodel-code-generator to generate many models. 
+These OSS projects use datamodel-code-generator to generate many models.
 See the following linked projects for real world examples and inspiration.
 
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
     - *[code-generator/Dockerfile](https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile)*
 - [apache/iceberg](https://github.com/apache/iceberg)
-    - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)* 
+    - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)*
     *[`make generate`](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34)*
 - [argoproj-labs/hera](https://github.com/argoproj-labs/hera)
     - *[`Makefile`](https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62)*
@@ -294,7 +295,7 @@ See the following linked projects for real world examples and inspiration.
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
     - *[Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)*
 - [PostHog/posthog](https://github.com/PostHog/posthog)
-    - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)* 
+    - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)*
 - [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
     - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
 
@@ -337,7 +338,7 @@ This method needs the [http extra option](#http-extra-option)
 The `datamodel-codegen` command:
 <!-- start command help -->
 ```bash
-usage: 
+usage:
   datamodel-codegen [options]
 
 Generate Python data models from schema definitions or structured data
