@@ -573,6 +573,7 @@ inferred_message = (
 __all__ = [
     "MAX_VERSION",
     "MIN_VERSION",
+    "DatetimeClassType",
     "DefaultPutDict",
     "Error",
     "InputFileType",

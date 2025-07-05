@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Callable, NamedTuple
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator import PythonVersion
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
@@ -83,4 +83,4 @@ def get_data_model_types(
     raise ValueError(msg)  # pragma: no cover
 
 
-__all__ = ["ConstraintsBase", "DataModel", "DataModelFieldBase", "DatetimeClassType"]
+__all__ = ["ConstraintsBase", "DataModel", "DataModelFieldBase"]

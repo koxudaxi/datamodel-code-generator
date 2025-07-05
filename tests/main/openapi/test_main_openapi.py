@@ -933,6 +933,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pyt
     [
         ("pydantic.BaseModel", "datetime.py", "AwareDatetime"),
         ("pydantic_v2.BaseModel", "datetime_pydantic_v2.py", "AwareDatetime"),
+        ("pydantic_v2.BaseModel", "datetime_pydantic_v2_datetime.py", "datetime"),
         ("dataclasses.dataclass", "datetime_dataclass.py", "datetime"),
         ("msgspec.Struct", "datetime_msgspec.py", "datetime"),
     ],
@@ -966,7 +967,7 @@ def test_main_openapi_aware_datetime(output_model: str, expected_output: str, da
         ),
         (
             "pydantic_v2.BaseModel",
-            "datetime_v2.py",
+            "datetime_pydantic_v2.py",
         ),
     ],
 )
