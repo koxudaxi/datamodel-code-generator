@@ -658,7 +658,10 @@ def test_openapi_parser_with_include_path_parameters() -> None:
         ],
         include_path_parameters=True,
     )
-    assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_with_query_parameters" / "with_path_params.py").read_text()
+    assert (
+        parser.parse()
+        == (EXPECTED_OPEN_API_PATH / "openapi_parser_with_query_parameters" / "with_path_params.py").read_text()
+    )
 
 
 @pytest.mark.skipif(
