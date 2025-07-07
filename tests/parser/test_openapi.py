@@ -644,6 +644,24 @@ def test_openapi_parser_with_query_parameters() -> None:
 
 
 @pytest.mark.skipif(
+    black.__version__.split(".")[0] >= "24",
+    reason="Installed black doesn't support the old style",
+)
+def test_openapi_parser_with_include_path_parameters() -> None:
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / "query_parameters.yaml"),
+        openapi_scopes=[
+            OpenAPIScope.Parameters,
+            OpenAPIScope.Schemas,
+            OpenAPIScope.Paths,
+        ],
+        include_path_parameters=True,
+    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_with_query_parameters" / "with_path_params.py").read_text()
+
+
+@pytest.mark.skipif(
     version.parse(pydantic.VERSION) < version.parse("2.9.0"),
     reason="Require Pydantic version 2.0.0 or later ",
 )
