@@ -189,6 +189,7 @@ class OpenAPIParser(JsonSchemaParser):
         field_include_all_keys: bool = False,
         field_extra_keys_without_x_prefix: set[str] | None = None,
         openapi_scopes: list[OpenAPIScope] | None = None,
+        include_path_parameters: bool = False,
         wrap_string_literal: bool | None = False,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
@@ -299,6 +300,7 @@ class OpenAPIParser(JsonSchemaParser):
             parent_scoped_naming=parent_scoped_naming,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
+        self.include_path_parameters: bool = include_path_parameters
 
     def get_ref_model(self, ref: str) -> dict[str, Any]:
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
@@ -421,7 +423,11 @@ class OpenAPIParser(JsonSchemaParser):
         for parameter_ in parameters:
             parameter = self.resolve_object(parameter_, ParameterObject)
             parameter_name = parameter.name
-            if not parameter_name or parameter.in_ != ParameterLocation.query:
+            if (
+                not parameter_name
+                or parameter.in_ not in {ParameterLocation.query, ParameterLocation.path}
+                or (parameter.in_ == ParameterLocation.path and not self.include_path_parameters)
+            ):
                 continue
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name=parameter_name, excludes=exclude_field_names
@@ -518,7 +524,9 @@ class OpenAPIParser(JsonSchemaParser):
             path_name = operation.operationId
             method = ""
         self.parse_all_parameters(
-            self._get_model_name(path_name, method, suffix="ParametersQuery"),
+            self._get_model_name(
+                path_name, method, suffix="Parameters" if self.include_path_parameters else "ParametersQuery"
+            ),
             operation.parameters,
             [*path, "parameters"],
         )
