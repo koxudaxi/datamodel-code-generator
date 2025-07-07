@@ -429,12 +429,11 @@ class OpenAPIParser(JsonSchemaParser):
                 or (parameter.in_ == ParameterLocation.path and not self.include_path_parameters)
             ):
                 continue
-            
 
             if any(field.original_name == parameter_name for field in fields):
                 msg = f"Parameter name '{parameter_name}' is used more than once."
                 raise Exception(msg)  # noqa: TRY002
-            
+
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name=parameter_name, excludes=exclude_field_names
             )
