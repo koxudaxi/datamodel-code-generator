@@ -233,12 +233,8 @@ class JsonSchemaObject(BaseModel):
                             if key == "allOf":
                                 # If 'allOf' is present, we include them as required fields
                                 required_fields.extend(sub_item for sub_item in val if isinstance(sub_item, str))
-                            else:
-                                warn(f"Invalid required field: {key!r} with value {val!r}", stacklevel=2)
-                        else:
-                            warn(f"Invalid required field: {key!r} with value {val!r}", stacklevel=2)
 
-            return required_fields
+            value = required_fields
 
         return value
 
