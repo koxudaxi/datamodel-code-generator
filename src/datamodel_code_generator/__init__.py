@@ -547,7 +547,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 path.parent.mkdir(parents=True)
             file = path.open("wt", encoding=encoding)
 
-        print(custom_file_header or header.format(filename), file=file)
+        safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
+        print(custom_file_header or header.format(safe_filename), file=file)
         if body:
             print(file=file)
             print(body.rstrip(), file=file)

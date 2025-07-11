@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -189,3 +190,84 @@ def test_frozen_dataclasses_with_keyword_only_command_line() -> None:
         ])
         assert return_code == Exit.OK
         assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
+
+
+def test_filename_with_newline_injection() -> None:
+    """Test that filenames with newlines cannot inject code into generated files"""
+
+    schema_content = """{"type": "object", "properties": {"name": {"type": "string"}}}"""
+
+    malicious_filename = """schema.json
+# INJECTED CODE:
+import os
+os.system('echo INJECTED')
+# END INJECTION"""
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir) / "output.py"
+
+        generate(
+            input_=schema_content,
+            input_filename=malicious_filename,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+        )
+
+        generated_content = output_path.read_text()
+
+        assert "#   filename:  schema.json # INJECTED CODE: import os" in generated_content, (
+            "Filename not properly sanitized"
+        )
+
+        assert not any(
+            line.strip().startswith("import os") and not line.strip().startswith("#")
+            for line in generated_content.split("\n")
+        )
+        assert not any(
+            "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
+        )
+
+        compile(generated_content, str(output_path), "exec")
+
+
+def test_filename_with_various_control_characters() -> None:
+    """Test that various control characters in filenames are properly sanitized"""
+
+    schema_content = """{"type": "object", "properties": {"test": {"type": "string"}}}"""
+
+    test_cases = [
+        ("newline", "schema.json\nimport os; os.system('echo INJECTED')"),
+        ("carriage_return", "schema.json\rimport os; os.system('echo INJECTED')"),
+        ("crlf", "schema.json\r\nimport os; os.system('echo INJECTED')"),
+        ("tab_newline", "schema.json\t\nimport os; os.system('echo TAB')"),
+        ("form_feed", "schema.json\f\nimport os; os.system('echo FF')"),
+        ("vertical_tab", "schema.json\v\nimport os; os.system('echo VT')"),
+        ("unicode_line_separator", "schema.json\u2028import os; os.system('echo U2028')"),
+        ("unicode_paragraph_separator", "schema.json\u2029import os; os.system('echo U2029')"),
+        ("multiple_newlines", "schema.json\n\n\nimport os; os.system('echo MULTI')"),
+        ("mixed_characters", "schema.json\n\r\t\nimport os; os.system('echo MIXED')"),
+    ]
+
+    for test_name, malicious_filename in test_cases:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "output.py"
+
+            generate(
+                input_=schema_content,
+                input_filename=malicious_filename,
+                input_file_type=InputFileType.JsonSchema,
+                output=output_path,
+            )
+
+            generated_content = output_path.read_text()
+
+            assert not any(
+                line.strip().startswith("import ") and not line.strip().startswith("#")
+                for line in generated_content.split("\n")
+            ), f"Injection found for {test_name}"
+
+            assert not any(
+                "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
+            ), f"System call found for {test_name}"
+
+            compile(generated_content, str(output_path), "exec")
