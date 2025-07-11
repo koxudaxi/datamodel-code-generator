@@ -79,6 +79,23 @@ def test_main_graphql_different_types_of_fields() -> None:
 
 
 @freeze_time("2019-07-26")
+def test_main_use_default_kwarg() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(GRAPHQL_DATA_PATH / "annotated.graphql"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "graphql",
+            "--use-default-kwarg",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "annotated_use_default_kwarg.py").read_text()
+
+
+@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
