@@ -13,7 +13,7 @@ from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Union, cast, Dict, Any
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
@@ -314,7 +314,7 @@ class Config(BaseModel):
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     keyword_only: bool = False
     frozen_dataclasses: bool = False
-    dataclass_arguments: dict[str, Any] | None = None
+    dataclass_arguments: Optional[Dict[str, Any]] = None
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
