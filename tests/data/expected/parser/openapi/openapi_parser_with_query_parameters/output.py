@@ -51,9 +51,9 @@ class PetsGetParametersQuery(BaseModel):
     HomeAddress: Optional[str] = 'Unknown'
     kind: Optional[str] = 'dog'
     filter: Optional[Filter] = None
-    multipleMediaFilter: Optional[Union[MultipleMediaFilter, MultipleMediaFilter1]] = (
-        None
-    )
+    multipleMediaFilter: Optional[
+        Union[MultipleMediaFilter, MultipleMediaFilter1]
+    ] = None
 
 
 class PetsGetResponse(BaseModel):
