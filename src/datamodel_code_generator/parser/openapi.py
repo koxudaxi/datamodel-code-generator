@@ -351,13 +351,17 @@ class OpenAPIParser(JsonSchemaParser):
         name: str,
         request_body: RequestBodyObject,
         path: list[str],
-    ) -> None:
+    ) -> dict[str, DataType]:
+        data_types: dict[str, DataType] = {}
         for (
             media_type,
             media_obj,
         ) in request_body.content.items():
             if isinstance(media_obj.schema_, JsonSchemaObject):
-                self.parse_schema(name, media_obj.schema_, [*path, media_type])
+                data_types[media_type] = self.parse_schema(name, media_obj.schema_, [*path, media_type])
+            else:
+                data_types[media_type] = self.get_ref_data_type(media_obj.schema_.ref)
+        return data_types
 
     def parse_responses(
         self,
@@ -414,7 +418,7 @@ class OpenAPIParser(JsonSchemaParser):
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
         path: list[str],
-    ) -> None:
+    ) -> DataType | None:
         fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
@@ -500,6 +504,9 @@ class OpenAPIParser(JsonSchemaParser):
                     treat_dot_as_module=self.treat_dot_as_module,
                 )
             )
+            return self.data_type(reference=reference)
+
+        return None
 
     def parse_operation(
         self,
