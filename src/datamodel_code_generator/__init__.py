@@ -290,6 +290,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
+    exclude_typename_field: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -331,6 +332,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
         parser_class: type[Parser] = GraphQLParser
+        kwargs["exclude_typename_field"] = exclude_typename_field
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
