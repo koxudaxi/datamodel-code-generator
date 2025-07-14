@@ -448,6 +448,10 @@ Model customization:
   --collapse-root-models
                         Models generated with a root-type field will be merged into the
                         models using that root-type model
+  --dataclass-arguments DATACLASS_ARGUMENTS
+                        Custom dataclass arguments as a JSON dictionary, e.g. ''{"frozen":
+                        true, "kw_only": true}''. Overrides --frozen-dataclasses and similar
+                        flags.
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an array
   --disable-timestamp   Disable timestamp on file headers
@@ -491,7 +495,7 @@ Template customization:
                         A file with kwargs for custom formatters.
   --custom-template-dir CUSTOM_TEMPLATE_DIR
                         Custom template directory
-  --encoding ENCODING   The encoding of input and output (default: utf-8)
+  --encoding ENCODING   The encoding of input and output (default: cp1252)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data
   --use-double-quotes   Model generated with double quotes. Single quotes or your black
