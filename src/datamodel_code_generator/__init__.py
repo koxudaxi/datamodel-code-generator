@@ -258,6 +258,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: set[str] | None = None,
     openapi_scopes: list[OpenAPIScope] | None = None,
+    include_path_parameters: bool = False,
     graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
     wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
@@ -327,6 +328,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
         parser_class: type[Parser] = OpenAPIParser
         kwargs["openapi_scopes"] = openapi_scopes
+        kwargs["include_path_parameters"] = include_path_parameters
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 

@@ -14,6 +14,30 @@ servers:
 security:
   - BearerAuth: []
 paths:
+  /pets/{petId}:
+    get:
+      summary: Get a pet by ID
+      operationId: getPet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The pet ID
+          schema:
+            type: string
+        - name: include
+          in: query
+          required: false
+          description: Include additional data
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
   /pets:
     get:
       summary: List all pets
