@@ -141,7 +141,7 @@ number_kwargs: set[str] = {
 
 string_kwargs: set[str] = {"minItems", "maxItems", "minLength", "maxLength", "pattern"}
 
-byes_kwargs: set[str] = {"minLength", "maxLength"}
+bytes_kwargs: set[str] = {"minLength", "maxLength"}
 
 escape_characters = str.maketrans({
     "'": r"\'",
@@ -296,7 +296,7 @@ class DataTypeManager(_DataTypeManager):
         return self.type_map[types]
 
     def get_data_bytes_type(self, types: Types, **kwargs: Any) -> DataType:
-        data_type_kwargs: dict[str, Any] = self.transform_kwargs(kwargs, byes_kwargs)
+        data_type_kwargs: dict[str, Any] = self.transform_kwargs(kwargs, bytes_kwargs)
         strict = StrictTypes.bytes in self.strict_types
         if data_type_kwargs and not strict:
             return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)

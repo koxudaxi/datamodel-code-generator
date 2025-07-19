@@ -211,6 +211,33 @@ class JsonSchemaObject(BaseModel):
             return value.replace("#", "#/")
         return value
 
+    @field_validator("required", mode="before")
+    def validate_required(cls, value: Any) -> Any:  # noqa: N805
+        if value is None:
+            return []
+        if isinstance(value, list):  # noqa: PLR1702
+            # Filter to only include valid strings, excluding invalid objects
+            required_fields: list[str] = []
+            for item in value:
+                if isinstance(item, str):
+                    required_fields.append(item)
+
+                # In some cases, the required field can include "anyOf", "oneOf", or "allOf" as a dict (#2297)
+                elif isinstance(item, dict):
+                    for key, val in item.items():
+                        if isinstance(val, list):
+                            # If 'anyOf' or "oneOf" is present, we won't include it in required fields
+                            if key in {"anyOf", "oneOf"}:
+                                continue
+
+                            if key == "allOf":
+                                # If 'allOf' is present, we include them as required fields
+                                required_fields.extend(sub_item for sub_item in val if isinstance(sub_item, str))
+
+            value = required_fields
+
+        return value
+
     items: Optional[Union[list[JsonSchemaObject], JsonSchemaObject, bool]] = None  # noqa: UP007, UP045
     uniqueItems: Optional[bool] = None  # noqa: N815, UP045
     type: Optional[Union[str, list[str]]] = None  # noqa: UP007, UP045
@@ -1552,7 +1579,7 @@ class JsonSchemaParser(Parser):
         raw: dict[str, Any],
         path: list[str],
     ) -> None:
-        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.parse_obj(raw), path)
+        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.model_validate(raw), path)
 
     def parse_obj(
         self,
