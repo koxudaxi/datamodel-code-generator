@@ -372,6 +372,14 @@ def test_openapi_parser_parse_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_anyof" / "output.py").read_text()
 
 
+def test_openapi_parser_parse_anyof_required(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    parser = OpenAPIParser(
+        Path(DATA_PATH / "anyof_required.yaml"),
+    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_anyof_required" / "output.py").read_text()
+
+
 def test_openapi_parser_parse_nested_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
@@ -413,6 +421,17 @@ def test_openapi_parser_parse_allof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         Path(DATA_PATH / "allof.yaml"),
     )
     assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_allof" / "output.py").read_text()
+
+
+def test_openapi_parser_parse_allof_required_fields(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    parser = OpenAPIParser(
+        Path(DATA_PATH / "allof_required_fields.yaml"),
+    )
+    assert (
+        parser.parse()
+        == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_allof_required_fields" / "output.py").read_text()
+    )
 
 
 def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -499,6 +518,12 @@ def test_openapi_parser_parse_remote_ref(tmp_path: Path, monkeypatch: pytest.Mon
     expected_file = get_expected_file("openapi_parser_parse_remote_ref", True, True)
 
     assert parser.parse() == expected_file.read_text()
+
+
+def test_openapi_parser_parse_required_null(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    parser = OpenAPIParser(source=Path(DATA_PATH / "required_null.yaml"))
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_parse_required_null" / "output.py").read_text()
 
 
 def test_openapi_model_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
