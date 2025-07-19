@@ -359,7 +359,7 @@ class OpenAPIParser(JsonSchemaParser):
         ) in request_body.content.items():
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 data_types[media_type] = self.parse_schema(name, media_obj.schema_, [*path, media_type])
-            else:
+            elif media_obj.schema_ is not None:
                 data_types[media_type] = self.get_ref_data_type(media_obj.schema_.ref)
         return data_types
 
