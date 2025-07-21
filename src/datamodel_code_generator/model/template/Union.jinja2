@@ -1,5 +1,5 @@
 {%- if description %}
-# {{ description }}
+# {{ description | replace('\n', '\n# ') }}
 {%- endif %}
 {%- if fields|length > 1 %}
 {{ class_name }}: TypeAlias = Union[
