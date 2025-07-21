@@ -1722,7 +1722,7 @@ class JsonSchemaParser(Parser):
                     model_name = object_paths[-1]
                     self.parse_obj(model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path)
                 else:
-                    self.parse_obj(obj_name, root_obj, path_parts or ["#"])
+                    self.parse_obj(obj_name, root_obj, path_parts or ["."])
                 for key, model in definitions.items():
                     path = [*path_parts, _schema_path, key]
                     reference = self.model_resolver.get(path)
