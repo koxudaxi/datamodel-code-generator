@@ -15,7 +15,13 @@ from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic import DataModelField
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
-from datamodel_code_generator.parser.openapi import OpenAPIParser, ParameterObject
+from datamodel_code_generator.parser.openapi import (
+    MediaObject,
+    OpenAPIParser,
+    ParameterObject,
+    RequestBodyObject,
+    ResponseObject,
+)
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
 
@@ -738,3 +744,155 @@ def test_no_additional_imports() -> None:
         source="",
     )
     assert len(new_parser.imports) == 0
+
+
+@pytest.mark.parametrize(
+    ("request_body_data", "expected_type_hints"),
+    [
+        pytest.param(
+            {"application/json": {"schema": {"type": "object", "properties": {"name": {"type": "string"}}}}},
+            {"application/json": "TestRequest"},
+            id="object_with_properties",
+        ),
+        pytest.param(
+            {
+                "application/json": {"schema": {"type": "object", "properties": {"name": {"type": "string"}}}},
+                "text/plain": {"schema": {"type": "string"}},
+            },
+            {"application/json": "TestRequest", "text/plain": "str"},
+            id="multiple_media_types",
+        ),
+        pytest.param(
+            {"application/json": {"schema": {"$ref": "#/components/schemas/RequestRef"}}},
+            {"application/json": "RequestRef"},
+            id="schema_reference",
+        ),
+        pytest.param(
+            {"application/json": {}},  # MediaObject with no schema
+            {},  # Should result in empty dict since no schema to process
+            id="missing_schema",
+        ),
+    ],
+)
+def test_parse_request_body_return(request_body_data: dict[str, Any], expected_type_hints: dict[str, str]) -> None:
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source="",
+        use_standard_collections=True,
+    )
+    result = parser.parse_request_body(
+        "TestRequest",
+        RequestBodyObject(
+            content={
+                media_type: MediaObject.parse_obj(media_data) for media_type, media_data in request_body_data.items()
+            }
+        ),
+        ["test", "path"],
+    )
+
+    assert isinstance(result, dict)
+    assert len(result) == len(expected_type_hints)
+    for media_type, expected_hint in expected_type_hints.items():
+        assert media_type in result
+        assert result[media_type].type_hint == expected_hint
+
+
+@pytest.mark.parametrize(
+    ("parameters_data", "expected_type_hint"),
+    [
+        pytest.param([], None, id="no_parameters"),
+        pytest.param(
+            [{"name": "search", "in": "query", "required": False, "schema": {"type": "string"}}],
+            "TestParametersQuery",
+            id="with_query_parameters",
+        ),
+        pytest.param(
+            [{"name": "userId", "in": "path", "required": True, "schema": {"type": "string"}}],
+            None,
+            id="path_parameter_only",
+        ),
+    ],
+)
+def test_parse_all_parameters_return(parameters_data: list[dict[str, Any]], expected_type_hint: str | None) -> None:
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source="",
+        openapi_scopes=[OpenAPIScope.Parameters],
+    )
+    result = parser.parse_all_parameters(
+        "TestParametersQuery",
+        [ParameterObject.parse_obj(param_data) for param_data in parameters_data],
+        ["test", "path"],
+    )
+    if expected_type_hint is None:
+        assert result is None
+    else:
+        assert result is not None
+        assert result.type_hint == expected_type_hint
+
+
+@pytest.mark.parametrize(
+    ("responses_data", "expected_type_hints"),
+    [
+        pytest.param(
+            {
+                "200": {
+                    "description": "Success",
+                    "content": {"application/json": {"schema": {"type": "string"}}},
+                }
+            },
+            {"200": {"application/json": "str"}},
+            id="simple_response_with_schema",
+        ),
+        pytest.param(
+            {
+                "200": {
+                    "description": "Success",
+                    "content": {
+                        "application/json": {"schema": {"type": "object", "properties": {"name": {"type": "string"}}}},
+                        "text/plain": {"schema": {"type": "string"}},
+                    },
+                },
+                "400": {
+                    "description": "Bad Request",
+                    "content": {"text/plain": {"schema": {"type": "string"}}},
+                },
+            },
+            {"200": {"application/json": "TestResponse", "text/plain": "str"}, "400": {"text/plain": "str"}},
+            id="multiple_status_codes_and_content_types",
+        ),
+        pytest.param(
+            {
+                "200": {
+                    "description": "Success",
+                    "content": {"application/json": {}},  # Content but no schema
+                }
+            },
+            {},  # Should skip since no schema in content
+            id="response_with_no_schema",
+        ),
+    ],
+)
+def test_parse_responses_return(
+    responses_data: dict[str, dict[str, Any]],
+    expected_type_hints: dict[str, dict[str, str]],
+) -> None:
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source="",
+    )
+
+    result = parser.parse_responses(
+        "TestResponse",
+        {status_code: ResponseObject.parse_obj(response_data) for status_code, response_data in responses_data.items()},
+        ["test", "path"],
+    )
+
+    assert isinstance(result, dict)
+    assert len(result) == len(expected_type_hints)
+    for status_code, expected_content_types in expected_type_hints.items():
+        assert status_code in result
+        assert len(result[status_code]) == len(expected_content_types)
+        for content_type, expected_type_hint in expected_content_types.items():
+            assert content_type in result[status_code]
+            assert result[status_code][content_type].type_hint == expected_type_hint
