@@ -696,7 +696,7 @@ def test_parse_all_parameters_duplicate_names_exception() -> None:
         ParameterObject.parse_obj({"name": "duplicate_param", "in": "query", "schema": {"type": "integer"}}),
     ]
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception) as exc_info:  # noqa: PT011
         parser.parse_all_parameters("TestModel", parameters, ["test", "path"])
 
     assert "Parameter name 'duplicate_param' is used more than once." in str(exc_info.value)
