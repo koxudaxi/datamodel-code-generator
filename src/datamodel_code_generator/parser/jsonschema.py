@@ -1403,6 +1403,7 @@ class JsonSchemaParser(Parser):
                 custom_template_dir=self.custom_template_dir,
                 type_=_get_type(obj.type, obj.format) if self.use_subclass_enum and isinstance(obj.type, str) else None,
                 default=obj.default if obj.has_default else UNDEFINED,
+                treat_dot_as_module=self.treat_dot_as_module,
             )
             self.results.append(enum)
             return self.data_type(reference=reference_)

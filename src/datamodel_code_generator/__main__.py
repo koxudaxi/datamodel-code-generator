@@ -287,6 +287,7 @@ class Config(BaseModel):
     field_include_all_keys: bool = False
     field_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
     openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
+    include_path_parameters: bool = False
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
@@ -500,6 +501,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             field_include_all_keys=config.field_include_all_keys,
             field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
             openapi_scopes=config.openapi_scopes,
+            include_path_parameters=config.include_path_parameters,
             wrap_string_literal=config.wrap_string_literal,
             use_title_as_name=config.use_title_as_name,
             use_operation_id_as_name=config.use_operation_id_as_name,

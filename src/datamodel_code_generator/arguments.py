@@ -501,6 +501,12 @@ openapi_options.add_argument(
     default=None,
 )
 openapi_options.add_argument(
+    "--include-path-parameters",
+    help="Include path parameters in generated parameter models in addition to query parameters (Only OpenAPI)",
+    action="store_true",
+    default=None,
+)
+openapi_options.add_argument(
     "--validation",
     help="Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future "
     "releases",
