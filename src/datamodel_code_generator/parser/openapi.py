@@ -189,6 +189,7 @@ class OpenAPIParser(JsonSchemaParser):
         field_include_all_keys: bool = False,
         field_extra_keys_without_x_prefix: set[str] | None = None,
         openapi_scopes: list[OpenAPIScope] | None = None,
+        include_path_parameters: bool = False,
         wrap_string_literal: bool | None = False,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
@@ -301,6 +302,7 @@ class OpenAPIParser(JsonSchemaParser):
             dataclass_arguments=dataclass_arguments,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
+        self.include_path_parameters: bool = include_path_parameters
 
     def get_ref_model(self, ref: str) -> dict[str, Any]:
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
@@ -353,13 +355,17 @@ class OpenAPIParser(JsonSchemaParser):
         name: str,
         request_body: RequestBodyObject,
         path: list[str],
-    ) -> None:
+    ) -> dict[str, DataType]:
+        data_types: dict[str, DataType] = {}
         for (
             media_type,
             media_obj,
         ) in request_body.content.items():
             if isinstance(media_obj.schema_, JsonSchemaObject):
-                self.parse_schema(name, media_obj.schema_, [*path, media_type])
+                data_types[media_type] = self.parse_schema(name, media_obj.schema_, [*path, media_type])
+            elif media_obj.schema_ is not None:
+                data_types[media_type] = self.get_ref_data_type(media_obj.schema_.ref)
+        return data_types
 
     def parse_responses(
         self,
@@ -416,15 +422,24 @@ class OpenAPIParser(JsonSchemaParser):
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
         path: list[str],
-    ) -> None:
+    ) -> DataType | None:
         fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter_ in parameters:
             parameter = self.resolve_object(parameter_, ParameterObject)
             parameter_name = parameter.name
-            if not parameter_name or parameter.in_ != ParameterLocation.query:
+            if (
+                not parameter_name
+                or parameter.in_ not in {ParameterLocation.query, ParameterLocation.path}
+                or (parameter.in_ == ParameterLocation.path and not self.include_path_parameters)
+            ):
                 continue
+
+            if any(field.original_name == parameter_name for field in fields):
+                msg = f"Parameter name '{parameter_name}' is used more than once."
+                raise Exception(msg)  # noqa: TRY002
+
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name=parameter_name, excludes=exclude_field_names
             )
@@ -503,6 +518,9 @@ class OpenAPIParser(JsonSchemaParser):
                     dataclass_arguments=self.dataclass_arguments,
                 )
             )
+            return self.data_type(reference=reference)
+
+        return None
 
     def parse_operation(
         self,
@@ -521,7 +539,9 @@ class OpenAPIParser(JsonSchemaParser):
             path_name = operation.operationId
             method = ""
         self.parse_all_parameters(
-            self._get_model_name(path_name, method, suffix="ParametersQuery"),
+            self._get_model_name(
+                path_name, method, suffix="Parameters" if self.include_path_parameters else "ParametersQuery"
+            ),
             operation.parameters,
             [*path, "parameters"],
         )
