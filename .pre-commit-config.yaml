@@ -14,13 +14,13 @@ repos:
   hooks:
     - id: pyproject-fmt
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.12.3'
+  rev: 'v0.12.4'
   hooks:
-  - id: ruff-format
-    exclude: "^tests/data"
-  - id: ruff
+  - id: ruff-check
     exclude: "^tests/data"
     args: ["--fix", "--unsafe-fixes", "--exit-non-zero-on-fix"]
+  - id: ruff-format
+    exclude: "^tests/data"
 - repo: https://github.com/codespell-project/codespell
   rev: v2.4.1
   hooks:
