@@ -55,7 +55,10 @@ def test_main_base_class() -> None:
             "custom_module.Base",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -71,7 +74,10 @@ def test_target_python_version() -> None:
             f"3.{MIN_VERSION}",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+        )
 
 
 def test_main_modular(tmpdir_factory: pytest.TempdirFactory) -> None:
@@ -167,7 +173,9 @@ def test_pyproject() -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
+        )
 
 
 @pytest.mark.parametrize("language", ["UK", "US"])
@@ -285,7 +293,8 @@ def test_main_use_schema_description() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
         )
 
 

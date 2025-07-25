@@ -61,7 +61,10 @@ def test_main_inheritance_forward_ref() -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "inheritance_forward_ref.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "inheritance_forward_ref.py").read_text()
+        )
 
 
 @pytest.mark.benchmark
@@ -160,7 +163,10 @@ def test_main_jsonschema_nested_deep() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_init_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "nested_deep" / "__init__.py").read_text()
+        assert (
+            output_init_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "nested_deep" / "__init__.py").read_text()
+        )
 
         assert (
             output_nested_file.read_text(encoding="utf-8")
@@ -315,7 +321,10 @@ def test_use_default_pydantic_v2_with_json_schema_const() -> None:
             "--use-default",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "use_default_with_const.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "use_default_with_const.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -375,7 +384,10 @@ def test_main_json_reuse_enum_default_member() -> None:
             "--set-default-enum-member",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "json_reuse_enum_default_member.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "json_reuse_enum_default_member.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -429,7 +441,9 @@ def test_main_invalid_model_name() -> None:
             "ValidModelName",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "invalid_model_name.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "invalid_model_name.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -503,9 +517,9 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "root_id.py").read_text().replace(
-            "filename:  root_id.json", "filename:  root_id_self_ref.json"
-        )
+        assert output_file.read_text(encoding="utf-8") == (
+            EXPECTED_JSON_SCHEMA_PATH / "root_id.py"
+        ).read_text().replace("filename:  root_id.json", "filename:  root_id_self_ref.json")
         httpx_get_mock.assert_not_called()
 
 
@@ -528,9 +542,9 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "root_id.py").read_text().replace(
-            "filename:  root_id.json", "filename:  root_id_self_ref.json"
-        )
+        assert output_file.read_text(encoding="utf-8") == (
+            EXPECTED_JSON_SCHEMA_PATH / "root_id.py"
+        ).read_text().replace("filename:  root_id.json", "filename:  root_id_self_ref.json")
         httpx_get_mock.assert_has_calls([
             call(
                 "https://example.com/person.json",
@@ -562,7 +576,10 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "root_id_absolute_url.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "root_id_absolute_url.py").read_text()
+        )
         httpx_get_mock.assert_has_calls([
             call(
                 "https://example.com/person.json",
@@ -587,7 +604,10 @@ def test_main_root_id_jsonschema_with_absolute_local_file() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "root_id_absolute_url.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "root_id_absolute_url.py").read_text()
+        )
 
 
 @pytest.mark.benchmark
@@ -657,7 +677,10 @@ def test_main_external_definitions() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "external_definitions.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "external_definitions.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -673,7 +696,10 @@ def test_main_external_files_in_directory() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "external_files_in_directory.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "external_files_in_directory.py").read_text()
+        )
 
 
 @pytest.mark.benchmark
@@ -711,7 +737,9 @@ def test_main_circular_reference() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "circular_reference.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "circular_reference.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -727,7 +755,9 @@ def test_main_invalid_enum_name() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "invalid_enum_name.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "invalid_enum_name.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -745,7 +775,8 @@ def test_main_invalid_enum_name_snake_case_field() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "invalid_enum_name_snake_case_field.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "invalid_enum_name_snake_case_field.py").read_text()
         )
 
 
@@ -780,7 +811,10 @@ def test_main_json_capitalise_enum_members() -> None:
             "--capitalise-enum-members",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "json_capitalise_enum_members.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "json_capitalise_enum_members.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -813,7 +847,10 @@ def test_main_similar_nested_array() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "similar_nested_array.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "similar_nested_array.py").read_text()
+        )
 
 
 @pytest.mark.parametrize(
@@ -964,7 +1001,10 @@ def test_main_nested_json_pointer() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "nested_json_pointer.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "nested_json_pointer.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -1106,7 +1146,8 @@ def test_main_jsonschema_multiple_files_ref_test_json() -> None:
             ])
             assert return_code == Exit.OK
             assert (
-                output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "multiple_files_self_ref_single.py").read_text()
+                output_file.read_text(encoding="utf-8")
+                == (EXPECTED_JSON_SCHEMA_PATH / "multiple_files_self_ref_single.py").read_text()
             )
 
 
@@ -1167,7 +1208,10 @@ def test_main_all_of_with_object() -> None:
                 "jsonschema",
             ])
             assert return_code == Exit.OK
-            assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "all_of_with_object.py").read_text()
+            assert (
+                output_file.read_text(encoding="utf-8")
+                == (EXPECTED_JSON_SCHEMA_PATH / "all_of_with_object.py").read_text()
+            )
 
 
 @pytest.mark.skipif(
@@ -1188,7 +1232,9 @@ def test_main_combined_array() -> None:
                 "jsonschema",
             ])
             assert return_code == Exit.OK
-            assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "combined_array.py").read_text()
+            assert (
+                output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "combined_array.py").read_text()
+            )
 
 
 @freeze_time("2019-07-26")
@@ -1278,9 +1324,9 @@ def test_main_generate_custom_class_name_generator() -> None:
             custom_class_name_generator=custom_class_name_generator,
         )
 
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "general.py").read_text().replace(
-            "Person", "CustomPerson"
-        )
+        assert output_file.read_text(encoding="utf-8") == (
+            EXPECTED_JSON_SCHEMA_PATH / "general.py"
+        ).read_text().replace("Person", "CustomPerson")
 
 
 @freeze_time("2019-07-26")
@@ -1603,7 +1649,9 @@ def test_main_strict_types_all() -> None:
             "bool",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "strict_types_all.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "strict_types_all.py").read_text()
+        )
 
 
 @pytest.mark.benchmark
@@ -1629,7 +1677,8 @@ def test_main_strict_types_all_with_field_constraints() -> None:
 
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "strict_types_all_field_constraints.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "strict_types_all_field_constraints.py").read_text()
         )
 
 
@@ -1744,7 +1793,8 @@ def test_main_jsonschema_special_enum_empty_enum_field_name() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "special_enum_empty_enum_field_name.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "special_enum_empty_enum_field_name.py").read_text()
         )
 
 
@@ -1762,7 +1812,9 @@ def test_main_jsonschema_special_field_name() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "special_field_name.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "special_field_name.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -1811,7 +1863,10 @@ def test_main_jsonschema_combine_one_of_object() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "combine_one_of_object.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "combine_one_of_object.py").read_text()
+        )
 
 
 @pytest.mark.skipif(
@@ -2018,7 +2073,9 @@ def test_main_jsonschema_custom_base_path() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "custom_base_path.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "custom_base_path.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2034,7 +2091,9 @@ def test_long_description() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "long_description.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "long_description.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2083,7 +2142,9 @@ def test_jsonschema_pattern_properties() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "pattern_properties.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "pattern_properties.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2136,7 +2197,10 @@ def test_jsonschema_titles_use_title_as_name() -> None:
             "--use-title-as-name",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "titles_use_title_as_name.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "titles_use_title_as_name.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2154,7 +2218,8 @@ def test_jsonschema_without_titles_use_title_as_name() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "without_titles_use_title_as_name.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "without_titles_use_title_as_name.py").read_text()
         )
 
 
@@ -2171,7 +2236,9 @@ def test_main_jsonschema_has_default_value() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "has_default_value.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "has_default_value.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2187,7 +2254,9 @@ def test_main_jsonschema_boolean_property() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "boolean_property.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "boolean_property.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2317,7 +2386,10 @@ def test_main_jsonschema_array_in_additional_properites() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "array_in_additional_properties.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "array_in_additional_properties.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2349,7 +2421,9 @@ def test_main_jsonschema_object_has_one_of() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "object_has_one_of.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "object_has_one_of.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2365,7 +2439,9 @@ def test_main_jsonschema_json_pointer_array() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "json_pointer_array.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "json_pointer_array.py").read_text()
+        )
 
 
 @pytest.mark.filterwarnings("error")
@@ -2420,7 +2496,10 @@ def test_main_jsonschema_pattern_properties_by_reference() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "pattern_properties_by_reference.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "pattern_properties_by_reference.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2500,7 +2579,8 @@ def test_main_nullable_any_of_use_union_operator() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "nullable_any_of_use_union_operator.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "nullable_any_of_use_union_operator.py").read_text()
         )
 
 
@@ -2618,7 +2698,8 @@ def test_main_typed_dict_not_required_nullable() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_not_required_nullable.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_not_required_nullable.py").read_text()
         )
 
 
@@ -2676,7 +2757,10 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
             min_version,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "discriminator_no_mapping.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "discriminator_no_mapping.py").read_text()
+        )
 
 
 @pytest.mark.parametrize(
@@ -2810,9 +2894,9 @@ def test_main_dataclass_field_defs() -> None:
             "dataclasses.dataclass",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "dataclass_field.py").read_text().replace(
-            "filename:  user.json", "filename:  user_defs.json"
-        )
+        assert output_file.read_text(encoding="utf-8") == (
+            EXPECTED_JSON_SCHEMA_PATH / "dataclass_field.py"
+        ).read_text().replace("filename:  user.json", "filename:  user_defs.json")
 
 
 @freeze_time("2019-07-26")
@@ -2828,7 +2912,10 @@ def test_main_dataclass_default() -> None:
             "dataclasses.dataclass",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "dataclass_field_default.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "dataclass_field_default.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2868,7 +2955,10 @@ def test_main_array_field_constraints() -> None:
             "--collapse-root-models",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "array_field_constraints.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "array_field_constraints.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2883,7 +2973,9 @@ def test_all_of_use_default() -> None:
             "--use-default",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "all_of_use_default.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "all_of_use_default.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -2921,7 +3013,8 @@ def test_one_of_with_sub_schema_array_item() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "one_of_with_sub_schema_array_item.py").read_text()
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "one_of_with_sub_schema_array_item.py").read_text()
         )
 
 
@@ -2950,7 +3043,9 @@ def test_main_jsonschema_with_custom_formatters() -> None:
             str(formatter_config_path),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "custom_formatters.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "custom_formatters.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -3152,7 +3247,10 @@ def test_main_jsonschema_required_and_any_of_required() -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "required_and_any_of_required.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_JSON_SCHEMA_PATH / "required_and_any_of_required.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
