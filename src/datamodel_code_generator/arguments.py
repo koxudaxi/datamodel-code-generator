@@ -404,6 +404,13 @@ field_options.add_argument(
     action="store_true",
     default=None,
 )
+field_options.add_argument(
+    "--exclude-typename-field",
+    "--exclude_typename_field",
+    help="Exclude __typename field from the generated model",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Options for templating output

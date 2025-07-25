@@ -47,3 +47,20 @@ def test_graphql_union_aliased_bug() -> None:
         if actual != expected:
             pass
         assert actual == expected
+
+
+@freeze_time("2019-07-26")
+def test_main_graphql_exclude_typename_field() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(GRAPHQL_DATA_PATH / "exclude-typename-field.graphql"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "graphql",
+            "--exclude-typename-field",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "exclude_typename_field.py").read_text()
