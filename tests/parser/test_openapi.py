@@ -15,7 +15,7 @@ from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic import DataModelField
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
-from datamodel_code_generator.parser.openapi import OpenAPIParser
+from datamodel_code_generator.parser.openapi import OpenAPIParser, ParameterObject
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
 
@@ -666,6 +666,40 @@ def test_openapi_parser_with_query_parameters() -> None:
         ],
     )
     assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_with_query_parameters" / "output.py").read_text()
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] >= "24",
+    reason="Installed black doesn't support the old style",
+)
+def test_openapi_parser_with_include_path_parameters() -> None:
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / "query_parameters.yaml"),
+        openapi_scopes=[
+            OpenAPIScope.Parameters,
+            OpenAPIScope.Schemas,
+            OpenAPIScope.Paths,
+        ],
+        include_path_parameters=True,
+    )
+    assert (
+        parser.parse()
+        == (EXPECTED_OPEN_API_PATH / "openapi_parser_with_query_parameters" / "with_path_params.py").read_text()
+    )
+
+
+def test_parse_all_parameters_duplicate_names_exception() -> None:
+    parser = OpenAPIParser("", include_path_parameters=True)
+    parameters = [
+        ParameterObject.parse_obj({"name": "duplicate_param", "in": "path", "schema": {"type": "string"}}),
+        ParameterObject.parse_obj({"name": "duplicate_param", "in": "query", "schema": {"type": "integer"}}),
+    ]
+
+    with pytest.raises(Exception) as exc_info:  # noqa: PT011
+        parser.parse_all_parameters("TestModel", parameters, ["test", "path"])
+
+    assert "Parameter name 'duplicate_param' is used more than once." in str(exc_info.value)
 
 
 @pytest.mark.skipif(

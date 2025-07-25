@@ -22,7 +22,8 @@ class PetForm(BaseModel):
     age: Optional[int] = None
 
 
-class PetsPetIdGetParametersQuery(BaseModel):
+class PetsPetIdGetParameters(BaseModel):
+    petId: str
     include: Optional[str] = None
 
 
@@ -46,7 +47,7 @@ class MultipleMediaFilter1(BaseModel):
     media_type: Optional[MediaType] = 'json'
 
 
-class PetsGetParametersQuery(BaseModel):
+class PetsGetParameters(BaseModel):
     limit: Optional[int] = 0
     HomeAddress: Optional[str] = 'Unknown'
     kind: Optional[str] = 'dog'

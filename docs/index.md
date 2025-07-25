@@ -494,6 +494,9 @@ Template customization:
                         option (require black 20.8b0 or later)
 
 OpenAPI-only options:
+  --include-path-parameters
+                        Include path parameters in generated parameter models in addition to
+                        query parameters (Only OpenAPI)
   --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
   --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
