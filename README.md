@@ -1,6 +1,6 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) 
+This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
 and [msgspec.Struct](https://github.com/jcrist/msgspec) from an openapi file and others.
 
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
@@ -246,6 +246,7 @@ class Apis(BaseModel):
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
 - [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
 - [msgspec.Struct](https://github.com/jcrist/msgspec);
+- [django.Model](https://docs.djangoproject.com/en/stable/topics/db/models/);
 - Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
 
 ## Sponsors
@@ -273,14 +274,14 @@ class Apis(BaseModel):
 </table>
 
 ## Projects that use datamodel-code-generator
- 
-These OSS projects use datamodel-code-generator to generate many models. 
+
+These OSS projects use datamodel-code-generator to generate many models.
 See the following linked projects for real world examples and inspiration.
 
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte)
   - *[Generate Python, Java/Kotlin, and Typescript protocol models](https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin)*
 - [apache/iceberg](https://github.com/apache/iceberg)
-  - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)* 
+  - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)*
     *[`make generate`](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34)*
 - [argoproj-labs/hera](https://github.com/argoproj-labs/hera)
   - *[`Makefile`](https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62)*
@@ -301,7 +302,7 @@ See the following linked projects for real world examples and inspiration.
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata)
   - *[Makefile](https://github.com/open-metadata/OpenMetadata/blob/main/Makefile)*
 - [PostHog/posthog](https://github.com/PostHog/posthog)
-  - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)* 
+  - *[Generate models via `npm run`](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)*
 - [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer)
   - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
 
@@ -338,6 +339,47 @@ $ datamodel-codegen --url https://<INPUT FILE URL> --output model.py
 ```
 This method needs the [http extra option](#http-extra-option)
 
+### Django Model Generation
+You can generate Django models from JSON Schema or OpenAPI specifications:
+
+```bash
+$ datamodel-codegen --input schema.json --output-model-type django.Model --output models.py
+```
+
+Example input (`user_schema.json`):
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {"type": "integer"},
+    "username": {"type": "string"},
+    "email": {"type": "string", "format": "email"},
+    "is_active": {"type": "boolean", "default": true},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "required": ["id", "username", "email"]
+}
+```
+
+Generated Django model:
+```python
+from django.db import models
+
+class User(models.Model):
+    id = models.IntegerField()
+    username = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255)
+    is_active = models.BooleanField(null=True, blank=True, default=True)
+    created_at = models.DateTimeField(null=True, blank=True)
+```
+
+The Django model generator automatically:
+- Maps JSON Schema types to appropriate Django field types
+- Detects email fields and uses `EmailField`
+- Detects datetime fields and uses `DateTimeField`
+- Handles required vs optional fields with `null=True, blank=True`
+- Sets appropriate field options like `max_length` for character fields
+
 
 ## All Command Options
 
@@ -345,7 +387,7 @@ The `datamodel-codegen` command:
 
 <!-- start command help -->
 ```bash
-usage: 
+usage:
   datamodel-codegen [options]
 
 Generate Python data models from schema definitions or structured data
@@ -369,7 +411,7 @@ Options:
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv,graphql}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
-  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
+  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct,django.Model}
                         Output model type (default: pydantic.BaseModel)
   --url URL             Input file URL. `--input` is ignored when `--url` is used
 
