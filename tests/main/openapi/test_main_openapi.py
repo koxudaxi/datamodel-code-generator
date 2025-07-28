@@ -61,7 +61,7 @@ def test_main() -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "general.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "general.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -85,7 +85,7 @@ def test_main_openapi_discriminator_enum() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -109,7 +109,7 @@ def test_main_openapi_discriminator_enum_duplicate() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_duplicate.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_duplicate.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -126,7 +126,7 @@ def test_main_openapi_discriminator_with_properties() -> None:
         ])
         assert return_code == Exit.OK
 
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -142,7 +142,7 @@ def test_main_pydantic_basemodel() -> None:
             "pydantic.BaseModel",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "general.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "general.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -159,7 +159,7 @@ def test_main_base_class() -> None:
             "custom_module.Base",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "base_class.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "base_class.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -175,7 +175,7 @@ def test_target_python_version() -> None:
             f"3.{MIN_VERSION}",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "target_python_version.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "target_python_version.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -381,7 +381,7 @@ def test_pyproject() -> None:
 
             return_code: Exit = main([])
             assert return_code == Exit.OK
-            assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "pyproject.py").read_text()
+            assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pyproject.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -397,7 +397,7 @@ def test_pyproject_not_found() -> None:
                 str(output_file),
             ])
             assert return_code == Exit.OK
-            assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "pyproject_not_found.py").read_text()
+            assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pyproject_not_found.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -411,7 +411,7 @@ def test_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "stdin.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "stdin.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -428,7 +428,7 @@ def test_validation(mocker: MockerFixture) -> None:
             "--validation",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "validation.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "validation.py").read_text()
         mock_prance.assert_called_once()
 
 
@@ -501,7 +501,7 @@ def test_main_with_field_constraints(output_model: str, expected_output: str, ar
             *args,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @pytest.mark.parametrize(
@@ -530,7 +530,7 @@ def test_main_without_field_constraints(output_model: str, expected_output: str)
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @pytest.mark.parametrize(
@@ -567,7 +567,7 @@ def test_main_with_aliases(output_model: str, expected_output: str) -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 def test_main_with_bad_aliases() -> None:
@@ -625,7 +625,7 @@ def test_main_with_snake_case_field() -> None:
             "--snake-case-field",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "with_snake_case_field.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "with_snake_case_field.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -641,7 +641,7 @@ def test_main_with_strip_default_none() -> None:
             "--strip-default-none",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "with_strip_default_none.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "with_strip_default_none.py").read_text()
 
 
 def test_disable_timestamp() -> None:
@@ -655,7 +655,7 @@ def test_disable_timestamp() -> None:
             "--disable-timestamp",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "disable_timestamp.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "disable_timestamp.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -672,7 +672,7 @@ def test_enable_version_header() -> None:
         assert return_code == Exit.OK
         expected = (EXPECTED_OPENAPI_PATH / "enable_version_header.py").read_text()
         expected = expected.replace("#   version:   0.0.0", f"#   version:   {get_version()}")
-        assert output_file.read_text() == expected
+        assert output_file.read_text(encoding="utf-8") == expected
 
 
 @pytest.mark.parametrize(
@@ -706,7 +706,7 @@ def test_allow_population_by_field_name(output_model: str, expected_output: str)
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @pytest.mark.parametrize(
@@ -740,7 +740,7 @@ def test_allow_extra_fields(output_model: str, expected_output: str) -> None:
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @pytest.mark.parametrize(
@@ -774,7 +774,7 @@ def test_enable_faux_immutability(output_model: str, expected_output: str) -> No
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @pytest.mark.benchmark
@@ -790,7 +790,7 @@ def test_use_default() -> None:
             "--use-default",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "use_default.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_default.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -806,7 +806,7 @@ def test_force_optional() -> None:
             "--force-optional",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "force_optional.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "force_optional.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -820,7 +820,7 @@ def test_main_with_exclusive() -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "with_exclusive.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "with_exclusive.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -834,7 +834,7 @@ def test_main_subclass_enum() -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
 
 
 def test_main_use_standard_collections(tmpdir_factory: pytest.TempdirFactory) -> None:
@@ -953,7 +953,7 @@ def test_main_openapi_aware_datetime(output_model: str, expected_output: str, da
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @freeze_time("2019-07-26")
@@ -984,7 +984,7 @@ def test_main_openapi_datetime(output_model: str, expected_output: str) -> None:
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1025,7 +1025,7 @@ def test_main_openapi_enum_models_as_literal_one(min_version: str) -> None:
             min_version,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "one.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "one.py").read_text()
 
 
 @pytest.mark.skipif(
@@ -1051,7 +1051,7 @@ def test_main_openapi_use_one_literal_as_default(min_version: str) -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "one_literal_as_default.py").read_text()
+            output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "one_literal_as_default.py").read_text()
         )
 
 
@@ -1080,7 +1080,7 @@ def test_main_openapi_enum_models_as_literal_all(min_version: str) -> None:
             min_version,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "all.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "all.py").read_text()
 
 
 @pytest.mark.skipif(
@@ -1109,7 +1109,7 @@ def test_main_openapi_enum_models_as_literal() -> None:
         ])
 
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -1126,7 +1126,7 @@ def test_main_openapi_all_of_required() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "allof_required.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "allof_required.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -1143,7 +1143,7 @@ def test_main_openapi_nullable() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "nullable.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1160,7 +1160,7 @@ def test_main_openapi_nullable_strict_nullable() -> None:
             "--strict-nullable",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable.py").read_text()
 
 
 @pytest.mark.parametrize(
@@ -1201,7 +1201,7 @@ def test_main_openapi_pattern(output_model: str, expected_output: str) -> None:
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "pattern" / expected_output).read_text().replace(
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pattern" / expected_output).read_text().replace(
             "pattern.json", "pattern.yaml"
         )
 
@@ -1238,7 +1238,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(expected_output: str, 
             *args,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1293,7 +1293,7 @@ def test_main_http_openapi(mocker: MockerFixture) -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "http_refs.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "http_refs.py").read_text()
         httpx_get_mock.assert_has_calls([
             call(
                 "https://example.com/refs.yaml",
@@ -1325,7 +1325,7 @@ def test_main_disable_appending_item_suffix() -> None:
             "--disable-appending-item-suffix",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "disable_appending_item_suffix.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "disable_appending_item_suffix.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1344,7 +1344,7 @@ def test_main_openapi_body_and_parameters() -> None:
             "schemas",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "general.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "general.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1368,7 +1368,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture) -> N
             "schemas",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py").read_text()
         httpx_get_mock.assert_has_calls([
             call(
                 "https://schema.example",
@@ -1395,7 +1395,7 @@ def test_main_openapi_body_and_parameters_only_paths() -> None:
             "paths",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_paths.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_paths.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1414,7 +1414,7 @@ def test_main_openapi_body_and_parameters_only_schemas() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text() == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_schemas.py").read_text()
+            output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_schemas.py").read_text()
         )
 
 
@@ -1431,7 +1431,7 @@ def test_main_openapi_content_in_parameters() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "content_in_parameters.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "content_in_parameters.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1450,7 +1450,7 @@ def test_main_openapi_oas_response_reference() -> None:
             "schemas",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "oas_response_reference.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "oas_response_reference.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1466,7 +1466,7 @@ def test_main_openapi_json_pointer() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "json_pointer.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "json_pointer.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1500,7 +1500,7 @@ def test_main_use_annotated_with_field_constraints(output_model: str, expected_o
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1516,7 +1516,7 @@ def test_main_nested_enum() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "nested_enum.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nested_enum.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1533,7 +1533,7 @@ def test_openapi_special_yaml_keywords(mocker: MockerFixture) -> None:
             "--validation",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "special_yaml_keywords.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "special_yaml_keywords.py").read_text()
     mock_prance.assert_called_once()
 
 
@@ -1557,7 +1557,7 @@ def test_main_openapi_nullable_use_union_operator() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
+            output_file.read_text(encoding="utf-8")
             == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable_use_union_operator.py").read_text()
         )
 
@@ -1592,7 +1592,7 @@ def test_main_collapse_root_models() -> None:
             "--collapse-root-models",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "collapse_root_models.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "collapse_root_models.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1609,7 +1609,7 @@ def test_main_collapse_root_models_field_constraints() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text() == (EXPECTED_OPENAPI_PATH / "collapse_root_models_field_constraints.py").read_text()
+            output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "collapse_root_models_field_constraints.py").read_text()
         )
 
 
@@ -1627,7 +1627,7 @@ def test_main_collapse_root_models_with_references_to_flat_types() -> None:
 
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
+            output_file.read_text(encoding="utf-8")
             == (EXPECTED_OPENAPI_PATH / "collapse_root_models_with_references_to_flat_types.py").read_text()
         )
 
@@ -1645,7 +1645,7 @@ def test_main_openapi_max_items_enum() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "max_items_enum.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "max_items_enum.py").read_text()
 
 
 @pytest.mark.parametrize(
@@ -1676,7 +1676,7 @@ def test_main_openapi_const(output_model: str, expected_output: str) -> None:
             output_model,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @pytest.mark.parametrize(
@@ -1712,7 +1712,7 @@ def test_main_openapi_const_field(output_model: str, expected_output: str) -> No
             "--collapse-root-models",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1728,7 +1728,7 @@ def test_main_openapi_complex_reference() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "complex_reference.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "complex_reference.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1744,7 +1744,7 @@ def test_main_openapi_reference_to_object_properties() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1762,7 +1762,7 @@ def test_main_openapi_reference_to_object_properties_collapse_root_models() -> N
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
+            output_file.read_text(encoding="utf-8")
             == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties_collapse_root_models.py").read_text()
         )
 
@@ -1781,7 +1781,7 @@ def test_main_openapi_override_required_all_of_field() -> None:
             "--collapse-root-models",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "override_required_all_of.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "override_required_all_of.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1798,7 +1798,7 @@ def test_main_use_default_kwarg() -> None:
             "--use-default-kwarg",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "use_default_kwarg.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_default_kwarg.py").read_text()
 
 
 @pytest.mark.parametrize(
@@ -1827,7 +1827,7 @@ def test_main_openapi_discriminator(input_: str, output: str) -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "discriminator" / output).read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / output).read_text()
 
 
 @freeze_time("2023-07-27")
@@ -1866,7 +1866,7 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
             if a
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "discriminator" / expected).read_text().replace(
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / expected).read_text().replace(
             "discriminator_in_array.yaml", input_file
         )
 
@@ -1929,7 +1929,7 @@ def test_main_dataclass() -> None:
             "dataclasses.dataclass",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "dataclass.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "dataclass.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1947,7 +1947,7 @@ def test_main_dataclass_base_class() -> None:
             "custom_base.Base",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "dataclass_base_class.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "dataclass_base_class.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1963,7 +1963,7 @@ def test_main_openapi_reference_same_hierarchy_directory() -> None:
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "reference_same_hierarchy_directory.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "reference_same_hierarchy_directory.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1978,7 +1978,7 @@ def test_main_multiple_required_any_of() -> None:
             "--collapse-root-models",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "multiple_required_any_of.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "multiple_required_any_of.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -1992,7 +1992,7 @@ def test_main_openapi_max_min() -> None:
             str(output_file),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "max_min_number.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "max_min_number.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2011,7 +2011,7 @@ def test_main_openapi_use_operation_id_as_name() -> None:
             "parameters",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "use_operation_id_as_name.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_operation_id_as_name.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2052,7 +2052,7 @@ def test_main_unsorted_optional_fields() -> None:
             "dataclasses.dataclass",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "unsorted_optional_fields.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unsorted_optional_fields.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2068,7 +2068,7 @@ def test_main_typed_dict() -> None:
             "typing.TypedDict",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "typed_dict.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2086,7 +2086,7 @@ def test_main_typed_dict_py(min_version: str) -> None:
             min_version,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "typed_dict_py.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_py.py").read_text()
 
 
 @pytest.mark.skipif(
@@ -2137,7 +2137,7 @@ def test_main_typed_dict_nullable() -> None:
             "3.11",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable.py").read_text()
 
 
 @pytest.mark.skipif(
@@ -2160,7 +2160,7 @@ def test_main_typed_dict_nullable_strict_nullable() -> None:
             "--strict-nullable",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable_strict_nullable.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable_strict_nullable.py").read_text()
 
 
 @pytest.mark.benchmark
@@ -2181,7 +2181,7 @@ def test_main_openapi_nullable_31() -> None:
             "--use-union-operator",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "nullable_31.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_31.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2197,7 +2197,7 @@ def test_main_custom_file_header_path() -> None:
             str(DATA_PATH / "custom_file_header.txt"),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "custom_file_header.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "custom_file_header.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2233,7 +2233,7 @@ def test_main_pydantic_v2() -> None:
             "pydantic_v2.BaseModel",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "pydantic_v2.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pydantic_v2.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2249,7 +2249,7 @@ def test_main_openapi_custom_id_pydantic_v2() -> None:
             "pydantic_v2.BaseModel",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2.py").read_text()
 
 
 @pytest.mark.skipif(
@@ -2271,7 +2271,7 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base() -> None:
             "custom_base.Base",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2_custom_base.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2_custom_base.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2299,7 +2299,7 @@ def test_main_openapi_all_of_with_relative_ref() -> None:
             "--use-field-description",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "all_of_with_relative_ref.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "all_of_with_relative_ref.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2317,7 +2317,7 @@ def test_main_openapi_msgspec_struct(min_version: str) -> None:
             "msgspec.Struct",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_struct.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_struct.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2336,7 +2336,7 @@ def test_main_openapi_msgspec_struct_snake_case(min_version: str) -> None:
             "msgspec.Struct",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_struct_snake_case.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_struct_snake_case.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2360,7 +2360,7 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
+            output_file.read_text(encoding="utf-8")
             == (EXPECTED_OPENAPI_PATH / "msgspec_use_annotated_with_field_constraints.py").read_text()
         )
 
@@ -2382,7 +2382,7 @@ def test_main_openapi_discriminator_one_literal_as_default() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
+            output_file.read_text(encoding="utf-8")
             == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_one_literal_as_default.py").read_text()
         )
 
@@ -2404,7 +2404,7 @@ def test_main_openapi_discriminator_one_literal_as_default_dataclass() -> None:
         ])
         assert return_code == Exit.OK
         assert (
-            output_file.read_text()
+            output_file.read_text(encoding="utf-8")
             == (EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default.py").read_text()
         )
 
@@ -2431,7 +2431,7 @@ def test_main_openapi_keyword_only_dataclass() -> None:
             "3.10",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "dataclass_keyword_only.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "dataclass_keyword_only.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2496,7 +2496,7 @@ def test_main_openapi_keyword_only_msgspec(min_version: str) -> None:
             min_version,
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2523,7 +2523,7 @@ def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str) -> 
             str(OPEN_API_DATA_PATH / "extra_data_msgspec.json"),
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2549,7 +2549,7 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data() -> None:
             use_annotated=True,
             field_constraints=True,
         )
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2567,7 +2567,7 @@ def test_main_openapi_referenced_default() -> None:
             "pydantic_v2.BaseModel",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "referenced_default.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "referenced_default.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2589,7 +2589,7 @@ def test_duplicate_models() -> None:
             "--parent-scoped-naming",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "duplicate_models2.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "duplicate_models2.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2607,7 +2607,7 @@ def test_main_openapi_shadowed_imports() -> None:
             "pydantic_v2.BaseModel",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "shadowed_imports.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "shadowed_imports.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2625,4 +2625,4 @@ def test_main_openapi_extra_fields_forbid() -> None:
             "forbid",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "additional_properties.py").read_text()
+        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "additional_properties.py").read_text()

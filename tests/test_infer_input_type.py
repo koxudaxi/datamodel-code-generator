@@ -14,7 +14,7 @@ def test_infer_input_type() -> None:
             return
         if file.suffix not in {".yaml", ".json"}:
             return
-        result = infer_input_type(file.read_text())
+        result = infer_input_type(file.read_text(encoding="utf-8"))
         assert result == raw_data_type, f"{file} was the wrong type!"
 
     for file in (DATA_PATH / "json").rglob("*"):
