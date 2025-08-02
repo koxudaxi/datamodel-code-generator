@@ -437,7 +437,11 @@ template_options.add_argument(
 )
 template_options.add_argument(
     "--extra-template-data",
-    help="Extra template data",
+    help="Extra template data for output models. Input is supposed to be a json/yaml file. "
+    "For OpenAPI and Jsonschema the keys are the spec path of the object, or the name of the object if you want to "
+    "apply the template data to multiple objects with the same name. "
+    "If you are using another input file type (e.g. GraphQL), the key is the name of the object. "
+    "The value is a dictionary of the template data to add.",
     type=FileType("rt"),
 )
 template_options.add_argument(
