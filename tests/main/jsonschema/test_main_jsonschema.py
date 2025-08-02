@@ -3127,19 +3127,18 @@ def test_main_extra_fields(extra_fields: str, output_model: str, expected_output
     assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
 
 @freeze_time("2019-07-26")
-def test_main_jsonschema_same_name_objects() -> None:
+def test_main_jsonschema_same_name_objects(tmp_path: Path) -> None:
     """
     See: https://github.com/koxudaxi/datamodel-code-generator/issues/2460
     """
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(JSON_SCHEMA_DATA_PATH / "same_name_objects.json"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "same_name_objects.py").read_text()
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "same_name_objects.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "same_name_objects.py").read_text()
