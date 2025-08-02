@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Callable, NamedTuple
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion
+from datamodel_code_generator import PythonVersion
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType
     from datamodel_code_generator.types import DataTypeManager as DataTypeManagerABC
 
-DEFAULT_TARGET_DATETIME_CLASS = DatetimeClassType.Datetime
 DEFAULT_TARGET_PYTHON_VERSION = PythonVersion(f"{sys.version_info.major}.{sys.version_info.minor}")
 
 
@@ -29,15 +28,12 @@ class DataModelSet(NamedTuple):
 def get_data_model_types(
     data_model_type: DataModelType,
     target_python_version: PythonVersion = DEFAULT_TARGET_PYTHON_VERSION,
-    target_datetime_class: DatetimeClassType | None = None,
 ) -> DataModelSet:
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
     from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict  # noqa: PLC0415
     from .types import DataTypeManager  # noqa: PLC0415
 
-    if target_datetime_class is None:
-        target_datetime_class = DEFAULT_TARGET_DATETIME_CLASS
     if data_model_type == DataModelType.PydanticBaseModel:
         return DataModelSet(
             data_model=pydantic.BaseModel,
