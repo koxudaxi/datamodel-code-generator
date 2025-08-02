@@ -2502,3 +2502,19 @@ def test_main_openapi_extra_fields_forbid(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "additional_properties.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_same_name_objects() -> None:
+    with TemporaryDirectory() as output_dir:
+        output_file: Path = Path(output_dir) / "output.py"
+        return_code: Exit = main([
+            "--input",
+            str(OPEN_API_DATA_PATH / "same_name_objects.yaml"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "openapi",
+        ])
+        assert return_code == Exit.OK
+        assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "same_name_objects.py").read_text()
