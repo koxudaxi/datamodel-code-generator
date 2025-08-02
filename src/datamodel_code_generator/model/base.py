@@ -298,11 +298,18 @@ class DataModel(TemplateBase, Nullable, ABC):
 
         self.reference.source = self
 
-        self.extra_template_data = (
+        if extra_template_data is not None:
             # The supplied defaultdict will either create a new entry,
             # or already contain a predefined entry for this type
-            extra_template_data[self.name] if extra_template_data is not None else defaultdict(dict)
-        )
+            self.extra_template_data = extra_template_data[self.reference.path]
+
+            # We use the full object reference path as dictionary key, but
+            # we still support `name` as key because it was used for
+            # `--extra-template-data` input file and we don't want to break the
+            # existing behavior.
+            self.extra_template_data.update(extra_template_data[self.name])
+        else:
+            self.extra_template_data = defaultdict(dict)
 
         self.fields = self._validate_fields(fields) if fields else []
 

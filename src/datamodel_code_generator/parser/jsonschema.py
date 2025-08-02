@@ -654,13 +654,13 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add_ref(ref)
         return self.data_type(reference=reference)
 
-    def set_additional_properties(self, name: str, obj: JsonSchemaObject) -> None:
+    def set_additional_properties(self, path: str, obj: JsonSchemaObject) -> None:
         if isinstance(obj.additionalProperties, bool):
-            self.extra_template_data[name]["additionalProperties"] = obj.additionalProperties
+            self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
 
-    def set_title(self, name: str, obj: JsonSchemaObject) -> None:
+    def set_title(self, path: str, obj: JsonSchemaObject) -> None:
         if obj.title:
-            self.extra_template_data[name]["title"] = obj.title
+            self.extra_template_data[path]["title"] = obj.title
 
     def _deep_merge(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         result = dict1.copy()
@@ -782,7 +782,7 @@ class JsonSchemaParser(Parser):
         if self.use_title_as_name and obj.title:  # pragma: no cover
             name = obj.title
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
-        self.set_additional_properties(reference.name, obj)
+        self.set_additional_properties(reference.path, obj)
 
         data_model_type = self._create_data_model(
             reference=reference,
@@ -993,7 +993,7 @@ class JsonSchemaParser(Parser):
             loaded=True,
         )
         class_name = reference.name
-        self.set_title(class_name, obj)
+        self.set_title(reference.path, obj)
         fields = self.parse_object_fields(
             obj, path, get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module)
         )
@@ -1022,7 +1022,7 @@ class JsonSchemaParser(Parser):
             )
             data_model_type_class = self.data_model_root_type
 
-        self.set_additional_properties(class_name, obj)
+        self.set_additional_properties(reference.path, obj)
 
         data_model_type = self._create_data_model(
             model_type=data_model_type_class,
@@ -1305,8 +1305,8 @@ class JsonSchemaParser(Parser):
             name = obj.title
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-        self.set_title(name, obj)
-        self.set_additional_properties(name, obj)
+        self.set_title(reference.path, obj)
+        self.set_additional_properties(reference.path, obj)
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[
