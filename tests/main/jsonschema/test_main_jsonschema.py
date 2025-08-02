@@ -200,20 +200,18 @@ def test_main_jsonschema_external_files(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
-    output_path: Path = tmp_path / "output"
-    output_path.mkdir()
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "external_reference"),
         "--output",
-        str(output_path),
+        str(tmp_path),
         "--input-file-type",
         "jsonschema",
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
-    assert (output_path / "ref0.py").read_text() == (EXPECTED_JSON_SCHEMA_PATH / "external_ref0.py").read_text()
-    assert (output_path / "other/ref2.py").read_text() == (
+    assert (tmp_path / "ref0.py").read_text() == (EXPECTED_JSON_SCHEMA_PATH / "external_ref0.py").read_text()
+    assert (tmp_path / "other/ref2.py").read_text() == (
         EXPECTED_JSON_SCHEMA_PATH / "external_other_ref2.py"
     ).read_text()
 
@@ -239,20 +237,18 @@ def test_main_jsonschema_multiple_files(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> None:
-    output_path: Path = tmp_path / "output"
-    output_path.mkdir()
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "external_collapse"),
         "--output",
-        str(output_path),
+        str(tmp_path),
         "--input-file-type",
         "jsonschema",
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
-    assert not (output_path / "child.py").exists()
-    assert (output_path / "__init__.py").exists()
+    assert not (tmp_path / "child.py").exists()
+    assert (tmp_path / "__init__.py").exists()
 
 
 @pytest.mark.parametrize(
@@ -599,11 +595,9 @@ def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: 
     assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "id_stdin.py").read_text()
 
 
-def test_main_jsonschema_ids(tmp_path_factory: pytest.TempPathFactory) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
+def test_main_jsonschema_ids(tmp_path: Path) -> None:
     input_filename = JSON_SCHEMA_DATA_PATH / "ids" / "Organization.schema.json"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([
@@ -653,10 +647,8 @@ def test_main_external_files_in_directory(tmp_path: Path) -> None:
 
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
-def test_main_nested_directory(tmp_path_factory: pytest.TempPathFactory) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
-    output_path = output_directory / "model"
+def test_main_nested_directory(tmp_path: Path) -> None:
+    output_path = tmp_path / "model"
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "external_files_in_directory"),
@@ -1217,12 +1209,8 @@ def test_main_generate_custom_class_name_generator(tmp_path: Path) -> None:
 
 
 @freeze_time("2019-07-26")
-def test_main_generate_custom_class_name_generator_additional_properties(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
-    output_file = output_directory / "models.py"
+def test_main_generate_custom_class_name_generator_additional_properties(tmp_path: Path) -> None:
+    output_file = tmp_path / "models.py"
 
     def custom_class_name_generator(name: str) -> str:
         return f"Custom{name[0].upper() + name[1:]}"
@@ -2089,12 +2077,10 @@ def test_main_jsonschema_boolean_property(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_modular_default_enum_member(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path: Path,
 ) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = JSON_SCHEMA_DATA_PATH / "modular_default_enum_member"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([
@@ -2115,10 +2101,8 @@ def test_main_jsonschema_modular_default_enum_member(
     reason="Installed black doesn't support Python version 3.10",
 )
 @freeze_time("2019-07-26")
-def test_main_use_union_operator(tmp_path_factory: pytest.TempPathFactory) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
-    output_path = output_directory / "model"
+def test_main_use_union_operator(tmp_path: Path) -> None:
+    output_path = tmp_path / "model"
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "external_files_in_directory"),

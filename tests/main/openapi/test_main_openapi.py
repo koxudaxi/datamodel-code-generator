@@ -171,13 +171,10 @@ def test_target_python_version(tmp_path: Path) -> None:
 
 
 @pytest.mark.benchmark
-def test_main_modular(tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_main_modular(tmp_path: Path) -> None:
     """Test main function on modular file."""
-
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main(["--input", str(input_filename), "--output", str(output_path)])
@@ -187,13 +184,10 @@ def test_main_modular(tmp_path_factory: pytest.TempPathFactory) -> None:
         assert result == path.read_text()
 
 
-def test_main_modular_reuse_model(tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_main_modular_reuse_model(tmp_path: Path) -> None:
     """Test main function on modular file."""
-
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([
@@ -217,13 +211,10 @@ def test_main_modular_no_file() -> None:
     assert main(["--input", str(input_filename)]) == Exit.ERROR
 
 
-def test_main_modular_filename(tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_main_modular_filename(tmp_path: Path) -> None:
     """Test main function on modular file with filename."""
-
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_filename = output_directory / "model.py"
+    output_filename = tmp_path / "model.py"
 
     assert main(["--input", str(input_filename), "--output", str(output_filename)]) == Exit.ERROR
 
@@ -803,11 +794,9 @@ def test_main_subclass_enum(tmp_path: Path) -> None:
     assert output_file.read_text() == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
 
 
-def test_main_use_standard_collections(tmp_path_factory: pytest.TempPathFactory) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
+def test_main_use_standard_collections(tmp_path: Path) -> None:
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([
@@ -827,11 +816,9 @@ def test_main_use_standard_collections(tmp_path_factory: pytest.TempPathFactory)
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
-def test_main_use_generic_container_types(tmp_path_factory: pytest.TempPathFactory) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
+def test_main_use_generic_container_types(tmp_path: Path) -> None:
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([
@@ -853,12 +840,10 @@ def test_main_use_generic_container_types(tmp_path_factory: pytest.TempPathFacto
 )
 @pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path: Path,
 ) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([
@@ -1197,11 +1182,9 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
 
 @freeze_time("2019-07-26")
 def test_main_generate_custom_class_name_generator_modular(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path: Path,
 ) -> None:
-    output_directory = tmp_path_factory.mktemp("output")
-
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
     main_modular_custom_class_name_dir = EXPECTED_OPENAPI_PATH / "modular_custom_class_name"
 
     def custom_class_name_generator(name: str) -> str:
@@ -2009,13 +1992,11 @@ def test_main_typed_dict_py(min_version: str, tmp_path: Path) -> None:
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
-def test_main_modular_typed_dict(tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_main_modular_typed_dict(tmp_path: Path) -> None:
     """Test main function on modular file."""
 
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main([

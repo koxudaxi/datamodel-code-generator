@@ -70,13 +70,10 @@ def test_target_python_version(tmp_path: Path) -> None:
     assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
 
 
-def test_main_modular(tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_main_modular(tmp_path: Path) -> None:
     """Test main function on modular file."""
-
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main(["--input", str(input_filename), "--output", str(output_path)])
@@ -94,13 +91,11 @@ def test_main_modular_no_file() -> None:
     assert main(["--input", str(input_filename)]) == Exit.ERROR
 
 
-def test_main_modular_filename(tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_main_modular_filename(tmp_path: Path) -> None:
     """Test main function on modular file with filename."""
 
-    output_directory = tmp_path_factory.mktemp("output")
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_filename = output_directory / "model.py"
+    output_filename = tmp_path / "model.py"
 
     assert main(["--input", str(input_filename), "--output", str(output_filename)]) == Exit.ERROR
 
