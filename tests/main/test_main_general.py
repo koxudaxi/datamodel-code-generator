@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import tempfile
 from argparse import Namespace
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 import pytest
@@ -87,112 +85,106 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @freeze_time("2019-07-26")
-def test_space_and_special_characters_dict() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(PYTHON_DATA_PATH / "space_and_special_characters_dict.py"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "dict",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "space_and_special_characters_dict.py").read_text()
+def test_space_and_special_characters_dict(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(PYTHON_DATA_PATH / "space_and_special_characters_dict.py"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "dict",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "space_and_special_characters_dict.py").read_text()
 
 
 @freeze_time("2024-12-14")
-def test_direct_input_dict() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file = Path(output_dir) / "output.py"
-        generate(
-            {"foo": 1, "bar": {"baz": 2}},
-            input_file_type=InputFileType.Dict,
-            output=output_file,
-            output_model_type=DataModelType.PydanticV2BaseModel,
-            snake_case_field=True,
-        )
-        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "direct_input_dict.py").read_text()
+def test_direct_input_dict(tmp_path: Path) -> None:
+    output_file = tmp_path / "output.py"
+    generate(
+        {"foo": 1, "bar": {"baz": 2}},
+        input_file_type=InputFileType.Dict,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        snake_case_field=True,
+    )
+    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "direct_input_dict.py").read_text()
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses() -> None:
+def test_frozen_dataclasses(tmp_path: Path) -> None:
     """Test --frozen-dataclasses flag functionality."""
-    with TemporaryDirectory() as output_dir:
-        output_file = Path(output_dir) / "output.py"
-        generate(
-            DATA_PATH / "jsonschema" / "simple_frozen_test.json",
-            input_file_type=InputFileType.JsonSchema,
-            output=output_file,
-            output_model_type=DataModelType.DataclassesDataclass,
-            frozen_dataclasses=True,
-        )
-        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.DataclassesDataclass,
+        frozen_dataclasses=True,
+    )
+    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only() -> None:
+def test_frozen_dataclasses_with_keyword_only(tmp_path: Path) -> None:
     """Test --frozen-dataclasses with --keyword-only flag combination."""
 
-    with TemporaryDirectory() as output_dir:
-        output_file = Path(output_dir) / "output.py"
-        generate(
-            DATA_PATH / "jsonschema" / "simple_frozen_test.json",
-            input_file_type=InputFileType.JsonSchema,
-            output=output_file,
-            output_model_type=DataModelType.DataclassesDataclass,
-            frozen_dataclasses=True,
-            keyword_only=True,
-            target_python_version=PythonVersion.PY_310,
-        )
-        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.DataclassesDataclass,
+        frozen_dataclasses=True,
+        keyword_only=True,
+        target_python_version=PythonVersion.PY_310,
+    )
+    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_command_line() -> None:
+def test_frozen_dataclasses_command_line(tmp_path: Path) -> None:
     """Test --frozen-dataclasses flag via command line."""
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "dataclasses.dataclass",
-            "--frozen-dataclasses",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "dataclasses.dataclass",
+        "--frozen-dataclasses",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only_command_line() -> None:
+def test_frozen_dataclasses_with_keyword_only_command_line(tmp_path: Path) -> None:
     """Test --frozen-dataclasses with --keyword-only flag via command line."""
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "dataclasses.dataclass",
-            "--frozen-dataclasses",
-            "--keyword-only",
-            "--target-python-version",
-            "3.10",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "dataclasses.dataclass",
+        "--frozen-dataclasses",
+        "--keyword-only",
+        "--target-python-version",
+        "3.10",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
 
 
-def test_filename_with_newline_injection() -> None:
+def test_filename_with_newline_injection(tmp_path: Path) -> None:
     """Test that filenames with newlines cannot inject code into generated files"""
 
     schema_content = """{"type": "object", "properties": {"name": {"type": "string"}}}"""
@@ -203,34 +195,31 @@ import os
 os.system('echo INJECTED')
 # END INJECTION"""
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        output_path = Path(tmpdir) / "output.py"
+    output_path = tmp_path / "output.py"
 
-        generate(
-            input_=schema_content,
-            input_filename=malicious_filename,
-            input_file_type=InputFileType.JsonSchema,
-            output=output_path,
-        )
+    generate(
+        input_=schema_content,
+        input_filename=malicious_filename,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_path,
+    )
 
-        generated_content = output_path.read_text()
+    generated_content = output_path.read_text()
 
-        assert "#   filename:  schema.json # INJECTED CODE: import os" in generated_content, (
-            "Filename not properly sanitized"
-        )
+    assert "#   filename:  schema.json # INJECTED CODE: import os" in generated_content, (
+        "Filename not properly sanitized"
+    )
 
-        assert not any(
-            line.strip().startswith("import os") and not line.strip().startswith("#")
-            for line in generated_content.split("\n")
-        )
-        assert not any(
-            "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
-        )
+    assert not any(
+        line.strip().startswith("import os") and not line.strip().startswith("#")
+        for line in generated_content.split("\n")
+    )
+    assert not any("os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n"))
 
-        compile(generated_content, str(output_path), "exec")
+    compile(generated_content, str(output_path), "exec")
 
 
-def test_filename_with_various_control_characters() -> None:
+def test_filename_with_various_control_characters(tmp_path: Path) -> None:
     """Test that various control characters in filenames are properly sanitized"""
 
     schema_content = """{"type": "object", "properties": {"test": {"type": "string"}}}"""
@@ -249,25 +238,24 @@ def test_filename_with_various_control_characters() -> None:
     ]
 
     for test_name, malicious_filename in test_cases:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            output_path = Path(tmpdir) / "output.py"
+        output_path = tmp_path / "output.py"
 
-            generate(
-                input_=schema_content,
-                input_filename=malicious_filename,
-                input_file_type=InputFileType.JsonSchema,
-                output=output_path,
-            )
+        generate(
+            input_=schema_content,
+            input_filename=malicious_filename,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+        )
 
-            generated_content = output_path.read_text()
+        generated_content = output_path.read_text()
 
-            assert not any(
-                line.strip().startswith("import ") and not line.strip().startswith("#")
-                for line in generated_content.split("\n")
-            ), f"Injection found for {test_name}"
+        assert not any(
+            line.strip().startswith("import ") and not line.strip().startswith("#")
+            for line in generated_content.split("\n")
+        ), f"Injection found for {test_name}"
 
-            assert not any(
-                "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
-            ), f"System call found for {test_name}"
+        assert not any(
+            "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
+        ), f"System call found for {test_name}"
 
-            compile(generated_content, str(output_path), "exec")
+        compile(generated_content, str(output_path), "exec")
