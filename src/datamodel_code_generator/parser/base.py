@@ -935,6 +935,8 @@ class Parser(ABC):
                 for data_type in model_field.data_type.all_data_types:
                     reference = data_type.reference
                     if not reference or not isinstance(reference.source, self.data_model_root_type):
+                        # If the data type is not a reference, we can't collapse it.
+                        # If it's a reference to a root model type, we don't do anything.
                         continue
 
                     # Use root-type as model_field type
@@ -948,6 +950,10 @@ class Parser(ABC):
                         and any(d for d in model_field.data_type.all_data_types if d.is_dict or d.is_union or d.is_list)
                     ):
                         continue  # pragma: no cover
+
+                    if root_type_field.data_type.reference:
+                        # If the root type field is a reference, we aren't able to collapse it yet.
+                        continue
 
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.copy()
