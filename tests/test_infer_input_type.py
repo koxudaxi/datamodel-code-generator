@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from datamodel_code_generator import InputFileType, infer_input_type
+import pytest
+
+from datamodel_code_generator import Error, InputFileType, infer_input_type
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 
@@ -49,6 +51,13 @@ def test_infer_input_type() -> None:
             continue
 
         if str(file).endswith("not.json"):
-            assert_infer_input_type(file, InputFileType.Json)
+            with pytest.raises(
+                Error,
+                match=(
+                    r"Can't infer input file type from the input data. "
+                    r"Please specify the input file type explicitly with --input-file-type option."
+                ),
+            ):
+                infer_input_type(file.read_text())
             continue
         assert_infer_input_type(file, InputFileType.OpenAPI)
