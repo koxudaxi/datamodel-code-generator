@@ -3143,3 +3143,24 @@ def test_main_jsonschema_same_name_objects(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "same_name_objects.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_jsonschema_forwarding_reference_collapse_root(tmp_path: Path) -> None:
+    """
+    See: https://github.com/koxudaxi/datamodel-code-generator/issues/1466
+    """
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "forwarding_reference"),
+        "--output",
+        str(tmp_path),
+        "--input-file-type",
+        "jsonschema",
+        "--collapse-root-models",
+    ])
+    assert return_code == Exit.OK
+    main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "forwarding_reference"
+    for path in main_modular_dir.rglob("*.py"):
+        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
+        assert result == path.read_text()
