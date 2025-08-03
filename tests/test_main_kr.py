@@ -3,7 +3,6 @@ from __future__ import annotations
 import shutil
 from argparse import Namespace
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import black
 import pytest
@@ -28,59 +27,53 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @freeze_time("2019-07-26")
-def test_main() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api.yaml"),
-            "--output",
-            str(output_file),
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main" / "output.py").read_text()
+def test_main(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api.yaml"),
+        "--output",
+        str(output_file),
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main" / "output.py").read_text()
 
 
 @freeze_time("2019-07-26")
-def test_main_base_class() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        shutil.copy(DATA_PATH / "pyproject.toml", Path(output_dir) / "pyproject.toml")
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api.yaml"),
-            "--output",
-            str(output_file),
-            "--base-class",
-            "custom_module.Base",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+def test_main_base_class(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api.yaml"),
+        "--output",
+        str(output_file),
+        "--base-class",
+        "custom_module.Base",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
 
 
 @freeze_time("2019-07-26")
-def test_target_python_version() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api.yaml"),
-            "--output",
-            str(output_file),
-            "--target-python-version",
-            f"3.{MIN_VERSION}",
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+def test_target_python_version(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api.yaml"),
+        "--output",
+        str(output_file),
+        "--target-python-version",
+        f"3.{MIN_VERSION}",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
 
 
-def test_main_modular(tmpdir_factory: pytest.TempdirFactory) -> None:
+def test_main_modular(tmp_path: Path) -> None:
     """Test main function on modular file."""
-
-    output_directory = Path(tmpdir_factory.mktemp("output"))
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = output_directory / "model"
+    output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
         main(["--input", str(input_filename), "--output", str(output_path)])
@@ -98,13 +91,11 @@ def test_main_modular_no_file() -> None:
     assert main(["--input", str(input_filename)]) == Exit.ERROR
 
 
-def test_main_modular_filename(tmpdir_factory: pytest.TempdirFactory) -> None:
+def test_main_modular_filename(tmp_path: Path) -> None:
     """Test main function on modular file with filename."""
 
-    output_directory = Path(tmpdir_factory.mktemp("output"))
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_filename = output_directory / "model.py"
+    output_filename = tmp_path / "model.py"
 
     assert main(["--input", str(input_filename), "--output", str(output_filename)]) == Exit.ERROR
 
@@ -154,34 +145,30 @@ def test_main_custom_template_dir(
     reason="Installed black doesn't support the old style",
 )
 @freeze_time("2019-07-26")
-def test_pyproject() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_path = Path(output_dir)
-        pyproject_toml = Path(DATA_PATH) / "project" / "pyproject.toml"
-        shutil.copy(pyproject_toml, output_path)
-        output_file: Path = output_path / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api.yaml"),
-            "--output",
-            str(output_file),
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
+def test_pyproject(tmp_path: Path) -> None:
+    pyproject_toml = DATA_PATH / "project" / "pyproject.toml"
+    shutil.copy(pyproject_toml, tmp_path)
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api.yaml"),
+        "--output",
+        str(output_file),
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
 
 
 @pytest.mark.parametrize("language", ["UK", "US"])
-def test_pyproject_respects_both_spellings_of_capitalize_enum_members_flag(language: str) -> None:
-    with TemporaryDirectory() as output_dir:
-        output_path = Path(output_dir)
-        pyproject_toml_data = f"""
+def test_pyproject_respects_both_spellings_of_capitalize_enum_members_flag(language: str, tmp_path: Path) -> None:
+    pyproject_toml_data = f"""
 [tool.datamodel-codegen]
 capitali{"s" if language == "UK" else "z"}e-enum-members = true
 enable-version-header = false
 input-file-type = "jsonschema"
 """
-        with (output_path / "pyproject.toml").open("w") as f:
-            f.write(pyproject_toml_data)
+    with (tmp_path / "pyproject.toml").open("w") as f:
+        f.write(pyproject_toml_data)
 
         input_data = """
 {
@@ -196,11 +183,11 @@ input-file-type = "jsonschema"
   }
 }
 """
-        input_file = output_path / "schema.json"
-        with input_file.open("w") as f:
-            f.write(input_data)
+    input_file = tmp_path / "schema.json"
+    with input_file.open("w") as f:
+        f.write(input_data)
 
-        expected_output = """# generated by datamodel-codegen:
+    expected_output = """# generated by datamodel-codegen:
 #   filename:  schema.json
 
 from __future__ import annotations
@@ -220,18 +207,18 @@ class MyEnum(Enum):
     member_2 = 'member_2'
 """
 
-        output_file: Path = output_path / "output.py"
-        return_code: Exit = main([
-            "--disable-timestamp",
-            "--input",
-            input_file.as_posix(),
-            "--output",
-            output_file.as_posix(),
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text() == expected_output, (
-            f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text()}"
-        )
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--disable-timestamp",
+        "--input",
+        input_file.as_posix(),
+        "--output",
+        output_file.as_posix(),
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == expected_output, (
+        f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text()}"
+    )
 
 
 @pytest.mark.skipif(
@@ -239,71 +226,64 @@ class MyEnum(Enum):
     reason="Installed black doesn't support the old style",
 )
 @freeze_time("2019-07-26")
-def test_pyproject_with_tool_section() -> None:
+def test_pyproject_with_tool_section(tmp_path: Path) -> None:
     """Test that a pyproject.toml with a [tool.datamodel-codegen] section is
     found and its configuration applied.
     """
-    with TemporaryDirectory() as output_dir:
-        output_path = Path(output_dir)
-        pyproject_toml = """
+    pyproject_toml = """
 [tool.datamodel-codegen]
 target-python-version = "3.10"
 strict-types = ["str"]
 """
-        with (output_path / "pyproject.toml").open("w") as f:
-            f.write(pyproject_toml)
-        output_file: Path = output_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+    output_file: Path = tmp_path / "output.py"
 
-        # Run main from within the output directory so we can find our
-        # pyproject.toml.
-        with chdir(output_path):
-            return_code: Exit = main([
-                "--input",
-                str((OPEN_API_DATA_PATH / "api.yaml").resolve()),
-                "--output",
-                str(output_file.resolve()),
-            ])
+    # Run main from within the output directory so we can find our
+    # pyproject.toml.
+    with chdir(tmp_path):
+        return_code: Exit = main([
+            "--input",
+            str((OPEN_API_DATA_PATH / "api.yaml").resolve()),
+            "--output",
+            str(output_file.resolve()),
+        ])
 
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text()
-            # We expect the output to use pydantic.StrictStr in place of str
-            == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py").read_text()
-        )
+    assert return_code == Exit.OK
+    assert (
+        output_file.read_text()
+        # We expect the output to use pydantic.StrictStr in place of str
+        == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
-def test_main_use_schema_description() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
-            "--output",
-            str(output_file),
-            "--use-schema-description",
-        ])
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
-        )
+def test_main_use_schema_description(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
+        "--output",
+        str(output_file),
+        "--use-schema-description",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
 
 
 @freeze_time("2022-11-11")
-def test_main_use_field_description() -> None:
-    with TemporaryDirectory() as output_dir:
-        output_file: Path = Path(output_dir) / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
-            "--output",
-            str(output_file),
-            "--use-field-description",
-        ])
-        assert return_code == Exit.OK
-        generated = output_file.read_text()
-        expected = (EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py").read_text()
-        assert generated == expected
+def test_main_use_field_description(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
+        "--output",
+        str(output_file),
+        "--use-field-description",
+    ])
+    assert return_code == Exit.OK
+    generated = output_file.read_text()
+    expected = (EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py").read_text()
+    assert generated == expected
 
 
 def test_capitalise_enum_members(tmp_path: Path) -> None:
