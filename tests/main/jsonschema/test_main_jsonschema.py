@@ -857,7 +857,7 @@ def test_main_require_referenced_field_naive_datetime(output_model: str, expecte
         ),
         (
             "pydantic_v2.BaseModel",
-            "require_referenced_field",
+            "require_referenced_field_pydantic_v2",
         ),
         (
             "msgspec.Struct",

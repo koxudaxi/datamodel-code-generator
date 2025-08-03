@@ -409,7 +409,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version, output_datetime_class)
+    data_model_types = get_data_model_types(output_model_type, target_python_version)
     source = input_text or input_
     assert not isinstance(source, Mapping)
     parser = parser_class(
@@ -575,6 +575,7 @@ inferred_message = (
 __all__ = [
     "MAX_VERSION",
     "MIN_VERSION",
+    "DatetimeClassType",
     "DefaultPutDict",
     "Error",
     "InputFileType",
