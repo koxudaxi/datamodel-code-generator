@@ -199,8 +199,8 @@ class Config(BaseModel):
 
     if PYDANTIC_V2:
 
-        @model_validator()
-        def validate_output_datetime_class(self: Self) -> Self:
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_output_datetime_class(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
             datetime_class_type: DatetimeClassType | None = self.output_datetime_class
             if (
                 datetime_class_type
@@ -210,20 +210,20 @@ class Config(BaseModel):
                 raise Error(self.__validate_output_datetime_class_err)
             return self
 
-        @model_validator()
-        def validate_original_field_name_delimiter(self: Self) -> Self:
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_original_field_name_delimiter(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
             if self.original_field_name_delimiter is not None and not self.snake_case_field:
                 raise Error(self.__validate_original_field_name_delimiter_err)
             return self
 
-        @model_validator()
-        def validate_custom_file_header(self: Self) -> Self:
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_custom_file_header(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
             if self.custom_file_header and self.custom_file_header_path:
                 raise Error(self.__validate_custom_file_header_err)
             return self
 
-        @model_validator()
-        def validate_keyword_only(self: Self) -> Self:
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_keyword_only(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
             output_model_type: DataModelType = self.output_model_type
             python_target: PythonVersion = self.target_python_version
             if (
@@ -235,40 +235,40 @@ class Config(BaseModel):
             return self
 
         @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_root(self: Self) -> Self:
+        def validate_root(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
             if self.use_annotated:
                 self.field_constraints = True
             return self
 
     else:
 
-        @model_validator()
-        def validate_output_datetime_class(self: Config, values: dict[str, Any]) -> dict[str, Any]:
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_output_datetime_class(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             datetime_class_type: DatetimeClassType | None = values.get("output_datetime_class")
             if (
                 datetime_class_type
                 and datetime_class_type is not DatetimeClassType.Datetime
                 and values.get("output_model_type") == DataModelType.DataclassesDataclass
             ):
-                raise Error(self.__validate_output_datetime_class_err)
+                raise Error(cls.__validate_output_datetime_class_err)
             return values
 
-        @model_validator()
+        @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_original_field_name_delimiter(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             if values.get("original_field_name_delimiter") is not None and not values.get("snake_case_field"):
                 raise Error(cls.__validate_original_field_name_delimiter_err)
             return values
 
-        @model_validator()
+        @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_custom_file_header(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             if values.get("custom_file_header") and values.get("custom_file_header_path"):
                 raise Error(cls.__validate_custom_file_header_err)
             return values
 
-        @model_validator()
+        @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_keyword_only(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            output_model_type: DataModelType = values.get("output_model_type")  # pyright: ignore[reportAssignmentType]
-            python_target: PythonVersion = values.get("target_python_version")  # pyright: ignore[reportAssignmentType]
+            output_model_type: DataModelType = cast("DataModelType", values.get("output_model_type"))
+            python_target: PythonVersion = cast("PythonVersion", values.get("target_python_version"))
             if (
                 values.get("keyword_only")
                 and output_model_type == DataModelType.DataclassesDataclass
@@ -277,8 +277,8 @@ class Config(BaseModel):
                 raise Error(cls.__validate_keyword_only_err)
             return values
 
-        @model_validator()
-        def validate_root(cls, values: Any) -> Any:  # noqa: N805
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_root(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             if values.get("use_annotated"):
                 values["field_constraints"] = True
             return values
