@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover
 try:
     from tomllib import load as load_tomllib  # type: ignore[ignoreMissingImports]
 except ImportError:
-    from tomli import load as load_tomllib
+    from tomli import load as load_tomllib  # type: ignore[ignoreMissingImports]
 
 
 def load_toml(path: Path) -> dict[str, Any]:
