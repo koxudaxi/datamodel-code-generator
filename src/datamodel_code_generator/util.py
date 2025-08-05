@@ -1,38 +1,33 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
 import pydantic
 from packaging import version
 from pydantic import BaseModel as _BaseModel
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 PYDANTIC_VERSION = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))
 
 PYDANTIC_V2: bool = version.parse("2.0b3") <= PYDANTIC_VERSION
 
-if TYPE_CHECKING:
-    from pathlib import Path
-    from typing import Literal
-
+try:
+    from yaml import CSafeLoader as SafeLoader
+except ImportError:  # pragma: no cover
     from yaml import SafeLoader
 
-    def load_toml(path: Path) -> dict[str, Any]: ...
+try:
+    from tomllib import load as load_tomllib  # type: ignore[ignoreMissingImports]
+except ImportError:
+    from tomli import load as load_tomllib  # type: ignore[ignoreMissingImports]
 
-else:
-    try:
-        from yaml import CSafeLoader as SafeLoader
-    except ImportError:  # pragma: no cover
-        from yaml import SafeLoader
 
-    try:
-        from tomllib import load as load_tomllib
-    except ImportError:
-        from tomli import load as load_tomllib
-
-    def load_toml(path: Path) -> dict[str, Any]:
-        with path.open("rb") as f:
-            return load_tomllib(f)
+def load_toml(path: Path) -> dict[str, Any]:
+    with path.open("rb") as f:
+        return load_tomllib(f)
 
 
 SafeLoaderTemp = copy.deepcopy(SafeLoader)
@@ -44,16 +39,70 @@ SafeLoaderTemp.add_constructor(
 SafeLoader = SafeLoaderTemp
 
 Model = TypeVar("Model", bound=_BaseModel)
+T = TypeVar("T")
 
 
+@overload
 def model_validator(
+    mode: Literal["before"],
+) -> (
+    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
+    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
+): ...
+
+
+@overload
+def model_validator(
+    mode: Literal["after"],
+) -> (
+    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
+    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
+    | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
+): ...
+
+
+@overload
+def model_validator() -> (
+    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
+    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
+    | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
+): ...
+
+
+def model_validator(  # pyright: ignore[reportInconsistentOverload]
     mode: Literal["before", "after"] = "after",
-) -> Callable[[Callable[[Model, Any], Any]], Callable[[Model, Any], Any]]:
-    def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
+) -> (
+    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
+    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
+    | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
+):
+    """
+    Decorator for model validators in Pydantic models.
+
+    Uses `model_validator` in Pydantic v2 and `root_validator` in Pydantic v1.
+
+    We support only `before` mode because `after` mode needs different validator
+    implementation for v1 and v2.
+    """
+
+    @overload
+    def inner(method: Callable[[type[Model], T], T]) -> Callable[[type[Model], T], T]: ...
+
+    @overload
+    def inner(method: Callable[[Model, T], T]) -> Callable[[Model, T], T]: ...
+
+    @overload
+    def inner(method: Callable[[Model], Model]) -> Callable[[Model], Model]: ...
+
+    def inner(
+        method: Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model],
+    ) -> Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model]:
         if PYDANTIC_V2:
             from pydantic import model_validator as model_validator_v2  # noqa: PLC0415
 
-            return model_validator_v2(mode=mode)(method)  # pyright: ignore[reportReturnType]
+            if method == "before":
+                return model_validator_v2(mode=mode)(classmethod(method))  # type: ignore[reportReturnType]
+            return model_validator_v2(mode=mode)(method)  # type: ignore[reportReturnType]
         from pydantic import root_validator  # noqa: PLC0415
 
         return root_validator(method, pre=mode == "before")  # pyright: ignore[reportCallIssue]
