@@ -13,7 +13,7 @@ from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
@@ -183,17 +183,19 @@ class Config(BaseModel):
             values["custom_formatters"] = custom_formatters.split(",")
         return values
 
-    __validate_output_datetime_class_err: str = (
+    __validate_output_datetime_class_err: ClassVar[str] = (
         '`--output-datetime-class` only allows "datetime" for '
         f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
     )
 
-    __validate_original_field_name_delimiter_err: str = (
+    __validate_original_field_name_delimiter_err: ClassVar[str] = (
         "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
     )
 
-    __validate_custom_file_header_err: str = "`--custom_file_header_path` can not be used with `--custom_file_header`."
-    __validate_keyword_only_err: str = (
+    __validate_custom_file_header_err: ClassVar[str] = (
+        "`--custom_file_header_path` can not be used with `--custom_file_header`."
+    )
+    __validate_keyword_only_err: ClassVar[str] = (
         f"`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
     )
 
