@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datamodel_code_generator.model.typed_dict import DataModelField, TypedDict
-from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.model.typed_dict import DataModelField
 from datamodel_code_generator.types import DataType
 
 
