@@ -2475,6 +2475,24 @@ def test_main_typed_dict_not_required_nullable(tmp_path: Path) -> None:
     assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_not_required_nullable.py").read_text()
 
 
+@freeze_time("2019-07-26")
+def test_main_typed_dict_const(tmp_path: Path) -> None:
+    """Test main function writing to TypedDict with const fields."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "const.json"),
+        "--output",
+        str(output_file),
+        "--output-model-type",
+        "typing.TypedDict",
+        "--target-python-version",
+        "3.11",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_const.py").read_text()
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

@@ -1611,6 +1611,10 @@ def test_main_openapi_const(output_model: str, expected_output: str, tmp_path: P
             "msgspec.Struct",
             "const_field_msgspec.py",
         ),
+        (
+            "typing.TypedDict",
+            "const_field_typed_dict.py",
+        ),
     ],
 )
 @freeze_time("2019-07-26")
