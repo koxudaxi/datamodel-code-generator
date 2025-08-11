@@ -27,7 +27,7 @@ def test_graphql_field_enum(tmp_path: Path) -> None:
         "--set-default-enum-member",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -42,7 +42,7 @@ def test_graphql_union_aliased_bug(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text().rstrip()
+    actual = output_file.read_text(encoding="utf-8").rstrip()
     expected = (EXPECTED_GRAPHQL_PATH / "union-aliased-bug.py").read_text().rstrip()
     if actual != expected:
         pass
@@ -61,7 +61,7 @@ def test_graphql_union_commented(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text().rstrip()
+    actual = output_file.read_text(encoding="utf-8").rstrip()
     expected = (EXPECTED_GRAPHQL_PATH / "union-commented.py").read_text().rstrip()
     if actual != expected:
         pass
