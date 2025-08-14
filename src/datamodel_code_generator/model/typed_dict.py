@@ -114,6 +114,16 @@ class TypedDict(DataModel):
 class DataModelField(DataModelFieldBase):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
 
+    def process_const(self) -> None:
+        if "const" not in self.extras:
+            return
+        self.const = True
+        self.nullable = False
+        const = self.extras["const"]
+        self.data_type = self.data_type.__class__(literals=[const])
+        if not self.default:
+            self.default = const
+
     @property
     def key(self) -> str:
         return (self.original_name or self.name or "").translate(  # pragma: no cover
