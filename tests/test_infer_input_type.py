@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from datamodel_code_generator import InputFileType, infer_input_type
+import pytest
+
+from datamodel_code_generator import Error, InputFileType, infer_input_type
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 
@@ -17,12 +19,25 @@ def test_infer_input_type() -> None:
         result = infer_input_type(file.read_text())
         assert result == raw_data_type, f"{file} was the wrong type!"
 
+    def assert_invalid_infer_input_type(file: Path) -> None:
+        with pytest.raises(
+            Error,
+            match=(
+                r"Can't infer input file type from the input data. "
+                r"Please specify the input file type explicitly with --input-file-type option."
+            ),
+        ):
+            infer_input_type(file.read_text())
+
+    for file in (DATA_PATH / "csv").rglob("*"):
+        assert_infer_input_type(file, InputFileType.CSV)
+
     for file in (DATA_PATH / "json").rglob("*"):
-        if str(file).endswith("broken.json"):
+        if file.name.endswith("broken.json"):
             continue
         assert_infer_input_type(file, InputFileType.Json)
     for file in (DATA_PATH / "jsonschema").rglob("*"):
-        if str(file).endswith((
+        if file.name.endswith((
             "external_child.json",
             "external_child.yaml",
             "extra_data_msgspec.json",
@@ -30,11 +45,11 @@ def test_infer_input_type() -> None:
             continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / "openapi").rglob("*"):
-        if "all_of_with_relative_ref" in str(file):
+        if "all_of_with_relative_ref" in file.parts:
             continue
-        if "reference_same_hierarchy_directory" in str(file):
+        if "reference_same_hierarchy_directory" in file.parts:
             continue
-        if str(file).endswith((
+        if file.name.endswith((
             "aliases.json",
             "extra_data.json",
             "extra_data_msgspec.json",
@@ -48,7 +63,7 @@ def test_infer_input_type() -> None:
         )):
             continue
 
-        if str(file).endswith("not.json"):
-            assert_infer_input_type(file, InputFileType.Json)
+        if file.name.endswith("not.json"):
+            assert_invalid_infer_input_type(file)
             continue
         assert_infer_input_type(file, InputFileType.OpenAPI)
