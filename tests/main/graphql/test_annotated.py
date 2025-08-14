@@ -38,7 +38,7 @@ def test_annotated(tmp_path: Path) -> None:
         "--use-annotated",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "annotated.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -57,7 +57,10 @@ def test_annotated_use_standard_collections(tmp_path: Path) -> None:
         "--use-standard-collections",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -78,7 +81,7 @@ def test_annotated_use_standard_collections_use_union_operator(tmp_path: Path) -
     ])
     assert return_code == Exit.OK
     assert (
-        output_file.read_text()
+        output_file.read_text(encoding="utf-8")
         == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections_use_union_operator.py").read_text()
     )
 
@@ -99,7 +102,10 @@ def test_annotated_use_union_operator(tmp_path: Path) -> None:
         "--use-union-operator",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "annotated_use_union_operator.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_GRAPHQL_PATH / "annotated_use_union_operator.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -119,4 +125,4 @@ def test_annotated_field_aliases(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "field-aliases.json"),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_GRAPHQL_PATH / "annotated_field_aliases.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated_field_aliases.py").read_text()

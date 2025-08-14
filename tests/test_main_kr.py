@@ -36,7 +36,7 @@ def test_main(tmp_path: Path) -> None:
         str(output_file),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main" / "output.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main" / "output.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -52,7 +52,9 @@ def test_main_base_class(tmp_path: Path) -> None:
         "custom_module.Base",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -67,7 +69,10 @@ def test_target_python_version(tmp_path: Path) -> None:
         f"3.{MIN_VERSION}",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+    )
 
 
 def test_main_modular(tmp_path: Path) -> None:
@@ -156,7 +161,7 @@ def test_pyproject(tmp_path: Path) -> None:
         str(output_file),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
 
 
 @pytest.mark.parametrize("language", ["UK", "US"])
@@ -216,8 +221,8 @@ class MyEnum(Enum):
         output_file.as_posix(),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == expected_output, (
-        f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text()}"
+    assert output_file.read_text(encoding="utf-8") == expected_output, (
+        f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text(encoding='utf-8')}"
     )
 
 
@@ -250,7 +255,7 @@ strict-types = ["str"]
 
     assert return_code == Exit.OK
     assert (
-        output_file.read_text()
+        output_file.read_text(encoding="utf-8")
         # We expect the output to use pydantic.StrictStr in place of str
         == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py").read_text()
     )
@@ -267,7 +272,10 @@ def test_main_use_schema_description(tmp_path: Path) -> None:
         "--use-schema-description",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
+    )
 
 
 @freeze_time("2022-11-11")
@@ -281,7 +289,7 @@ def test_main_use_field_description(tmp_path: Path) -> None:
         "--use-field-description",
     ])
     assert return_code == Exit.OK
-    generated = output_file.read_text()
+    generated = output_file.read_text(encoding="utf-8")
     expected = (EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py").read_text()
     assert generated == expected
 

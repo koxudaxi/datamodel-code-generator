@@ -35,4 +35,4 @@ def test_main_yaml(tmp_path: Path) -> None:
         "yaml",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "yaml.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_PATH / "yaml.py").read_text()
