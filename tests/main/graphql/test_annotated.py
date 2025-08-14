@@ -57,7 +57,10 @@ def test_annotated_use_standard_collections(tmp_path: Path) -> None:
         "--use-standard-collections",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -99,7 +102,10 @@ def test_annotated_use_union_operator(tmp_path: Path) -> None:
         "--use-union-operator",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated_use_union_operator.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_GRAPHQL_PATH / "annotated_use_union_operator.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")

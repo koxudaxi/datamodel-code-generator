@@ -105,7 +105,10 @@ def test_main_openapi_discriminator_enum_duplicate(tmp_path: Path) -> None:
         "openapi",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_duplicate.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_duplicate.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -121,7 +124,10 @@ def test_main_openapi_discriminator_with_properties(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
 
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -997,7 +1003,10 @@ def test_main_openapi_use_one_literal_as_default(min_version: str, tmp_path: Pat
         "--use-one-literal-as-default",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "one_literal_as_default.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "enum_models" / "one_literal_as_default.py").read_text()
+    )
 
 
 @pytest.mark.skipif(
@@ -1052,7 +1061,9 @@ def test_main_openapi_enum_models_as_literal(tmp_path: Path) -> None:
     ])
 
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py").read_text()
+    )
 
 
 @pytest.mark.benchmark
@@ -1100,7 +1111,9 @@ def test_main_openapi_nullable_strict_nullable(tmp_path: Path) -> None:
         "--strict-nullable",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable.py").read_text()
+    )
 
 
 @pytest.mark.parametrize(
@@ -1140,9 +1153,9 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, tmp_path:
         output_model,
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pattern" / expected_output).read_text().replace(
-        "pattern.json", "pattern.yaml"
-    )
+    assert output_file.read_text(encoding="utf-8") == (
+        EXPECTED_OPENAPI_PATH / "pattern" / expected_output
+    ).read_text().replace("pattern.json", "pattern.yaml")
 
 
 @pytest.mark.parametrize(
@@ -1262,7 +1275,10 @@ def test_main_disable_appending_item_suffix(tmp_path: Path) -> None:
         "--disable-appending-item-suffix",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "disable_appending_item_suffix.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "disable_appending_item_suffix.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1280,7 +1296,10 @@ def test_main_openapi_body_and_parameters(tmp_path: Path) -> None:
         "schemas",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "general.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "general.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1303,7 +1322,10 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, tmp_
         "schemas",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py").read_text()
+    )
     httpx_get_mock.assert_has_calls([
         call(
             "https://schema.example",
@@ -1329,7 +1351,10 @@ def test_main_openapi_body_and_parameters_only_paths(tmp_path: Path) -> None:
         "paths",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_paths.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_paths.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1346,7 +1371,10 @@ def test_main_openapi_body_and_parameters_only_schemas(tmp_path: Path) -> None:
         "schemas",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_schemas.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_schemas.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1530,7 +1558,10 @@ def test_main_collapse_root_models_field_constraints(tmp_path: Path) -> None:
         "--field-constraints",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "collapse_root_models_field_constraints.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "collapse_root_models_field_constraints.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1658,7 +1689,10 @@ def test_main_openapi_reference_to_object_properties(tmp_path: Path) -> None:
         "openapi",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1693,7 +1727,9 @@ def test_main_openapi_override_required_all_of_field(tmp_path: Path) -> None:
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "override_required_all_of.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "override_required_all_of.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1775,9 +1811,9 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
         if a
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / expected).read_text().replace(
-        "discriminator_in_array.yaml", input_file
-    )
+    assert output_file.read_text(encoding="utf-8") == (
+        EXPECTED_OPENAPI_PATH / "discriminator" / expected
+    ).read_text().replace("discriminator_in_array.yaml", input_file)
 
 
 @pytest.mark.parametrize(
@@ -1868,7 +1904,10 @@ def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None
             "openapi",
         ])
         assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "reference_same_hierarchy_directory.py").read_text()
+        assert (
+            output_file.read_text(encoding="utf-8")
+            == (EXPECTED_OPENAPI_PATH / "reference_same_hierarchy_directory.py").read_text()
+        )
 
 
 @freeze_time("2019-07-26")
@@ -1882,7 +1921,9 @@ def test_main_multiple_required_any_of(tmp_path: Path) -> None:
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "multiple_required_any_of.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "multiple_required_any_of.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1913,7 +1954,9 @@ def test_main_openapi_use_operation_id_as_name(tmp_path: Path) -> None:
         "parameters",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_operation_id_as_name.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_operation_id_as_name.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1954,7 +1997,9 @@ def test_main_unsorted_optional_fields(tmp_path: Path) -> None:
         "dataclasses.dataclass",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unsorted_optional_fields.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unsorted_optional_fields.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -2056,7 +2101,10 @@ def test_main_typed_dict_nullable_strict_nullable(tmp_path: Path) -> None:
         "--strict-nullable",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable_strict_nullable.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable_strict_nullable.py").read_text()
+    )
 
 
 @pytest.mark.benchmark
@@ -2161,7 +2209,10 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base(tmp_path: Path) -> None:
         "custom_base.Base",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2_custom_base.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2_custom_base.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -2188,7 +2239,9 @@ def test_main_openapi_all_of_with_relative_ref(tmp_path: Path) -> None:
         "--use-field-description",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "all_of_with_relative_ref.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "all_of_with_relative_ref.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -2223,7 +2276,9 @@ def test_main_openapi_msgspec_struct_snake_case(min_version: str, tmp_path: Path
         "msgspec.Struct",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_struct_snake_case.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_struct_snake_case.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -2404,7 +2459,10 @@ def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str, tmp
         str(OPEN_API_DATA_PATH / "extra_data_msgspec.json"),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -2429,7 +2487,10 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Pa
         use_annotated=True,
         field_constraints=True,
     )
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")

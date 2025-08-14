@@ -27,7 +27,7 @@ def test_infer_input_type() -> None:
                 r"Please specify the input file type explicitly with --input-file-type option."
             ),
         ):
-            infer_input_type(file.read_text())
+            infer_input_type(file.read_text(encoding="utf-8"))
 
     for file in (DATA_PATH / "csv").rglob("*"):
         assert_infer_input_type(file, InputFileType.CSV)

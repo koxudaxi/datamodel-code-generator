@@ -52,7 +52,9 @@ def test_main_base_class(tmp_path: Path) -> None:
         "custom_module.Base",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -67,7 +69,10 @@ def test_target_python_version(tmp_path: Path) -> None:
         f"3.{MIN_VERSION}",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
+    )
 
 
 def test_main_modular(tmp_path: Path) -> None:
@@ -267,7 +272,10 @@ def test_main_use_schema_description(tmp_path: Path) -> None:
         "--use-schema-description",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
+    )
 
 
 @freeze_time("2022-11-11")

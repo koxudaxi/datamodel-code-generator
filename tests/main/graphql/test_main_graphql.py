@@ -75,7 +75,9 @@ def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "different_types_of_fields.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "different_types_of_fields.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -91,7 +93,10 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
         "--use-default-kwarg",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated_use_default_kwarg.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_GRAPHQL_PATH / "annotated_use_default_kwarg.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -194,7 +199,9 @@ def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "additional_imports_isort4.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "additional_imports_isort4.py").read_text()
+    )
 
 
 @pytest.mark.skipif(
@@ -221,7 +228,9 @@ def test_main_graphql_additional_imports_isort_5_or_6(tmp_path: Path) -> None:
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "additional_imports_isort5.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "additional_imports_isort5.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -262,7 +271,9 @@ def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
         "--use-standard-collections",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "use_standard_collections.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "use_standard_collections.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -299,4 +310,7 @@ def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
         "allow",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "simple_star_wars_extra_fields_allow.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_GRAPHQL_PATH / "simple_star_wars_extra_fields_allow.py").read_text()
+    )
