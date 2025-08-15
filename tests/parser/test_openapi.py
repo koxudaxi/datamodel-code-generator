@@ -916,7 +916,7 @@ def test_openapi_parser_webhooks_only() -> None:
         openapi_scopes=[OpenAPIScope.Webhooks],
     )
     result = parser.parse()
-    
+
     # With only webhooks scope, should not include the base schemas
     # but should include request models generated from webhooks
     assert result is not None
