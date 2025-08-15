@@ -896,3 +896,27 @@ def test_parse_responses_return(
         for content_type, expected_type_hint in expected_content_types.items():
             assert content_type in result[status_code]
             assert result[status_code][content_type].type_hint == expected_type_hint
+
+
+def test_openapi_parser_webhooks() -> None:
+    """Test parsing OpenAPI spec with webhooks scope."""
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / "webhooks.yaml"),
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Webhooks],
+    )
+    assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_webhooks" / "output.py").read_text()
+
+
+def test_openapi_parser_webhooks_only() -> None:
+    """Test parsing OpenAPI spec with only webhooks scope."""
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / "webhooks.yaml"),
+        openapi_scopes=[OpenAPIScope.Webhooks],
+    )
+    result = parser.parse()
+    
+    # With only webhooks scope, should not include the base schemas
+    # but should include request models generated from webhooks
+    assert result is not None

@@ -639,5 +639,26 @@ class OpenAPIParser(JsonSchemaParser):
                             raw_operation,
                             [*path, operation_name],
                         )
+            
+            if OpenAPIScope.Webhooks in self.open_api_scopes:
+                webhooks: dict[str, dict[str, Any]] = specification.get("webhooks", {})
+                webhooks_path = [*path_parts, "#/webhooks"]
+                for webhook_name, methods_ in webhooks.items():
+                    # Resolve webhook items if applicable
+                    methods = self.get_ref_model(methods_["$ref"]) if "$ref" in methods_ else methods_
+                    relative_webhook_name = webhook_name[1:] if webhook_name.startswith("/") else webhook_name
+                    if relative_webhook_name:
+                        path = [*webhooks_path, relative_webhook_name]
+                    else:  # pragma: no cover
+                        path = get_special_path("root", webhooks_path)
+                    for operation_name, raw_operation in methods.items():
+                        if operation_name not in OPERATION_NAMES:
+                            continue
+                        if security is not None and "security" not in raw_operation:
+                            raw_operation["security"] = security
+                        self.parse_operation(
+                            raw_operation,
+                            [*path, operation_name],
+                        )
 
         self._resolve_unparsed_json_pointer()
