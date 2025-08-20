@@ -2552,7 +2552,7 @@ def test_main_typed_dict_const(tmp_path: Path) -> None:
         "--output-model-type",
         "typing.TypedDict",
         "--target-python-version",
-        "3.11",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_const.py").read_text()
