@@ -2555,7 +2555,7 @@ def test_main_typed_dict_const(tmp_path: Path) -> None:
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_const.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_const.py").read_text()
 
 
 @pytest.mark.parametrize(
