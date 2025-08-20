@@ -96,7 +96,10 @@ def test_space_and_special_characters_dict(tmp_path: Path) -> None:
         "dict",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "space_and_special_characters_dict.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_MAIN_PATH / "space_and_special_characters_dict.py").read_text()
+    )
 
 
 @freeze_time("2024-12-14")
@@ -159,7 +162,7 @@ def test_frozen_dataclasses_command_line(tmp_path: Path) -> None:
         "--frozen-dataclasses",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_PATH / "frozen_dataclasses.py").read_text()
 
 
 @freeze_time(TIMESTAMP)
@@ -181,7 +184,10 @@ def test_frozen_dataclasses_with_keyword_only_command_line(tmp_path: Path) -> No
         "3.10",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py").read_text()
+    )
 
 
 def test_filename_with_newline_injection(tmp_path: Path) -> None:
