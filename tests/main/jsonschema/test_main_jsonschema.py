@@ -2263,7 +2263,7 @@ def test_main_jsonschema_object_with_only_additional_properties(tmp_path: Path) 
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text() == (EXPECTED_JSON_SCHEMA_PATH / "string_dict.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "string_dict.py").read_text()
 
 
 @freeze_time("2019-07-26")
@@ -2589,7 +2589,7 @@ def test_main_typed_dict_additional_properties(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert (
-        output_file.read_text()
+        output_file.read_text(encoding="utf-8")
         == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_with_only_additional_properties.py").read_text()
     )
 
