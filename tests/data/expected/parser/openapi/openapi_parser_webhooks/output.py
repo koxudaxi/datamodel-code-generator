@@ -15,11 +15,3 @@ class PetUpdate(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     tag: Optional[str] = None
-
-
-class PetNewPostRequest(BaseModel):
-    __root__: Pet
-
-
-class PetUpdatedPostRequest(BaseModel):
-    __root__: PetUpdate
