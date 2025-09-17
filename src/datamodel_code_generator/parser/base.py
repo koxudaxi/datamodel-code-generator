@@ -1246,7 +1246,7 @@ class Parser(ABC):
         with_import: bool | None = True,  # noqa: FBT001, FBT002
         format_: bool | None = True,  # noqa: FBT001, FBT002
         settings_path: Path | None = None,
-        disable_future_imports: bool = False,
+        disable_future_imports: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         self.parse_raw()
 
