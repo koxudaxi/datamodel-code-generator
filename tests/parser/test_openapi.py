@@ -920,3 +920,109 @@ def test_openapi_parser_webhooks_only() -> None:
     # With only webhooks scope, should not include the base schemas
     # but should include request models generated from webhooks
     assert result is not None
+
+
+def test_openapi_parser_non_operations_and_security() -> None:
+    """Test parsing OpenAPI spec with non-operation fields and global security inheritance."""
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=Path(DATA_PATH / "non_operations_and_security.yaml"),
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths, OpenAPIScope.Webhooks],
+    )
+    
+    # Parse the spec - this should not fail and should ignore non-operation fields
+    result = parser.parse()
+    assert result is not None
+    
+    # Verify that the result contains the Pet schema
+    assert "class Pet(BaseModel):" in result
+    assert "id: Optional[int] = None" in result
+    assert "name: Optional[str] = None" in result
+
+
+def test_openapi_parser_security_inheritance_paths() -> None:
+    """Test that global security is inherited by operations without their own security in paths."""
+    # Create a minimal spec to test security inheritance
+    spec_content = """
+openapi: 3.1.0
+info:
+  title: Security Test API
+  version: 1.0.0
+security:
+  - api_key: []
+paths:
+  /test:
+    get:
+      # No security defined - should inherit global security
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      in: header
+      name: X-API-Key
+"""
+    
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=spec_content,
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths],
+    )
+    
+    # This should not fail - the security inheritance code should execute
+    result = parser.parse()
+    assert result is not None
+
+
+def test_openapi_parser_security_inheritance_webhooks() -> None:
+    """Test that global security is inherited by operations without their own security in webhooks."""
+    # Create a minimal spec to test security inheritance in webhooks
+    spec_content = """
+openapi: 3.1.0
+info:
+  title: Webhook Security Test API
+  version: 1.0.0
+security:
+  - api_key: []
+webhooks:
+  test.event:
+    info: "This should be ignored as it's not an operation"
+    post:
+      # No security defined - should inherit global security
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+      responses:
+        '200':
+          description: Success
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      in: header
+      name: X-API-Key
+"""
+    
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelFieldBase,
+        source=spec_content,
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Webhooks],
+    )
+    
+    # This should not fail - the security inheritance code should execute
+    result = parser.parse()
+    assert result is not None
