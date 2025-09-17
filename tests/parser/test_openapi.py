@@ -929,11 +929,11 @@ def test_openapi_parser_non_operations_and_security() -> None:
         source=Path(DATA_PATH / "non_operations_and_security.yaml"),
         openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths, OpenAPIScope.Webhooks],
     )
-    
+
     # Parse the spec - this should not fail and should ignore non-operation fields
     result = parser.parse()
     assert result is not None
-    
+
     # Verify that the result contains the Pet schema
     assert "class Pet(BaseModel):" in result
     assert "id: Optional[int] = None" in result
@@ -971,13 +971,13 @@ components:
       in: header
       name: X-API-Key
 """
-    
+
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=spec_content,
         openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths],
     )
-    
+
     # This should not fail - the security inheritance code should execute
     result = parser.parse()
     assert result is not None
@@ -1016,13 +1016,13 @@ components:
       in: header
       name: X-API-Key
 """
-    
+
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=spec_content,
         openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Webhooks],
     )
-    
+
     # This should not fail - the security inheritance code should execute
     result = parser.parse()
     assert result is not None
