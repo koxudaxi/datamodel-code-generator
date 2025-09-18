@@ -36,7 +36,7 @@ dependencies = [
   "isort>=4.3.21,<7",
   "jinja2>=2.10.1,<4",
   "packaging",
-  "pydantic>=1.5",
+  "pydantic==2.12.0a1",
   "pyyaml>=6.0.1",
   "tomli>=2.2.1,<3; python_version<='3.11'",
 ]
