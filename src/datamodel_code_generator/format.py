@@ -178,7 +178,7 @@ class CodeFormatter:
         import_ = import_module(custom_formatter_import)
 
         if not hasattr(import_, "CodeFormatter"):
-            msg = f"Custom formatter module `{import_.__name__}` must contains object with name Formatter"
+            msg = f"Custom formatter module `{import_.__name__}` must contains object with name CodeFormatter"
             raise NameError(msg)
 
         formatter_class = import_.__getattribute__("CodeFormatter")  # noqa: PLC2801
