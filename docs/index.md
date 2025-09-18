@@ -496,7 +496,7 @@ OpenAPI-only options:
   --include-path-parameters
                         Include path parameters in generated parameter models in addition to
                         query parameters (Only OpenAPI)
-  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
+  --openapi-scopes {schemas,paths,tags,parameters,webhooks} [{schemas,paths,tags,parameters,webhooks} ...]
                         Scopes of OpenAPI model generation (default: schemas)
   --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
   --use-operation-id-as-name
