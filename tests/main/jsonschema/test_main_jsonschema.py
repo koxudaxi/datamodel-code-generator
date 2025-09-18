@@ -2593,6 +2593,23 @@ def test_main_typed_dict_additional_properties(tmp_path: Path) -> None:
         == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_with_only_additional_properties.py").read_text()
     )
 
+@freeze_time("2019-07-26")
+def test_main_dataclass_const(tmp_path: Path) -> None:
+    """Test main function writing to dataclass with const fields."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "const.json"),
+        "--output",
+        str(output_file),
+        "--output-model-type",
+        "dataclasses.dataclass",
+        "--target-python-version",
+        "3.10",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "dataclass_const.py").read_text()
+
 
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
