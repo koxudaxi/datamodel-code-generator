@@ -2593,6 +2593,7 @@ def test_main_typed_dict_additional_properties(tmp_path: Path) -> None:
         == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_with_only_additional_properties.py").read_text()
     )
 
+
 @freeze_time("2019-07-26")
 def test_main_dataclass_const(tmp_path: Path) -> None:
     """Test main function writing to dataclass with const fields."""
