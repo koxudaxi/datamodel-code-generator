@@ -263,12 +263,6 @@ class Apis(BaseModel):
       <p>Astral</p>
     </a>
   </td>
-  <td valign="top" align="center">
-    <a href="https://github.com/DataDog">
-      <img src="https://avatars.githubusercontent.com/u/365230?s=200&v=4" alt="Datadog, Inc. Logo" style="width: 100px;">
-      <p>Datadog, Inc.</p>
-    </a>
-  </td>
   </tr>
 </table>
 
@@ -497,7 +491,12 @@ Template customization:
                         Custom template directory
   --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
-                        Extra template data
+                        Extra template data for output models. Input is supposed to be a
+                        json/yaml file. For OpenAPI and Jsonschema the keys are the spec
+                        path of the object, or the name of the object if you want to apply
+                        the template data to multiple objects with the same name. If you are
+                        using another input file type (e.g. GraphQL), the key is the name of
+                        the object. The value is a dictionary of the template data to add.
   --use-double-quotes   Model generated with double quotes. Single quotes or your black
                         config skip_string_normalization value will be used without this
                         option.

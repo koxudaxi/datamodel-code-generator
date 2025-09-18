@@ -17,6 +17,9 @@ class Stt(BaseModel):
 
 
 class TextResponse(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
     __root__: Dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any]
 
 

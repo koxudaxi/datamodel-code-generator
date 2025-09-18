@@ -602,7 +602,7 @@ class DataTypeManager(ABC):
         )
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
-        self.target_datetime_class: DatetimeClassType = target_datetime_class or DatetimeClassType.Datetime
+        self.target_datetime_class: DatetimeClassType | None = target_datetime_class
         self.treat_dot_as_module: bool = treat_dot_as_module
 
         if TYPE_CHECKING:

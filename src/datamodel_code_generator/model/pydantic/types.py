@@ -62,7 +62,6 @@ def type_map_factory(
     strict_types: Sequence[StrictTypes],
     pattern_key: str,
     use_pendulum: bool,  # noqa: FBT001
-    target_datetime_class: DatetimeClassType,  # noqa: ARG001
 ) -> dict[Types, DataType]:
     data_type_int = data_type(type="int")
     data_type_float = data_type(type="float")
@@ -208,14 +207,13 @@ class DataTypeManager(_DataTypeManager):
         data_type: type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
-        target_datetime_class: DatetimeClassType,  # noqa: ARG002
+        target_datetime_class: DatetimeClassType | None,  # noqa: ARG002
     ) -> dict[Types, DataType]:
         return type_map_factory(
             data_type,
             strict_types,
             pattern_key,
             self.use_pendulum,
-            self.target_datetime_class,
         )
 
     def transform_kwargs(self, kwargs: dict[str, Any], filter_: set[str]) -> dict[str, str]:

@@ -215,7 +215,7 @@ class OpenAPIParser(JsonSchemaParser):
         treat_dot_as_module: bool = False,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
-        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
+        target_datetime_class: DatetimeClassType | None = None,
         keyword_only: bool = False,
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
@@ -223,6 +223,7 @@ class OpenAPIParser(JsonSchemaParser):
         parent_scoped_naming: bool = False,
         dataclass_arguments: dict[str, Any] | None = None,
     ) -> None:
+        target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
         super().__init__(
             source=source,
             data_model_type=data_model_type,

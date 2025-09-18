@@ -45,6 +45,6 @@ class DataTypeManager(_DataTypeManager):
         }
         if target_datetime_class == DatetimeClassType.Awaredatetime:
             result[Types.date_time] = data_type.from_import(IMPORT_AWARE_DATETIME)
-        if target_datetime_class == DatetimeClassType.Naivedatetime:
+        elif target_datetime_class == DatetimeClassType.Naivedatetime:
             result[Types.date_time] = data_type.from_import(IMPORT_NAIVE_DATETIME)
         return result
