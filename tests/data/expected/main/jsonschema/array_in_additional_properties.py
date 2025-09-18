@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from pydantic import BaseModel
 
 
 class MyJsonOfListOfString(BaseModel):
-    __root__: Optional[Dict[str, List[str]]] = None
+    __root__: Dict[str, List[str]]
