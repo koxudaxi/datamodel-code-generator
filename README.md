@@ -397,7 +397,8 @@ Typing customization:
   --use-unique-items-as-set
                         define field type as `set` when the field attribute has
                         `uniqueItems`
-
+  --disable-future-imports
+                        Disables the import of annotations from __future__
 Field customization:
   --capitalise-enum-members, --capitalize-enum-members
                         Capitalize field names on enum

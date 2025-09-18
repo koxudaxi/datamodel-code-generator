@@ -289,6 +289,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
+    disable_future_imports: bool = False,
 ) -> None:
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
@@ -499,7 +500,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     )
 
     with chdir(output):
-        results = parser.parse()
+        results = parser.parse(disable_future_imports=disable_future_imports)
     if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
             input_filename = "<stdin>"
