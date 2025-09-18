@@ -1646,6 +1646,10 @@ def test_main_openapi_const(output_model: str, expected_output: str, tmp_path: P
             "typing.TypedDict",
             "const_field_typed_dict.py",
         ),
+        (
+            "dataclasses.dataclass",
+            "const_field_dataclass.py",
+        ),
     ],
 )
 @freeze_time("2019-07-26")
