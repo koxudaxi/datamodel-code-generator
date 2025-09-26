@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from pydantic import Field
@@ -11,6 +11,7 @@ from datamodel_code_generator.imports import (
     IMPORT_DATETIME,
     IMPORT_TIME,
     IMPORT_TIMEDELTA,
+    IMPORT_UNION,
     Import,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -20,6 +21,8 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
     IMPORT_MSGSPEC_META,
+    IMPORT_MSGSPEC_UNSET,
+    IMPORT_MSGSPEC_UNSETTYPE,
 )
 from datamodel_code_generator.model.pydantic.base_model import (
     Constraints as _Constraints,
@@ -28,12 +31,31 @@ from datamodel_code_generator.model.rootmodel import RootModel as _RootModel
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import type_map_factory
 from datamodel_code_generator.types import (
+    NONE,
+    OPTIONAL_PREFIX,
+    UNION_DELIMITER,
+    UNION_OPERATOR_DELIMITER,
+    UNION_PREFIX,
     DataType,
     StrictTypes,
     Types,
+    _remove_none_from_union,
     chain_as_tuple,
     get_optional_type,
 )
+
+UNSET_TYPE = "UnsetType"
+
+
+class _UNSET:
+    def __str__(self) -> str:
+        return "UNSET"
+
+    __repr__ = __str__
+
+
+UNSET = _UNSET()
+
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -66,6 +88,8 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_META)
         if self.extras.get("is_classvar"):
             extra_imports.append(IMPORT_CLASSVAR)
+        if not self.required and not self.nullable:
+            extra_imports.extend([IMPORT_UNION, IMPORT_MSGSPEC_UNSETTYPE, IMPORT_MSGSPEC_UNSET])
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
 
     cls.imports = property(new_imports)  # pyright: ignore[reportAttributeAccessIssue]
@@ -127,6 +151,21 @@ class Constraints(_Constraints):
     # To override existing pattern alias
     regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
     pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
+
+
+@lru_cache
+def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+    type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
+    if type_.startswith(OPTIONAL_PREFIX):
+        type_ = type_[len(OPTIONAL_PREFIX) : -1]
+
+    if not type_ or type_ == NONE:
+        return UNSET_TYPE
+    if use_union_operator:
+        return UNION_OPERATOR_DELIMITER.join((type_, UNSET_TYPE))
+    if type_.startswith(UNION_PREFIX):
+        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
 
 
 @import_extender
@@ -192,8 +231,8 @@ class DataModelField(DataModelFieldBase):
 
         if self.default != UNDEFINED and self.default is not None:
             data["default"] = self.default
-        elif not self.required:
-            data["default"] = None
+        elif self._not_required and "default_factory" not in data:
+            data["default"] = self.default or (None if self.nullable else UNSET)
 
         if self.required:
             data = {
@@ -221,6 +260,21 @@ class DataModelField(DataModelFieldBase):
         return f"field({', '.join(kwargs)})"
 
     @property
+    def type_hint(self) -> str:
+        type_hint = super().type_hint
+        if self._not_required and not self.nullable:
+            return get_neither_required_nor_nullable_type(type_hint, self.data_type.use_union_operator)
+        return type_hint
+
+    @property
+    def _not_required(self) -> bool:
+        return not self.required and isinstance(self.parent, Struct)
+
+    @property
+    def fall_back_to_nullable(self) -> bool:
+        return not self._not_required
+
+    @property
     def annotated(self) -> str | None:
         if not self.use_annotated:  # pragma: no cover
             return None
@@ -245,7 +299,9 @@ class DataModelField(DataModelFieldBase):
         if not self.required and not self.extras.get("is_classvar"):
             type_hint = self.data_type.type_hint
             annotated_type = f"Annotated[{type_hint}, {meta}]"
-            return get_optional_type(annotated_type, self.data_type.use_union_operator)
+            if self.nullable:
+                return get_optional_type(annotated_type, self.data_type.use_union_operator)
+            return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
 
         annotated_type = f"Annotated[{self.type_hint}, {meta}]"
         if self.extras.get("is_classvar"):

@@ -4,16 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Union
 
-from msgspec import Meta, Struct, field
+from msgspec import UNSET, Meta, Struct, UnsetType, field
 
 
 class Pet(Struct):
     id: int
     name: str
     before_tag: str = field(name='beforeTag')
-    tag: Optional[str] = None
+    tag: Union[str, UnsetType] = UNSET
 
 
 Pets = List[Pet]
@@ -22,7 +22,7 @@ Pets = List[Pet]
 class User(Struct):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: Union[str, UnsetType] = UNSET
 
 
 Users = List[User]
@@ -40,26 +40,30 @@ class Error(Struct):
 
 
 class Api(Struct):
-    api_key: Optional[
-        Annotated[str, Meta(description='To be used as a dataset parameter value')]
-    ] = field(name='apiKey', default=None)
-    api_version_number: Optional[
-        Annotated[str, Meta(description='To be used as a version parameter value')]
-    ] = field(name='apiVersionNumber', default=None)
-    api_url: Optional[
-        Annotated[str, Meta(description="The URL describing the dataset's fields")]
-    ] = field(name='apiUrl', default=None)
-    api_documentation_url: Optional[
-        Annotated[str, Meta(description='A URL to the API console for each API')]
-    ] = field(name='apiDocumentationUrl', default=None)
+    api_key: Union[
+        Annotated[str, Meta(description='To be used as a dataset parameter value')],
+        UnsetType,
+    ] = field(name='apiKey', default=UNSET)
+    api_version_number: Union[
+        Annotated[str, Meta(description='To be used as a version parameter value')],
+        UnsetType,
+    ] = field(name='apiVersionNumber', default=UNSET)
+    api_url: Union[
+        Annotated[str, Meta(description="The URL describing the dataset's fields")],
+        UnsetType,
+    ] = field(name='apiUrl', default=UNSET)
+    api_documentation_url: Union[
+        Annotated[str, Meta(description='A URL to the API console for each API')],
+        UnsetType,
+    ] = field(name='apiDocumentationUrl', default=UNSET)
 
 
 Apis = List[Api]
 
 
 class Event(Struct):
-    name: Optional[str] = None
+    name: Union[str, UnsetType] = UNSET
 
 
 class Result(Struct):
-    event: Optional[Event] = None
+    event: Union[Event, UnsetType] = UNSET
