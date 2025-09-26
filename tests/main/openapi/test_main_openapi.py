@@ -2073,8 +2073,15 @@ def test_main_modular_typed_dict(tmp_path: Path) -> None:
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
+@pytest.mark.parametrize(
+    ("model_type", "expected_file"),
+    [
+        ("typing.TypedDict", "typed_dict_nullable.py"),
+        ("msgspec.Struct", "msgspec_nullable.py"),
+    ],
+)
 @freeze_time("2019-07-26")
-def test_main_typed_dict_nullable(tmp_path: Path) -> None:
+def test_main_nullable(model_type: str, expected_file: str, tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2082,12 +2089,12 @@ def test_main_typed_dict_nullable(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--output-model-type",
-        "typing.TypedDict",
+        model_type,
         "--target-python-version",
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_file).read_text()
 
 
 @pytest.mark.skipif(
