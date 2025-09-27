@@ -8,10 +8,6 @@ Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 {%- endif -%}
 {%- endmacro -%}
 
-{% for decorator in decorators -%}
-{{ decorator }}
-{% endfor -%}
-
 {{ class_name }}: TypeAlias = {{ get_type_annotation(fields[0]) }}{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
 """
