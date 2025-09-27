@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, IMPORT_ANNOTATED
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_TYPE_ALIAS
 from datamodel_code_generator.model import DataModel
 
 
