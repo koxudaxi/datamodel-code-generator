@@ -3284,31 +3284,15 @@ def test_main_jsonschema_forwarding_reference_collapse_root(tmp_path: Path) -> N
 
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
-def test_main_jsonschema_type_alias_union(tmp_path: Path) -> None:
-    """Test that TypeAlias is generated for unions when --use-type-alias is used."""
+def test_main_jsonschema_type_alias(tmp_path: Path) -> None:
+    """Test that TypeAlias is generated for various type scenarios."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
-        str(JSON_SCHEMA_DATA_PATH / "type_alias_union.json"),
+        str(JSON_SCHEMA_DATA_PATH / "type_alias.json"),
         "--output",
         str(output_file),
         "--use-type-alias",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_union.py").read_text()
-
-
-@pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_jsonschema_type_alias_array(tmp_path: Path) -> None:
-    """Test that TypeAlias is generated for arrays when --use-type-alias is used."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "type_alias_array.json"),
-        "--output",
-        str(output_file),
-        "--use-type-alias",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_array.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias.py").read_text()

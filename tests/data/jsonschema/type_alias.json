@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SimpleString": {
+      "type": "string"
+    },
+    "UnionType": {
+      "anyOf": [
+        {"type": "string"},
+        {"type": "integer"}
+      ]
+    },
+    "ArrayType": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "AnnotatedType": {
+      "title": "MyAnnotatedType",
+      "anyOf": [
+        {"type": "string"},
+        {"type": "boolean"}
+      ]
+    }
+  }
+}
