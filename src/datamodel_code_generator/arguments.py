@@ -305,6 +305,12 @@ typing_options.add_argument(
     action="store_true",
     default=None,
 )
+typing_options.add_argument(
+    "--use-type-alias",
+    help="Use TypeAlias instead of root models for simple types",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Customization options for generated model fields
