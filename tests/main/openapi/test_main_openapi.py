@@ -2606,3 +2606,23 @@ def test_main_openapi_type_alias(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias.py").read_text()
+
+
+@pytest.mark.benchmark
+@freeze_time("2019-07-26")
+def test_main_openapi_type_alias_py39(tmp_path: Path) -> None:
+    """Test that TypeAlias from typing_extensions is generated for OpenAPI schemas with Python 3.9."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "type_alias.yaml"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--input-file-type",
+        "openapi",
+        "--target-python-version",
+        "3.9",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py39.py").read_text()

@@ -365,7 +365,7 @@ def test_main_graphql_type_alias(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_graphql_type_alias_python39(tmp_path: Path) -> None:
-    """Test that TypeAlias is generated for GraphQL schemas with Python 3.9 using typing_extensions."""
+    """Test that TypeAlias from typing_extensions is generated for GraphQL schemas with Python 3.9."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -379,15 +379,4 @@ def test_main_graphql_type_alias_python39(tmp_path: Path) -> None:
         "3.9",
     ])
     assert return_code == Exit.OK
-
-    output_content = output_file.read_text(encoding="utf-8")
-
-    # Should use typing_extensions.TypeAlias for Python 3.9
-    assert "from typing_extensions import TypeAlias" in output_content
-    assert "from typing import Literal, Optional, Union" in output_content
-    assert "TypeAlias" not in output_content.split("\n")[6]  # Should not be in typing import line
-
-    # Should still generate the same type aliases
-    assert "Boolean: TypeAlias = bool" in output_content
-    assert "String: TypeAlias = str" in output_content
-    assert "UnionType: TypeAlias = Union[" in output_content
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias_py39.py").read_text()
