@@ -362,6 +362,8 @@ Options:
 Typing customization:
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
+  --disable-future-imports
+                        Disable __future__ imports
   --enum-field-as-literal {all,one}
                         Parse enum field as literal. all: all enum field type are Literal.
                         one: field type is Literal when an enum has only one possible value
