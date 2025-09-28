@@ -87,6 +87,16 @@ class DataModelField(DataModelFieldBase):
     }
     constraints: Optional[Constraints] = None  # noqa: UP045
 
+    def process_const(self) -> None:
+        if "const" not in self.extras:
+            return
+        self.const = True
+        self.nullable = False
+        const = self.extras["const"]
+        self.data_type = self.data_type.__class__(literals=[const])
+        if not self.default:
+            self.default = const
+
     @property
     def imports(self) -> tuple[Import, ...]:
         field = self.field
