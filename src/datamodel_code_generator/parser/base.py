@@ -1246,10 +1246,11 @@ class Parser(ABC):
         with_import: bool | None = True,  # noqa: FBT001, FBT002
         format_: bool | None = True,  # noqa: FBT001, FBT002
         settings_path: Path | None = None,
+        disable_future_imports: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         self.parse_raw()
 
-        if with_import:
+        if with_import and not disable_future_imports:
             self.imports.append(IMPORT_ANNOTATIONS)
 
         if format_:
