@@ -345,7 +345,6 @@ def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_graphql_type_alias(tmp_path: Path) -> None:
-    """Test that TypeAlias is generated for GraphQL schemas with Python 3.10+."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -380,3 +379,23 @@ def test_main_graphql_type_alias_python39(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias_py39.py").read_text()
+
+
+@pytest.mark.benchmark
+@freeze_time("2019-07-26")
+def test_main_graphql_type_alias_py312(tmp_path: Path) -> None:
+    """Test that type statement syntax is generated for GraphQL schemas with Python 3.12+."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(GRAPHQL_DATA_PATH / "type_alias.graphql"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--input-file-type",
+        "graphql",
+        "--target-python-version",
+        "3.12",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias_py312.py").read_text()

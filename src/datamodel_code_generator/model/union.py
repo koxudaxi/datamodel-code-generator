@@ -67,3 +67,8 @@ class DataTypeUnionBackport(DataTypeUnion):
         IMPORT_TYPE_ALIAS_BACKPORT,
         IMPORT_UNION,
     )
+
+
+class DataTypeUnionTypeStatement(DataTypeUnion):
+    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeStatement.jinja2"
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_UNION,)

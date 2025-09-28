@@ -21,3 +21,9 @@ class TypeAliasBackport(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "type_alias.jinja2"
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_BACKPORT, IMPORT_ANNOTATED)
+
+
+class TypeStatement(DataModel):
+    TEMPLATE_FILE_PATH: ClassVar[str] = "type_statement.jinja2"
+    BASE_CLASS: ClassVar[str] = ""
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_ANNOTATED,)

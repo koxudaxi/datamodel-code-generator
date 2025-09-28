@@ -1,0 +1,16 @@
+{%- macro get_type_annotation(_field) -%}
+{%- if _field.annotated -%}
+{{ _field.annotated }}
+{%- elif _field.field -%}
+Annotated[{{ _field.type_hint }}, {{ _field.field }}]
+{%- else -%}
+{{ _field.type_hint }}
+{%- endif -%}
+{%- endmacro -%}
+
+type {{ class_name }} = {{ get_type_annotation(fields[0]) }}{% if comment is defined %}  # {{ comment }}{% endif %}
+{%- if description %}
+"""
+{{ description | indent(0) }}
+"""
+{%- endif %}

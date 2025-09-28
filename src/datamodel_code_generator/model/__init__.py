@@ -47,12 +47,18 @@ def get_data_model_types(
     )
     from .types import DataTypeManager  # noqa: PLC0415
 
-    # Choose the appropriate TypeAlias class based on Python version
-    type_alias_class = type_alias.TypeAlias if target_python_version.has_type_alias else type_alias.TypeAliasBackport
-
-    # Choose the appropriate Scalar and Union classes based on Python version
-    scalar_class = scalar.DataTypeScalar if target_python_version.has_type_alias else scalar.DataTypeScalarBackport
-    union_class = union.DataTypeUnion if target_python_version.has_type_alias else union.DataTypeUnionBackport
+    if target_python_version.has_type_statement:
+        type_alias_class = type_alias.TypeStatement
+        scalar_class = scalar.DataTypeScalarTypeStatement
+        union_class = union.DataTypeUnionTypeStatement
+    elif target_python_version.has_type_alias:
+        type_alias_class = type_alias.TypeAlias
+        scalar_class = scalar.DataTypeScalar
+        union_class = union.DataTypeUnion
+    else:
+        type_alias_class = type_alias.TypeAliasBackport
+        scalar_class = scalar.DataTypeScalarBackport
+        union_class = union.DataTypeUnionBackport
 
     if data_model_type == DataModelType.PydanticBaseModel:
         return DataModelSet(

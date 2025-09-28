@@ -89,3 +89,8 @@ class DataTypeScalar(DataModel):
 
 class DataTypeScalarBackport(DataTypeScalar):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_BACKPORT,)
+
+
+class DataTypeScalarTypeStatement(DataTypeScalar):
+    TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeStatement.jinja2"
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
