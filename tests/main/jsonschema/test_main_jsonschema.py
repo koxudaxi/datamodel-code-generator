@@ -2252,6 +2252,21 @@ def test_main_jsonschema_array_in_additional_properites(tmp_path: Path) -> None:
 
 
 @freeze_time("2019-07-26")
+def test_main_jsonschema_object_with_only_additional_properties(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "string_dict.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "string_dict.py").read_text()
+
+
+@freeze_time("2019-07-26")
 def test_main_jsonschema_nullable_object(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
@@ -2556,6 +2571,31 @@ def test_main_typed_dict_const(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_const.py").read_text()
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] < "24",
+    reason="Installed black doesn't support the new style",
+)
+@freeze_time("2019-07-26")
+def test_main_typed_dict_additional_properties(tmp_path: Path) -> None:
+    """Test main function writing to TypedDict with additional properties, and no other fields."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "string_dict.json"),
+        "--output",
+        str(output_file),
+        "--output-model-type",
+        "typing.TypedDict",
+        "--target-python-version",
+        "3.11",
+    ])
+    assert return_code == Exit.OK
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_with_only_additional_properties.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
