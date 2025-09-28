@@ -20,6 +20,15 @@
         {"type": "string"},
         {"type": "boolean"}
       ]
+    },
+    "ModelWithTypeAliasField": {
+      "type": "object",
+      "properties": {
+        "simple_field": {"$ref": "#/definitions/SimpleString"},
+        "union_field": {"$ref": "#/definitions/UnionType"},
+        "array_field": {"$ref": "#/definitions/ArrayType"},
+        "annotated_field": {"$ref": "#/definitions/AnnotatedType"}
+      }
     }
   }
 }

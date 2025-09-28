@@ -29,6 +29,15 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 """
 
 
+class ModelWithTypeAliasField(BaseModel):
+    simple_field: Optional[SimpleString] = None
+    string_field: Optional[String] = None
+    union_field: Optional[UnionType] = None
+    typename__: Optional[Literal['ModelWithTypeAliasField']] = Field(
+        'ModelWithTypeAliasField', alias='__typename'
+    )
+
+
 class Person(BaseModel):
     age: Int
     name: String

@@ -19,3 +19,14 @@ components:
       anyOf:
         - type: string
         - type: boolean
+    ModelWithTypeAliasField:
+      type: object
+      properties:
+        simple_field:
+          $ref: "#/components/schemas/SimpleString"
+        union_field:
+          $ref: "#/components/schemas/UnionType"
+        array_field:
+          $ref: "#/components/schemas/ArrayType"
+        annotated_field:
+          $ref: "#/components/schemas/AnnotatedType"

@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, List, TypeAlias, Union
+from typing import Annotated, Any, List, Optional, TypeAlias, Union
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 Model: TypeAlias = Any
 
@@ -23,3 +23,10 @@ ArrayType: TypeAlias = List[str]
 AnnotatedType: TypeAlias = Annotated[
     Union[str, bool], Field(..., title='MyAnnotatedType')
 ]
+
+
+class ModelWithTypeAliasField(BaseModel):
+    simple_field: Optional[SimpleString] = None
+    union_field: Optional[UnionType] = None
+    array_field: Optional[ArrayType] = None
+    annotated_field: Optional[AnnotatedType] = None

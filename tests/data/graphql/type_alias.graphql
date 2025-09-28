@@ -11,3 +11,9 @@ type Pet {
 }
 
 union UnionType = Person | Pet
+
+type ModelWithTypeAliasField {
+  simple_field: SimpleString
+  union_field: UnionType
+  string_field: String
+}
