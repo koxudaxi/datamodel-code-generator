@@ -1004,7 +1004,7 @@ class JsonSchemaParser(Parser):
                 self.get_object_field(
                     field_name=None,
                     field=obj.additionalProperties,
-                    required=False,
+                    required=True,
                     original_field_name=None,
                     field_type=self.data_type(
                         data_types=[
