@@ -305,6 +305,12 @@ typing_options.add_argument(
     action="store_true",
     default=None,
 )
+typing_options.add_argument(
+    "--disable-future-imports",
+    help="Disable __future__ imports",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Customization options for generated model fields
