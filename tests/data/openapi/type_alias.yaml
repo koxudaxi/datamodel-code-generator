@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: TypeAlias Test
+components:
+  schemas:
+    SimpleString:
+      type: string
+    UnionType:
+      anyOf:
+        - type: string
+        - type: integer
+    ArrayType:
+      type: array
+      items:
+        type: string
+    AnnotatedType:
+      title: MyAnnotatedType
+      anyOf:
+        - type: string
+        - type: boolean
