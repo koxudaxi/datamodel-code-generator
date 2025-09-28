@@ -2573,6 +2573,10 @@ def test_main_typed_dict_const(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "typed_dict_const.py").read_text()
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] < "24",
+    reason="Installed black doesn't support the new style",
+)
 @freeze_time("2019-07-26")
 def test_main_typed_dict_additional_properties(tmp_path: Path) -> None:
     """Test main function writing to TypedDict with additional properties, and no other fields."""
