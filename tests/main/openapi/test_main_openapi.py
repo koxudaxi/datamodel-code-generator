@@ -2601,6 +2601,8 @@ def test_main_openapi_type_alias(tmp_path: Path) -> None:
         "--use-type-alias",
         "--input-file-type",
         "openapi",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias.py").read_text()

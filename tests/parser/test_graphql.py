@@ -25,6 +25,8 @@ def test_graphql_field_enum(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--set-default-enum-member",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
@@ -40,6 +42,8 @@ def test_graphql_union_aliased_bug(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     actual = output_file.read_text(encoding="utf-8").rstrip()
@@ -59,6 +63,8 @@ def test_graphql_union_commented(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     actual = output_file.read_text(encoding="utf-8").rstrip()

@@ -416,6 +416,12 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
     data_model_types = get_data_model_types(output_model_type, target_python_version, use_type_alias=use_type_alias)
+
+    # Add GraphQL-specific model types if needed
+    if input_file_type == InputFileType.GraphQL:
+        kwargs["data_model_scalar_type"] = data_model_types.scalar_model
+        kwargs["data_model_union_type"] = data_model_types.union_model
+
     source = input_text or input_
     assert not isinstance(source, Mapping)
     parser = parser_class(

@@ -3333,6 +3333,8 @@ def test_main_jsonschema_type_alias(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--use-type-alias",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias.py").read_text()

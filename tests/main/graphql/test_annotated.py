@@ -36,6 +36,8 @@ def test_annotated(tmp_path: Path) -> None:
         "--output-model-type",
         "pydantic_v2.BaseModel",
         "--use-annotated",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated.py").read_text()
@@ -55,6 +57,8 @@ def test_annotated_use_standard_collections(tmp_path: Path) -> None:
         "pydantic_v2.BaseModel",
         "--use-annotated",
         "--use-standard-collections",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -78,6 +82,8 @@ def test_annotated_use_standard_collections_use_union_operator(tmp_path: Path) -
         "--use-annotated",
         "--use-standard-collections",
         "--use-union-operator",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -100,6 +106,8 @@ def test_annotated_use_union_operator(tmp_path: Path) -> None:
         "pydantic_v2.BaseModel",
         "--use-annotated",
         "--use-union-operator",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -123,6 +131,8 @@ def test_annotated_field_aliases(tmp_path: Path) -> None:
         "--use-annotated",
         "--aliases",
         str(GRAPHQL_DATA_PATH / "field-aliases.json"),
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated_field_aliases.py").read_text()

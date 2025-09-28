@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, IMPORT_UNION, Import
+from datamodel_code_generator.imports import (
+    IMPORT_TYPE_ALIAS,
+    IMPORT_TYPE_ALIAS_BACKPORT,
+    IMPORT_UNION,
+    Import,
+)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 
@@ -55,3 +60,10 @@ class DataTypeUnion(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
+
+
+class DataTypeUnionBackport(DataTypeUnion):
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
+        IMPORT_TYPE_ALIAS_BACKPORT,
+        IMPORT_UNION,
+    )

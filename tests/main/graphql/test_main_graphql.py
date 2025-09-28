@@ -54,6 +54,8 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
         "graphql",
         "--output-model",
         output_model,
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / expected_output).read_text()
@@ -73,6 +75,8 @@ def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -91,6 +95,8 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--use-default-kwarg",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -115,6 +121,8 @@ def test_main_graphql_custom_scalar_types(tmp_path: Path) -> None:
         "graphql",
         "--extra-template-data",
         str(GRAPHQL_DATA_PATH / "custom-scalar-types.json"),
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "custom_scalar_types.py").read_text()
@@ -136,6 +144,8 @@ def test_main_graphql_field_aliases(tmp_path: Path) -> None:
         "graphql",
         "--aliases",
         str(GRAPHQL_DATA_PATH / "field-aliases.json"),
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field_aliases.py").read_text()
@@ -155,6 +165,8 @@ def test_main_graphql_enums(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums.py").read_text()
@@ -174,6 +186,8 @@ def test_main_graphql_union(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "union.py").read_text()
@@ -197,6 +211,8 @@ def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
         "--additional-imports",
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -226,6 +242,8 @@ def test_main_graphql_additional_imports_isort_5_or_6(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
         "--additional-imports",
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -249,6 +267,8 @@ def test_main_graphql_custom_formatters(tmp_path: Path) -> None:
         "graphql",
         "--custom-formatters",
         "tests.data.python.custom_formatters.add_comment",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "custom_formatters.py").read_text()
@@ -269,6 +289,8 @@ def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--use-standard-collections",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -291,6 +313,8 @@ def test_main_graphql_use_union_operator(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--use-union-operator",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "use_union_operator.py").read_text()
@@ -308,6 +332,8 @@ def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
         "graphql",
         "--extra-fields",
         "allow",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -319,7 +345,7 @@ def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_graphql_type_alias(tmp_path: Path) -> None:
-    """Test that TypeAlias is generated for GraphQL schemas."""
+    """Test that TypeAlias is generated for GraphQL schemas with Python 3.10+."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -329,6 +355,39 @@ def test_main_graphql_type_alias(tmp_path: Path) -> None:
         "--use-type-alias",
         "--input-file-type",
         "graphql",
+        "--target-python-version",
+        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias.py").read_text()
+
+
+@pytest.mark.benchmark
+@freeze_time("2019-07-26")
+def test_main_graphql_type_alias_python39(tmp_path: Path) -> None:
+    """Test that TypeAlias is generated for GraphQL schemas with Python 3.9 using typing_extensions."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(GRAPHQL_DATA_PATH / "type_alias.graphql"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--input-file-type",
+        "graphql",
+        "--target-python-version",
+        "3.9",
+    ])
+    assert return_code == Exit.OK
+
+    output_content = output_file.read_text(encoding="utf-8")
+
+    # Should use typing_extensions.TypeAlias for Python 3.9
+    assert "from typing_extensions import TypeAlias" in output_content
+    assert "from typing import Literal, Optional, Union" in output_content
+    assert "TypeAlias" not in output_content.split("\n")[6]  # Should not be in typing import line
+
+    # Should still generate the same type aliases
+    assert "Boolean: TypeAlias = bool" in output_content
+    assert "String: TypeAlias = str" in output_content
+    assert "UnionType: TypeAlias = Union[" in output_content
