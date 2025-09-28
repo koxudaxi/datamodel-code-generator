@@ -4,16 +4,16 @@
 
 from __future__ import annotations
 
-from typing import NotRequired, TypedDict
+from typing import Annotated, NotRequired, TypeAlias, TypedDict
 
 from . import foo as foo_1
 from . import models
 from .nested import foo as foo_2
 
-Optional = str
+Optional: TypeAlias = str
 
 
-Id = str
+Id: TypeAlias = str
 
 
 class Error(TypedDict):

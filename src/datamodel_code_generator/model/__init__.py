@@ -39,7 +39,6 @@ def get_data_model_types(
         msgspec,
         pydantic,
         pydantic_v2,
-        rootmodel,
         scalar,
         type_alias,
         typed_dict,
@@ -83,7 +82,7 @@ def get_data_model_types(
     if data_model_type == DataModelType.DataclassesDataclass:
         return DataModelSet(
             data_model=dataclass.DataClass,
-            root_model=type_alias_class if use_type_alias else rootmodel.RootModel,
+            root_model=type_alias_class,
             field_model=dataclass.DataModelField,
             data_type_manager=dataclass.DataTypeManager,
             dump_resolve_reference_action=None,
@@ -93,7 +92,7 @@ def get_data_model_types(
     if data_model_type == DataModelType.TypingTypedDict:
         return DataModelSet(
             data_model=typed_dict.TypedDict,
-            root_model=type_alias_class if use_type_alias else rootmodel.RootModel,
+            root_model=type_alias_class,
             field_model=(
                 typed_dict.DataModelField
                 if target_python_version.has_typed_dict_non_required
@@ -107,7 +106,7 @@ def get_data_model_types(
     if data_model_type == DataModelType.MsgspecStruct:
         return DataModelSet(
             data_model=msgspec.Struct,
-            root_model=type_alias_class if use_type_alias else msgspec.RootModel,
+            root_model=type_alias_class,
             field_model=msgspec.DataModelField,
             data_type_manager=msgspec.DataTypeManager,
             dump_resolve_reference_action=None,

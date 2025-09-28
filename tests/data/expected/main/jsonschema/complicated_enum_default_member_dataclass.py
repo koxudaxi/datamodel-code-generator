@@ -6,7 +6,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
+
+from typing_extensions import TypeAlias
 
 
 class ProcessingStatus(Enum):
@@ -15,7 +17,7 @@ class ProcessingStatus(Enum):
     FAILED = 'FAILED'
 
 
-Kind = str
+Kind: TypeAlias = str
 
 
 @dataclass

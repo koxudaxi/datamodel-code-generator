@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from msgspec import Struct
+from typing_extensions import TypeAlias
 
-Model = Any
+Model: TypeAlias = Any
 
 
 class Test(Struct):
