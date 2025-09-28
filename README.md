@@ -370,6 +370,8 @@ Options:
 Typing customization:
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
+  --disable-future-imports
+                        Disable __future__ imports
   --enum-field-as-literal {all,one}
                         Parse enum field as literal. all: all enum field type are Literal.
                         one: field type is Literal when an enum has only one possible value
@@ -397,8 +399,7 @@ Typing customization:
   --use-unique-items-as-set
                         define field type as `set` when the field attribute has
                         `uniqueItems`
-  --disable-future-imports
-                        Disables the import of annotations from __future__
+
 Field customization:
   --capitalise-enum-members, --capitalize-enum-members
                         Capitalize field names on enum
