@@ -2588,7 +2588,6 @@ def test_main_openapi_same_name_objects(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "same_name_objects.py").read_text()
 
 
-@pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_openapi_type_alias(tmp_path: Path) -> None:
     """Test that TypeAlias is generated for OpenAPI schemas."""
@@ -2608,7 +2607,6 @@ def test_main_openapi_type_alias(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias.py").read_text()
 
 
-@pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_openapi_type_alias_py39(tmp_path: Path) -> None:
     """Test that TypeAlias from typing_extensions is generated for OpenAPI schemas with Python 3.9."""
@@ -2628,8 +2626,11 @@ def test_main_openapi_type_alias_py39(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py39.py").read_text()
 
 
-@pytest.mark.benchmark
 @freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
 def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
     """Test that type statement syntax is generated for OpenAPI schemas with Python 3.12+."""
     output_file: Path = tmp_path / "output.py"
