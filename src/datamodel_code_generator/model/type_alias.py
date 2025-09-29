@@ -13,7 +13,7 @@ from datamodel_code_generator.types import chain_as_tuple
 
 
 class TypeAlias(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = "type_alias.jinja2"
+    TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAlias.jinja2"
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)
 
@@ -27,7 +27,7 @@ class TypeAlias(DataModel):
 
 
 class TypeAliasBackport(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = "type_alias.jinja2"
+    TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAlias.jinja2"
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_BACKPORT,)
 
@@ -41,7 +41,7 @@ class TypeAliasBackport(DataModel):
 
 
 class TypeStatement(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = "type_statement.jinja2"
+    TEMPLATE_FILE_PATH: ClassVar[str] = "TypeStatement.jinja2"
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
 
