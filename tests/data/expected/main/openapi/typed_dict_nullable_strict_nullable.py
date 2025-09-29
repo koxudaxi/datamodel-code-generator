@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, NotRequired, Optional, TypeAlias, TypedDict, Union
+from typing import List, NotRequired, Optional, TypeAlias, TypedDict, Union
 
 
 class Cursors(TypedDict):

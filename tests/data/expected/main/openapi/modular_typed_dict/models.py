@@ -4,17 +4,7 @@
 
 from __future__ import annotations
 
-from typing import (
-    Annotated,
-    Any,
-    Dict,
-    List,
-    Literal,
-    NotRequired,
-    TypeAlias,
-    TypedDict,
-    Union,
-)
+from typing import Any, Dict, List, Literal, NotRequired, TypeAlias, TypedDict, Union
 
 Species: TypeAlias = Literal['dog', 'cat', 'snake']
 

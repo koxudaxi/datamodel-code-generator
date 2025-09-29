@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, NotRequired, TypeAlias, TypedDict
+from typing import List, NotRequired, TypeAlias, TypedDict
 
 from .. import Id, Optional
 

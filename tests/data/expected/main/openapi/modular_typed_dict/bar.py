@@ -4,6 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Annotated, TypeAlias
+from typing import TypeAlias
 
 Field: TypeAlias = str

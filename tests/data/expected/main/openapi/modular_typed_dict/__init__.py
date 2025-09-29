@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, NotRequired, TypeAlias, TypedDict
+from typing import NotRequired, TypeAlias, TypedDict
 
 from . import foo as foo_1
 from . import models

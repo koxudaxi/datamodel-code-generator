@@ -4,6 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Dict, TypeAlias
+from typing import Dict, TypeAlias
 
 MyStringDict: TypeAlias = Dict[str, str]
