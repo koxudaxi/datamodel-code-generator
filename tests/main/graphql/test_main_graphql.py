@@ -54,8 +54,6 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
         "graphql",
         "--output-model",
         output_model,
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / expected_output).read_text()
@@ -75,8 +73,6 @@ def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -95,8 +91,6 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--use-default-kwarg",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -121,8 +115,6 @@ def test_main_graphql_custom_scalar_types(tmp_path: Path) -> None:
         "graphql",
         "--extra-template-data",
         str(GRAPHQL_DATA_PATH / "custom-scalar-types.json"),
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "custom_scalar_types.py").read_text()
@@ -144,8 +136,6 @@ def test_main_graphql_field_aliases(tmp_path: Path) -> None:
         "graphql",
         "--aliases",
         str(GRAPHQL_DATA_PATH / "field-aliases.json"),
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field_aliases.py").read_text()
@@ -165,8 +155,6 @@ def test_main_graphql_enums(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums.py").read_text()
@@ -186,8 +174,6 @@ def test_main_graphql_union(tmp_path: Path) -> None:
         str(output_file),
         "--input-file-type",
         "graphql",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "union.py").read_text()
@@ -211,8 +197,6 @@ def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
         "--additional-imports",
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -242,8 +226,6 @@ def test_main_graphql_additional_imports_isort_5_or_6(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
         "--additional-imports",
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -267,8 +249,6 @@ def test_main_graphql_custom_formatters(tmp_path: Path) -> None:
         "graphql",
         "--custom-formatters",
         "tests.data.python.custom_formatters.add_comment",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "custom_formatters.py").read_text()
@@ -289,8 +269,6 @@ def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--use-standard-collections",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert (
@@ -313,8 +291,6 @@ def test_main_graphql_use_union_operator(tmp_path: Path) -> None:
         "--input-file-type",
         "graphql",
         "--use-union-operator",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "use_union_operator.py").read_text()
@@ -332,8 +308,6 @@ def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
         "graphql",
         "--extra-fields",
         "allow",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert (

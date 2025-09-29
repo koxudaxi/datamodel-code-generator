@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, TypeAlias, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeAlias
 
 Boolean: TypeAlias = bool
 """
