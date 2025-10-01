@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, NotRequired, TypedDict, Union
+from typing import Any, Dict, List, Literal, NotRequired, TypeAlias, TypedDict, Union
 
-Species = Literal['dog', 'cat', 'snake']
+Species: TypeAlias = Literal['dog', 'cat', 'snake']
 
 
 class Pet(TypedDict):
