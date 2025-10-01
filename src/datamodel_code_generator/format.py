@@ -31,6 +31,7 @@ class PythonVersion(Enum):
     PY_311 = "3.11"
     PY_312 = "3.12"
     PY_313 = "3.13"
+    PY_314 = "3.14"
 
     @cached_property
     def _is_py_310_or_later(self) -> bool:  # pragma: no cover
