@@ -16,6 +16,7 @@
     },
     "AnnotatedType": {
       "title": "MyAnnotatedType",
+      "description": "An annotated union type",
       "anyOf": [
         {"type": "string"},
         {"type": "boolean"}

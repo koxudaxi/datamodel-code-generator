@@ -13,4 +13,8 @@ Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 """
 {{ description | indent(0) }}
 """
+{%- elif fields and fields[0].docstring %}
+"""
+{{ fields[0].docstring | indent(0) }}
+"""
 {%- endif %}

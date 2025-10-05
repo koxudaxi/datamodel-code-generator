@@ -20,10 +20,10 @@ type UnionType = Union[str, int]
 type ArrayType = List[str]
 
 
-type AnnotatedType = Annotated[
-    Union[str, bool],
-    Field(..., description='An annotated union type', title='MyAnnotatedType'),
-]
+type AnnotatedType = Annotated[Union[str, bool], Field(..., title='MyAnnotatedType')]
+"""
+An annotated union type
+"""
 
 
 class ModelWithTypeAliasField(BaseModel):

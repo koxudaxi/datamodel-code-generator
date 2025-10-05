@@ -7,23 +7,26 @@ from __future__ import annotations
 from typing import Annotated, Any, List, Optional, Union
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeAliasType
 
-type Model = Any
-
-
-type SimpleString = str
+Model = TypeAliasType("Model", Any)
 
 
-type UnionType = Union[str, int]
+SimpleString = TypeAliasType("SimpleString", str)
 
 
-type ArrayType = List[str]
+UnionType = TypeAliasType("UnionType", Union[str, int])
 
 
-type AnnotatedType = Annotated[
-    Union[str, bool],
-    Field(..., description='An annotated union type', title='MyAnnotatedType'),
-]
+ArrayType = TypeAliasType("ArrayType", List[str])
+
+
+AnnotatedType = TypeAliasType(
+    "AnnotatedType", Annotated[Union[str, bool], Field(..., title='MyAnnotatedType')]
+)
+"""
+An annotated union type
+"""
 
 
 class ModelWithTypeAliasField(BaseModel):

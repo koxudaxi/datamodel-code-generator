@@ -13,4 +13,8 @@ type {{ class_name }} = {{ get_type_annotation(fields[0]) }}{% if comment is def
 """
 {{ description | indent(0) }}
 """
+{%- elif fields and fields[0].docstring %}
+"""
+{{ fields[0].docstring | indent(0) }}
+"""
 {%- endif %}

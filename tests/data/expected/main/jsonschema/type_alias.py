@@ -22,7 +22,11 @@ ArrayType = TypeAliasType("ArrayType", List[str])
 
 
 AnnotatedType = TypeAliasType(
-    "AnnotatedType", Annotated[Union[str, bool], Field(..., title='MyAnnotatedType')]
+    "AnnotatedType",
+    Annotated[
+        Union[str, bool],
+        Field(..., description='An annotated union type', title='MyAnnotatedType'),
+    ],
 )
 
 
