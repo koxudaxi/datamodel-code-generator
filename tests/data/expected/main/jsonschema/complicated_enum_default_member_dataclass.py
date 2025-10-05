@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAliasType
 
 
 class ProcessingStatus(Enum):
@@ -17,7 +17,7 @@ class ProcessingStatus(Enum):
     FAILED = 'FAILED'
 
 
-Kind: TypeAlias = str
+Kind = TypeAliasType("Kind", str)
 
 
 @dataclass

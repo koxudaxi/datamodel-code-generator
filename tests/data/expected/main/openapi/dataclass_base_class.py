@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from custom_base import Base
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAliasType
 
 
 @dataclass
@@ -18,7 +18,7 @@ class Pet(Base):
     tag: Optional[str] = None
 
 
-Pets: TypeAlias = List[Pet]
+Pets = TypeAliasType("Pets", List[Pet])
 
 
 @dataclass
@@ -28,13 +28,13 @@ class User(Base):
     tag: Optional[str] = None
 
 
-Users: TypeAlias = List[User]
+Users = TypeAliasType("Users", List[User])
 
 
-Id: TypeAlias = str
+Id = TypeAliasType("Id", str)
 
 
-Rules: TypeAlias = List[str]
+Rules = TypeAliasType("Rules", List[str])
 
 
 @dataclass
@@ -51,7 +51,7 @@ class Api(Base):
     apiDocumentationUrl: Optional[str] = None
 
 
-Apis: TypeAlias = List[Api]
+Apis = TypeAliasType("Apis", List[Api])
 
 
 @dataclass

@@ -24,7 +24,7 @@ from datamodel_code_generator.model.imports import (
 from datamodel_code_generator.model.pydantic.base_model import (
     Constraints as _Constraints,
 )
-from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasBackport
+from datamodel_code_generator.model.type_alias import TypeAliasBackport
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import type_map_factory
 from datamodel_code_generator.types import (
@@ -259,7 +259,7 @@ class DataModelField(DataModelFieldBase):
                 data_type_child = data_type.data_types[0]
                 if (  # pragma: no cover
                     data_type_child.reference
-                    and (isinstance(data_type_child.reference.source, (Struct, TypeAlias, TypeAliasBackport)))
+                    and (isinstance(data_type_child.reference.source, (Struct, TypeAliasBackport)))
                     and isinstance(self.default, list)
                 ):
                     return (

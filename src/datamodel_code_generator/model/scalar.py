@@ -4,8 +4,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.imports import (
-    IMPORT_TYPE_ALIAS,
-    IMPORT_TYPE_ALIAS_BACKPORT,
+    IMPORT_TYPE_ALIAS_TYPE,
     Import,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -33,10 +32,10 @@ DEFAULT_GRAPHQL_SCALAR_TYPES: dict[str, str] = {
 }
 
 
-class DataTypeScalar(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = "Scalar.jinja2"
+class DataTypeScalarBackport(DataModel):
+    TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_TYPE,)
 
     def __init__(  # noqa: PLR0913
         self,
@@ -87,10 +86,6 @@ class DataTypeScalar(DataModel):
         )
 
 
-class DataTypeScalarBackport(DataTypeScalar):
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_BACKPORT,)
-
-
-class DataTypeScalarTypeStatement(DataTypeScalar):
+class DataTypeScalarTypeStatement(DataTypeScalarBackport):
     TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeStatement.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()

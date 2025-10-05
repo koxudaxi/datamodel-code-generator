@@ -8,7 +8,7 @@ Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 {%- endif -%}
 {%- endmacro -%}
 
-{{ class_name }}: TypeAlias = {{ get_type_annotation(fields[0]) }}{% if comment is defined %}  # {{ comment }}{% endif %}
+{{ class_name }} = TypeAliasType("{{ class_name }}", {{ get_type_annotation(fields[0]) }}){% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
 """
 {{ description | indent(0) }}

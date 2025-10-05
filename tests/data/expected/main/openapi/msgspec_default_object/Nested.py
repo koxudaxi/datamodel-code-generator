@@ -7,11 +7,11 @@ from __future__ import annotations
 from typing import List, Optional
 
 from msgspec import Struct, convert, field
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAliasType
 
 from . import Foo as Foo_1
 
-Foo: TypeAlias = str
+Foo = TypeAliasType("Foo", str)
 
 
 class Bar(Struct):

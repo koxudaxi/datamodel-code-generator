@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.imports import (
-    IMPORT_TYPE_ALIAS,
-    IMPORT_TYPE_ALIAS_BACKPORT,
+    IMPORT_TYPE_ALIAS_TYPE,
     IMPORT_UNION,
     Import,
 )
@@ -18,11 +17,11 @@ if TYPE_CHECKING:
     from datamodel_code_generator.reference import Reference
 
 
-class DataTypeUnion(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = "Union.jinja2"
+class DataTypeUnionBackport(DataModel):
+    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
-        IMPORT_TYPE_ALIAS,
+        IMPORT_TYPE_ALIAS_TYPE,
         IMPORT_UNION,
     )
 
@@ -62,13 +61,6 @@ class DataTypeUnion(DataModel):
         )
 
 
-class DataTypeUnionBackport(DataTypeUnion):
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
-        IMPORT_TYPE_ALIAS_BACKPORT,
-        IMPORT_UNION,
-    )
-
-
-class DataTypeUnionTypeStatement(DataTypeUnion):
+class DataTypeUnionTypeStatement(DataTypeUnionBackport):
     TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeStatement.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_UNION,)

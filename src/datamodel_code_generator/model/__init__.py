@@ -50,10 +50,6 @@ def get_data_model_types(
         type_alias_class = type_alias.TypeStatement
         scalar_class = scalar.DataTypeScalarTypeStatement
         union_class = union.DataTypeUnionTypeStatement
-    elif target_python_version.has_type_alias:
-        type_alias_class = type_alias.TypeAlias
-        scalar_class = scalar.DataTypeScalar
-        union_class = union.DataTypeUnion
     else:
         type_alias_class = type_alias.TypeAliasBackport
         scalar_class = scalar.DataTypeScalarBackport

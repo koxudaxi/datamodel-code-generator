@@ -3324,7 +3324,7 @@ def test_main_jsonschema_forwarding_reference_collapse_root(tmp_path: Path) -> N
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_type_alias(tmp_path: Path) -> None:
-    """Test that TypeAlias is generated for various type scenarios."""
+    """Test that TypeAliasType is generated for Python 3.9-3.11."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -3332,28 +3332,9 @@ def test_main_jsonschema_type_alias(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--use-type-alias",
-        "--target-python-version",
-        "3.10",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_jsonschema_type_alias_py39(tmp_path: Path) -> None:
-    """Test that TypeAlias from typing_extensions is generated for Python 3.9."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "type_alias.json"),
-        "--output",
-        str(output_file),
-        "--use-type-alias",
-        "--target-python-version",
-        "3.9",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_py39.py").read_text()
 
 
 @freeze_time("2019-07-26")
