@@ -6,109 +6,108 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAliasType
 
-Base64String = TypeAliasType("Base64String", str)
+Base64String: TypeAlias = str
 """
 A (potentially binary) string encoded using base64.
 """
 
 
-BigInt = TypeAliasType("BigInt", int)
+BigInt: TypeAlias = int
 """
 Represents non-fractional signed whole numeric values. Since the value may
 exceed the size of a 32-bit integer, it's encoded as a string.
 """
 
 
-Boolean = TypeAliasType("Boolean", bool)
+Boolean: TypeAlias = bool
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-Date = TypeAliasType("Date", date)
+Date: TypeAlias = date
 """
 An ISO-8601 encoded date string.
 """
 
 
-DateTime = TypeAliasType("DateTime", datetime)
+DateTime: TypeAlias = datetime
 """
 An ISO-8601 encoded UTC date string.
 """
 
 
-Float = TypeAliasType("Float", float)
+Float: TypeAlias = float
 """
 The `Float` scalar type represents signed double-precision fractional values as specified by [IEEE 754](https://en.wikipedia.org/wiki/IEEE_floating_point).
 """
 
 
-GitObjectID = TypeAliasType("GitObjectID", str)
+GitObjectID: TypeAlias = str
 """
 A Git object ID.
 """
 
 
-GitRefname = TypeAliasType("GitRefname", str)
+GitRefname: TypeAlias = str
 """
 A fully qualified reference name (e.g. `refs/heads/master`).
 """
 
 
-GitSSHRemote = TypeAliasType("GitSSHRemote", str)
+GitSSHRemote: TypeAlias = str
 """
 Git SSH string
 """
 
 
-GitTimestamp = TypeAliasType("GitTimestamp", str)
+GitTimestamp: TypeAlias = str
 """
 An ISO-8601 encoded date string. Unlike the DateTime type, GitTimestamp is not converted in UTC.
 """
 
 
-HTML = TypeAliasType("HTML", str)
+HTML: TypeAlias = str
 """
 A string containing HTML code.
 """
 
 
-ID = TypeAliasType("ID", str)
+ID: TypeAlias = str
 """
 The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
 """
 
 
-Int = TypeAliasType("Int", int)
+Int: TypeAlias = int
 """
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 """
 
 
-PreciseDateTime = TypeAliasType("PreciseDateTime", datetime)
+PreciseDateTime: TypeAlias = datetime
 """
 An ISO-8601 encoded UTC date string with millisecond precision.
 """
 
 
-String = TypeAliasType("String", str)
+String: TypeAlias = str
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """
 
 
-URI = TypeAliasType("URI", str)
+URI: TypeAlias = str
 """
 An RFC 3986, RFC 3987, and RFC 6570 (level 4) compliant URI string.
 """
 
 
-X509Certificate = TypeAliasType("X509Certificate", str)
+X509Certificate: TypeAlias = str
 """
 A valid x509 certificate string
 """
@@ -22686,7 +22685,7 @@ class WorkflowsParametersInput(BaseModel):
 
 
 # Types that can be assigned to issues.
-Assignee = TypeAliasType("Assignee", Union[)
+Assignee: TypeAlias = Union[
     'Bot',
     'Mannequin',
     'Organization',
@@ -22695,7 +22694,7 @@ Assignee = TypeAliasType("Assignee", Union[)
 
 
 # Types that can initiate an audit log event.
-AuditEntryActor = TypeAliasType("AuditEntryActor", Union[)
+AuditEntryActor: TypeAlias = Union[
     'Bot',
     'Organization',
     'User',
@@ -22703,7 +22702,7 @@ AuditEntryActor = TypeAliasType("AuditEntryActor", Union[)
 
 
 # Types which can be actors for `BranchActorAllowance` objects.
-BranchActorAllowanceActor = TypeAliasType("BranchActorAllowanceActor", Union[)
+BranchActorAllowanceActor: TypeAlias = Union[
     'App',
     'Team',
     'User',
@@ -22711,63 +22710,63 @@ BranchActorAllowanceActor = TypeAliasType("BranchActorAllowanceActor", Union[)
 
 
 # Types that can represent a repository ruleset bypass actor.
-BypassActor = TypeAliasType("BypassActor", Union[)
+BypassActor: TypeAlias = Union[
     'App',
     'Team',
 ]
 
 
 # An object which can have its data claimed or claim data from another.
-Claimable = TypeAliasType("Claimable", Union[)
+Claimable: TypeAlias = Union[
     'Mannequin',
     'User',
 ]
 
 
 # The object which triggered a `ClosedEvent`.
-Closer = TypeAliasType("Closer", Union[)
+Closer: TypeAlias = Union[
     'Commit',
     'PullRequest',
 ]
 
 
 # Represents either a issue the viewer can access or a restricted contribution.
-CreatedIssueOrRestrictedContribution = TypeAliasType("CreatedIssueOrRestrictedContribution", Union[)
+CreatedIssueOrRestrictedContribution: TypeAlias = Union[
     'CreatedIssueContribution',
     'RestrictedContribution',
 ]
 
 
 # Represents either a pull request the viewer can access or a restricted contribution.
-CreatedPullRequestOrRestrictedContribution = TypeAliasType("CreatedPullRequestOrRestrictedContribution", Union[)
+CreatedPullRequestOrRestrictedContribution: TypeAlias = Union[
     'CreatedPullRequestContribution',
     'RestrictedContribution',
 ]
 
 
 # Represents either a repository the viewer can access or a restricted contribution.
-CreatedRepositoryOrRestrictedContribution = TypeAliasType("CreatedRepositoryOrRestrictedContribution", Union[)
+CreatedRepositoryOrRestrictedContribution: TypeAlias = Union[
     'CreatedRepositoryContribution',
     'RestrictedContribution',
 ]
 
 
 # Users and teams.
-DeploymentReviewer = TypeAliasType("DeploymentReviewer", Union[)
+DeploymentReviewer: TypeAlias = Union[
     'Team',
     'User',
 ]
 
 
 # An object that is a member of an enterprise.
-EnterpriseMember = TypeAliasType("EnterpriseMember", Union[)
+EnterpriseMember: TypeAlias = Union[
     'EnterpriseUserAccount',
     'User',
 ]
 
 
 # Types that can own an IP allow list.
-IpAllowListOwner = TypeAliasType("IpAllowListOwner", Union[)
+IpAllowListOwner: TypeAlias = Union[
     'App',
     'Enterprise',
     'Organization',
@@ -22775,14 +22774,14 @@ IpAllowListOwner = TypeAliasType("IpAllowListOwner", Union[)
 
 
 # Used for return value of Repository.issueOrPullRequest.
-IssueOrPullRequest = TypeAliasType("IssueOrPullRequest", Union[)
+IssueOrPullRequest: TypeAlias = Union[
     'Issue',
     'PullRequest',
 ]
 
 
 # An item in an issue timeline
-IssueTimelineItem = TypeAliasType("IssueTimelineItem", Union[)
+IssueTimelineItem: TypeAlias = Union[
     'AssignedEvent',
     'ClosedEvent',
     'Commit',
@@ -22806,7 +22805,7 @@ IssueTimelineItem = TypeAliasType("IssueTimelineItem", Union[)
 
 
 # An item in an issue timeline
-IssueTimelineItems = TypeAliasType("IssueTimelineItems", Union[)
+IssueTimelineItems: TypeAlias = Union[
     'AddedToProjectEvent',
     'AssignedEvent',
     'ClosedEvent',
@@ -22842,14 +22841,14 @@ IssueTimelineItems = TypeAliasType("IssueTimelineItems", Union[)
 
 
 # Types that can be inside a Milestone.
-MilestoneItem = TypeAliasType("MilestoneItem", Union[)
+MilestoneItem: TypeAlias = Union[
     'Issue',
     'PullRequest',
 ]
 
 
 # Types of memberships that can be restored for an Organization member.
-OrgRestoreMemberAuditEntryMembership = TypeAliasType("OrgRestoreMemberAuditEntryMembership", Union[)
+OrgRestoreMemberAuditEntryMembership: TypeAlias = Union[
     'OrgRestoreMemberMembershipOrganizationAuditEntryData',
     'OrgRestoreMemberMembershipRepositoryAuditEntryData',
     'OrgRestoreMemberMembershipTeamAuditEntryData',
@@ -22857,7 +22856,7 @@ OrgRestoreMemberAuditEntryMembership = TypeAliasType("OrgRestoreMemberAuditEntry
 
 
 # An audit entry in an organization audit log.
-OrganizationAuditEntry = TypeAliasType("OrganizationAuditEntry", Union[)
+OrganizationAuditEntry: TypeAlias = Union[
     'MembersCanDeleteReposClearAuditEntry',
     'MembersCanDeleteReposDisableAuditEntry',
     'MembersCanDeleteReposEnableAuditEntry',
@@ -22922,14 +22921,14 @@ OrganizationAuditEntry = TypeAliasType("OrganizationAuditEntry", Union[)
 
 
 # Used for argument of CreateProjectV2 mutation.
-OrganizationOrUser = TypeAliasType("OrganizationOrUser", Union[)
+OrganizationOrUser: TypeAlias = Union[
     'Organization',
     'User',
 ]
 
 
 # Types that can grant permissions on a repository to a user
-PermissionGranter = TypeAliasType("PermissionGranter", Union[)
+PermissionGranter: TypeAlias = Union[
     'Organization',
     'Repository',
     'Team',
@@ -22937,28 +22936,28 @@ PermissionGranter = TypeAliasType("PermissionGranter", Union[)
 
 
 # Types that can be pinned to a profile page.
-PinnableItem = TypeAliasType("PinnableItem", Union[)
+PinnableItem: TypeAlias = Union[
     'Gist',
     'Repository',
 ]
 
 
 # Types that can be inside Project Cards.
-ProjectCardItem = TypeAliasType("ProjectCardItem", Union[)
+ProjectCardItem: TypeAlias = Union[
     'Issue',
     'PullRequest',
 ]
 
 
 # Possible collaborators for a project.
-ProjectV2Actor = TypeAliasType("ProjectV2Actor", Union[)
+ProjectV2Actor: TypeAlias = Union[
     'Team',
     'User',
 ]
 
 
 # Configurations for project fields.
-ProjectV2FieldConfiguration = TypeAliasType("ProjectV2FieldConfiguration", Union[)
+ProjectV2FieldConfiguration: TypeAlias = Union[
     'ProjectV2Field',
     'ProjectV2IterationField',
     'ProjectV2SingleSelectField',
@@ -22966,7 +22965,7 @@ ProjectV2FieldConfiguration = TypeAliasType("ProjectV2FieldConfiguration", Union
 
 
 # Types that can be inside Project Items.
-ProjectV2ItemContent = TypeAliasType("ProjectV2ItemContent", Union[)
+ProjectV2ItemContent: TypeAlias = Union[
     'DraftIssue',
     'Issue',
     'PullRequest',
@@ -22974,7 +22973,7 @@ ProjectV2ItemContent = TypeAliasType("ProjectV2ItemContent", Union[)
 
 
 # Project field values
-ProjectV2ItemFieldValue = TypeAliasType("ProjectV2ItemFieldValue", Union[)
+ProjectV2ItemFieldValue: TypeAlias = Union[
     'ProjectV2ItemFieldDateValue',
     'ProjectV2ItemFieldIterationValue',
     'ProjectV2ItemFieldLabelValue',
@@ -22990,7 +22989,7 @@ ProjectV2ItemFieldValue = TypeAliasType("ProjectV2ItemFieldValue", Union[)
 
 
 # An item in a pull request timeline
-PullRequestTimelineItem = TypeAliasType("PullRequestTimelineItem", Union[)
+PullRequestTimelineItem: TypeAlias = Union[
     'AssignedEvent',
     'BaseRefDeletedEvent',
     'BaseRefForcePushedEvent',
@@ -23028,7 +23027,7 @@ PullRequestTimelineItem = TypeAliasType("PullRequestTimelineItem", Union[)
 
 
 # An item in a pull request timeline
-PullRequestTimelineItems = TypeAliasType("PullRequestTimelineItems", Union[)
+PullRequestTimelineItems: TypeAlias = Union[
     'AddedToMergeQueueEvent',
     'AddedToProjectEvent',
     'AssignedEvent',
@@ -23091,7 +23090,7 @@ PullRequestTimelineItems = TypeAliasType("PullRequestTimelineItems", Union[)
 
 
 # Types that can be an actor.
-PushAllowanceActor = TypeAliasType("PushAllowanceActor", Union[)
+PushAllowanceActor: TypeAlias = Union[
     'App',
     'Team',
     'User',
@@ -23099,7 +23098,7 @@ PushAllowanceActor = TypeAliasType("PushAllowanceActor", Union[)
 
 
 # Types that can be assigned to reactions.
-Reactor = TypeAliasType("Reactor", Union[)
+Reactor: TypeAlias = Union[
     'Bot',
     'Mannequin',
     'Organization',
@@ -23108,21 +23107,21 @@ Reactor = TypeAliasType("Reactor", Union[)
 
 
 # Any referenceable object
-ReferencedSubject = TypeAliasType("ReferencedSubject", Union[)
+ReferencedSubject: TypeAlias = Union[
     'Issue',
     'PullRequest',
 ]
 
 
 # An object which has a renamable title
-RenamedTitleSubject = TypeAliasType("RenamedTitleSubject", Union[)
+RenamedTitleSubject: TypeAlias = Union[
     'Issue',
     'PullRequest',
 ]
 
 
 # Types that can be requested reviewers.
-RequestedReviewer = TypeAliasType("RequestedReviewer", Union[)
+RequestedReviewer: TypeAlias = Union[
     'Bot',
     'Mannequin',
     'Team',
@@ -23131,7 +23130,7 @@ RequestedReviewer = TypeAliasType("RequestedReviewer", Union[)
 
 
 # Types that can be an actor.
-ReviewDismissalAllowanceActor = TypeAliasType("ReviewDismissalAllowanceActor", Union[)
+ReviewDismissalAllowanceActor: TypeAlias = Union[
     'App',
     'Team',
     'User',
@@ -23139,7 +23138,7 @@ ReviewDismissalAllowanceActor = TypeAliasType("ReviewDismissalAllowanceActor", U
 
 
 # Types which can be parameters for `RepositoryRule` objects.
-RuleParameters = TypeAliasType("RuleParameters", Union[)
+RuleParameters: TypeAlias = Union[
     'BranchNamePatternParameters',
     'CommitAuthorEmailPatternParameters',
     'CommitMessagePatternParameters',
@@ -23154,14 +23153,14 @@ RuleParameters = TypeAliasType("RuleParameters", Union[)
 
 
 # Types which can have `RepositoryRule` objects.
-RuleSource = TypeAliasType("RuleSource", Union[)
+RuleSource: TypeAlias = Union[
     'Organization',
     'Repository',
 ]
 
 
 # The results of a search.
-SearchResultItem = TypeAliasType("SearchResultItem", Union[)
+SearchResultItem: TypeAlias = Union[
     'App',
     'Discussion',
     'Issue',
@@ -23174,35 +23173,35 @@ SearchResultItem = TypeAliasType("SearchResultItem", Union[)
 
 
 # Entities that can sponsor others via GitHub Sponsors
-Sponsor = TypeAliasType("Sponsor", Union[)
+Sponsor: TypeAlias = Union[
     'Organization',
     'User',
 ]
 
 
 # Entities that can be sponsored via GitHub Sponsors
-SponsorableItem = TypeAliasType("SponsorableItem", Union[)
+SponsorableItem: TypeAlias = Union[
     'Organization',
     'User',
 ]
 
 
 # A record that can be featured on a GitHub Sponsors profile.
-SponsorsListingFeatureableItem = TypeAliasType("SponsorsListingFeatureableItem", Union[)
+SponsorsListingFeatureableItem: TypeAlias = Union[
     'Repository',
     'User',
 ]
 
 
 # Types that can be inside a StatusCheckRollup context.
-StatusCheckRollupContext = TypeAliasType("StatusCheckRollupContext", Union[)
+StatusCheckRollupContext: TypeAlias = Union[
     'CheckRun',
     'StatusContext',
 ]
 
 
 # Types that can own a verifiable domain.
-VerifiableDomainOwner = TypeAliasType("VerifiableDomainOwner", Union[)
+VerifiableDomainOwner: TypeAlias = Union[
     'Enterprise',
     'Organization',
 ]
