@@ -3371,7 +3371,10 @@ def test_main_jsonschema_type_alias_with_field_description(tmp_path: Path) -> No
         "--use-field-description",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_with_field_description.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_with_field_description.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
@@ -3393,4 +3396,7 @@ def test_main_jsonschema_type_alias_with_field_description_py312(tmp_path: Path)
         "3.12",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_with_field_description_py312.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_with_field_description_py312.py").read_text()
+    )
