@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar, Literal, Union
 
-from msgspec import UNSET, Meta, Struct, UnsetType
+from msgspec import Meta, Struct, UnsetType
 
 
 class Type1(Struct, kw_only=True, tag_field='type_', tag='a'):

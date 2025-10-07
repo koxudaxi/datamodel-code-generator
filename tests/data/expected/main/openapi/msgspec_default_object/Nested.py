@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import List, Union
 
-from msgspec import UNSET, Struct, UnsetType, convert, field
+from msgspec import Struct, UnsetType, convert, field
 
 from . import Foo as Foo_1
 

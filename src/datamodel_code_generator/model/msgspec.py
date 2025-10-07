@@ -89,7 +89,9 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
         if self.extras.get("is_classvar"):
             extra_imports.append(IMPORT_CLASSVAR)
         if not self.required and not self.nullable:
-            extra_imports.extend([IMPORT_UNION, IMPORT_MSGSPEC_UNSETTYPE, IMPORT_MSGSPEC_UNSET])
+            extra_imports.extend([IMPORT_UNION, IMPORT_MSGSPEC_UNSETTYPE])
+            if not self.default:
+                extra_imports.append(IMPORT_MSGSPEC_UNSET)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
 
     cls.imports = property(new_imports)  # pyright: ignore[reportAttributeAccessIssue]

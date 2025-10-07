@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar, Literal, Union
 
-from msgspec import UNSET, Meta, Struct, UnsetType
+from msgspec import Meta, Struct, UnsetType
 
 from .. import type_4
 from ..subfolder import type_5
