@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from typing import List, NotRequired, TypedDict
 
+from typing_extensions import TypeAliasType
+
 from .. import Id, Optional
 
 
@@ -23,4 +25,4 @@ class TeaClone(TypedDict):
     optional: NotRequired[List[Optional]]
 
 
-ListModel = List[Tea]
+ListModel = TypeAliasType("ListModel", List[Tea])

@@ -19,8 +19,8 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import Enum
-from datamodel_code_generator.model.scalar import DataTypeScalar
-from datamodel_code_generator.model.union import DataTypeUnion
+from datamodel_code_generator.model.scalar import DataTypeScalarBackport
+from datamodel_code_generator.model.union import DataTypeUnionBackport
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
@@ -84,8 +84,8 @@ class GraphQLParser(Parser):
         *,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
-        data_model_scalar_type: type[DataModel] = DataTypeScalar,
-        data_model_union_type: type[DataModel] = DataTypeUnion,
+        data_model_scalar_type: type[DataModel] = DataTypeScalarBackport,
+        data_model_union_type: type[DataModel] = DataTypeUnionBackport,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,
@@ -139,6 +139,7 @@ class GraphQLParser(Parser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
@@ -217,6 +218,7 @@ class GraphQLParser(Parser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            use_type_alias=use_type_alias,
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,

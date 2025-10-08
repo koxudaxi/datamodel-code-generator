@@ -6,14 +6,16 @@ from __future__ import annotations
 
 from typing import NotRequired, TypedDict
 
+from typing_extensions import TypeAliasType
+
 from . import foo as foo_1
 from . import models
 from .nested import foo as foo_2
 
-Optional = str
+Optional = TypeAliasType("Optional", str)
 
 
-Id = str
+Id = TypeAliasType("Id", str)
 
 
 class Error(TypedDict):
