@@ -13,6 +13,7 @@ repos:
   rev: v2.7.0
   hooks:
     - id: pyproject-fmt
+      args: ["--max-supported-python=3.14"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: 'v0.13.3'
   hooks:
