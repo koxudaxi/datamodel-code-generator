@@ -4,6 +4,7 @@ import contextlib
 import json
 import platform
 import shutil
+import sys
 from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
@@ -39,6 +40,12 @@ if TYPE_CHECKING:
 
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
+
+
+MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
+    sys.version_info[:2] == (3, 12) and version.parse(black.__version__) < version.parse("24.0.0"),
+    reason="msgspec.Struct formatting differs with python3.12 + black < 24",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -2073,8 +2080,15 @@ def test_main_modular_typed_dict(tmp_path: Path) -> None:
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
+@pytest.mark.parametrize(
+    ("model_type", "expected_file"),
+    [
+        ("typing.TypedDict", "typed_dict_nullable.py"),
+        ("msgspec.Struct", "msgspec_nullable.py"),
+    ],
+)
 @freeze_time("2019-07-26")
-def test_main_typed_dict_nullable(tmp_path: Path) -> None:
+def test_main_nullable(model_type: str, expected_file: str, tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2082,12 +2096,12 @@ def test_main_typed_dict_nullable(tmp_path: Path) -> None:
         "--output",
         str(output_file),
         "--output-model-type",
-        "typing.TypedDict",
+        model_type,
         "--target-python-version",
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_file).read_text()
 
 
 @pytest.mark.skipif(
@@ -2294,6 +2308,7 @@ def test_main_openapi_msgspec_struct_snake_case(min_version: str, tmp_path: Path
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_use_annotated_with_field_constraints(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
