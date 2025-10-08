@@ -110,10 +110,14 @@ class Config(BaseModel):
                 return cls.__fields__
 
     @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
-    def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
-        if value is None or isinstance(value, TextIOBase):
+    def validate_file(cls, value: Path | None) -> TextIOBase | None:  # noqa: N805
+        if value is None:  # pragma: no cover
             return value
-        return cast("TextIOBase", Path(value).expanduser().resolve().open("rt"))
+        if value.is_file():
+            return cast("TextIOBase", value.expanduser().resolve().open("rt"))
+
+        msg = f"A file was expected but {value} is not a file."
+        raise Error(msg)  # pragma: no cover
 
     @field_validator(
         "input",
