@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py: ["3.13", "3.12", "3.11", "3.10", "3.9"]
+        py: ["3.14", "3.13", "3.12", "3.11", "3.10", "3.9"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
         tox_env: ['']
         include:
