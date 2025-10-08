@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import shutil
+import sys
 from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
@@ -38,6 +39,12 @@ FixtureRequest = pytest.FixtureRequest
 
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "jsonschema"
+
+
+MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
+    sys.version_info[:2] == (3, 12) and version.parse(black.__version__) < version.parse("24.0.0"),
+    reason="msgspec.Struct formatting differs with python3.12 + black < 24",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -2683,9 +2690,10 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
             "pydantic_v2.BaseModel",
             "discriminator_with_external_reference.py",
         ),
-        (
+        pytest.param(
             "msgspec.Struct",
             "discriminator_with_external_reference_msgspec.py",
+            marks=MSGSPEC_LEGACY_BLACK_SKIP,
         ),
     ],
 )
@@ -2717,9 +2725,10 @@ def test_main_jsonschema_external_discriminator(
             "pydantic.BaseModel",
             "discriminator_with_external_references_folder",
         ),
-        (
+        pytest.param(
             "msgspec.Struct",
             "discriminator_with_external_references_folder_msgspec",
+            marks=MSGSPEC_LEGACY_BLACK_SKIP,
         ),
     ],
 )

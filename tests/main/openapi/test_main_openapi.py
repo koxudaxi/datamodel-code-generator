@@ -4,6 +4,7 @@ import contextlib
 import json
 import platform
 import shutil
+import sys
 from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
@@ -39,6 +40,12 @@ if TYPE_CHECKING:
 
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
+
+
+MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
+    sys.version_info[:2] == (3, 12) and version.parse(black.__version__) < version.parse("24.0.0"),
+    reason="msgspec.Struct formatting differs with python3.12 + black < 24",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -2301,6 +2308,7 @@ def test_main_openapi_msgspec_struct_snake_case(min_version: str, tmp_path: Path
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_use_annotated_with_field_constraints(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
