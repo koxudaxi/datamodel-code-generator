@@ -824,7 +824,7 @@ def test_main_specialized_enum(tmp_path: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
-def test_main_specialized_enum_disable(tmp_path: Path) -> None:
+def test_main_specialized_enums_disabled(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
