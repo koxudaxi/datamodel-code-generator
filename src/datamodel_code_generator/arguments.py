@@ -290,7 +290,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-subclass-enum",
-    help="Define Enum class as subclass with field type when enum has type (int, float, bytes, str)",
+    help="Define generic Enum class as subclass with field type when enum has type (int, float, bytes, str)",
     action="store_true",
     default=None,
 )

@@ -165,6 +165,27 @@ def test_main_graphql_enums(tmp_path: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_graphql_specialized_enums(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(GRAPHQL_DATA_PATH / "enums.graphql"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "graphql",
+        "--target-python-version",
+        "3.11",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums_specialized.py").read_text()
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_union(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
