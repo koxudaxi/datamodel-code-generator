@@ -219,10 +219,13 @@ parsable-types.str = [ "int", "float" ]
 [tool.uv]
 conflicts = [
   [
-    { group = "pydantic1" },
     { group = "black24" },
     { group = "black22" },
     { group = "black23" },
     { group = "dev" },
+  ],
+  [
+    { group = "pydantic1" },
+    { group = "pkg-meta" },
   ],
 ]
