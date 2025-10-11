@@ -1677,6 +1677,23 @@ def test_main_jsonschema_subclass_enum(tmp_path: Path) -> None:
 
 
 @freeze_time("2019-07-26")
+def test_main_jsonschema_specialized_enums(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "subclass_enum.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--target-python-version",
+        "3.11",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "specialized_enum.py").read_text()
+
+
+@freeze_time("2019-07-26")
 def test_main_jsonschema_special_enum_empty_enum_field_name(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([

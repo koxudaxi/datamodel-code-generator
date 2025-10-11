@@ -393,8 +393,8 @@ Typing customization:
                         Use one literal as default value for one literal field
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
-  --use-subclass-enum   Define Enum class as subclass with field type when enum has type
-                        (int, float, bytes, str)
+  --use-subclass-enum   Define generic Enum class as subclass with field type when enum has
+                        type (int, float, bytes, str)
   --use-type-alias      Use TypeAlias instead of root models (experimental)
   --use-union-operator  Use | operator for Union type (PEP 604).
   --use-unique-items-as-set
