@@ -1677,6 +1677,10 @@ def test_main_jsonschema_subclass_enum(tmp_path: Path) -> None:
 
 
 @freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_jsonschema_specialized_enums(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
@@ -1694,6 +1698,10 @@ def test_main_jsonschema_specialized_enums(tmp_path: Path) -> None:
 
 
 @freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_jsonschema_specialized_enums_disable(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
