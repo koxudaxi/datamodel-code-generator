@@ -2,6 +2,12 @@
 
 When a schema defines a simple type (not an object with properties), `datamodel-code-generator` creates a root model. If you don't want to introduce a new level of attribute access (`.root`) or want to use generated types as plain Python types in non-Pydantic code, you can use the `--use-type-alias` flag to generate type aliases instead of root models.
 
+## Notes
+
+- RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases for details.
+- Type aliases do not support some RootModel features (e.g. `model_config`)
+- A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
+
 ## Example
 
 Input JSON Schema
@@ -134,9 +140,3 @@ class User(BaseModel):
     id: Optional[UserId] = None
     status: Optional[Status] = None
 ```
-
-## Notes
-
-- RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases for details.
-- Type aliases do not support some RootModel features (e.g. `model_config`)
-- A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
