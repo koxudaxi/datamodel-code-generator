@@ -7,6 +7,7 @@ from datamodel_code_generator.model.pydantic import DataTypeManager as _DataType
 from datamodel_code_generator.model.pydantic.imports import IMPORT_CONSTR
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_AWARE_DATETIME,
+    IMPORT_BASE64STR,
     IMPORT_NAIVE_DATETIME,
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types
@@ -41,6 +42,10 @@ class DataTypeManager(_DataTypeManager):
                     r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'",
                     **({"strict": True} if StrictTypes.str in strict_types else {}),
                 },
+            ),
+            Types.byte: self.data_type.from_import(
+                IMPORT_BASE64STR,
+                strict=StrictTypes.str in strict_types,
             ),
         }
         if target_datetime_class == DatetimeClassType.Awaredatetime:

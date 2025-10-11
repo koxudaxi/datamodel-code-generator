@@ -2623,8 +2623,21 @@ def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
         "openapi",
         "--target-python-version",
         "3.12",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py312.py").read_text()
+
+def test_main_openapi_byte_format(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "byte_format.yaml"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "openapi",
         "--output-model-type",
         "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py312.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "byte_format.py").read_text()
