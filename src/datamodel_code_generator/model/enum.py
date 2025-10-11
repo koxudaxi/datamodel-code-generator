@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, Import
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
 from datamodel_code_generator.types import DataType, Types
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
+
 
 _INT: str = "int"
 _FLOAT: str = "float"
@@ -70,9 +71,8 @@ class Enum(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-
         if not base_classes and type_:
-            base_class = SUBCLASS_BASE_CLASSES.get(type_)
+            base_class: str | None = SUBCLASS_BASE_CLASSES.get(type_)
             if base_class:
                 self.base_classes: list[BaseClassDataType] = [
                     BaseClassDataType(type=base_class),
@@ -108,6 +108,27 @@ class Enum(DataModel):
     @property
     def imports(self) -> tuple[Import, ...]:
         return tuple(i for i in super().imports if i != IMPORT_ANY)
+
+
+class StrEnum(Enum):
+    BASE_CLASS: ClassVar[str] = "enum.StrEnum"
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_STR_ENUM,)
+
+
+class IntEnum(Enum):
+    BASE_CLASS: ClassVar[str] = "enum.IntEnum"
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_INT_ENUM,)
+
+
+SPECIALIZED_ENUM_TYPE_MATCH: dict[Types, type[Enum]] = {
+    Types.int32: IntEnum,
+    Types.int64: IntEnum,
+    Types.integer: IntEnum,
+    Types.string: StrEnum,
+}
+"""
+Map specialized enum types to their corresponding Enum subclasses.
+"""
 
 
 class Member:
