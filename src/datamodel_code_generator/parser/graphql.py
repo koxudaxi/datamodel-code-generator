@@ -115,6 +115,7 @@ class GraphQLParser(Parser):
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
+        use_specialized_enum: bool = True,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -194,6 +195,7 @@ class GraphQLParser(Parser):
             use_one_literal_as_default=use_one_literal_as_default,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
+            use_specialized_enum=use_specialized_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
@@ -368,8 +370,10 @@ class GraphQLParser(Parser):
             )
 
         enum_cls: type[Enum] = Enum
-        if self.target_python_version.has_specialized_enums and (
-            specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(Types.string)
+        if (
+            self.target_python_version.has_specialized_enums
+            and self.use_specialized_enum
+            and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(Types.string))
         ):
             # If specialized enum is available in the target Python version, use it
             enum_cls = specialized_type
