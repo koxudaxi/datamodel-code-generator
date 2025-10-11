@@ -87,6 +87,8 @@ def get_model_by_path(schema: dict[str, Any] | list[Any], keys: list[str] | list
     )
 
 
+# TODO: This dictionary contains formats valid only for OpenAPI and not for
+#       jsonschema and vice versa. They should be separated.
 json_schema_data_formats: dict[str, dict[str, Types]] = {
     "integer": {
         "int32": Types.int32,
