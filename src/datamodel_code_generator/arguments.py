@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import locale
-from argparse import ArgumentParser, HelpFormatter, Namespace
+from argparse import ArgumentParser, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -292,6 +292,12 @@ typing_options.add_argument(
     "--use-subclass-enum",
     help="Define generic Enum class as subclass with field type when enum has type (int, float, bytes, str)",
     action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--use-specialized-enum",
+    help="Don't use specialized Enum class (StrEnum, IntEnum) even if the target Python version supports it",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(
