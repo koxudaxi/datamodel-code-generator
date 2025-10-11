@@ -800,6 +800,45 @@ def test_main_subclass_enum(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
 
 
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_specialized_enum(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
+        "--output",
+        str(output_file),
+        "--target-python-version",
+        "3.11",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_specialized.py").read_text()
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_specialized_enum_disable(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
+        "--output",
+        str(output_file),
+        "--target-python-version",
+        "3.11",
+        "--no-use-specialized-enum",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
+
+
 def test_main_use_standard_collections(tmp_path: Path) -> None:
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_path = tmp_path / "model"
