@@ -27,6 +27,7 @@ from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
     Enum,
+    StrEnum,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
@@ -1407,10 +1408,11 @@ class JsonSchemaParser(Parser):
 
             enum_cls: type[Enum] = Enum
             if (
-                self.target_python_version.has_specialized_enums
-                and self.use_specialized_enum
+                self.use_specialized_enum
                 and type_
                 and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(type_))
+                # StrEnum is available only in Python 3.11+
+                and (specialized_type != StrEnum or self.target_python_version.has_strenum)
             ):
                 # If specialized enum is available in the target Python version,
                 # use it and ignore `self.use_subclass_enum` setting.

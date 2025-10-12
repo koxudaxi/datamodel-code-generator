@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
@@ -15,7 +15,7 @@ class Type(Enum):
     animal = 'animal'
 
 
-class Number(Enum):
+class Number(IntEnum):
     integer_1 = 1
 
 
@@ -65,7 +65,7 @@ class EnumRoot(Enum):
     b = 'b'
 
 
-class IntEnum(Enum):
+class IntEnumModel(Enum):
     number_1 = 1
     number_2 = 2
 

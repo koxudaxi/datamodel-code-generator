@@ -371,7 +371,7 @@ class GraphQLParser(Parser):
 
         enum_cls: type[Enum] = Enum
         if (
-            self.target_python_version.has_specialized_enums
+            self.target_python_version.has_strenum
             and self.use_specialized_enum
             and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(Types.string))
         ):

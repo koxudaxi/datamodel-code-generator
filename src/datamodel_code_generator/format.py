@@ -66,10 +66,9 @@ class PythonVersion(Enum):
         return self._is_py_312_or_later
 
     @property
-    def has_specialized_enums(self) -> bool:
+    def has_strenum(self) -> bool:
         """
-        Verifies if the Python version supports specialized enums
-        `StrEnum` and `IntEnum`.
+        Verifies if the Python version supports `StrEnum`.
         """
         return self._is_py_311_or_later
 
