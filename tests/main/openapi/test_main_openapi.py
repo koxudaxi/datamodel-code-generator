@@ -2153,7 +2153,10 @@ def test_main_openapi_nullable_required_annotated(tmp_path: Path) -> None:
         "--snake-case-field",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_required_annotated.py").read_text()
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_OPENAPI_PATH / "nullable_required_annotated.py").read_text()
+    )
 
 
 @freeze_time("2019-07-26")
