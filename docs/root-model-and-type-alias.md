@@ -7,6 +7,7 @@ When a schema defines a simple type (not an object with properties), `datamodel-
 - RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases for details.
 - Type aliases do not support some RootModel features (e.g. `model_config`)
 - A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
+- Type aliases cannot be combined with `Annotated` for Pydantic v1
 
 ## Pydantic v1 vs v2
 
