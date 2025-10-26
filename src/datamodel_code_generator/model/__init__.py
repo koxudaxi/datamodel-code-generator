@@ -46,14 +46,36 @@ def get_data_model_types(
     )
     from .types import DataTypeManager  # noqa: PLC0415
 
-    if target_python_version.has_type_statement:
+    # Select type alias implementation based on Python version and Pydantic version
+    # Pydantic v1: Always use TypeAlias annotation (compatible with Pydantic v1)
+    #   - Python 3.10+: typing.TypeAlias
+    #   - Python 3.9: typing_extensions.TypeAlias
+    # Pydantic v2/other formats: Use TypeStatement or TypeAliasType
+    #   - Python 3.12+: type statement (creates TypeAliasType at runtime)
+    #   - Python 3.9-3.11: typing_extensions.TypeAliasType
+
+    if data_model_type == DataModelType.PydanticBaseModel:
+        # Pydantic v1: Use TypeAlias annotation (annotation-only, no runtime TypeAliasType)
+        if target_python_version.has_type_alias:
+            # Python 3.10+: typing.TypeAlias
+            type_alias_class = type_alias.TypeAlias
+            scalar_class = scalar.DataTypeScalar
+            union_class = union.DataTypeUnion
+        else:
+            # Python 3.9: typing_extensions.TypeAlias
+            type_alias_class = type_alias.TypeAliasBackport
+            scalar_class = scalar.DataTypeScalarBackport
+            union_class = union.DataTypeUnionBackport
+    elif target_python_version.has_type_statement:
+        # Python 3.12+ with Pydantic v2 or other formats: Use type statement
         type_alias_class = type_alias.TypeStatement
         scalar_class = scalar.DataTypeScalarTypeStatement
         union_class = union.DataTypeUnionTypeStatement
     else:
-        type_alias_class = type_alias.TypeAliasBackport
-        scalar_class = scalar.DataTypeScalarBackport
-        union_class = union.DataTypeUnionBackport
+        # Python 3.9-3.11 with Pydantic v2 or other formats: Use TypeAliasType
+        type_alias_class = type_alias.TypeAliasTypeBackport
+        scalar_class = scalar.DataTypeScalarTypeBackport
+        union_class = union.DataTypeUnionTypeBackport
 
     if data_model_type == DataModelType.PydanticBaseModel:
         return DataModelSet(

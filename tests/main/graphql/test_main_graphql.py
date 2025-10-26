@@ -339,7 +339,7 @@ def test_main_graphql_type_alias(tmp_path: Path) -> None:
     reason="Installed black doesn't support the new 'type' statement",
 )
 def test_main_graphql_type_alias_py312(tmp_path: Path) -> None:
-    """Test that type statement syntax is generated for GraphQL schemas with Python 3.12+."""
+    """Test that type statement syntax is generated for GraphQL schemas with Python 3.12+ and Pydantic v2."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -351,6 +351,8 @@ def test_main_graphql_type_alias_py312(tmp_path: Path) -> None:
         "graphql",
         "--target-python-version",
         "3.12",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias_py312.py").read_text()

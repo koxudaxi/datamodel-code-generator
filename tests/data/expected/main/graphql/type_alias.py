@@ -7,24 +7,24 @@ from __future__ import annotations
 from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAliasType
+from typing_extensions import TypeAlias
 
-Boolean = TypeAliasType("Boolean", bool)
+Boolean: TypeAlias = bool
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-Int = TypeAliasType("Int", int)
+Int: TypeAlias = int
 """
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 """
 
 
-SimpleString = TypeAliasType("SimpleString", str)
+SimpleString: TypeAlias = str
 
 
-String = TypeAliasType("String", str)
+String: TypeAlias = str
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """
@@ -51,10 +51,7 @@ class Pet(BaseModel):
     typename__: Optional[Literal['Pet']] = Field('Pet', alias='__typename')
 
 
-UnionType = TypeAliasType(
-    "UnionType",
-    Union[
-        'Person',
-        'Pet',
-    ],
-)
+UnionType: TypeAlias = Union[
+    'Person',
+    'Pet',
+]

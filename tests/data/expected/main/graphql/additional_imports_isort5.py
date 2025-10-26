@@ -9,27 +9,27 @@ from typing import Literal, Optional
 
 from mymodule.myclass import MyCustomPythonClass
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAliasType
+from typing_extensions import TypeAlias
 
-Boolean = TypeAliasType("Boolean", bool)
+Boolean: TypeAlias = bool
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-Date = TypeAliasType("Date", date)
+Date: TypeAlias = date
 
 
-DateTime = TypeAliasType("DateTime", datetime)
+DateTime: TypeAlias = datetime
 """
 DateTime (ISO8601, example: 2020-01-01T10:11:12+00:00)
 """
 
 
-MyCustomClass = TypeAliasType("MyCustomClass", MyCustomPythonClass)
+MyCustomClass: TypeAlias = MyCustomPythonClass
 
 
-String = TypeAliasType("String", str)
+String: TypeAlias = str
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """
