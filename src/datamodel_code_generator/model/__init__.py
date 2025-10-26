@@ -46,16 +46,8 @@ def get_data_model_types(
     )
     from .types import DataTypeManager  # noqa: PLC0415
 
-    # Select type alias implementation based on Python version and Pydantic version
-    # Pydantic v1: Always use TypeAlias annotation (compatible with Pydantic v1)
-    #   - Python 3.10+: typing.TypeAlias
-    #   - Python 3.9: typing_extensions.TypeAlias
-    # Pydantic v2/other formats: Use TypeStatement or TypeAliasType
-    #   - Python 3.12+: type statement (creates TypeAliasType at runtime)
-    #   - Python 3.9-3.11: typing_extensions.TypeAliasType
-
+    # Pydantic v1 does not support TypeAliasType type, fallback to TypeAlias
     if data_model_type == DataModelType.PydanticBaseModel:
-        # Pydantic v1: Use TypeAlias annotation (annotation-only, no runtime TypeAliasType)
         if target_python_version.has_type_alias:
             # Python 3.10+: typing.TypeAlias
             type_alias_class = type_alias.TypeAlias
