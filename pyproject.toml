@@ -121,6 +121,16 @@ build.targets.sdist.include = [
 ]
 version.source = "vcs"
 
+[tool.uv]
+conflicts = [
+  [
+    { group = "black24" },
+    { group = "black22" },
+    { group = "black23" },
+    { group = "dev" },
+  ],
+]
+
 [tool.ruff]
 line-length = 120
 extend-exclude = [ "tests/data" ]
@@ -214,13 +224,3 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
-
-[tool.uv]
-conflicts = [
-  [
-    { group = "black24" },
-    { group = "black22" },
-    { group = "black23" },
-    { group = "dev" },
-  ],
-]
