@@ -308,7 +308,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-type-alias",
-    help="Use TypeAlias instead of root models",
+    help="Use TypeAlias instead of root models (experimental)",
     action="store_true",
     default=None,
 )
