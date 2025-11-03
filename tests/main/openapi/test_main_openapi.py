@@ -131,6 +131,28 @@ def test_main_openapi_discriminator_with_properties(tmp_path: Path) -> None:
 
 
 @freeze_time("2019-07-26")
+def test_main_openapi_discriminator_allof(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "discriminator_allof.yaml"),
+        "--output",
+        str(output_file),
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--snake-case-field",
+        "--use-annotated",
+        "--use-union-operator",
+        "--target-python-version",
+        "3.11",
+        "--collapse-root-models",
+    ])
+    assert return_code == Exit.OK
+
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "allof.py").read_text()
+
+
+@freeze_time("2019-07-26")
 def test_main_pydantic_basemodel(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([

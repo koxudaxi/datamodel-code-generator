@@ -599,6 +599,8 @@ class OpenAPIParser(JsonSchemaParser):
 
             specification: dict[str, Any] = load_yaml(source.text)
             self.raw_obj = specification
+            # Collect discriminator schemas before parsing
+            self._collect_discriminator_schemas()
             schemas: dict[Any, Any] = specification.get("components", {}).get("schemas", {})
             security: list[dict[str, list[str]]] | None = specification.get("security")
             if OpenAPIScope.Schemas in self.open_api_scopes:

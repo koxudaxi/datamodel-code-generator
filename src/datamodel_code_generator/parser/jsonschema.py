@@ -563,6 +563,8 @@ class JsonSchemaParser(Parser):
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
+        self._discriminator_schemas: dict[str, dict[str, Any]] = {}  # Map of ref -> discriminator info
+        self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)  # Map of ref -> list of subtype refs
         self.field_keys: set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -666,6 +668,15 @@ class JsonSchemaParser(Parser):
 
     def get_ref_data_type(self, ref: str) -> DataType:
         reference = self.model_resolver.add_ref(ref)
+
+        # Check if this ref has a discriminator but no oneOf/anyOf
+        if ref in self._discriminator_schemas and ref in self._discriminator_subtypes:
+            subtypes = self._discriminator_subtypes[ref]
+            if subtypes:
+                # Create union type with all subtypes
+                data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
+                return self.data_type(data_types=[self.data_type(reference=r) for r in data_types])
+
         return self.data_type(reference=reference)
 
     def set_additional_properties(self, path: str, obj: JsonSchemaObject) -> None:
@@ -962,7 +973,18 @@ class JsonSchemaParser(Parser):
                 )
                 continue
 
-            field_type = self.parse_item(modular_name, field, [*path, field_name])
+            # Check if field references a discriminated schema before parsing
+            if field.ref and field.ref in self._discriminator_schemas:
+                discriminator_info = self._discriminator_schemas[field.ref]
+                subtypes = self._discriminator_subtypes.get(field.ref, [])
+                if discriminator_info and subtypes:
+                    # Create union type with all subtypes directly
+                    subtype_data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
+                    field_type = self.data_type(data_types=[self.data_type(reference=r) for r in subtype_data_types])
+                else:
+                    field_type = self.parse_item(modular_name, field, [*path, field_name])
+            else:
+                field_type = self.parse_item(modular_name, field, [*path, field_name])
 
             if self.force_optional_for_required_fields or (
                 self.apply_default_values_for_required_fields and field.has_default
@@ -970,16 +992,24 @@ class JsonSchemaParser(Parser):
                 required: bool = False
             else:
                 required = original_field_name in requires
-            fields.append(
-                self.get_object_field(
-                    field_name=field_name,
-                    field=field,
-                    required=required,
-                    field_type=field_type,
-                    alias=alias,
-                    original_field_name=original_field_name,
-                )
+
+            # Check if field references a discriminated schema and propagate discriminator
+            field_obj = self.get_object_field(
+                field_name=field_name,
+                field=field,
+                required=required,
+                field_type=field_type,
+                alias=alias,
+                original_field_name=original_field_name,
             )
+
+            # If field is a ref to a discriminated schema, add discriminator to extras
+            if field.ref and field.ref in self._discriminator_schemas:
+                discriminator_info = self._discriminator_schemas[field.ref]
+                if discriminator_info:
+                    field_obj.extras["discriminator"] = discriminator_info
+
+            fields.append(field_obj)
         return fields
 
     def parse_object(
@@ -1707,6 +1737,63 @@ class JsonSchemaParser(Parser):
         if model_count != len(self.results):
             # New model have been generated. It try to resolve json pointer again.
             self._resolve_unparsed_json_pointer()
+
+    def _collect_discriminator_schemas(self) -> None:  # noqa: PLR0912
+        """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""
+        if not self.raw_obj:
+            return
+
+        schemas = get_model_by_path(self.raw_obj, ["components", "schemas"]) if "components" in self.raw_obj else {}
+        if not schemas:
+            # Try JSON Schema format
+            schemas = self.raw_obj.get("definitions", {}) or self.raw_obj.get("$defs", {})
+
+        if not schemas:
+            return
+
+        # First pass: Find schemas with discriminators but no oneOf/anyOf
+        for schema_name, schema in schemas.items():
+            if not isinstance(schema, dict):
+                continue
+
+            discriminator = schema.get("discriminator")
+            if not discriminator:
+                continue
+
+            # Skip if it has oneOf/anyOf (those are handled differently)
+            if schema.get("oneOf") or schema.get("anyOf"):
+                continue
+
+            ref = f"#/components/schemas/{schema_name}"
+            if "components" not in self.raw_obj:
+                # JSON Schema format
+                ref = f"#/definitions/{schema_name}"
+
+            # Store discriminator info
+            if isinstance(discriminator, dict):
+                self._discriminator_schemas[ref] = discriminator
+            else:
+                self._discriminator_schemas[ref] = {"propertyName": discriminator}
+
+        # Second pass: Find subtypes (schemas that reference discriminated schemas via allOf)
+        for schema_name, schema in schemas.items():
+            if not isinstance(schema, dict):
+                continue
+
+            all_of = schema.get("allOf", [])
+            if not all_of:
+                continue
+
+            for all_of_item in all_of:
+                if not isinstance(all_of_item, dict):
+                    continue
+
+                ref_in_allof = all_of_item.get("$ref")
+                if ref_in_allof and ref_in_allof in self._discriminator_schemas:
+                    subtype_ref = f"#/components/schemas/{schema_name}"
+                    if "components" not in self.raw_obj:
+                        subtype_ref = f"#/definitions/{schema_name}"
+                    self._discriminator_subtypes[ref_in_allof].append(subtype_ref)
 
     def parse_json_pointer(self, raw: dict[str, Any], ref: str, path_parts: list[str]) -> None:
         path = ref.split("#", 1)[-1]
