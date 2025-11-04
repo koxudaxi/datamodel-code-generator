@@ -33,6 +33,7 @@ from datamodel_code_generator.types import (
     DataTypeManager,
     EmptyDataType,
     StrictTypes,
+    Types,
 )
 from datamodel_code_generator.util import BaseModel
 
@@ -307,6 +308,8 @@ class OpenAPIParser(JsonSchemaParser):
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
+        self._discriminator_schemas: dict[str, dict[str, Any]] = {}  # Map of ref -> discriminator info
+        self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)  # Map of ref -> list of subtype refs
 
     def get_ref_model(self, ref: str) -> dict[str, Any]:
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
@@ -322,6 +325,94 @@ class OpenAPIParser(JsonSchemaParser):
             obj.type = [obj.type, "null"]
 
         return super().get_data_type(obj)
+
+    def get_ref_data_type(self, ref: str) -> DataType:
+        reference = self.model_resolver.add_ref(ref)
+
+        # Check if this ref has a discriminator but no oneOf/anyOf
+        if ref in self._discriminator_schemas and ref in self._discriminator_subtypes:
+            subtypes = self._discriminator_subtypes[ref]
+            if subtypes:
+                # Create union type with all subtypes
+                data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
+                return self.data_type(data_types=[self.data_type(reference=r) for r in data_types])
+
+        return self.data_type(reference=reference)
+
+    def parse_object_fields(
+        self,
+        obj: JsonSchemaObject,
+        path: list[str],
+        module_name: Optional[str] = None,  # noqa: UP045
+    ) -> list[DataModelFieldBase]:
+        properties: dict[str, JsonSchemaObject | bool] = {} if obj.properties is None else obj.properties
+        requires: set[str] = {*()} if obj.required is None else {*obj.required}
+        fields: list[DataModelFieldBase] = []
+
+        exclude_field_names: set[str] = set()
+        for original_field_name, field in properties.items():
+            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                original_field_name, excludes=exclude_field_names
+            )
+            modular_name = f"{module_name}.{field_name}" if module_name else field_name
+
+            exclude_field_names.add(field_name)
+
+            if isinstance(field, bool):
+                fields.append(
+                    self.data_model_field_type(
+                        name=field_name,
+                        data_type=self.data_type_manager.get_data_type(
+                            Types.any,
+                        ),
+                        required=False if self.force_optional_for_required_fields else original_field_name in requires,
+                        alias=alias,
+                        strip_default_none=self.strip_default_none,
+                        use_annotated=self.use_annotated,
+                        use_field_description=self.use_field_description,
+                        original_name=original_field_name,
+                    )
+                )
+                continue
+
+            # Check if field references a discriminated schema before parsing
+            if field.ref and field.ref in self._discriminator_schemas:
+                discriminator_info = self._discriminator_schemas[field.ref]
+                subtypes = self._discriminator_subtypes.get(field.ref, [])
+                if discriminator_info and subtypes:
+                    # Create union type with all subtypes directly
+                    subtype_data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
+                    field_type = self.data_type(data_types=[self.data_type(reference=r) for r in subtype_data_types])
+                else:
+                    field_type = self.parse_item(modular_name, field, [*path, field_name])
+            else:
+                field_type = self.parse_item(modular_name, field, [*path, field_name])
+
+            if self.force_optional_for_required_fields or (
+                self.apply_default_values_for_required_fields and field.has_default
+            ):
+                required: bool = False
+            else:
+                required = original_field_name in requires
+
+            # Check if field references a discriminated schema and propagate discriminator
+            field_obj = self.get_object_field(
+                field_name=field_name,
+                field=field,
+                required=required,
+                field_type=field_type,
+                alias=alias,
+                original_field_name=original_field_name,
+            )
+
+            # If field is a ref to a discriminated schema, add discriminator to extras
+            if field.ref and field.ref in self._discriminator_schemas:
+                discriminator_info = self._discriminator_schemas[field.ref]
+                if discriminator_info:
+                    field_obj.extras["discriminator"] = discriminator_info
+
+            fields.append(field_obj)
+        return fields
 
     def resolve_object(self, obj: ReferenceObject | BaseModelT, object_type: type[BaseModelT]) -> BaseModelT:
         if isinstance(obj, ReferenceObject):
@@ -648,3 +739,54 @@ class OpenAPIParser(JsonSchemaParser):
                         )
 
         self._resolve_unparsed_json_pointer()
+
+    def _collect_discriminator_schemas(self) -> None:  # noqa: PLR0912
+        """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""
+        if not self.raw_obj:
+            return
+
+        if "components" not in self.raw_obj:
+            return
+
+        schemas = get_model_by_path(self.raw_obj, ["components", "schemas"])
+        if not schemas:
+            return
+
+        # First pass: Find schemas with discriminators but no oneOf/anyOf
+        for schema_name, schema in schemas.items():
+            if not isinstance(schema, dict):
+                continue
+
+            discriminator = schema.get("discriminator")
+            if not discriminator:
+                continue
+
+            # Skip if it has oneOf/anyOf (those are handled differently)
+            if schema.get("oneOf") or schema.get("anyOf"):
+                continue
+
+            ref = f"#/components/schemas/{schema_name}"
+
+            # Store discriminator info
+            if isinstance(discriminator, dict):
+                self._discriminator_schemas[ref] = discriminator
+            else:
+                self._discriminator_schemas[ref] = {"propertyName": discriminator}
+
+        # Second pass: Find subtypes (schemas that reference discriminated schemas via allOf)
+        for schema_name, schema in schemas.items():
+            if not isinstance(schema, dict):
+                continue
+
+            all_of = schema.get("allOf", [])
+            if not all_of:
+                continue
+
+            for all_of_item in all_of:
+                if not isinstance(all_of_item, dict):
+                    continue
+
+                ref_in_allof = all_of_item.get("$ref")
+                if ref_in_allof and ref_in_allof in self._discriminator_schemas:
+                    subtype_ref = f"#/components/schemas/{schema_name}"
+                    self._discriminator_subtypes[ref_in_allof].append(subtype_ref)
