@@ -31,7 +31,7 @@ def get_data_model_types(
 ) -> DataModelSet:
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
-    from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, typed_dict  # noqa: PLC0415
+    from . import dataclass, msgspec, pydantic, pydantic_v2, rootmodel, strawberry, typed_dict  # noqa: PLC0415
     from .types import DataTypeManager  # noqa: PLC0415
 
     if data_model_type == DataModelType.PydanticBaseModel:
@@ -78,6 +78,15 @@ def get_data_model_types(
             data_type_manager=msgspec.DataTypeManager,
             dump_resolve_reference_action=None,
             known_third_party=["msgspec"],
+        )
+    if data_model_type == DataModelType.StrawberryEnum:
+        return DataModelSet(
+            data_model=strawberry.BaseModel,
+            root_model=strawberry.RootModel,
+            field_model=strawberry.DataModelField,
+            data_type_manager=strawberry.DataTypeManager,
+            dump_resolve_reference_action=None,
+            known_third_party=["strawberry-graphql"],
         )
     msg = f"{data_model_type} is unsupported data model type"
     raise ValueError(msg)  # pragma: no cover

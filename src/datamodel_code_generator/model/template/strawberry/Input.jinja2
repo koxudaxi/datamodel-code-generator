@@ -1,0 +1,49 @@
+{% for decorator in decorators -%}
+{{ decorator }}
+{% endfor -%}
+@strawberry.input
+class {{ class_name }}{% if base_class %}({{ base_class }}){% endif %}:{% if comment is defined %}  # {{ comment }}{% endif %}
+{%- if description %}
+    """
+    {{ description | indent(4) }}
+    """
+{%- endif %}
+{%- if not fields %}
+    pass
+{%- endif %}
+{%- for field in fields -%}
+    {%- if not field.annotated and field.field %}
+    {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
+    {%- else %}
+    {%- if field.annotated %}
+    {{ field.name }}: {{ field.annotated }}
+    {%- else %}
+    {{ field.name }}: {{ field.type_hint }}
+    {%- endif %}
+    {%- if field.represented_default and field.represented_default != 'None' and not (field.strip_default_none and field.represented_default == 'None')
+            -%}
+            {%- set default_str = field.represented_default -%}
+            {%- set scalar_names = ['ID', 'String', 'Int', 'Float', 'Boolean'] -%}
+            {%- set is_quoted_scalar = (default_str.startswith("'") and default_str.endswith("'") and default_str[1:-1] in scalar_names) or (default_str.startswith('"') and default_str.endswith('"') and default_str[1:-1] in scalar_names) -%}
+            {%- set is_quoted_enum_member = (default_str.startswith("'") and default_str.endswith("'") and '.' in default_str[1:-1]) or (default_str.startswith('"') and default_str.endswith('"') and '.' in default_str[1:-1]) -%}
+            {%- if (default_str.startswith("'strawberry.scalars.") and default_str.endswith("'")) or (default_str.startswith('"strawberry.scalars.') and default_str.endswith('"'))
+                -%}
+                = {{ default_str[1:-1] }}
+            {%- elif is_quoted_scalar -%}
+                = {{ default_str[1:-1] }}
+            {%- elif is_quoted_enum_member -%}
+                = {{ default_str[1:-1] }}
+            {%- else -%}
+                = {{ field.represented_default }}
+            {%- endif -%}
+    {%- endif -%}
+    {%- endif %}
+    {%- if field.docstring %}
+    """
+    {{ field.docstring | indent(4) }}
+    """
+    {%- endif %}
+{%- for method in methods -%}
+    {{ method }}
+{%- endfor -%}
+{%- endfor -%}

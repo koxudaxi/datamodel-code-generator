@@ -1,0 +1,24 @@
+{% for decorator in decorators -%}
+{{ decorator }}
+{% endfor -%}
+@strawberry.enum
+class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
+{%- if description %}
+    """
+    {{ description | indent(4) }}
+    """
+{%- endif %}
+{%- if not fields %}
+    pass
+{%- endif %}
+{%- for field in fields %}
+    {{ field.name }} = "{{ field.name }}"
+    {%- if field.docstring %}
+    """
+    {{ field.docstring | indent(4) }}
+    """
+    {%- endif %}
+{%- for method in methods -%}
+    {{ method }}
+{%- endfor -%}
+{%- endfor -%}

@@ -369,6 +369,7 @@ class Config(BaseModel):
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
+    scalars_from_import: Optional[str] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
@@ -585,6 +586,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             formatters=config.formatters,
             parent_scoped_naming=config.parent_scoped_naming,
             disable_future_imports=config.disable_future_imports,
+            scalars_from_import=config.scalars_from_import,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

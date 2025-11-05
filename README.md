@@ -1,7 +1,7 @@
 # datamodel-code-generator
 
-This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict) 
-and [msgspec.Struct](https://github.com/jcrist/msgspec) from an openapi file and others.
+This code generator creates [pydantic v1 and v2](https://docs.pydantic.dev/) model, [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html), [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict),
+[msgspec.Struct](https://github.com/jcrist/msgspec) and [Strawberry GraphQL](https://strawberry.rocks/) types from an openapi file and others.
 
 [![PyPI version](https://badge.fury.io/py/datamodel-code-generator.svg)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
@@ -246,6 +246,7 @@ class Apis(BaseModel):
 - [dataclasses.dataclass](https://docs.python.org/3/library/dataclasses.html);
 - [typing.TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict);
 - [msgspec.Struct](https://github.com/jcrist/msgspec);
+- [Strawberry GraphQL](https://strawberry.rocks/) types (@strawberry.type, @strawberry.enum, @strawberry.input, @strawberry.directive);
 - Custom type from your [jinja2](https://jinja.palletsprojects.com/en/3.1.x/) template;
 
 ## Sponsors
@@ -363,7 +364,7 @@ Options:
   --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv,graphql}
                         Input file type (default: auto)
   --output OUTPUT       Output file (default: stdout)
-  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
+  --output-model-type {pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct,strawberry.Enum}
                         Output model type (default: pydantic.BaseModel)
   --url URL             Input file URL. `--input` is ignored when `--url` is used
 

@@ -526,6 +526,16 @@ openapi_options.add_argument(
 )
 
 # ======================================================================================
+# Options specific to GraphQL input schemas
+# ======================================================================================
+base_options.add_argument(
+    "--scalars-from-import",
+    help="Import path for custom GraphQL scalars. If not provided, no import statements will be generated for custom scalars. Only used with --output-model-type strawberry.Enum",
+    type=str,
+    default=None,
+)
+
+# ======================================================================================
 # General options
 # ======================================================================================
 general_options.add_argument(
