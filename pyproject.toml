@@ -23,6 +23,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython",
 ]
 dynamic = [
@@ -120,6 +121,16 @@ build.targets.sdist.include = [
 ]
 version.source = "vcs"
 
+[tool.uv]
+conflicts = [
+  [
+    { group = "black24" },
+    { group = "black22" },
+    { group = "black23" },
+    { group = "dev" },
+  ],
+]
+
 [tool.ruff]
 line-length = 120
 extend-exclude = [ "tests/data" ]
@@ -213,13 +224,3 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
-
-[tool.uv]
-conflicts = [
-  [
-    { group = "black24" },
-    { group = "black22" },
-    { group = "black23" },
-    { group = "dev" },
-  ],
-]

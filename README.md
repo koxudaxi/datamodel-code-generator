@@ -370,6 +370,8 @@ Options:
 Typing customization:
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
+  --disable-future-imports
+                        Disable __future__ imports
   --enum-field-as-literal {all,one}
                         Parse enum field as literal. all: all enum field type are Literal.
                         one: field type is Literal when an enum has only one possible value
@@ -468,7 +470,7 @@ Model customization:
                         Set name of models defined inline from the parent model
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
-  --target-python-version {3.9,3.10,3.11,3.12,3.13}
+  --target-python-version {3.9,3.10,3.11,3.12,3.13,3.14}
                         target python version
   --treat-dot-as-module
                         treat dotted module names as modules

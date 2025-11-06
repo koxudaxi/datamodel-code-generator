@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import locale
-from argparse import ArgumentParser, FileType, HelpFormatter, Namespace
+from argparse import ArgumentParser, HelpFormatter, Namespace
 from operator import attrgetter
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
@@ -316,6 +317,12 @@ typing_options.add_argument(
     action="store_true",
     default=None,
 )
+typing_options.add_argument(
+    "--disable-future-imports",
+    help="Disable __future__ imports",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Customization options for generated model fields
@@ -422,7 +429,7 @@ field_options.add_argument(
 template_options.add_argument(
     "--aliases",
     help="Alias mapping file",
-    type=FileType("rt"),
+    type=Path,
 )
 template_options.add_argument(
     "--custom-file-header",
@@ -453,7 +460,7 @@ template_options.add_argument(
     "apply the template data to multiple objects with the same name. "
     "If you are using another input file type (e.g. GraphQL), the key is the name of the object. "
     "The value is a dictionary of the template data to add.",
-    type=FileType("rt"),
+    type=Path,
 )
 template_options.add_argument(
     "--use-double-quotes",
@@ -490,7 +497,7 @@ base_options.add_argument(
 template_options.add_argument(
     "--custom-formatters-kwargs",
     help="A file with kwargs for custom formatters.",
-    type=FileType("rt"),
+    type=Path,
 )
 
 # ======================================================================================
