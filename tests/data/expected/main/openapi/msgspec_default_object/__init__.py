@@ -4,21 +4,21 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Union
 
-from msgspec import Struct, convert, field
+from msgspec import UNSET, Struct, UnsetType, convert, field
 
 
 class Foo(Struct):
-    text: Optional[str] = '987'
-    number: Optional[float] = None
+    text: Union[str, UnsetType] = '987'
+    number: Union[float, UnsetType] = UNSET
 
 
 class Bar(Struct):
-    foo: Optional[Foo] = field(
+    foo: Union[Foo, UnsetType] = field(
         default_factory=lambda: convert({'text': 'abc', 'number': 123}, type=Foo)
     )
-    baz: Optional[List[Foo]] = field(
+    baz: Union[List[Foo], UnsetType] = field(
         default_factory=lambda: convert(
             [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}],
             type=list[Foo],
