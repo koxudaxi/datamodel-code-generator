@@ -11,6 +11,7 @@ import yaml
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator.model.pydantic.dataclass import DataClass
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -18,7 +19,6 @@ from datamodel_code_generator.parser.jsonschema import (
     get_model_by_path,
 )
 from datamodel_code_generator.types import DataType
-from datamodel_code_generator.model.pydantic.dataclass import DataClass
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -512,6 +512,7 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     parser.parse_object("Person", AltJsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
+
 def test_create_data_model_with_frozen_dataclasses() -> None:
     """Test _create_data_model when frozen_dataclasses attribute exists."""
     parser = JsonSchemaParser(
@@ -520,14 +521,14 @@ def test_create_data_model_with_frozen_dataclasses() -> None:
         data_model_root_type=DataClass,
     )
     parser.frozen_dataclasses = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -540,14 +541,14 @@ def test_create_data_model_with_keyword_only() -> None:
         data_model_root_type=DataClass,
     )
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -561,14 +562,14 @@ def test_create_data_model_with_both_frozen_and_keyword_only() -> None:
     )
     parser.frozen_dataclasses = True
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -582,15 +583,15 @@ def test_create_data_model_with_existing_dataclass_arguments() -> None:
     )
     parser.frozen_dataclasses = True
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
         dataclass_arguments={"slots": True, "order": True},
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -604,14 +605,14 @@ def test_create_data_model_without_existing_dataclass_arguments() -> None:
     )
     parser.frozen_dataclasses = False
     parser.keyword_only = False
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -625,9 +626,9 @@ def test_create_data_model_frozen_and_keyword_only_cleanup() -> None:
     )
     parser.frozen_dataclasses = True
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
@@ -635,7 +636,7 @@ def test_create_data_model_frozen_and_keyword_only_cleanup() -> None:
         frozen=False,
         keyword_only=False,
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -648,14 +649,14 @@ def test_create_data_model_without_frozen_dataclasses_attr() -> None:
         data_model_root_type=DataClass,
     )
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -668,14 +669,14 @@ def test_create_data_model_without_keyword_only_attr() -> None:
         data_model_root_type=DataClass,
     )
     parser.frozen_dataclasses = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -689,9 +690,9 @@ def test_create_data_model_with_complex_existing_arguments() -> None:
     )
     parser.frozen_dataclasses = True
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
@@ -702,7 +703,7 @@ def test_create_data_model_with_complex_existing_arguments() -> None:
             "match_args": True,
         },
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
 
@@ -716,14 +717,14 @@ def test_create_data_model_none_dataclass_arguments() -> None:
     )
     parser.frozen_dataclasses = True
     parser.keyword_only = True
-    
+
     field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-    
+
     result = parser._create_data_model(
         reference=Reference(name="TestModel", path="test_model"),
         fields=[field],
         dataclass_arguments=None,
     )
-    
+
     assert isinstance(result, DataClass)
     assert result.name == "TestModel"
