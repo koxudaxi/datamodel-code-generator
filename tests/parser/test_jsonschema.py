@@ -18,6 +18,7 @@ from datamodel_code_generator.parser.jsonschema import (
     get_model_by_path,
 )
 from datamodel_code_generator.types import DataType
+from datamodel_code_generator.model.pydantic.dataclass import DataClass
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -510,3 +511,219 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     )
     parser.parse_object("Person", AltJsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
+
+def test_create_data_model_with_frozen_dataclasses() -> None:
+    """Test _create_data_model when frozen_dataclasses attribute exists."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_with_keyword_only() -> None:
+    """Test _create_data_model when keyword_only attribute exists."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_with_both_frozen_and_keyword_only() -> None:
+    """Test _create_data_model when both frozen_dataclasses and keyword_only exist."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_with_existing_dataclass_arguments() -> None:
+    """Test _create_data_model when existing dataclass_arguments are provided in kwargs."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+        dataclass_arguments={"slots": True, "order": True},
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_without_existing_dataclass_arguments() -> None:
+    """Test _create_data_model when no existing dataclass_arguments (else branch)."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = False
+    parser.keyword_only = False
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_frozen_and_keyword_only_cleanup() -> None:
+    """Test that frozen and keyword_only are popped from kwargs when existing args present."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+        dataclass_arguments={"slots": True},
+        frozen=False,
+        keyword_only=False,
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_without_frozen_dataclasses_attr() -> None:
+    """Test _create_data_model when frozen_dataclasses attribute doesn't exist."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_without_keyword_only_attr() -> None:
+    """Test _create_data_model when keyword_only attribute doesn't exist."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_with_complex_existing_arguments() -> None:
+    """Test _create_data_model with complex existing dataclass_arguments that get merged."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+        dataclass_arguments={
+            "slots": True,
+            "order": True,
+            "unsafe_hash": False,
+            "match_args": True,
+        },
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
+
+
+def test_create_data_model_none_dataclass_arguments() -> None:
+    """Test _create_data_model when dataclass_arguments is explicitly None."""
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=DataClass,
+        data_model_root_type=DataClass,
+    )
+    parser.frozen_dataclasses = True
+    parser.keyword_only = True
+    
+    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
+    
+    result = parser._create_data_model(
+        reference=Reference(name="TestModel", path="test_model"),
+        fields=[field],
+        dataclass_arguments=None,
+    )
+    
+    assert isinstance(result, DataClass)
+    assert result.name == "TestModel"
