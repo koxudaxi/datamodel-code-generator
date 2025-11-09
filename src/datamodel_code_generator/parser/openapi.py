@@ -327,7 +327,7 @@ class OpenAPIParser(JsonSchemaParser):
         return super().get_data_type(obj)
 
     def get_ref_data_type(self, ref: str) -> DataType:
-        reference = self.model_resolver.add_ref(ref)
+        data_type = super().get_ref_data_type(ref)
 
         # Check if this ref has a discriminator but no oneOf/anyOf
         if ref in self._discriminator_schemas and ref in self._discriminator_subtypes:
@@ -337,7 +337,7 @@ class OpenAPIParser(JsonSchemaParser):
                 data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
                 return self.data_type(data_types=[self.data_type(reference=r) for r in data_types])
 
-        return self.data_type(reference=reference)
+        return data_type
 
     def parse_object_fields(
         self,
@@ -779,8 +779,6 @@ class OpenAPIParser(JsonSchemaParser):
                 continue
 
             all_of = schema.get("allOf", [])
-            if not all_of:
-                continue
 
             for all_of_item in all_of:
                 if not isinstance(all_of_item, dict):
