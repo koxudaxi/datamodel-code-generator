@@ -33,7 +33,6 @@ from datamodel_code_generator.types import (
     DataTypeManager,
     EmptyDataType,
     StrictTypes,
-    Types,
 )
 from datamodel_code_generator.util import BaseModel
 
@@ -345,74 +344,69 @@ class OpenAPIParser(JsonSchemaParser):
         path: list[str],
         module_name: Optional[str] = None,  # noqa: UP045
     ) -> list[DataModelFieldBase]:
+        # Get base fields from parent class
+        fields = super().parse_object_fields(obj, path, module_name)
+
         properties: dict[str, JsonSchemaObject | bool] = {} if obj.properties is None else obj.properties
-        requires: set[str] = {*()} if obj.required is None else {*obj.required}
-        fields: list[DataModelFieldBase] = []
 
-        exclude_field_names: set[str] = set()
-        for original_field_name, field in properties.items():
-            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                original_field_name, excludes=exclude_field_names
-            )
-            modular_name = f"{module_name}.{field_name}" if module_name else field_name
+        # Post-process fields to handle discriminated schemas
+        result_fields: list[DataModelFieldBase] = []
+        for field_obj in fields:
+            original_field_name = field_obj.original_name
+            field = properties.get(original_field_name)
 
-            exclude_field_names.add(field_name)
-
+            # bool fields do not have a schema, cannot be discriminated
             if isinstance(field, bool):
-                fields.append(
-                    self.data_model_field_type(
-                        name=field_name,
-                        data_type=self.data_type_manager.get_data_type(
-                            Types.any,
-                        ),
-                        required=False if self.force_optional_for_required_fields else original_field_name in requires,
-                        alias=alias,
-                        strip_default_none=self.strip_default_none,
-                        use_annotated=self.use_annotated,
-                        use_field_description=self.use_field_description,
-                        original_name=original_field_name,
-                    )
-                )
+                result_fields.append(field_obj)
                 continue
 
-            # Check if field references a discriminated schema before parsing
+            # Only process JsonSchemaObject fields (skip bool fields)
+            if not isinstance(field, JsonSchemaObject):
+                result_fields.append(field_obj)
+                continue
+
+            # Check if field references a discriminated schema
             if field.ref and field.ref in self._discriminator_schemas:
                 discriminator_info = self._discriminator_schemas[field.ref]
                 subtypes = self._discriminator_subtypes.get(field.ref, [])
+
+                # Determine new field_type
                 if discriminator_info and subtypes:
-                    # Create union type with all subtypes directly
                     subtype_data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
-                    field_type = self.data_type(data_types=[self.data_type(reference=r) for r in subtype_data_types])
+                    new_field_type = self.data_type(
+                        data_types=[self.data_type(reference=r) for r in subtype_data_types]
+                    )
                 else:
-                    field_type = self.parse_item(modular_name, field, [*path, field_name])
-            else:
-                field_type = self.parse_item(modular_name, field, [*path, field_name])
+                    new_field_type = field_obj.data_type
 
-            if self.force_optional_for_required_fields or (
-                self.apply_default_values_for_required_fields and field.has_default
-            ):
-                required: bool = False
-            else:
-                required = original_field_name in requires
-
-            # Check if field references a discriminated schema and propagate discriminator
-            field_obj = self.get_object_field(
-                field_name=field_name,
-                field=field,
-                required=required,
-                field_type=field_type,
-                alias=alias,
-                original_field_name=original_field_name,
-            )
-
-            # If field is a ref to a discriminated schema, add discriminator to extras
-            if field.ref and field.ref in self._discriminator_schemas:
-                discriminator_info = self._discriminator_schemas[field.ref]
+                # Create new extras dict with discriminator
+                new_extras = {**field_obj.extras}
                 if discriminator_info:
-                    field_obj.extras["discriminator"] = discriminator_info
+                    new_extras["discriminator"] = discriminator_info
 
-            fields.append(field_obj)
-        return fields
+                # Replace field with new instance
+                new_field = self.data_model_field_type(
+                    name=field_obj.name,
+                    default=field_obj.default,
+                    data_type=new_field_type,
+                    required=field_obj.required,
+                    alias=field_obj.alias,
+                    constraints=field_obj.constraints,
+                    nullable=field_obj.nullable,
+                    strip_default_none=field_obj.strip_default_none,
+                    extras=new_extras,
+                    use_annotated=field_obj.use_annotated,
+                    use_field_description=field_obj.use_field_description,
+                    use_default_kwarg=field_obj.use_default_kwarg,
+                    original_name=field_obj.original_name,
+                    has_default=field_obj.has_default,
+                    type_has_null=field_obj.type_has_null,
+                )
+                result_fields.append(new_field)
+            else:
+                result_fields.append(field_obj)
+
+        return result_fields
 
     def resolve_object(self, obj: ReferenceObject | BaseModelT, object_type: type[BaseModelT]) -> BaseModelT:
         if isinstance(obj, ReferenceObject):
