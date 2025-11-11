@@ -2652,6 +2652,42 @@ def test_main_jsonschema_discriminator_literals(
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "prefix_items.py",
+        ),
+        (
+            "msgspec.Struct",
+            "prefix_items_msgspec.py",
+        ),
+    ],
+)
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_prefix_items(
+    output_model: str, expected_output: str, min_version: str, tmp_path: Path
+) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "prefix_items.json"),
+        "--output",
+        str(output_file),
+        "--output-model-type",
+        output_model,
+        "--target-python",
+        min_version,
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+
+
 @freeze_time("2019-07-26")
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 24,

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Span": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "integer" }
+      },
+      "required": ["value"]
+    }
+  },
+  "title": "defaults",
+  "type": "object",
+  "properties": {
+    "a": {
+      "type": "array",
+      "prefixItems": [{ "$ref": "#/$defs/Span" }, { "type": "string" }],
+      "minItems": 2,
+      "maxItems": 2
+    }
+  },
+  "required": ["a"]
+}
