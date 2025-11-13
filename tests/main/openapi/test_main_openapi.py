@@ -143,8 +143,6 @@ def test_main_openapi_discriminator_allof(tmp_path: Path) -> None:
         "--snake-case-field",
         "--use-annotated",
         "--use-union-operator",
-        "--target-python-version",
-        "3.11",
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
