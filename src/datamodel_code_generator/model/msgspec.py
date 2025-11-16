@@ -24,7 +24,7 @@ from datamodel_code_generator.model.imports import (
 from datamodel_code_generator.model.pydantic.base_model import (
     Constraints as _Constraints,
 )
-from datamodel_code_generator.model.rootmodel import RootModel as _RootModel
+from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import type_map_factory
 from datamodel_code_generator.types import (
@@ -70,10 +70,6 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
 
     cls.imports = property(new_imports)  # pyright: ignore[reportAttributeAccessIssue]
     return cls
-
-
-class RootModel(_RootModel):
-    pass
 
 
 class Struct(DataModel):
@@ -263,7 +259,7 @@ class DataModelField(DataModelFieldBase):
                 data_type_child = data_type.data_types[0]
                 if (  # pragma: no cover
                     data_type_child.reference
-                    and (isinstance(data_type_child.reference.source, (Struct, RootModel)))
+                    and (isinstance(data_type_child.reference.source, (Struct, TypeAliasBase)))
                     and isinstance(self.default, list)
                 ):
                     return (
