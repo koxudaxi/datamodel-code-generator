@@ -22,7 +22,7 @@ jobs:
       # https://github.com/astral-sh/uv/issues/11006
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
       - name: Install dependencies
