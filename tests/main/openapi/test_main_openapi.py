@@ -2623,6 +2623,8 @@ def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
         "openapi",
         "--target-python-version",
         "3.12",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py312.py").read_text()
