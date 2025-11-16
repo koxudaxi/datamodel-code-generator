@@ -3320,3 +3320,87 @@ def test_main_jsonschema_forwarding_reference_collapse_root(tmp_path: Path) -> N
     for path in main_modular_dir.rglob("*.py"):
         result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
         assert result == path.read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_jsonschema_type_alias(tmp_path: Path) -> None:
+    """Test that TypeAliasType is generated for Python 3.9-3.11."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "type_alias.json"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias.py").read_text()
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_py312(tmp_path: Path) -> None:
+    """Test that type statement syntax is generated for Python 3.12+ with Pydantic v2."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "type_alias.json"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--target-python-version",
+        "3.12",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_py312.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_jsonschema_type_alias_with_field_description(tmp_path: Path) -> None:
+    """Test that TypeAliasType is generated with field descriptions for Python 3.9-3.11."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "type_alias.json"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--use-field-description",
+    ])
+    assert return_code == Exit.OK
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_with_field_description.py").read_text()
+    )
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_with_field_description_py312(tmp_path: Path) -> None:
+    """Test that type statement syntax is generated with field descriptions for Python 3.12+ and Pydantic v2."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "type_alias.json"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--use-field-description",
+        "--target-python-version",
+        "3.12",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+    assert return_code == Exit.OK
+    assert (
+        output_file.read_text(encoding="utf-8")
+        == (EXPECTED_JSON_SCHEMA_PATH / "type_alias_with_field_description_py312.py").read_text()
+    )
