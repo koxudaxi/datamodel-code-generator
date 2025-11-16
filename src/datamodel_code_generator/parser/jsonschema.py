@@ -1585,7 +1585,10 @@ class JsonSchemaParser(Parser):
         raw: dict[str, Any],
         path: list[str],
     ) -> None:
-        self.parse_obj(name, self.SCHEMA_OBJECT_TYPE.model_validate(raw), path)
+        obj: JsonSchemaObject = (
+            self.SCHEMA_OBJECT_TYPE.model_validate(raw) if PYDANTIC_V2 else self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
+        )
+        self.parse_obj(name, obj, path)
 
     def parse_obj(
         self,
