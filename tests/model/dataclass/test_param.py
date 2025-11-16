@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datamodel_code_generator.model.dataclass import DataClass, DataModelField
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType, Types
+from datamodel_code_generator.types import DataType
 
 
 def test_dataclass_without_frozen() -> None:
@@ -10,7 +10,7 @@ def test_dataclass_without_frozen() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -31,7 +31,7 @@ def test_dataclass_with_frozen() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -51,7 +51,7 @@ def test_dataclass_with_keyword_only_and_frozen() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -74,7 +74,7 @@ def test_dataclass_with_only_keyword_only() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -121,12 +121,12 @@ def test_dataclass_kw_only_true_only() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field1 = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
     field2 = DataModelField(
         name="field2",
-        data_type=DataType(type=Types.integer),
+        data_type=DataType(type="int"),
         required=False,
     )
 
