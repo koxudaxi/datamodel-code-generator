@@ -1,0 +1,19 @@
+scalar SimpleString
+
+type Person {
+  name: String!
+  age: Int!
+}
+
+type Pet {
+  name: String!
+  type: String!
+}
+
+union UnionType = Person | Pet
+
+type ModelWithTypeAliasField {
+  simple_field: SimpleString
+  union_field: UnionType
+  string_field: String
+}
