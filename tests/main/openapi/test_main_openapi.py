@@ -2628,6 +2628,7 @@ def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py312.py").read_text()
 
 
+@freeze_time("2019-07-26")
 def test_main_openapi_byte_format(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
