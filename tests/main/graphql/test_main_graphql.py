@@ -200,7 +200,7 @@ def test_main_graphql_specialized_enums_disabled(tmp_path: Path) -> None:
         "--no-use-specialized-enum",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums_no_specialized.py").read_text()
 
 
 @freeze_time("2019-07-26")
