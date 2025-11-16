@@ -307,6 +307,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-type-alias",
+    help="Use TypeAlias instead of root models (experimental)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--disable-future-imports",
     help="Disable __future__ imports",
     action="store_true",
