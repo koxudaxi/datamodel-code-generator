@@ -105,6 +105,7 @@ docs = [
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
+pydantic1 = [ "pydantic<2" ]
 fix = [ "pre-commit-uv>=4.1.4" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
@@ -128,6 +129,10 @@ conflicts = [
     { group = "black22" },
     { group = "black23" },
     { group = "dev" },
+  ],
+  [
+    { group = "pydantic1" },
+    { group = "pkg-meta" },
   ],
 ]
 
