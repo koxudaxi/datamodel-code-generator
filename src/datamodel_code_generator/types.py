@@ -605,18 +605,15 @@ class DataTypeManager(ABC):
         self.target_datetime_class: DatetimeClassType | None = target_datetime_class
         self.treat_dot_as_module: bool = treat_dot_as_module
 
-        if TYPE_CHECKING:
-            self.data_type: type[DataType]
-        else:
-            self.data_type: type[DataType] = create_model(
-                "ContextDataType",
-                python_version=(PythonVersion, python_version),
-                use_standard_collections=(bool, use_standard_collections),
-                use_generic_container=(bool, use_generic_container_types),
-                use_union_operator=(bool, use_union_operator),
-                treat_dot_as_module=(bool, treat_dot_as_module),
-                __base__=DataType,
-            )
+        self.data_type: type[DataType] = create_model(
+            "ContextDataType",
+            python_version=(PythonVersion, python_version),
+            use_standard_collections=(bool, use_standard_collections),
+            use_generic_container=(bool, use_generic_container_types),
+            use_union_operator=(bool, use_union_operator),
+            treat_dot_as_module=(bool, treat_dot_as_module),
+            __base__=DataType,
+        )
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:

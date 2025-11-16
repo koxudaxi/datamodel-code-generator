@@ -15,6 +15,7 @@ from datamodel_code_generator import (
     PythonVersionMin,
     snooper_to_methods,
 )
+from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.dataclass import DataClass
@@ -36,8 +37,6 @@ except ImportError as exc:  # pragma: no cover
     msg = "Please run `$pip install 'datamodel-code-generator[graphql]`' to generate data-model from a GraphQL schema."
     raise Exception(msg) from exc  # noqa: TRY002
 
-
-from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
 
 if TYPE_CHECKING:
     from collections import defaultdict
