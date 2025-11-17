@@ -372,6 +372,7 @@ class GraphQLParser(Parser):
             fields=enum_fields,
             path=self.current_source_path,
             description=enum_object.description,
+            type_=Types.string if self.use_subclass_enum else None,
             custom_template_dir=self.custom_template_dir,
         )
         self.results.append(enum)
