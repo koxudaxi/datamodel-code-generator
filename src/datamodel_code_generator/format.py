@@ -65,6 +65,13 @@ class PythonVersion(Enum):
     def has_type_statement(self) -> bool:
         return self._is_py_312_or_later
 
+    @property
+    def has_strenum(self) -> bool:
+        """
+        Verifies if the Python version supports `StrEnum`.
+        """
+        return self._is_py_311_or_later
+
 
 PythonVersionMin = PythonVersion.PY_39
 

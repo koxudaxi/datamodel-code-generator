@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from typing import Optional
 
 from pydantic import BaseModel
@@ -16,13 +16,13 @@ class IntEnumModel(IntEnum):
     integer_3 = 3
 
 
-class FloatEnum(float, Enum):
+class FloatEnum(Enum):
     number_1_1 = 1.1
     number_2_1 = 2.1
     number_3_1 = 3.1
 
 
-class StrEnum(str, Enum):
+class StrEnumModel(StrEnum):
     field_1 = '1'
     field_2 = '2'
     field_3 = '3'
@@ -47,7 +47,7 @@ class UnknownEnum(Enum):
 class Model(BaseModel):
     IntEnum: Optional[IntEnumModel] = None
     FloatEnum: Optional[FloatEnum] = None
-    StrEnum: Optional[StrEnum] = None
+    StrEnum: Optional[StrEnumModel] = None
     NonTypedEnum: Optional[NonTypedEnum] = None
     BooleanEnum: Optional[BooleanEnum] = None
     UnknownEnum: Optional[UnknownEnum] = None

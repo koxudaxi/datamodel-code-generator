@@ -18,7 +18,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.dataclass import DataClass
-from datamodel_code_generator.model.enum import Enum
+from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
 from datamodel_code_generator.model.scalar import DataTypeScalarBackport
 from datamodel_code_generator.model.union import DataTypeUnionBackport
 from datamodel_code_generator.parser.base import (
@@ -115,6 +115,7 @@ class GraphQLParser(Parser):
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
+        use_specialized_enum: bool = True,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -194,6 +195,7 @@ class GraphQLParser(Parser):
             use_one_literal_as_default=use_one_literal_as_default,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
+            use_specialized_enum=use_specialized_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
@@ -367,7 +369,16 @@ class GraphQLParser(Parser):
                 )
             )
 
-        enum = Enum(
+        enum_cls: type[Enum] = Enum
+        if (
+            self.target_python_version.has_strenum
+            and self.use_specialized_enum
+            and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(Types.string))
+        ):
+            # If specialized enum is available in the target Python version, use it
+            enum_cls = specialized_type
+
+        enum: Enum = enum_cls(
             reference=self.references[enum_object.name],
             fields=enum_fields,
             path=self.current_source_path,

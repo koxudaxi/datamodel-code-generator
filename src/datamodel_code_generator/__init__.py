@@ -245,6 +245,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_one_literal_as_default: bool = False,
     set_default_enum_member: bool = False,
     use_subclass_enum: bool = False,
+    use_specialized_enum: bool = True,
     strict_nullable: bool = False,
     use_generic_container_types: bool = False,
     enable_faux_immutability: bool = False,
@@ -461,6 +462,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         if output_model_type == DataModelType.DataclassesDataclass
         else set_default_enum_member,
         use_subclass_enum=use_subclass_enum,
+        use_specialized_enum=use_specialized_enum,
         strict_nullable=strict_nullable,
         use_generic_container_types=use_generic_container_types,
         enable_faux_immutability=enable_faux_immutability,
