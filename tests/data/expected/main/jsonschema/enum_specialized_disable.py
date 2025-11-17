@@ -4,25 +4,25 @@
 
 from __future__ import annotations
 
-from enum import Enum, IntEnum
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
 
 
-class IntEnumModel(IntEnum):
+class IntEnum(Enum):
     integer_1 = 1
     integer_2 = 2
     integer_3 = 3
 
 
-class FloatEnum(float, Enum):
+class FloatEnum(Enum):
     number_1_1 = 1.1
     number_2_1 = 2.1
     number_3_1 = 3.1
 
 
-class StrEnum(str, Enum):
+class StrEnum(Enum):
     field_1 = '1'
     field_2 = '2'
     field_3 = '3'
@@ -45,7 +45,7 @@ class UnknownEnum(Enum):
 
 
 class Model(BaseModel):
-    IntEnum: Optional[IntEnumModel] = None
+    IntEnum: Optional[IntEnum] = None
     FloatEnum: Optional[FloatEnum] = None
     StrEnum: Optional[StrEnum] = None
     NonTypedEnum: Optional[NonTypedEnum] = None

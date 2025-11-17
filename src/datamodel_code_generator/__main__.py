@@ -315,6 +315,7 @@ class Config(BaseModel):
     use_one_literal_as_default: bool = False
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
+    use_specialized_enum: bool = True
     strict_nullable: bool = False
     use_generic_container_types: bool = False
     use_union_operator: bool = False
@@ -533,6 +534,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_one_literal_as_default=config.use_one_literal_as_default,
             set_default_enum_member=config.set_default_enum_member,
             use_subclass_enum=config.use_subclass_enum,
+            use_specialized_enum=config.use_specialized_enum,
             strict_nullable=config.strict_nullable,
             use_generic_container_types=config.use_generic_container_types,
             enable_faux_immutability=config.enable_faux_immutability,

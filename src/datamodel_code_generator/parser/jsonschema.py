@@ -30,7 +30,11 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name
 from datamodel_code_generator.model.dataclass import DataClass
-from datamodel_code_generator.model.enum import Enum
+from datamodel_code_generator.model.enum import (
+    SPECIALIZED_ENUM_TYPE_MATCH,
+    Enum,
+    StrEnum,
+)
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
@@ -91,6 +95,8 @@ def get_model_by_path(schema: dict[str, Any] | list[Any], keys: list[str] | list
     )
 
 
+# TODO: This dictionary contains formats valid only for OpenAPI and not for
+#       jsonschema and vice versa. They should be separated.
 json_schema_data_formats: dict[str, dict[str, Types]] = {
     "integer": {
         "int32": Types.int32,
@@ -426,6 +432,7 @@ class JsonSchemaParser(Parser):
         use_one_literal_as_default: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
+        use_specialized_enum: bool = True,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -505,6 +512,7 @@ class JsonSchemaParser(Parser):
             use_one_literal_as_default=use_one_literal_as_default,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
+            use_specialized_enum=use_specialized_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
@@ -1402,13 +1410,28 @@ class JsonSchemaParser(Parser):
             )
 
         def create_enum(reference_: Reference) -> DataType:
-            enum = Enum(
+            type_: Types | None = _get_type(obj.type, obj.format) if isinstance(obj.type, str) else None
+
+            enum_cls: type[Enum] = Enum
+            if (
+                self.use_specialized_enum
+                and type_
+                and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(type_))
+                # StrEnum is available only in Python 3.11+
+                and (specialized_type != StrEnum or self.target_python_version.has_strenum)
+            ):
+                # If specialized enum is available in the target Python version,
+                # use it and ignore `self.use_subclass_enum` setting.
+                type_ = None
+                enum_cls = specialized_type
+
+            enum = enum_cls(
                 reference=reference_,
                 fields=enum_fields,
                 path=self.current_source_path,
                 description=obj.description if self.use_schema_description else None,
                 custom_template_dir=self.custom_template_dir,
-                type_=_get_type(obj.type, obj.format) if self.use_subclass_enum and isinstance(obj.type, str) else None,
+                type_=type_ if self.use_subclass_enum else None,
                 default=obj.default if obj.has_default else UNDEFINED,
                 treat_dot_as_module=self.treat_dot_as_module,
             )
