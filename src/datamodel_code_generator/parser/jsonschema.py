@@ -19,7 +19,13 @@ from datamodel_code_generator import (
     load_yaml_from_path,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import DEFAULT_FORMATTERS, Formatter, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import (
+    DEFAULT_FORMATTERS,
+    DatetimeClassType,
+    Formatter,
+    PythonVersion,
+    PythonVersionMin,
+)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name
@@ -56,8 +62,6 @@ from datamodel_code_generator.util import (
 
 if PYDANTIC_V2:
     from pydantic import ConfigDict
-
-from datamodel_code_generator.format import DatetimeClassType
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence

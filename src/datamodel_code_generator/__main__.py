@@ -20,11 +20,6 @@ import argcomplete
 import black
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from argparse import Namespace
-
-    from typing_extensions import Self
-
 from datamodel_code_generator import (
     DataModelType,
     Error,
@@ -50,11 +45,15 @@ from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed f
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     ConfigDict,
-    Model,
     field_validator,
     load_toml,
     model_validator,
 )
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from typing_extensions import Self
 
 
 class Exit(IntEnum):
@@ -82,20 +81,13 @@ class Config(BaseModel):
         def __getitem__(self, item: str) -> Any:
             return self.get(item)
 
-        if TYPE_CHECKING:
+        @classmethod
+        def parse_obj(cls, obj: Any) -> Self:
+            return cls.model_validate(obj)
 
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]: ...
-
-        else:
-
-            @classmethod
-            def parse_obj(cls: type[Model], obj: Any) -> Model:
-                return cls.model_validate(obj)
-
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]:
-                return cls.model_fields
+        @classmethod
+        def get_fields(cls) -> dict[str, Any]:
+            return cls.model_fields
 
     else:
 
@@ -103,11 +95,9 @@ class Config(BaseModel):
             # Pydantic 1.5.1 doesn't support validate_assignment correctly
             arbitrary_types_allowed = (TextIOBase,)
 
-        if not TYPE_CHECKING:
-
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]:
-                return cls.__fields__
+        @classmethod
+        def get_fields(cls) -> dict[str, Any]:
+            return cls.__fields__
 
     @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805

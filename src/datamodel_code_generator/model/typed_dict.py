@@ -17,9 +17,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
+    from datamodel_code_generator.imports import Import
     from datamodel_code_generator.reference import Reference
 
-from datamodel_code_generator.imports import Import  # noqa: TC001
 
 escape_characters = str.maketrans({
     "\\": r"\\",

@@ -21,7 +21,6 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.parser import DefaultPutDict  # noqa: TC001 # needed for type check
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -41,6 +40,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from pathlib import Path
     from urllib.parse import ParseResult
+
+    from datamodel_code_generator.parser import DefaultPutDict
 
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r"^application/.*json$")

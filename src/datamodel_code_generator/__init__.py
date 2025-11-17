@@ -33,6 +33,13 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.util import SafeLoader
 
+if TYPE_CHECKING:
+    from collections import defaultdict
+
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.parser.base import Parser
+    from datamodel_code_generator.types import StrictTypes
+
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
 
@@ -57,23 +64,12 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
         return load_yaml(f)
 
 
-if TYPE_CHECKING:
-    from collections import defaultdict
+def get_version() -> str:
+    package = "datamodel-code-generator"
 
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    from datamodel_code_generator.parser.base import Parser
-    from datamodel_code_generator.types import StrictTypes
+    from importlib.metadata import version  # noqa: PLC0415
 
-    def get_version() -> str: ...
-
-else:
-
-    def get_version() -> str:
-        package = "datamodel-code-generator"
-
-        from importlib.metadata import version  # noqa: PLC0415
-
-        return version(package)
+    return version(package)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
