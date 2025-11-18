@@ -248,6 +248,19 @@ class JsonSchemaObject(BaseModel):
 
         return value
 
+    @field_validator("type", mode="before")
+    def validate_null_type(cls, value: Any) -> Any:  # noqa: N805
+        """
+        Validate and convert unquoted null type to string "null"
+        """
+        # TODO[openapi]: This should be supported only for OpenAPI 3.1+
+        # See: https://github.com/koxudaxi/datamodel-code-generator/issues/2477#issuecomment-3192480591
+        if value is None:
+            value = "null"
+        if isinstance(value, list) and None in value:
+            value = [v if v is not None else "null" for v in value]
+        return value
+
     items: Optional[Union[list[JsonSchemaObject], JsonSchemaObject, bool]] = None  # noqa: UP007, UP045
     uniqueItems: Optional[bool] = None  # noqa: N815, UP045
     type: Optional[Union[str, list[str]]] = None  # noqa: UP007, UP045

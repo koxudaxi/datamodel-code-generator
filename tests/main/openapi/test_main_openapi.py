@@ -2684,3 +2684,20 @@ def test_main_openapi_byte_format(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "byte_format.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_unquoted_null(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "unquoted_null.yaml"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "openapi",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unquoted_null.py").read_text()
