@@ -253,6 +253,8 @@ class JsonSchemaObject(BaseModel):
         """
         Validate and convert unquoted null type to string "null"
         """
+        # TODO[openapi]: This should be supported only for OpenAPI 3.1+
+        # See: https://github.com/koxudaxi/datamodel-code-generator/issues/2477#issuecomment-3192480591
         if value is None:
             value = "null"
         if isinstance(value, list) and None in value:
