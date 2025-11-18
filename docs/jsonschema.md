@@ -61,3 +61,25 @@ class Person(BaseModel):
     friends: Optional[List] = None
     comment: Optional[Any] = None
 ```
+
+## Tuple validation
+
+JSON Schema's [`prefixItems`](https://json-schema.org/understanding-json-schema/reference/array.html#tuple-validation) syntax lets you describe heterogeneous arrays. When `prefixItems` is present, `items` is empty, and `minItems`/`maxItems` match the number of prefix entries, datamodel-code-generator now emits precise tuple annotations:
+
+```json
+{
+  "type": "array",
+  "prefixItems": [
+    { "$ref": "#/$defs/Span" },
+    { "type": "string" }
+  ],
+  "minItems": 2,
+  "maxItems": 2
+}
+```
+
+```py
+from typing import Tuple
+
+Tuple[Span, str]
+```
