@@ -52,7 +52,7 @@ optional-dependencies.debug = [
   "pysnooper>=0.4.1,<2",
 ]
 optional-dependencies.graphql = [
-  "graphql-core>=3.2.3",
+  "graphql-core==3.2.6",
 ]
 optional-dependencies.http = [
   "httpx>=0.24.1",
@@ -79,6 +79,7 @@ dev = [
 ]
 test = [
   "freezegun",
+  "inline-snapshot==0.31.1",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -133,6 +134,7 @@ conflicts = [
   [
     { group = "pydantic1" },
     { group = "pkg-meta" },
+    { group = "dev" },
   ],
 ]
 
@@ -195,6 +197,7 @@ filterwarnings = [
   "ignore:^.*black doesn't support `experimental-string-processing` option for wrapping string literal in .*",
   "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
+  "ignore:^.*'typing.ByteString' is deprecated and slated for removal in Python 3.17.*",
 ]
 norecursedirs = "tests/data/*"
 verbosity_assertions = 2

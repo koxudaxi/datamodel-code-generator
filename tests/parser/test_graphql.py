@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from freezegun import freeze_time
+from inline_snapshot import external_file
 
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH
@@ -27,7 +28,7 @@ def test_graphql_field_enum(tmp_path: Path) -> None:
         "--set-default-enum-member",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == external_file(EXPECTED_GRAPHQL_PATH / "field-default-enum.py")
 
 
 @freeze_time("2019-07-26")
@@ -42,11 +43,7 @@ def test_graphql_union_aliased_bug(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").rstrip()
-    expected = (EXPECTED_GRAPHQL_PATH / "union-aliased-bug.py").read_text().rstrip()
-    if actual != expected:
-        pass
-    assert actual == expected
+    assert output_file.read_text(encoding="utf-8") == external_file(EXPECTED_GRAPHQL_PATH / "union-aliased-bug.py")
 
 
 @freeze_time("2019-07-26")
@@ -61,8 +58,4 @@ def test_graphql_union_commented(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").rstrip()
-    expected = (EXPECTED_GRAPHQL_PATH / "union-commented.py").read_text().rstrip()
-    if actual != expected:
-        pass
-    assert actual == expected
+    assert output_file.read_text(encoding="utf-8") == external_file(EXPECTED_GRAPHQL_PATH / "union-commented.py")

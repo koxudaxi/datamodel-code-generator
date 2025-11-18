@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from freezegun import freeze_time
+from inline_snapshot import external_file
 
 from datamodel_code_generator.__main__ import Exit, main
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
@@ -35,4 +36,4 @@ def test_main_yaml(tmp_path: Path) -> None:
         "yaml",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_PATH / "yaml.py").read_text()
+    assert output_file.read_text(encoding="utf-8") == external_file(EXPECTED_MAIN_PATH / "yaml.py")
