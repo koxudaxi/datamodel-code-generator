@@ -13,11 +13,19 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _normalize_line_endings(text: str | object) -> str | object:
+def _normalize_line_endings(text: str) -> str:
     """Normalize line endings to LF for cross-platform comparison."""
-    if isinstance(text, str):
-        return text.replace("\r\n", "\n")
-    return text
+    return text.replace("\r\n", "\n")
+
+
+def _assert_with_external_file(content: str, expected_path: Path) -> None:
+    """Assert content matches external file, handling line endings."""
+    expected = external_file(expected_path)
+    normalized_content = _normalize_line_endings(content)
+    if isinstance(expected, str):
+        assert normalized_content == _normalize_line_endings(expected)
+    else:
+        assert normalized_content == expected
 
 
 class AssertFileContent(Protocol):
@@ -81,7 +89,7 @@ def create_assert_file_content(
         content = output_file.read_text(encoding=encoding)
         if transform is not None:
             content = transform(content)
-        assert _normalize_line_endings(content) == _normalize_line_endings(external_file(expected_path))
+        _assert_with_external_file(content, expected_path)
 
     return _assert_file_content
 
@@ -100,7 +108,7 @@ def assert_output(
         assert_output(captured.out, EXPECTED_PATH / "output.py")
         assert_output(parser.parse(), EXPECTED_PATH / "output.py")
     """
-    assert _normalize_line_endings(output) == _normalize_line_endings(external_file(expected_path))
+    _assert_with_external_file(output, expected_path)
 
 
 def assert_directory_content(
@@ -124,7 +132,7 @@ def assert_directory_content(
         relative_path = expected_path.relative_to(expected_dir)
         output_path = output_dir / relative_path
         result = output_path.read_text(encoding=encoding)
-        assert _normalize_line_endings(result) == _normalize_line_endings(external_file(expected_path))
+        _assert_with_external_file(result, expected_path)
 
 
 def assert_parser_results(
@@ -146,7 +154,7 @@ def assert_parser_results(
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
         result_obj = results.pop(key)
-        assert _normalize_line_endings(result_obj.body) == _normalize_line_endings(external_file(expected_path))
+        _assert_with_external_file(result_obj.body, expected_path)
 
 
 def assert_parser_modules(
@@ -165,7 +173,7 @@ def assert_parser_modules(
     """
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
-        assert _normalize_line_endings(result.body) == _normalize_line_endings(external_file(expected_path))
+        _assert_with_external_file(result.body, expected_path)
 
 
 register_format_alias(".py", ".txt")
