@@ -2614,4 +2614,3 @@ def test_main_openapi_unquoted_null(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unquoted_null.py").read_text()
-
