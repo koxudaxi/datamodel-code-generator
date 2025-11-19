@@ -7,7 +7,6 @@ from unittest.mock import call
 import black
 import pytest
 from freezegun import freeze_time
-from inline_snapshot import external_file
 from packaging import version
 
 from datamodel_code_generator import (
@@ -171,11 +170,14 @@ def test_main_http_json(mocker: MockerFixture, tmp_path: Path) -> None:
         "json",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(
-        "#   filename:  https://example.com/pet.json",
-        "#   filename:  pet.json",
+    assert_file_content(
+        output_file,
+        "general.py",
+        transform=lambda s: s.replace(
+            "#   filename:  https://example.com/pet.json",
+            "#   filename:  pet.json",
+        ),
     )
-    assert actual == external_file(EXPECTED_JSON_PATH / "general.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/pet.json",

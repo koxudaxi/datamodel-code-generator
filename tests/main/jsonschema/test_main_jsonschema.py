@@ -13,7 +13,7 @@ import black
 import isort
 import pytest
 from freezegun import freeze_time
-from inline_snapshot import external_file
+from inline_snapshot import external_file  # noqa: F401
 from packaging import version
 
 from datamodel_code_generator import (
@@ -472,11 +472,11 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(
-        "filename:  root_id_self_ref.json",
-        "filename:  root_id.json",
+    assert_file_content(
+        output_file,
+        "root_id.py",
+        transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
     )
-    assert actual == external_file(EXPECTED_JSON_SCHEMA_PATH / "root_id.py")
     httpx_get_mock.assert_not_called()
 
 
@@ -499,11 +499,11 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(
-        "filename:  root_id_self_ref.json",
-        "filename:  root_id.json",
+    assert_file_content(
+        output_file,
+        "root_id.py",
+        transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
     )
-    assert actual == external_file(EXPECTED_JSON_SCHEMA_PATH / "root_id.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/person.json",
@@ -1161,8 +1161,11 @@ def test_main_generate_custom_class_name_generator(tmp_path: Path) -> None:
         custom_class_name_generator=custom_class_name_generator,
     )
 
-    actual = output_file.read_text(encoding="utf-8").replace("CustomPerson", "Person")
-    assert actual == external_file(EXPECTED_JSON_SCHEMA_PATH / "general.py")
+    assert_file_content(
+        output_file,
+        "general.py",
+        transform=lambda s: s.replace("CustomPerson", "Person"),
+    )
 
 
 @freeze_time("2019-07-26")
@@ -1216,11 +1219,14 @@ def test_main_http_jsonschema(mocker: MockerFixture, tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(
-        "#   filename:  https://example.com/external_files_in_directory/person.json",
-        "#   filename:  person.json",
+    assert_file_content(
+        output_file,
+        "external_files_in_directory.py",
+        transform=lambda s: s.replace(
+            "#   filename:  https://example.com/external_files_in_directory/person.json",
+            "#   filename:  person.json",
+        ),
     )
-    assert actual == external_file(EXPECTED_JSON_SCHEMA_PATH / "external_files_in_directory.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/external_files_in_directory/person.json",
@@ -1354,11 +1360,14 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
 
     return_code: Exit = main(args)
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(
-        "#   filename:  https://example.com/external_files_in_directory/person.json",
-        "#   filename:  person.json",
+    assert_file_content(
+        output_file,
+        "external_files_in_directory.py",
+        transform=lambda s: s.replace(
+            "#   filename:  https://example.com/external_files_in_directory/person.json",
+            "#   filename:  person.json",
+        ),
     )
-    assert actual == external_file(EXPECTED_JSON_SCHEMA_PATH / "external_files_in_directory.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/external_files_in_directory/person.json",
@@ -2687,8 +2696,11 @@ def test_main_dataclass_field_defs(tmp_path: Path) -> None:
         "dataclasses.dataclass",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace("filename:  user_defs.json", "filename:  user.json")
-    assert actual == external_file(EXPECTED_JSON_SCHEMA_PATH / "dataclass_field.py")
+    assert_file_content(
+        output_file,
+        "dataclass_field.py",
+        transform=lambda s: s.replace("filename:  user_defs.json", "filename:  user.json"),
+    )
 
 
 @freeze_time("2019-07-26")

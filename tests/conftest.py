@@ -9,6 +9,7 @@ from inline_snapshot import external_file, register_format_alias
 from datamodel_code_generator import MIN_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -18,6 +19,7 @@ class AssertFileContent(Protocol):
         output_file: Path,
         expected_name: str | Path | None = None,
         encoding: str = "utf-8",
+        transform: Callable[[str], str] | None = None,
     ) -> None: ...
 
 
@@ -49,6 +51,7 @@ def create_assert_file_content(
         output_file: Path,
         expected_name: str | Path | None = None,
         encoding: str = "utf-8",
+        transform: Callable[[str], str] | None = None,
     ) -> None:
         """Assert that file content matches expected external file."""
         if expected_name is None:
@@ -68,9 +71,29 @@ def create_assert_file_content(
                 del frame
 
         expected_path = base_path / expected_name
-        assert output_file.read_text(encoding=encoding) == external_file(expected_path)
+        content = output_file.read_text(encoding=encoding)
+        if transform is not None:
+            content = transform(content)
+        assert content == external_file(expected_path)
 
     return _assert_file_content
+
+
+def assert_output(
+    output: str,
+    expected_path: Path,
+) -> None:
+    """Assert that output string matches expected external file.
+
+    Args:
+        output: The output string to compare (e.g., captured.out, parser.parse()).
+        expected_path: Path to the expected file.
+
+    Usage:
+        assert_output(captured.out, EXPECTED_PATH / "output.py")
+        assert_output(parser.parse(), EXPECTED_PATH / "output.py")
+    """
+    assert output == external_file(expected_path)
 
 
 def assert_directory_content(
@@ -95,6 +118,46 @@ def assert_directory_content(
         output_path = output_dir / relative_path
         result = output_path.read_text(encoding=encoding)
         assert result == external_file(expected_path)
+
+
+def assert_parser_results(
+    results: dict,
+    expected_dir: Path,
+    pattern: str = "*.py",
+) -> None:
+    """Assert parser results match expected files.
+
+    Args:
+        results: Dictionary with string keys mapping to objects with .body attribute.
+        expected_dir: Directory containing expected files.
+        pattern: Glob pattern for files to compare (default: "*.py").
+
+    Usage:
+        results = {delimiter.join(p): r for p, r in parser.parse().items()}
+        assert_parser_results(results, EXPECTED_PATH / "parser_output")
+    """
+    for expected_path in expected_dir.rglob(pattern):
+        key = str(expected_path.relative_to(expected_dir))
+        assert results.pop(key).body == external_file(expected_path)
+
+
+def assert_parser_modules(
+    modules: dict,
+    expected_dir: Path,
+) -> None:
+    """Assert parser modules match expected files.
+
+    Args:
+        modules: Dictionary with tuple keys mapping to objects with .body attribute.
+        expected_dir: Directory containing expected files.
+
+    Usage:
+        modules = parser.parse()
+        assert_parser_modules(modules, EXPECTED_PATH / "parser_modular")
+    """
+    for paths, result in modules.items():
+        expected_path = expected_dir.joinpath(*paths)
+        assert result.body == external_file(expected_path)
 
 
 register_format_alias(".py", ".txt")

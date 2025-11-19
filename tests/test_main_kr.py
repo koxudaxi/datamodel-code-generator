@@ -7,11 +7,10 @@ from pathlib import Path
 import black
 import pytest
 from freezegun import freeze_time
-from inline_snapshot import external_file
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import assert_directory_content, create_assert_file_content
+from tests.conftest import assert_directory_content, assert_output, create_assert_file_content
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -111,7 +110,7 @@ def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch
         main(["--input", str(input_filename)])
 
     captured = capsys.readouterr()
-    assert captured.out == external_file(EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
+    assert_output(captured.out, EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
 
     assert captured.err == inferred_message.format("openapi") + "\n"
 
@@ -137,7 +136,7 @@ def test_main_custom_template_dir(
         ])
 
     captured = capsys.readouterr()
-    assert captured.out == external_file(EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py")
+    assert_output(captured.out, EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py")
     assert captured.err == inferred_message.format("openapi") + "\n"
 
 

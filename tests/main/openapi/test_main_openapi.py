@@ -15,10 +15,9 @@ import isort
 import pydantic
 import pytest
 from freezegun import freeze_time
-from inline_snapshot import external_file
 from packaging import version
 
-from tests.conftest import assert_directory_content, create_assert_file_content
+from tests.conftest import assert_directory_content, assert_output, create_assert_file_content
 
 with contextlib.suppress(ImportError):
     pass
@@ -229,7 +228,7 @@ def test_main_openapi_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, mon
         main(["--input", str(input_filename)])
 
     captured = capsys.readouterr()
-    assert captured.out == external_file(EXPECTED_OPENAPI_PATH / "no_file.py")
+    assert_output(captured.out, EXPECTED_OPENAPI_PATH / "no_file.py")
     assert captured.err == inferred_message.format("openapi") + "\n"
 
 
@@ -274,7 +273,7 @@ def test_main_openapi_extra_template_data_config(
         ])
 
     captured = capsys.readouterr()
-    assert captured.out == external_file(EXPECTED_OPENAPI_PATH / expected_output)
+    assert_output(captured.out, EXPECTED_OPENAPI_PATH / expected_output)
     assert captured.err == inferred_message.format("openapi") + "\n"
 
 
@@ -299,7 +298,7 @@ def test_main_custom_template_dir_old_style(
         ])
 
     captured = capsys.readouterr()
-    assert captured.out == external_file(EXPECTED_OPENAPI_PATH / "custom_template_dir.py")
+    assert_output(captured.out, EXPECTED_OPENAPI_PATH / "custom_template_dir.py")
     assert captured.err == inferred_message.format("openapi") + "\n"
 
 
@@ -324,7 +323,7 @@ def test_main_openapi_custom_template_dir(
         ])
 
     captured = capsys.readouterr()
-    assert captured.out == external_file(EXPECTED_OPENAPI_PATH / "custom_template_dir.py")
+    assert_output(captured.out, EXPECTED_OPENAPI_PATH / "custom_template_dir.py")
     assert captured.err == inferred_message.format("openapi") + "\n"
 
 
@@ -635,11 +634,11 @@ def test_enable_version_header(tmp_path: Path) -> None:
         "--enable-version-header",
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(
-        f"#   version:   {get_version()}",
-        "#   version:   0.0.0",
+    assert_file_content(
+        output_file,
+        "enable_version_header.py",
+        transform=lambda s: s.replace(f"#   version:   {get_version()}", "#   version:   0.0.0"),
     )
-    assert actual == external_file(EXPECTED_OPENAPI_PATH / "enable_version_header.py")
 
 
 @pytest.mark.parametrize(
@@ -1174,8 +1173,11 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, tmp_path:
         output_model,
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace("pattern.yaml", "pattern.json")
-    assert actual == external_file(EXPECTED_OPENAPI_PATH / "pattern" / expected_output)
+    assert_file_content(
+        output_file,
+        f"pattern/{expected_output}",
+        transform=lambda s: s.replace("pattern.yaml", "pattern.json"),
+    )
 
 
 @pytest.mark.parametrize(
@@ -1803,8 +1805,11 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
         if a
     ])
     assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").replace(input_file, "discriminator_in_array.yaml")
-    assert actual == external_file(EXPECTED_OPENAPI_PATH / "discriminator" / expected)
+    assert_file_content(
+        output_file,
+        f"discriminator/{expected}",
+        transform=lambda s: s.replace(input_file, "discriminator_in_array.yaml"),
+    )
 
 
 @pytest.mark.parametrize(
