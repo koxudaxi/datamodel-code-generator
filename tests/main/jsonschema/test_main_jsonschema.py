@@ -25,7 +25,7 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import create_assert_file_content
+from tests.conftest import assert_directory_content, create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
 
 if TYPE_CHECKING:
@@ -175,9 +175,7 @@ def test_main_jsonschema_nested_skip(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     nested_skip_dir = EXPECTED_JSON_SCHEMA_PATH / "nested_skip"
-    for path in nested_skip_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(nested_skip_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, nested_skip_dir)
 
 
 @pytest.mark.benchmark
@@ -226,9 +224,7 @@ def test_main_jsonschema_multiple_files(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "multiple_files"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @pytest.mark.benchmark
@@ -610,9 +606,7 @@ def test_main_jsonschema_ids(tmp_path: Path) -> None:
             "jsonschema",
         ])
     main_jsonschema_ids_dir = EXPECTED_JSON_SCHEMA_PATH / "ids"
-    for path in main_jsonschema_ids_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_jsonschema_ids_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_jsonschema_ids_dir)
 
 
 @pytest.mark.benchmark
@@ -660,10 +654,7 @@ def test_main_nested_directory(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_nested_directory = EXPECTED_JSON_SCHEMA_PATH / "nested_directory"
-
-    for path in main_nested_directory.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_nested_directory)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_nested_directory)
 
 
 @freeze_time("2019-07-26")
@@ -918,9 +909,7 @@ def test_main_jsonschema_multiple_files_json_pointer(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "multiple_files_json_pointer"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -1001,9 +990,7 @@ def test_main_jsonschema_multiple_files_ref(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "multiple_files_self_ref"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -1156,10 +1143,7 @@ def test_main_generate_from_directory(tmp_path: Path) -> None:
     )
 
     main_nested_directory = EXPECTED_JSON_SCHEMA_PATH / "nested_directory"
-
-    for path in main_nested_directory.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_nested_directory)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_nested_directory)
 
 
 @freeze_time("2019-07-26")
@@ -2090,9 +2074,7 @@ def test_main_jsonschema_modular_default_enum_member(
             "--set-default-enum-member",
         ])
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "modular_default_enum_member"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_modular_dir)
 
 
 @pytest.mark.skipif(
@@ -2113,10 +2095,7 @@ def test_main_use_union_operator(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_nested_directory = EXPECTED_JSON_SCHEMA_PATH / "use_union_operator"
-
-    for path in main_nested_directory.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_nested_directory)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_nested_directory)
 
 
 @freeze_time("2019-07-26")
@@ -2140,11 +2119,7 @@ def test_treat_dot_as_module(as_module: bool, tmp_path: Path) -> None:
     assert return_code == Exit.OK
     path_extension = "treat_dot_as_module" if as_module else "treat_dot_not_as_module"
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / path_extension
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        if as_module:
-            assert str(path.relative_to(main_modular_dir)).count(".") == 1
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2159,9 +2134,7 @@ def test_main_jsonschema_duplicate_name(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "duplicate_name"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2406,9 +2379,7 @@ def test_main_all_of_any_of(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     all_of_any_of_dir = EXPECTED_JSON_SCHEMA_PATH / "all_of_any_of"
-    for path in all_of_any_of_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(all_of_any_of_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, all_of_any_of_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2423,9 +2394,7 @@ def test_main_all_of_one_of(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     all_of_any_of_dir = EXPECTED_JSON_SCHEMA_PATH / "all_of_one_of"
-    for path in all_of_any_of_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(all_of_any_of_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, all_of_any_of_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2662,9 +2631,7 @@ def test_main_jsonschema_external_discriminator_folder(
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / expected_output
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path), path
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2682,9 +2649,7 @@ def test_main_duplicate_field_constraints(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "duplicate_field_constraints"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2707,9 +2672,7 @@ def test_main_duplicate_field_constraints_msgspec(min_version: str, tmp_path: Pa
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "duplicate_field_constraints_msgspec"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2807,9 +2770,7 @@ def test_main_root_one_of(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     expected_directory = EXPECTED_JSON_SCHEMA_PATH / "root_one_of"
-    for path in expected_directory.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(expected_directory)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, expected_directory)
 
 
 @freeze_time("2019-07-26")
@@ -2865,9 +2826,7 @@ def test_main_imports_correct(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "imports_correct"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @pytest.mark.parametrize(
@@ -2985,9 +2944,7 @@ def test_main_invalid_import_name(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "invalid_import_name"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @pytest.mark.parametrize(
@@ -3218,9 +3175,7 @@ def test_main_jsonschema_forwarding_reference_collapse_root(tmp_path: Path) -> N
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_JSON_SCHEMA_PATH / "forwarding_reference"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")

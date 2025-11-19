@@ -73,6 +73,30 @@ def create_assert_file_content(
     return _assert_file_content
 
 
+def assert_directory_content(
+    output_dir: Path,
+    expected_dir: Path,
+    pattern: str = "*.py",
+    encoding: str = "utf-8",
+) -> None:
+    """Assert all files in output_dir match expected files in expected_dir.
+
+    Args:
+        output_dir: Directory containing generated output files.
+        expected_dir: Directory containing expected files.
+        pattern: Glob pattern for files to compare (default: "*.py").
+        encoding: File encoding (default: "utf-8").
+
+    Usage:
+        assert_directory_content(tmp_path / "model", EXPECTED_PATH / "main_modular")
+    """
+    for expected_path in expected_dir.rglob(pattern):
+        relative_path = expected_path.relative_to(expected_dir)
+        output_path = output_dir / relative_path
+        result = output_path.read_text(encoding=encoding)
+        assert result == external_file(expected_path)
+
+
 register_format_alias(".py", ".txt")
 register_format_alias(".pyi", ".txt")
 

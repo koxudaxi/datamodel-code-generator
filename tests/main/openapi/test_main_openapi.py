@@ -18,7 +18,7 @@ from freezegun import freeze_time
 from inline_snapshot import external_file
 from packaging import version
 
-from tests.conftest import create_assert_file_content
+from tests.conftest import assert_directory_content, create_assert_file_content
 
 with contextlib.suppress(ImportError):
     pass
@@ -184,9 +184,7 @@ def test_main_modular(tmp_path: Path) -> None:
     with freeze_time(TIMESTAMP):
         main(["--input", str(input_filename), "--output", str(output_path)])
     main_modular_dir = EXPECTED_OPENAPI_PATH / "modular"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_modular_dir)
 
 
 def test_main_modular_reuse_model(tmp_path: Path) -> None:
@@ -203,9 +201,7 @@ def test_main_modular_reuse_model(tmp_path: Path) -> None:
             "--reuse-model",
         ])
     main_modular_dir = EXPECTED_OPENAPI_PATH / "modular_reuse_model"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_modular_dir)
 
 
 def test_main_modular_no_file() -> None:
@@ -853,9 +849,7 @@ def test_main_use_standard_collections(tmp_path: Path) -> None:
             "--use-standard-collections",
         ])
     main_use_standard_collections_dir = EXPECTED_OPENAPI_PATH / "use_standard_collections"
-    for path in main_use_standard_collections_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_use_standard_collections_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_use_standard_collections_dir)
 
 
 @pytest.mark.skipif(
@@ -875,9 +869,7 @@ def test_main_use_generic_container_types(tmp_path: Path) -> None:
             "--use-generic-container-types",
         ])
     main_use_generic_container_types_dir = EXPECTED_OPENAPI_PATH / "use_generic_container_types"
-    for path in main_use_generic_container_types_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_use_generic_container_types_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_use_generic_container_types_dir)
 
 
 @pytest.mark.skipif(
@@ -903,11 +895,7 @@ def test_main_use_generic_container_types_standard_collections(
     main_use_generic_container_types_standard_collections_dir = (
         EXPECTED_OPENAPI_PATH / "use_generic_container_types_standard_collections"
     )
-    for path in main_use_generic_container_types_standard_collections_dir.rglob("*.py"):
-        result = output_path.joinpath(
-            path.relative_to(main_use_generic_container_types_standard_collections_dir)
-        ).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_use_generic_container_types_standard_collections_dir)
 
 
 def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pytest.CaptureFixture) -> None:
@@ -1246,9 +1234,7 @@ def test_main_generate_custom_class_name_generator_modular(
             custom_class_name_generator=custom_class_name_generator,
         )
 
-        for path in main_modular_custom_class_name_dir.rglob("*.py"):
-            result = output_path.joinpath(path.relative_to(main_modular_custom_class_name_dir)).read_text()
-            assert result == external_file(path)
+        assert_directory_content(output_path, main_modular_custom_class_name_dir)
 
 
 @freeze_time("2019-07-26")
@@ -1540,9 +1526,7 @@ def test_external_relative_ref(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     main_modular_dir = EXPECTED_OPENAPI_PATH / "external_relative_ref"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @pytest.mark.benchmark
@@ -1861,9 +1845,7 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
     assert return_code == Exit.OK
 
     main_modular_dir = EXPECTED_OPENAPI_PATH / expected_output
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path), path
+    assert_directory_content(tmp_path, main_modular_dir)
 
 
 @freeze_time("2019-07-26")
@@ -2054,9 +2036,7 @@ def test_main_modular_typed_dict(tmp_path: Path) -> None:
             "3.11",
         ])
     main_modular_dir = EXPECTED_OPENAPI_PATH / "modular_typed_dict"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, main_modular_dir)
 
 
 @pytest.mark.skipif(

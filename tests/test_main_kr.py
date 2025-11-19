@@ -11,7 +11,7 @@ from inline_snapshot import external_file
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import create_assert_file_content
+from tests.conftest import assert_directory_content, create_assert_file_content
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -81,10 +81,7 @@ def test_main_modular(tmp_path: Path) -> None:
 
     with freeze_time(TIMESTAMP):
         main(["--input", str(input_filename), "--output", str(output_path)])
-    main_modular_dir = EXPECTED_MAIN_KR_PATH / "main_modular"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == external_file(path)
+    assert_directory_content(output_path, EXPECTED_MAIN_KR_PATH / "main_modular")
 
 
 def test_main_modular_no_file() -> None:

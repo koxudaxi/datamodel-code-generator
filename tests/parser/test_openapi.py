@@ -9,6 +9,7 @@ import black
 import pydantic
 import pytest
 from inline_snapshot import external_file
+
 from packaging import version
 
 from datamodel_code_generator import OpenAPIScope, PythonVersionMin
