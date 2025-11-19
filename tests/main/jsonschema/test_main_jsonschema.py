@@ -25,7 +25,7 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import assert_file_content
+from tests.conftest import create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
 
 if TYPE_CHECKING:
@@ -40,6 +40,8 @@ FixtureRequest = pytest.FixtureRequest
 
 JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_JSON_SCHEMA_PATH: Path = EXPECTED_MAIN_PATH / "jsonschema"
+
+assert_file_content = create_assert_file_content(EXPECTED_JSON_SCHEMA_PATH)
 
 
 @pytest.fixture(autouse=True)
@@ -77,7 +79,8 @@ def test_main_inheritance_forward_ref_keep_model_order(tmp_path: Path) -> None:
         "--keep-model-order",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / "inheritance_forward_ref_keep_model_order.py")
+    assert_file_content(output_file)
+
 
 @pytest.mark.skip(reason="pytest-xdist does not support the test")
 @freeze_time("2019-07-26")
@@ -99,7 +102,7 @@ def test_main_autodetect(tmp_path: Path) -> None:
         "auto",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="autodetect.py")
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -132,7 +135,7 @@ def test_main_jsonschema(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="general.py")
+    assert_file_content(output_file, "general.py")
 
 
 @pytest.mark.benchmark
@@ -152,9 +155,11 @@ def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert_file_content(output_init_file, EXPECTED_JSON_SCHEMA_PATH / "nested_deep" / "__init__.py")
+
     assert_file_content(output_nested_file, EXPECTED_JSON_SCHEMA_PATH / "nested_deep" / "nested" / "deep.py")
     assert_file_content(
-        output_empty_parent_nested_file, EXPECTED_JSON_SCHEMA_PATH / "nested_deep" / "empty_parent" / "nested" / "deep.py"
+        output_empty_parent_nested_file,
+        EXPECTED_JSON_SCHEMA_PATH / "nested_deep" / "empty_parent" / "nested" / "deep.py",
     )
 
 
@@ -188,7 +193,7 @@ def test_main_jsonschema_external_files(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="external_files.py")
+    assert_file_content(output_file, "external_files.py")
 
 
 @pytest.mark.benchmark
@@ -204,8 +209,8 @@ def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
-    assert_file_content(tmp_path / "ref0.py", EXPECTED_JSON_SCHEMA_PATH / "external_ref0.py")
-    assert_file_content(tmp_path / "other/ref2.py", EXPECTED_JSON_SCHEMA_PATH / "external_other_ref2.py")
+    assert_file_content(tmp_path / "ref0.py", "external_ref0.py")
+    assert_file_content((tmp_path / "other/ref2.py"), EXPECTED_JSON_SCHEMA_PATH / "external_other_ref2.py")
 
 
 @pytest.mark.benchmark
@@ -270,7 +275,7 @@ def test_main_null_and_array(output_model: str, expected_output: str, tmp_path: 
         output_model,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -286,7 +291,7 @@ def test_use_default_pydantic_v2_with_json_schema_const(tmp_path: Path) -> None:
         "--use-default",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "use_default_with_const.py")
 
 
 @freeze_time("2019-07-26")
@@ -328,7 +333,7 @@ def test_main_complicated_enum_default_member(
         if a
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @pytest.mark.benchmark
@@ -418,7 +423,7 @@ def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, tmp_path
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="root_id.py")
+    assert_file_content(output_file, "root_id.py")
     httpx_get_mock.assert_not_called()
 
 
@@ -442,7 +447,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="root_id.py")
+    assert_file_content(output_file, "root_id.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/person.json",
@@ -534,7 +539,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="root_id_absolute_url.py")
+    assert_file_content(output_file, "root_id_absolute_url.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/person.json",
@@ -558,7 +563,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(tmp_path: Path) -> Non
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="root_id_absolute_url.py")
+    assert_file_content(output_file, "root_id_absolute_url.py")
 
 
 @pytest.mark.benchmark
@@ -574,7 +579,7 @@ def test_main_jsonschema_id(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="id.py")
+    assert_file_content(output_file, "id.py")
 
 
 @freeze_time("2019-07-26")
@@ -588,7 +593,7 @@ def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: 
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="id_stdin.py")
+    assert_file_content(output_file, "id_stdin.py")
 
 
 def test_main_jsonschema_ids(tmp_path: Path) -> None:
@@ -623,7 +628,7 @@ def test_main_external_definitions(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="external_definitions.py")
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -752,7 +757,7 @@ def test_main_json_capitalise_enum_members_without_enum(tmp_path: Path) -> None:
         "--capitalise-enum-members",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="autodetect.py")
+    assert_file_content(output_file, "autodetect.py")
 
 
 @freeze_time("2019-07-26")
@@ -799,8 +804,8 @@ def test_main_require_referenced_field(output_model: str, expected_output: str, 
     ])
     assert return_code == Exit.OK
 
-    assert_file_content(tmp_path / "referenced.py", EXPECTED_JSON_SCHEMA_PATH / expected_output / "referenced.py")
-    assert_file_content(tmp_path / "required.py", EXPECTED_JSON_SCHEMA_PATH / expected_output / "required.py")
+    assert_file_content(tmp_path / "referenced.py", f"{expected_output}/referenced.py")
+    assert_file_content(tmp_path / "required.py", f"{expected_output}/required.py")
 
 
 @pytest.mark.parametrize(
@@ -832,8 +837,8 @@ def test_main_require_referenced_field_naive_datetime(output_model: str, expecte
     ])
     assert return_code == Exit.OK
 
-    assert_file_content(tmp_path / "referenced.py", EXPECTED_JSON_SCHEMA_PATH / expected_output / "referenced.py")
-    assert_file_content(tmp_path / "required.py", EXPECTED_JSON_SCHEMA_PATH / expected_output / "required.py")
+    assert_file_content(tmp_path / "referenced.py", f"{expected_output}/referenced.py")
+    assert_file_content(tmp_path / "required.py", f"{expected_output}/required.py")
 
 
 @pytest.mark.parametrize(
@@ -867,8 +872,8 @@ def test_main_require_referenced_field_datetime(output_model: str, expected_outp
     ])
     assert return_code == Exit.OK
 
-    assert_file_content(tmp_path / "referenced.py", EXPECTED_JSON_SCHEMA_PATH / expected_output / "referenced.py")
-    assert_file_content(tmp_path / "required.py", EXPECTED_JSON_SCHEMA_PATH / expected_output / "required.py")
+    assert_file_content(tmp_path / "referenced.py", f"{expected_output}/referenced.py")
+    assert_file_content(tmp_path / "required.py", f"{expected_output}/required.py")
 
 
 @freeze_time("2019-07-26")
@@ -1014,7 +1019,7 @@ def test_main_jsonschema_multiple_files_ref_test_json(tmp_path: Path) -> None:
             "jsonschema",
         ])
         assert return_code == Exit.OK
-        assert_file_content(output_file, expected_name="multiple_files_self_ref_single.py")
+        assert_file_content(output_file, "multiple_files_self_ref_single.py")
 
 
 @freeze_time("2019-07-26")
@@ -1103,7 +1108,7 @@ def test_main_jsonschema_pattern(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="pattern.py")
+    assert_file_content(output_file, "pattern.py")
 
 
 @freeze_time("2019-07-26")
@@ -1117,7 +1122,7 @@ def test_main_generate(tmp_path: Path) -> None:
         output=output_file,
     )
 
-    assert_file_content(output_file, expected_name="general.py")
+    assert_file_content(output_file, "general.py")
 
 
 @freeze_time("2019-07-26")
@@ -1192,7 +1197,7 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
         custom_class_name_generator=custom_class_name_generator,
     )
 
-    assert_file_content(output_file, expected_name="root_model_with_additional_properties_custom_class_name.py")
+    assert_file_content(output_file, "root_model_with_additional_properties_custom_class_name.py")
 
 
 @freeze_time("2019-07-26")
@@ -1507,7 +1512,7 @@ def test_main_strict_types_all_with_field_constraints(tmp_path: Path) -> None:
     ])
 
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "strict_types_all_field_constraints.py")
 
 
 @freeze_time("2019-07-26")
@@ -1522,7 +1527,7 @@ def test_main_jsonschema_special_enum(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="special_enum.py")
+    assert_file_content(output_file, "special_enum.py")
 
 
 @freeze_time("2019-07-26")
@@ -1539,7 +1544,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix(tmp_path: Path) 
         "special",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "special_enum_special_field_name_prefix.py")
 
 
 @freeze_time("2019-07-26")
@@ -1556,7 +1561,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private(tmp
         "",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "special_enum_special_field_name_prefix_keep_private.py")
 
 
 @freeze_time("2019-07-26")
@@ -1572,7 +1577,7 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix(tmp_path
         "--remove-special-field-name-prefix",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "special_model_remove_special_field_name_prefix.py")
 
 
 @freeze_time("2019-07-26")
@@ -1588,7 +1593,7 @@ def test_main_jsonschema_subclass_enum(tmp_path: Path) -> None:
         "--use-subclass-enum",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "subclass_enum.py")
 
 
 @freeze_time("2019-07-26")
@@ -1609,7 +1614,7 @@ def test_main_jsonschema_specialized_enums(tmp_path: Path) -> None:
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="enum_specialized.py")
+    assert_file_content(output_file, "enum_specialized.py")
 
 
 @freeze_time("2019-07-26")
@@ -1631,7 +1636,7 @@ def test_main_jsonschema_specialized_enums_disabled(tmp_path: Path) -> None:
         "--no-use-specialized-enum",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="enum_specialized_disable.py")
+    assert_file_content(output_file, "enum_specialized_disable.py")
 
 
 @freeze_time("2019-07-26")
@@ -1648,7 +1653,7 @@ def test_main_jsonschema_special_enum_empty_enum_field_name(tmp_path: Path) -> N
         "empty",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "special_enum_empty_enum_field_name.py")
 
 
 @pytest.mark.benchmark
@@ -1664,7 +1669,7 @@ def test_main_jsonschema_special_field_name(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "special_field_name.py")
 
 
 @freeze_time("2019-07-26")
@@ -1679,7 +1684,7 @@ def test_main_jsonschema_complex_one_of(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "complex_one_of.py")
 
 
 @pytest.mark.benchmark
@@ -1695,7 +1700,7 @@ def test_main_jsonschema_complex_any_of(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "complex_any_of.py")
 
 
 @freeze_time("2019-07-26")
@@ -1710,7 +1715,7 @@ def test_main_jsonschema_combine_one_of_object(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "combine_one_of_object.py")
 
 
 @pytest.mark.skipif(
@@ -1748,7 +1753,7 @@ def test_main_jsonschema_combine_any_of_object(
         + ([] if union_mode is None else ["--union-mode", union_mode])
     )
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @pytest.mark.benchmark
@@ -1765,7 +1770,7 @@ def test_main_jsonschema_field_include_all_keys(tmp_path: Path) -> None:
         "--field-include-all-keys",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="general.py")
+    assert_file_content(output_file, "general.py")
 
 
 @freeze_time("2019-07-26")
@@ -1800,7 +1805,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         "x-repr",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -1835,7 +1840,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(output_model: str, expect
         "x-repr",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -1865,7 +1870,7 @@ def test_main_jsonschema_field_extras(output_model: str, expected_output: str, t
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @pytest.mark.skipif(
@@ -1899,7 +1904,7 @@ def test_main_jsonschema_custom_type_path(output_model: str, expected_output: st
         output_model,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -1914,7 +1919,7 @@ def test_main_jsonschema_custom_base_path(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "custom_base_path.py")
 
 
 @freeze_time("2019-07-26")
@@ -1973,7 +1978,7 @@ def test_jsonschema_pattern_properties(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="pattern_properties.py")
+    assert_file_content(output_file, "pattern_properties.py")
 
 
 @freeze_time("2019-07-26")
@@ -1989,7 +1994,7 @@ def test_jsonschema_pattern_properties_field_constraints(tmp_path: Path) -> None
         "--field-constraints",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "pattern_properties_field_constraints.py")
 
 
 @freeze_time("2019-07-26")
@@ -2004,7 +2009,7 @@ def test_jsonschema_titles(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="titles.py")
+    assert_file_content(output_file, "titles.py")
 
 
 @freeze_time("2019-07-26")
@@ -2020,7 +2025,7 @@ def test_jsonschema_titles_use_title_as_name(tmp_path: Path) -> None:
         "--use-title-as-name",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "titles_use_title_as_name.py")
 
 
 @freeze_time("2019-07-26")
@@ -2036,7 +2041,7 @@ def test_jsonschema_without_titles_use_title_as_name(tmp_path: Path) -> None:
         "--use-title-as-name",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "without_titles_use_title_as_name.py")
 
 
 @freeze_time("2019-07-26")
@@ -2051,7 +2056,7 @@ def test_main_jsonschema_has_default_value(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "has_default_value.py")
 
 
 @freeze_time("2019-07-26")
@@ -2066,7 +2071,7 @@ def test_main_jsonschema_boolean_property(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "boolean_property.py")
 
 
 @freeze_time("2019-07-26")
@@ -2171,7 +2176,7 @@ def test_main_jsonschema_items_boolean(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "items_boolean.py")
 
 
 @freeze_time("2019-07-26")
@@ -2186,7 +2191,7 @@ def test_main_jsonschema_array_in_additional_properites(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="array_in_additional_properties.py")
+    assert_file_content(output_file, "array_in_additional_properties.py")
 
 
 @freeze_time("2019-07-26")
@@ -2201,7 +2206,7 @@ def test_main_jsonschema_object_with_only_additional_properties(tmp_path: Path) 
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="string_dict.py")
+    assert_file_content(output_file, "string_dict.py")
 
 
 @freeze_time("2019-07-26")
@@ -2216,7 +2221,7 @@ def test_main_jsonschema_nullable_object(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "nullable_object.py")
 
 
 @freeze_time("2019-07-26")
@@ -2231,7 +2236,7 @@ def test_main_jsonschema_object_has_one_of(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "object_has_one_of.py")
 
 
 @freeze_time("2019-07-26")
@@ -2246,7 +2251,7 @@ def test_main_jsonschema_json_pointer_array(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "json_pointer_array.py")
 
 
 @pytest.mark.filterwarnings("error")
@@ -2298,7 +2303,7 @@ def test_main_jsonschema_pattern_properties_by_reference(tmp_path: Path) -> None
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "pattern_properties_by_reference.py")
 
 
 @freeze_time("2019-07-26")
@@ -2344,7 +2349,7 @@ def test_main_jsonschema_enum_root_literal(tmp_path: Path) -> None:
         "--collapse-root-models",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="root_in_enum.py")
+    assert_file_content(output_file, "root_in_enum.py")
 
 
 @freeze_time("2019-07-26")
@@ -2518,7 +2523,7 @@ def test_main_typed_dict_additional_properties(tmp_path: Path) -> None:
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="typed_dict_with_only_additional_properties.py")
+    assert_file_content(output_file, "typed_dict_with_only_additional_properties.py")
 
 
 @freeze_time("2019-07-26")
@@ -2572,7 +2577,7 @@ def test_main_jsonschema_discriminator_literals(
         min_version,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -2593,7 +2598,7 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
         min_version,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "discriminator_no_mapping.py")
 
 
 @pytest.mark.parametrize(
@@ -2625,9 +2630,7 @@ def test_main_jsonschema_external_discriminator(
         min_version,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output), (
-        EXPECTED_JSON_SCHEMA_PATH / expected_output
-    )
+    assert_file_content(output_file, expected_output), (EXPECTED_JSON_SCHEMA_PATH / expected_output)
 
 
 @pytest.mark.parametrize(
@@ -2737,7 +2740,7 @@ def test_main_dataclass_default(tmp_path: Path) -> None:
         "dataclasses.dataclass",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, expected_name="dataclass_field_default.py")
+    assert_file_content(output_file, "dataclass_field_default.py")
 
 
 @freeze_time("2019-07-26")
@@ -2847,7 +2850,7 @@ def test_main_jsonschema_with_custom_formatters(tmp_path: Path) -> None:
         str(formatter_config_path),
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "custom_formatters.py")
 
 
 @freeze_time("2019-07-26")
@@ -2894,7 +2897,7 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str, min_v
         min_version,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -2918,7 +2921,7 @@ def test_main_jsonschema_keyword_only_msgspec(min_version: str, tmp_path: Path) 
         min_version,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "discriminator_literals_msgspec_keyword_only.py")
 
 
 @freeze_time("2019-07-26")
@@ -2944,7 +2947,7 @@ def test_main_jsonschema_keyword_only_msgspec_with_extra_data(min_version: str, 
         str(JSON_SCHEMA_DATA_PATH / "extra_data_msgspec.json"),
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "discriminator_literals_msgspec_keyword_only_omit_defaults.py")
 
 
 @freeze_time("2019-07-26")
@@ -2967,7 +2970,7 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
         use_annotated=True,
         field_constraints=True,
     )
-    assert_file_content(output_file, expected_name="discriminator_literals_msgspec_keyword_only_omit_defaults.py")
+    assert_file_content(output_file, "discriminator_literals_msgspec_keyword_only_omit_defaults.py")
 
 
 @freeze_time("2019-07-26")
@@ -3014,7 +3017,7 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
         output_model,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @pytest.mark.benchmark
@@ -3030,7 +3033,7 @@ def test_main_jsonschema_required_and_any_of_required(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "required_and_any_of_required.py")
 
 
 @freeze_time("2019-07-26")
@@ -3178,7 +3181,7 @@ def test_main_extra_fields(extra_fields: str, output_model: str, expected_output
         output_model,
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file, EXPECTED_JSON_SCHEMA_PATH / expected_output)
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -3196,7 +3199,7 @@ def test_main_jsonschema_same_name_objects(tmp_path: Path) -> None:
         "jsonschema",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "same_name_objects.py")
 
 
 @freeze_time("2019-07-26")
@@ -3232,7 +3235,7 @@ def test_main_jsonschema_type_alias(tmp_path: Path) -> None:
         "--use-type-alias",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "type_alias.py")
 
 
 @freeze_time("2019-07-26")
@@ -3255,7 +3258,7 @@ def test_main_jsonschema_type_alias_py312(tmp_path: Path) -> None:
         "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "type_alias_py312.py")
 
 
 @freeze_time("2019-07-26")
@@ -3271,7 +3274,7 @@ def test_main_jsonschema_type_alias_with_field_description(tmp_path: Path) -> No
         "--use-field-description",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "type_alias_with_field_description.py")
 
 
 @freeze_time("2019-07-26")
@@ -3295,4 +3298,4 @@ def test_main_jsonschema_type_alias_with_field_description_py312(tmp_path: Path)
         "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
-    assert_file_content(output_file)
+    assert_file_content(output_file, "type_alias_with_field_description_py312.py")

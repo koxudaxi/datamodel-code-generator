@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 from freezegun import freeze_time
-from inline_snapshot import external_file
 
 from datamodel_code_generator import (
     DataModelType,
@@ -16,6 +15,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.__main__ import Config, Exit, main
 from datamodel_code_generator.format import PythonVersion
+from tests.conftest import create_assert_file_content
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
 PYTHON_DATA_PATH: Path = DATA_PATH / "python"
 EXPECTED_MAIN_PATH = DATA_PATH / "expected" / "main"
+
+assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
 
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
 
@@ -97,9 +99,7 @@ def test_space_and_special_characters_dict(tmp_path: Path) -> None:
         "dict",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == external_file(
-        EXPECTED_MAIN_PATH / "space_and_special_characters_dict.py"
-    )
+    assert_file_content(output_file)
 
 
 @freeze_time("2024-12-14")
@@ -112,7 +112,7 @@ def test_direct_input_dict(tmp_path: Path) -> None:
         output_model_type=DataModelType.PydanticV2BaseModel,
         snake_case_field=True,
     )
-    assert output_file.read_text() == external_file(EXPECTED_MAIN_PATH / "direct_input_dict.py")
+    assert_file_content(output_file)
 
 
 @freeze_time(TIMESTAMP)
@@ -126,7 +126,7 @@ def test_frozen_dataclasses(tmp_path: Path) -> None:
         output_model_type=DataModelType.DataclassesDataclass,
         frozen_dataclasses=True,
     )
-    assert output_file.read_text() == external_file(EXPECTED_MAIN_PATH / "frozen_dataclasses.py")
+    assert_file_content(output_file)
 
 
 @freeze_time(TIMESTAMP)
@@ -143,7 +143,7 @@ def test_frozen_dataclasses_with_keyword_only(tmp_path: Path) -> None:
         keyword_only=True,
         target_python_version=PythonVersion.PY_310,
     )
-    assert output_file.read_text() == external_file(EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py")
+    assert_file_content(output_file, "frozen_dataclasses_keyword_only.py")
 
 
 @freeze_time(TIMESTAMP)
@@ -162,7 +162,7 @@ def test_frozen_dataclasses_command_line(tmp_path: Path) -> None:
         "--frozen-dataclasses",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == external_file(EXPECTED_MAIN_PATH / "frozen_dataclasses.py")
+    assert_file_content(output_file, "frozen_dataclasses.py")
 
 
 @freeze_time(TIMESTAMP)
@@ -184,9 +184,7 @@ def test_frozen_dataclasses_with_keyword_only_command_line(tmp_path: Path) -> No
         "3.10",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == external_file(
-        EXPECTED_MAIN_PATH / "frozen_dataclasses_keyword_only.py"
-    )
+    assert_file_content(output_file, "frozen_dataclasses_keyword_only.py")
 
 
 def test_filename_with_newline_injection(tmp_path: Path) -> None:
