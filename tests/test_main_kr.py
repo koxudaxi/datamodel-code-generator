@@ -253,11 +253,8 @@ strict-types = ["str"]
         ])
 
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        # We expect the output to use pydantic.StrictStr in place of str
-        == external_file(EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py")
-    )
+    # We expect the output to use pydantic.StrictStr in place of str
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py")
 
 
 @freeze_time("2019-07-26")
@@ -285,9 +282,7 @@ def test_main_use_field_description(tmp_path: Path) -> None:
         "--use-field-description",
     ])
     assert return_code == Exit.OK
-    generated = output_file.read_text(encoding="utf-8")
-    expected = external_file(EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py")
-    assert generated == expected
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py")
 
 
 def test_capitalise_enum_members(tmp_path: Path) -> None:
