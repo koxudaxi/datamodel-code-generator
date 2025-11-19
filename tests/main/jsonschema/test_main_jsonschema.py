@@ -13,7 +13,6 @@ import black
 import isort
 import pytest
 from freezegun import freeze_time
-from inline_snapshot import external_file  # noqa: F401
 from packaging import version
 
 from datamodel_code_generator import (
@@ -1127,8 +1126,7 @@ def test_main_generate_non_pydantic_output(tmp_path: Path) -> None:
         output_model_type=DataModelType.DataclassesDataclass,
     )
 
-    file = EXPECTED_JSON_SCHEMA_PATH / "generate_non_pydantic_output.py"
-    assert output_file.read_text(encoding="utf-8") == file.read_text()
+    assert_file_content(output_file, "generate_non_pydantic_output.py")
 
 
 @freeze_time("2019-07-26")

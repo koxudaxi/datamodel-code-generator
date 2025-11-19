@@ -2613,5 +2613,4 @@ def test_main_openapi_unquoted_null(tmp_path: Path) -> None:
         "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unquoted_null.py").read_text()
-
+    assert_file_content(output_file, "unquoted_null.py")

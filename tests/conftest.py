@@ -162,12 +162,14 @@ def assert_parser_modules(
 
 register_format_alias(".py", ".txt")
 register_format_alias(".pyi", ".txt")
+register_format_alias(".snapshot", ".txt")
 
 
 @pytest.fixture(autouse=True)
 def _inline_snapshot_file_formats() -> None:
     register_format_alias(".py", ".txt")
     register_format_alias(".pyi", ".txt")
+    register_format_alias(".snapshot", ".txt")
 
 
 @pytest.fixture(scope="session")
