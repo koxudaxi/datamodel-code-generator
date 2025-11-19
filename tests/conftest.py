@@ -138,7 +138,8 @@ def assert_parser_results(
     """
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
-        assert results.pop(key).body == external_file(expected_path)
+        result_obj = results.pop(key)
+        assert result_obj.body == external_file(expected_path)
 
 
 def assert_parser_modules(
