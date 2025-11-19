@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import sys
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
@@ -13,12 +12,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-IS_WINDOWS = sys.platform == "win32"
-
 
 def _normalize_line_endings(text: str | object) -> str | object:
-    """Normalize line endings to LF on Windows."""
-    if IS_WINDOWS and isinstance(text, str):
+    """Normalize line endings to LF for cross-platform comparison."""
+    if isinstance(text, str):
         return text.replace("\r\n", "\n")
     return text
 
