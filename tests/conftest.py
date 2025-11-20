@@ -20,16 +20,12 @@ def _normalize_line_endings(text: str) -> str:
 
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
-    if expected_path.exists():
-        expected_content = expected_path.read_text(encoding="utf-8")
-        if _normalize_line_endings(content) == _normalize_line_endings(expected_content):
-            return
     expected = external_file(expected_path)
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):
         assert normalized_content == _normalize_line_endings(expected)
     else:
-        assert normalized_content == expected
+        assert expected == normalized_content
 
 
 class AssertFileContent(Protocol):
