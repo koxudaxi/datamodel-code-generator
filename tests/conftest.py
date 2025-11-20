@@ -25,6 +25,9 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     if isinstance(expected, str):
         assert normalized_content == _normalize_line_endings(expected)
     else:
+        expected_value = expected._load_value()
+        if _normalize_line_endings(expected_value) == normalized_content:
+            return
         assert expected == normalized_content
 
 
