@@ -61,7 +61,7 @@ optional-dependencies.ruff = [
   "ruff>=0.9.10",
 ]
 optional-dependencies.validation = [
-  "openapi-spec-validator>=0.2.8,<0.7",
+  "openapi-spec-validator>=0.2.8,<0.8",
   "prance>=0.18.2",
 ]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
@@ -79,6 +79,7 @@ dev = [
 ]
 test = [
   "freezegun",
+  "inline-snapshot==0.31.1",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -107,7 +108,7 @@ black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
 pydantic1 = [ "pydantic<2" ]
 fix = [ "pre-commit-uv>=4.1.4" ]
-pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
+pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.9.10" ]
 coverage = [
   "covdefaults>=2.3",
   "coverage[toml]>=7.6.1",
@@ -133,6 +134,7 @@ conflicts = [
   [
     { group = "pydantic1" },
     { group = "pkg-meta" },
+    { group = "dev" },
   ],
 ]
 
@@ -195,6 +197,7 @@ filterwarnings = [
   "ignore:^.*black doesn't support `experimental-string-processing` option for wrapping string literal in .*",
   "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
+  "ignore:^.*'typing.ByteString' is deprecated and slated for removal in Python 3.17.*",
 ]
 norecursedirs = "tests/data/*"
 verbosity_assertions = 2

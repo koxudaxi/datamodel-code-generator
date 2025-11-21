@@ -9,7 +9,7 @@ from itertools import zip_longest
 from keyword import iskeyword
 from pathlib import Path, PurePath
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, NamedTuple, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, NamedTuple, Optional, TypeVar, cast
 from urllib.parse import ParseResult, urlparse
 
 import inflect
@@ -672,7 +672,7 @@ class ModelResolver:  # noqa: PLR0904
 
 @lru_cache
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
-    singular_name = inflect_engine.singular_noun(name)
+    singular_name = inflect_engine.singular_noun(cast("inflect.Word", name))
     if singular_name is False:
         singular_name = f"{name}{suffix}"
     return singular_name  # pyright: ignore[reportReturnType]

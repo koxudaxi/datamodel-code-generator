@@ -7,12 +7,15 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 YAML_DATA_PATH: Path = DATA_PATH / "yaml"
+
+assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
 
 
 @pytest.fixture(autouse=True)
@@ -35,4 +38,4 @@ def test_main_yaml(tmp_path: Path) -> None:
         "yaml",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_PATH / "yaml.py").read_text()
+    assert_file_content(output_file)

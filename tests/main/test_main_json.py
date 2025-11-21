@@ -13,6 +13,7 @@ from datamodel_code_generator import (
     chdir,
 )
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
 if TYPE_CHECKING:
@@ -25,6 +26,8 @@ FixtureRequest = pytest.FixtureRequest
 
 JSON_DATA_PATH: Path = DATA_PATH / "json"
 EXPECTED_JSON_PATH: Path = EXPECTED_MAIN_PATH / "json"
+
+assert_file_content = create_assert_file_content(EXPECTED_JSON_PATH)
 
 
 @pytest.fixture(autouse=True)
@@ -46,7 +49,7 @@ def test_main_json(tmp_path: Path) -> None:
         "json",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "general.py").read_text()
+    assert_file_content(output_file, "general.py")
 
 
 @freeze_time("2019-07-26")
@@ -61,9 +64,7 @@ def test_space_and_special_characters_json(tmp_path: Path) -> None:
         "json",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "space_and_special_characters.py").read_text()
-    )
+    assert_file_content(output_file, "space_and_special_characters.py")
 
 
 @freeze_time("2019-07-26")
@@ -92,7 +93,7 @@ def test_main_json_array_include_null(tmp_path: Path) -> None:
         "json",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "json_array_include_null.py").read_text()
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -108,7 +109,7 @@ def test_main_json_reuse_model(tmp_path: Path) -> None:
         "--reuse-model",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "json_reuse_model.py").read_text()
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -126,7 +127,7 @@ def test_main_json_reuse_model_pydantic2(tmp_path: Path) -> None:
         "--reuse-model",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "json_reuse_model_pydantic2.py").read_text()
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -143,10 +144,7 @@ def test_simple_json_snake_case_field(tmp_path: Path) -> None:
             "--snake-case-field",
         ])
         assert return_code == Exit.OK
-        assert (
-            output_file.read_text(encoding="utf-8")
-            == (EXPECTED_JSON_PATH / "simple_json_snake_case_field.py").read_text()
-        )
+        assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -172,9 +170,13 @@ def test_main_http_json(mocker: MockerFixture, tmp_path: Path) -> None:
         "json",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "general.py").read_text().replace(
-        "#   filename:  pet.json",
-        "#   filename:  https://example.com/pet.json",
+    assert_file_content(
+        output_file,
+        "general.py",
+        transform=lambda s: s.replace(
+            "#   filename:  https://example.com/pet.json",
+            "#   filename:  pet.json",
+        ),
     )
     httpx_get_mock.assert_has_calls([
         call(
@@ -205,10 +207,7 @@ def test_main_typed_dict_space_and_special_characters(tmp_path: Path) -> None:
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_JSON_PATH / "typed_dict_space_and_special_characters.py").read_text()
-    )
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -224,4 +223,4 @@ def test_main_json_snake_case_field(tmp_path: Path) -> None:
         "--snake-case-field",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_PATH / "json_snake_case_field.py").read_text()
+    assert_file_content(output_file)

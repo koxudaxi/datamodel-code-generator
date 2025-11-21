@@ -7,6 +7,7 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
 if TYPE_CHECKING:
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
 
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
+
+assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
 
 @pytest.fixture(autouse=True)
@@ -38,7 +41,7 @@ def test_annotated(tmp_path: Path) -> None:
         "--use-annotated",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated.py").read_text()
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -57,10 +60,7 @@ def test_annotated_use_standard_collections(tmp_path: Path) -> None:
         "--use-standard-collections",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections.py").read_text()
-    )
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -80,10 +80,7 @@ def test_annotated_use_standard_collections_use_union_operator(tmp_path: Path) -
         "--use-union-operator",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_GRAPHQL_PATH / "annotated_use_standard_collections_use_union_operator.py").read_text()
-    )
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -102,10 +99,7 @@ def test_annotated_use_union_operator(tmp_path: Path) -> None:
         "--use-union-operator",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_GRAPHQL_PATH / "annotated_use_union_operator.py").read_text()
-    )
+    assert_file_content(output_file)
 
 
 @freeze_time("2019-07-26")
@@ -125,4 +119,4 @@ def test_annotated_field_aliases(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "field-aliases.json"),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "annotated_field_aliases.py").read_text()
+    assert_file_content(output_file)

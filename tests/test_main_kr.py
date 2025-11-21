@@ -10,10 +10,13 @@ from freezegun import freeze_time
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import assert_directory_content, assert_output, create_assert_file_content
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
+
+assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
 
 
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
@@ -36,7 +39,7 @@ def test_main(tmp_path: Path) -> None:
         str(output_file),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main" / "output.py").read_text()
+    assert_file_content(output_file, "main/output.py")
 
 
 @freeze_time("2019-07-26")
@@ -52,9 +55,7 @@ def test_main_base_class(tmp_path: Path) -> None:
         "custom_module.Base",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py").read_text()
-    )
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py")
 
 
 @freeze_time("2019-07-26")
@@ -69,10 +70,7 @@ def test_target_python_version(tmp_path: Path) -> None:
         f"3.{MIN_VERSION}",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py").read_text()
-    )
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py")
 
 
 def test_main_modular(tmp_path: Path) -> None:
@@ -82,10 +80,7 @@ def test_main_modular(tmp_path: Path) -> None:
 
     with freeze_time(TIMESTAMP):
         main(["--input", str(input_filename), "--output", str(output_path)])
-    main_modular_dir = EXPECTED_MAIN_KR_PATH / "main_modular"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == path.read_text()
+    assert_directory_content(output_path, EXPECTED_MAIN_KR_PATH / "main_modular")
 
 
 def test_main_modular_no_file() -> None:
@@ -115,7 +110,7 @@ def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch
         main(["--input", str(input_filename)])
 
     captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py").read_text()
+    assert_output(captured.out, EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
 
     assert captured.err == inferred_message.format("openapi") + "\n"
 
@@ -141,7 +136,7 @@ def test_main_custom_template_dir(
         ])
 
     captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py").read_text()
+    assert_output(captured.out, EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py")
     assert captured.err == inferred_message.format("openapi") + "\n"
 
 
@@ -161,7 +156,7 @@ def test_pyproject(tmp_path: Path) -> None:
         str(output_file),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.py").read_text()
+    assert_file_content(output_file, "pyproject/output.py")
 
 
 @pytest.mark.parametrize("language", ["UK", "US"])
@@ -254,11 +249,8 @@ strict-types = ["str"]
         ])
 
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        # We expect the output to use pydantic.StrictStr in place of str
-        == (EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py").read_text()
-    )
+    # We expect the output to use pydantic.StrictStr in place of str
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py")
 
 
 @freeze_time("2019-07-26")
@@ -272,10 +264,7 @@ def test_main_use_schema_description(tmp_path: Path) -> None:
         "--use-schema-description",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py").read_text()
-    )
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py")
 
 
 @freeze_time("2022-11-11")
@@ -289,9 +278,7 @@ def test_main_use_field_description(tmp_path: Path) -> None:
         "--use-field-description",
     ])
     assert return_code == Exit.OK
-    generated = output_file.read_text(encoding="utf-8")
-    expected = (EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py").read_text()
-    assert generated == expected
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py")
 
 
 def test_capitalise_enum_members(tmp_path: Path) -> None:

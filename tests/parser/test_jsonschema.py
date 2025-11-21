@@ -18,6 +18,7 @@ from datamodel_code_generator.parser.jsonschema import (
     get_model_by_path,
 )
 from datamodel_code_generator.types import DataType
+from tests.conftest import assert_output
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -347,7 +348,7 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         data_model_field_type=DataModelFieldBase,
     )
     parser.parse()
-    assert dump_templates(list(parser.results)) == (DATA_PATH / "nested_array.json.snapshot").read_text()
+    assert_output(dump_templates(list(parser.results)), DATA_PATH / "nested_array.json.snapshot")
 
 
 @pytest.mark.parametrize(
