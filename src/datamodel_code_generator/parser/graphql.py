@@ -45,9 +45,9 @@ if TYPE_CHECKING:
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
 try:  # graphql-core < 3.2.7
-    graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind
+    graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # pyright: ignore[reportAttributeAccessIssue]
 except AttributeError:  # pragma: no cover - executed on newer graphql-core
-    graphql_resolver_kind = graphql.type.introspection.TypeFields.kind
+    graphql_resolver_kind = graphql.type.introspection.TypeFields.kind  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
