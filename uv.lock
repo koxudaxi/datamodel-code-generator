@@ -540,9 +540,24 @@ wheels = [
 name = "cfgv"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.10'",
+]
 sdist = { url = "https://files.pythonhosted.org/packages/11/74/539e56497d9bd1d484fd863dd69cbbfa653cd2aa27abfe35653494d85e94/cfgv-3.4.0.tar.gz", hash = "sha256:e52591d4c5f5dead8e0f673fb16db7949d2cfb3f7da4582893288f0ded8fe560", size = 7114, upload-time = "2023-08-12T20:38:17.776Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/55/51844dd50c4fc7a33b653bfaba4c2456f06955289ca770a5dbd5fd267374/cfgv-3.4.0-py2.py3-none-any.whl", hash = "sha256:b7265b1f29fd3316bfcd2b330d63d024f2bfd8bcb8b0272f8e19a504856c48f9", size = 7249, upload-time = "2023-08-12T20:38:16.269Z" },
+]
+
+[[package]]
+name = "cfgv"
+version = "3.5.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.10'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/b5/721b8799b04bf9afe054a3899c6cf4e880fcf8563cc71c15610242490a0c/cfgv-3.5.0.tar.gz", hash = "sha256:d5b1034354820651caa73ede66a6294d6e95c1b00acc5e9b098e917404669132", size = 7334, upload-time = "2025-11-19T20:55:51.612Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/db/3c/33bac158f8ab7f89b2e59426d5fe2e4f63f7ed25df84c036890172b412b5/cfgv-3.5.0-py2.py3-none-any.whl", hash = "sha256:a8dc6b26ad22ff227d2634a65cb388215ce6cc96bbcc5cfde7641ae87e8dacc0", size = 7445, upload-time = "2025-11-19T20:55:50.744Z" },
 ]
 
 [[package]]
@@ -1195,8 +1210,8 @@ requires-dist = [
     { name = "argcomplete", specifier = ">=2.10.1,<4" },
     { name = "black", specifier = ">=19.10b0" },
     { name = "genson", specifier = ">=1.2.1,<2" },
-    { name = "graphql-core", marker = "extra == 'all'", specifier = "==3.2.6" },
-    { name = "graphql-core", marker = "extra == 'graphql'", specifier = "==3.2.6" },
+    { name = "graphql-core", marker = "extra == 'all'", specifier = ">=3.2.3" },
+    { name = "graphql-core", marker = "extra == 'graphql'", specifier = ">=3.2.3" },
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.24.1" },
     { name = "httpx", marker = "extra == 'http'", specifier = ">=0.24.1" },
     { name = "inflect", specifier = ">=4.1,<8" },
@@ -1205,8 +1220,8 @@ requires-dist = [
     { name = "openapi-spec-validator", marker = "extra == 'all'", specifier = ">=0.2.8,<0.8" },
     { name = "openapi-spec-validator", marker = "extra == 'validation'", specifier = ">=0.2.8,<0.8" },
     { name = "packaging" },
-    { name = "prance", marker = "extra == 'all'", specifier = ">=0.23.0" },
-    { name = "prance", marker = "extra == 'validation'", specifier = ">=0.23.0" },
+    { name = "prance", marker = "extra == 'all'", specifier = ">=0.18.2" },
+    { name = "prance", marker = "extra == 'validation'", specifier = ">=0.18.2" },
     { name = "pydantic", specifier = ">=1.5" },
     { name = "pysnooper", marker = "extra == 'all'", specifier = ">=0.4.1,<2" },
     { name = "pysnooper", marker = "extra == 'debug'", specifier = ">=0.4.1,<2" },
@@ -1251,7 +1266,7 @@ dev = [
     { name = "types-pyyaml" },
     { name = "types-setuptools", specifier = ">=67.6.0.5,<70" },
     { name = "types-toml" },
-    { name = "uv", specifier = ">=0.5.22" },
+    { name = "uv", specifier = ">=0.9.10" },
 ]
 docs = [
     { name = "mkdocs", specifier = ">=1.6" },
@@ -1261,7 +1276,7 @@ fix = [{ name = "pre-commit-uv", specifier = ">=4.1.4" }]
 pkg-meta = [
     { name = "check-wheel-contents", specifier = ">=0.6.1" },
     { name = "twine", specifier = ">=6.1" },
-    { name = "uv", specifier = ">=0.5.22" },
+    { name = "uv", specifier = ">=0.9.10" },
 ]
 pydantic1 = [{ name = "pydantic", specifier = "<2" }]
 test = [
@@ -1561,14 +1576,14 @@ wheels = [
 
 [[package]]
 name = "graphql-core"
-version = "3.2.6"
+version = "3.2.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/16/7574029da84834349b60ed71614d66ca3afe46e9bf9c7b9562102acb7d4f/graphql_core-3.2.6.tar.gz", hash = "sha256:c08eec22f9e40f0bd61d805907e3b3b1b9a320bc606e23dc145eebca07c8fbab", size = 505353, upload-time = "2025-01-26T16:36:27.374Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/9b/037a640a2983b09aed4a823f9cf1729e6d780b0671f854efa4727a7affbe/graphql_core-3.2.7.tar.gz", hash = "sha256:27b6904bdd3b43f2a0556dad5d579bdfdeab1f38e8e8788e555bdcb586a6f62c", size = 513484, upload-time = "2025-11-01T22:30:40.436Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/4f/7297663840621022bc73c22d7d9d80dbc78b4db6297f764b545cd5dd462d/graphql_core-3.2.6-py3-none-any.whl", hash = "sha256:78b016718c161a6fb20a7d97bbf107f331cd1afe53e45566c59f776ed7f0b45f", size = 203416, upload-time = "2025-01-26T16:36:24.868Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/14/933037032608787fb92e365883ad6a741c235e0ff992865ec5d904a38f1e/graphql_core-3.2.7-py3-none-any.whl", hash = "sha256:17fc8f3ca4a42913d8e24d9ac9f08deddf0a0b2483076575757f6c412ead2ec0", size = 207262, upload-time = "2025-11-01T22:30:38.912Z" },
 ]
 
 [[package]]
@@ -1643,7 +1658,7 @@ name = "importlib-metadata"
 version = "8.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp", marker = "python_full_version < '3.10' or extra == 'group-24-datamodel-code-generator-dev' or extra == 'group-24-datamodel-code-generator-pkg-meta' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24')" },
+    { name = "zipp" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [
@@ -1790,8 +1805,8 @@ wheels = [
 ]
 
 [[package]]
-name = "jsonschema-spec"
-version = "0.2.4"
+name = "jsonschema-path"
+version = "0.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pathable" },
@@ -1799,21 +1814,21 @@ dependencies = [
     { name = "referencing" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/bf/5e9a059f611e8950eec986385892f9d596e4936fa58a37bf295789197f77/jsonschema_spec-0.2.4.tar.gz", hash = "sha256:873e396ad1ba6edf9f52d6174c110d4fafb7b5f5894744246a53fe75e5251ec2", size = 11477, upload-time = "2023-08-16T17:47:24.747Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6e/45/41ebc679c2a4fced6a722f624c18d658dee42612b83ea24c1caf7c0eb3a8/jsonschema_path-0.3.4.tar.gz", hash = "sha256:8365356039f16cc65fddffafda5f58766e34bebab7d6d105616ab52bc4297001", size = 11159, upload-time = "2025-01-24T14:33:16.547Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/a2/7759a4268e1d6d74559de8fb5be6c77d621b822ae64d28ab4f7467c22f63/jsonschema_spec-0.2.4-py3-none-any.whl", hash = "sha256:e6dcf7056734ec6854f7888da6c08ce6c421f28aeeddce96bb90de0fb6d711ef", size = 14739, upload-time = "2023-08-16T17:47:23.071Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/58/3485da8cb93d2f393bce453adeef16896751f14ba3e2024bc21dc9597646/jsonschema_path-0.3.4-py3-none-any.whl", hash = "sha256:f502191fdc2b22050f9a81c9237be9d27145b9001c55842bece5e94e382e52f8", size = 14810, upload-time = "2025-01-24T14:33:14.652Z" },
 ]
 
 [[package]]
 name = "jsonschema-specifications"
-version = "2023.7.1"
+version = "2025.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "referencing" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/12/ce/eb5396b34c28cbac19a6a8632f0e03d309135d77285536258b82120198d8/jsonschema_specifications-2023.7.1.tar.gz", hash = "sha256:c91a50404e88a1f6ba40636778e2ee08f6e24c5613fe4c53ac24578a5a7f72bb", size = 12689, upload-time = "2023-07-18T15:25:46.815Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/24/83349ac2189cc2435e84da3f69ba3c97314d3c0622628e55171c6798ed80/jsonschema_specifications-2023.7.1-py3-none-any.whl", hash = "sha256:05adf340b659828a004220a9613be00fa3f223f2b82002e273dee62fd50524b1", size = 17835, upload-time = "2023-07-18T15:25:45.245Z" },
+    { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
 ]
 
 [[package]]
@@ -2364,17 +2379,17 @@ wheels = [
 
 [[package]]
 name = "openapi-spec-validator"
-version = "0.6.0"
+version = "0.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonschema" },
-    { name = "jsonschema-spec" },
+    { name = "jsonschema-path" },
     { name = "lazy-object-proxy" },
     { name = "openapi-schema-validator" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/87/733b5e5ccd80fc28046b3fbe559d54068094261d931a909e880c99bdcfe9/openapi_spec_validator-0.6.0.tar.gz", hash = "sha256:68c4c212c88ef14c6b1a591b895bf742c455783c7ebba2507abd7dbc1365a616", size = 33646, upload-time = "2023-07-10T07:58:04.131Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/af/fe2d7618d6eae6fb3a82766a44ed87cd8d6d82b4564ed1c7cfb0f6378e91/openapi_spec_validator-0.7.2.tar.gz", hash = "sha256:cc029309b5c5dbc7859df0372d55e9d1ff43e96d678b9ba087f7c56fc586f734", size = 36855, upload-time = "2025-06-07T14:48:56.299Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/32/c4272a50c125b225bedc730306e28aad9563ad85794c16de41c05b6135ca/openapi_spec_validator-0.6.0-py3-none-any.whl", hash = "sha256:675f1a3c0d0d8eff9116694acde88bcd4613a95bf5240270724d9d78c78f26d6", size = 32411, upload-time = "2023-07-10T07:58:02.286Z" },
+    { url = "https://files.pythonhosted.org/packages/27/dd/b3fd642260cb17532f66cc1e8250f3507d1e580483e209dc1e9d13bd980d/openapi_spec_validator-0.7.2-py3-none-any.whl", hash = "sha256:4bbdc0894ec85f1d1bea1d6d9c8b2c3c8d7ccaa13577ef40da9c006c9fd0eb60", size = 39713, upload-time = "2025-06-07T14:48:54.077Z" },
 ]
 
 [[package]]
@@ -2491,7 +2506,7 @@ resolution-markers = [
     "python_full_version < '3.10'",
 ]
 dependencies = [
-    { name = "cfgv", marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
+    { name = "cfgv", version = "3.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "identify", marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "nodeenv", marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "pyyaml", marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
@@ -2510,7 +2525,7 @@ resolution-markers = [
     "python_full_version >= '3.10'",
 ]
 dependencies = [
-    { name = "cfgv", marker = "python_full_version >= '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
+    { name = "cfgv", version = "3.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "identify", marker = "python_full_version >= '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "nodeenv", marker = "python_full_version >= '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "pyyaml", marker = "python_full_version >= '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
@@ -3206,16 +3221,17 @@ wheels = [
 
 [[package]]
 name = "referencing"
-version = "0.30.2"
+version = "0.36.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "rpds-py", version = "0.27.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
     { name = "rpds-py", version = "0.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pkg-meta') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-pydantic1') or (extra == 'group-24-datamodel-code-generator-pkg-meta' and extra == 'group-24-datamodel-code-generator-pydantic1')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/43/d3f6cf3e1ec9003520c5fb31dc363ee488c517f09402abd2a1c90df63bbb/referencing-0.30.2.tar.gz", hash = "sha256:794ad8003c65938edcdbc027f1933215e0d0ccc0291e3ce20a4d87432b59efc0", size = 53386, upload-time = "2023-08-05T08:11:51.555Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/db/98b5c277be99dd18bfd91dd04e1b759cad18d1a338188c936e92f921c7e2/referencing-0.36.2.tar.gz", hash = "sha256:df2e89862cd09deabbdba16944cc3f10feb6b3e6f18e902f7cc25609a34775aa", size = 74744, upload-time = "2025-01-25T08:48:16.138Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/8e/56d6f1e2d591f4d6cbcba446cac4a1b0dc4f584537e2071d9bcee8eeab6b/referencing-0.30.2-py3-none-any.whl", hash = "sha256:449b6669b6121a9e96a7f9e410b245d471e8d48964c67113ce9afe50c8dd7bdf", size = 25617, upload-time = "2023-08-05T08:11:49.795Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/b1/3baf80dc6d2b7bc27a95a67752d0208e410351e3feb4eb78de5f77454d8d/referencing-0.36.2-py3-none-any.whl", hash = "sha256:e8699adbbf8b5c7de96d8ffa0eb5c158b3beafce084968e2ea8bb08c6794dcd0", size = 26775, upload-time = "2025-01-25T08:48:14.241Z" },
 ]
 
 [[package]]
@@ -3898,28 +3914,28 @@ wheels = [
 
 [[package]]
 name = "uv"
-version = "0.9.10"
+version = "0.9.11"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c7/42/18d158032c594110e7dab012931a3cd6a09f4dec801854dc877a3c6e865a/uv-0.9.10.tar.gz", hash = "sha256:84128ca76a665fe0584bff6ef913741d5615a4187c1aaed81739d519e669cfbd", size = 3738676, upload-time = "2025-11-17T17:02:36.069Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/08/3bf76403ea7c22feef634849137fab10b28ab5ba5bbf08a53390763d5448/uv-0.9.11.tar.gz", hash = "sha256:605a7a57f508aabd029fc0c5ef5c60a556f8c50d32e194f1a300a9f4e87f18d4", size = 3744387, upload-time = "2025-11-20T23:20:00.95Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/d2/68f07f3b96539b986d36a6f2b03f9f8484373f7d8f05949221be1a1f9993/uv-0.9.10-py3-none-linux_armv6l.whl", hash = "sha256:a02b27e00afe0d7908fbb9ec61ad5338508e02356138a8a718af239fe773dd2e", size = 20522030, upload-time = "2025-11-17T17:01:48.503Z" },
-    { url = "https://files.pythonhosted.org/packages/27/67/763da49b0dfafb5465376e29e176f56c3f1ca79a38ef59983fe5d62dd371/uv-0.9.10-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:3c2ddc0bca2e4b7e31623a17d60ea5f8d1ee4ff3ee27ddbf884e089e57cd0c93", size = 19627118, upload-time = "2025-11-17T17:01:51.736Z" },
-    { url = "https://files.pythonhosted.org/packages/b7/e8/5b5b5a719830ee5505bddf35082f6dc41569dab8fb6761626e5034c27748/uv-0.9.10-py3-none-macosx_11_0_arm64.whl", hash = "sha256:8c8969d54c9f603107445a23f36fba03a0dfa4c75b3ada2faf94ed371f26f3a4", size = 18174169, upload-time = "2025-11-17T17:01:54.034Z" },
-    { url = "https://files.pythonhosted.org/packages/35/6b/4c074cab3bf483a172bec905e1696269b0222d73fd8dc890388da8b110c9/uv-0.9.10-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:c9a326f04b670f1af2d9fa90e50af57a9a872a8dc90bb377d0c27b2030438ffc", size = 19950337, upload-time = "2025-11-17T17:01:56.35Z" },
-    { url = "https://files.pythonhosted.org/packages/45/9d/a8930ce9f5247629335de32dd97f19b955f86fb7524ea268f17181c3bccc/uv-0.9.10-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:55ecddf19314f7da5b8dea6bcfcc86f5769dd7d22106c731e8e6cfbf3fa6b98d", size = 20123165, upload-time = "2025-11-17T17:01:58.668Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/4b/3b136c1effa53ab84bc72f66cbc3aca0013fad6581d9c03c2989635b3be1/uv-0.9.10-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:763cf33c7c5ab490323fab667b24f66412c3c3ca58e86b56e13fc0109d031a1b", size = 21024525, upload-time = "2025-11-17T17:02:01.022Z" },
-    { url = "https://files.pythonhosted.org/packages/64/f8/7aab6deb6362431edd670c2885d802ced2cb045fd4f73df462c9c8b05f32/uv-0.9.10-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:5e7a86eb5edbb9064b1401522eb10c5bd25ff56c04cd0ed253d0cd088a448bef", size = 22578222, upload-time = "2025-11-17T17:02:03.333Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/5c/658647132d2c2396bd484b9ee42ab9a0a3f439a14b59e91c48b66b6b7403/uv-0.9.10-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3c133e34feca0823d952a1d323d1d47f2b35e13154de5ca293d188f5b8792a62", size = 22205447, upload-time = "2025-11-17T17:02:05.706Z" },
-    { url = "https://files.pythonhosted.org/packages/80/22/b4c766d855aaefd3797c6e296af4b006d560b78cec5f3041902cd6d7abce/uv-0.9.10-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:92d4b58ef810eaf5edf95c607d613ff240ab903ee599af1d687f891ab64b4129", size = 21247210, upload-time = "2025-11-17T17:02:08.312Z" },
-    { url = "https://files.pythonhosted.org/packages/a2/0c/4b705b613237519e8640baaa1fe4809ddef2482ad7b82ea807c71e5ddb5d/uv-0.9.10-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:21981bc859802c94d4b8f026b8734d39e8146baac703f1e3eab2e2d87d65ca8c", size = 21389310, upload-time = "2025-11-17T17:02:11.117Z" },
-    { url = "https://files.pythonhosted.org/packages/35/44/81df7494107d8473a754fea74e51c8727192a71c11fc4c92aa901e36a255/uv-0.9.10-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:110fd2062dccc4825f96cef0007f6bbb6f5da117af50415bed6f6dcd5e1e3603", size = 20062308, upload-time = "2025-11-17T17:02:14.437Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/b5/0919100138d2cdb2f4f058a0e7c6fc059aad1914b1f6637c7fcfe2e670d9/uv-0.9.10-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:b0a0c4594871de9e8b12c9e10982dc83e2414b712a34e84860fac9fbc8510c5a", size = 21182524, upload-time = "2025-11-17T17:02:16.844Z" },
-    { url = "https://files.pythonhosted.org/packages/43/f5/deb8be34797f71ae72f690da26b388682cc478bda630822fff7bc90e80f3/uv-0.9.10-py3-none-musllinux_1_1_armv7l.whl", hash = "sha256:516d1c5549912696ba68376d2652661ed327199a9ec15763f7baa29bc75b35ec", size = 20084575, upload-time = "2025-11-17T17:02:19.174Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/da/4e51d384669103a9ba8ede1ecf1c99c932148bdb365794ac586f90e5296f/uv-0.9.10-py3-none-musllinux_1_1_i686.whl", hash = "sha256:780a7af4a7dfb0894a8d367b5c3a48f926480f465a34aa4a8633d6e4f521e517", size = 20495061, upload-time = "2025-11-17T17:02:21.978Z" },
-    { url = "https://files.pythonhosted.org/packages/78/9f/c16fb7e0290744a22987ffb9700c69fe1e459e199e04f3e881ce05d032e4/uv-0.9.10-py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:4e256d3cc542f73435b27a3d0bf2a6b0f9d2dd6dd5c8df1a8028834deb896819", size = 21601257, upload-time = "2025-11-17T17:02:24.646Z" },
-    { url = "https://files.pythonhosted.org/packages/b1/f9/ea01841fe2660add4b8fbc2b3a34e8d4f812d9bdaeeeead5470e1142b4be/uv-0.9.10-py3-none-win32.whl", hash = "sha256:dfcc3cd5765158e82a0f52066462e378887aac01b347b588907fe3290af92356", size = 19338075, upload-time = "2025-11-17T17:02:28.007Z" },
-    { url = "https://files.pythonhosted.org/packages/43/c3/72dbdf10ea0e70ca47248aaa25122df9dfa7a7e85e96ba6031cafc67cb02/uv-0.9.10-py3-none-win_amd64.whl", hash = "sha256:9ee9027eb98cf5a99d9a3d5ddab7048745e2e49d572869044f66772e17f57792", size = 21367277, upload-time = "2025-11-17T17:02:30.672Z" },
-    { url = "https://files.pythonhosted.org/packages/6c/9d/b38be12b524dbd28dcdc99cfd88f6f3f792823258b96efb6d691025872cb/uv-0.9.10-py3-none-win_arm64.whl", hash = "sha256:d4903e73f5e281ce5c3def60014bef93d2d1a148901653e222470ce54987f4a1", size = 19770409, upload-time = "2025-11-17T17:02:34.057Z" },
+    { url = "https://files.pythonhosted.org/packages/77/26/8f917e9faddd9cb49abcbc8c7dac5343b0f61d04c6ac36873d2a324fee1a/uv-0.9.11-py3-none-linux_armv6l.whl", hash = "sha256:803f85cf25ab7f1fca10fe2e40a1b9f5b1d48efc25efd6651ba3c9668db6a19e", size = 20787588, upload-time = "2025-11-20T23:18:53.738Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/1f/eafd39c719ddee19fc25884f68c1a7e736c0fca63c1cbef925caf8ebd739/uv-0.9.11-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:6a31b0bd4eaec59bf97816aefbcd75cae4fcc8875c4b19ef1846b7bff3d67c70", size = 19922144, upload-time = "2025-11-20T23:18:57.569Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/f3/6b9fac39e5b65fa47dba872dcf171f1470490cd645343e8334f20f73885b/uv-0.9.11-py3-none-macosx_11_0_arm64.whl", hash = "sha256:48548a23fb5a103b8955dfafff7d79d21112b8e25ce5ff25e3468dc541b20e83", size = 18380643, upload-time = "2025-11-20T23:19:01.02Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/9a/d4080e95950a4fc6fdf20d67b9a43ffb8e3d6d6b7c8dda460ae73ddbecd9/uv-0.9.11-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:cb680948e678590b5960744af2ecea6f2c0307dbb74ac44daf5c00e84ad8c09f", size = 20310262, upload-time = "2025-11-20T23:19:04.914Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/b4/86d9c881bd6accf2b766f7193b50e9d5815f2b34806191d90ea24967965e/uv-0.9.11-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:9ef1982295e5aaf909a9668d6fb6abfc5089666c699f585a36f3a67f1a22916a", size = 20392988, upload-time = "2025-11-20T23:19:08.258Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/1d/6a227b7ca1829442c1419ba1db856d176b6e0861f9bf9355a8790a5d02b5/uv-0.9.11-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:92ff773aa4193148019533c55382c2f9c661824bbf0c2e03f12aeefc800ede57", size = 21394892, upload-time = "2025-11-20T23:19:12.626Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/8f/df45b8409923121de8c4081c9d6d8ba3273eaa450645e1e542d83179c7b5/uv-0.9.11-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:70137a46675bbecf3a8b43d292a61767f1b944156af3d0f8d5986292bd86f6cf", size = 22987735, upload-time = "2025-11-20T23:19:16.27Z" },
+    { url = "https://files.pythonhosted.org/packages/89/51/bbf3248a619c9f502d310a11362da5ed72c312d354fb8f9667c5aa3be9dd/uv-0.9.11-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:b5af9117bab6c4b3a1cacb0cddfb3cd540d0adfb13c7b8a9a318873cf2d07e52", size = 22617321, upload-time = "2025-11-20T23:19:20.1Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/cd/a158ec989c5433dc86ebd9fea800f2aed24255b84ab65b6d7407251e5e31/uv-0.9.11-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:8cc86940d9b3a425575f25dc45247be2fb31f7fed7bf3394ae9daadd466e5b80", size = 21615712, upload-time = "2025-11-20T23:19:23.71Z" },
+    { url = "https://files.pythonhosted.org/packages/73/da/2597becbc0fcbb59608d38fda5db79969e76dedf5b072f0e8564c8f0628b/uv-0.9.11-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e97906ca1b90dac91c23af20e282e2e37c8eb80c3721898733928a295f2defda", size = 21661022, upload-time = "2025-11-20T23:19:27.385Z" },
+    { url = "https://files.pythonhosted.org/packages/52/66/9b8f3b3529b23c2a6f5b9612da70ea53117935ec999757b4f1d640f63d63/uv-0.9.11-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:d901269e1db72abc974ba61d37be6e56532e104922329e0b553d9df07ba224be", size = 20440548, upload-time = "2025-11-20T23:19:31.051Z" },
+    { url = "https://files.pythonhosted.org/packages/72/b2/683afdb83e96dd966eb7cf3688af56a1b826c8bc1e8182fb10ec35b3e391/uv-0.9.11-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:8abfb7d4b136de3e92dd239ea9a51d4b7bbb970dc1b33bec84d08facf82b9a6e", size = 21493758, upload-time = "2025-11-20T23:19:34.688Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/00/99848bc9834aab104fa74aa1a60b1ca478dee824d2e4aacb15af85673572/uv-0.9.11-py3-none-musllinux_1_1_armv7l.whl", hash = "sha256:1f8afc13b3b94bce1e72514c598d41623387b2b61b68d7dbce9a01a0d8874860", size = 20332324, upload-time = "2025-11-20T23:19:38.376Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/94/8cfd1bb1cc5d768cb334f976ba2686c6327e4ac91c16b8469b284956d4d9/uv-0.9.11-py3-none-musllinux_1_1_i686.whl", hash = "sha256:7d414cfa410f1850a244d87255f98d06ca61cc13d82f6413c4f03e9e0c9effc7", size = 20845062, upload-time = "2025-11-20T23:19:42.006Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/42/43f66bfc621464dabe9cfe3cbf69cddc36464da56ab786c94fc9ccf99cc7/uv-0.9.11-py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:edc14143d0ba086a7da4b737a77746bb36bc00e3d26466f180ea99e3bf795171", size = 21857559, upload-time = "2025-11-20T23:19:46.026Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/4d/bfd41bf087522601c724d712c3727aeb62f51b1f67c4ab86a078c3947525/uv-0.9.11-py3-none-win32.whl", hash = "sha256:af5fd91eecaa04b4799f553c726307200f45da844d5c7c5880d64db4debdd5dc", size = 19639246, upload-time = "2025-11-20T23:19:50.254Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/2f/d51c02627de68a7ca5b82f0a5d61d753beee3fe696366d1a1c5d5e40cd58/uv-0.9.11-py3-none-win_amd64.whl", hash = "sha256:c65a024ad98547e32168f3a52360fe73ff39cd609a8fb9dd2509aac91483cfc8", size = 21626822, upload-time = "2025-11-20T23:19:54.424Z" },
+    { url = "https://files.pythonhosted.org/packages/af/d8/e07e866ee328d3c9f27a6d57a018d8330f47be95ef4654a178779c968a66/uv-0.9.11-py3-none-win_arm64.whl", hash = "sha256:4907a696c745703542ed2559bdf5380b92c8b1d4bf290ebfed45bf9a2a2c6690", size = 20046856, upload-time = "2025-11-20T23:19:58.517Z" },
 ]
 
 [[package]]

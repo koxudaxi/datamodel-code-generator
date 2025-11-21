@@ -52,7 +52,7 @@ optional-dependencies.debug = [
   "pysnooper>=0.4.1,<2",
 ]
 optional-dependencies.graphql = [
-  "graphql-core==3.2.6",
+  "graphql-core>=3.2.3",
 ]
 optional-dependencies.http = [
   "httpx>=0.24.1",
@@ -62,7 +62,7 @@ optional-dependencies.ruff = [
 ]
 optional-dependencies.validation = [
   "openapi-spec-validator>=0.2.8,<0.8",
-  "prance>=0.23",
+  "prance>=0.18.2",
 ]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
 urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
@@ -108,7 +108,7 @@ black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
 pydantic1 = [ "pydantic<2" ]
 fix = [ "pre-commit-uv>=4.1.4" ]
-pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
+pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.9.10" ]
 coverage = [
   "covdefaults>=2.3",
   "coverage[toml]>=7.6.1",
