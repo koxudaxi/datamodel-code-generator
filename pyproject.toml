@@ -134,7 +134,6 @@ conflicts = [
   [
     { group = "pydantic1" },
     { group = "pkg-meta" },
-
   ],
 ]
 
