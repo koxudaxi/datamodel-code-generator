@@ -237,6 +237,9 @@ class DataModelFieldBase(_BaseModel):
         return True
 
 
+DataType.model_rebuild()
+
+
 @lru_cache
 def get_template(template_file_path: Path) -> Template:
     """Load and cache a Jinja2 template from the template directory."""

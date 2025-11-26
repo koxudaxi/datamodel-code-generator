@@ -27,6 +27,7 @@ from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
+from typing_extensions import TypeAlias, TypeAliasType
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -51,6 +52,9 @@ MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
 
+YamlScalar: TypeAlias = str | int | float | bool | None
+YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
+
 try:
     import pysnooper
 
@@ -61,15 +65,30 @@ except ImportError:  # pragma: no cover
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
-def load_yaml(stream: str | TextIO) -> Any:
+def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content from a string or file-like object."""
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
-def load_yaml_from_path(path: Path, encoding: str) -> Any:
+def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
+    """Load YAML and return as dict. Raises TypeError if result is not a dict."""
+    result = load_yaml(stream)
+    if not isinstance(result, dict):
+        msg = f"Expected dict, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def load_yaml_from_path(path: Path, encoding: str) -> YamlValue:
     """Load YAML content from a file path."""
     with path.open(encoding=encoding) as f:
         return load_yaml(f)
+
+
+def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
+    """Load YAML and return as dict from a file path."""
+    with path.open(encoding=encoding) as f:
+        return load_yaml_dict(f)
 
 
 def get_version() -> str:
@@ -401,10 +420,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                         obj = get_header_and_first_line(io.StringIO(input_text))
                 elif input_file_type == InputFileType.Yaml:
                     if isinstance(input_, Path):
-                        obj = load_yaml(input_.read_text(encoding=encoding))
+                        obj = load_yaml_dict(input_.read_text(encoding=encoding))
                     else:
                         assert input_text is not None
-                        obj = load_yaml(input_text)
+                        obj = load_yaml_dict(input_text)
                 elif input_file_type == InputFileType.Json:
                     if isinstance(input_, Path):
                         obj = json.loads(input_.read_text(encoding=encoding))

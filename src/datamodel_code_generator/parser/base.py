@@ -610,7 +610,8 @@ class Parser(ABC):
                 ):
                     # Replace referenced duplicate model to original model
                     for child in model.reference.children[:]:
-                        child.replace_reference(root_data_type.reference)
+                        if isinstance(child, DataType):
+                            child.replace_reference(root_data_type.reference)
                     models.remove(model)
                     for data_type in model.all_data_types:
                         if data_type.reference:
@@ -932,7 +933,7 @@ class Parser(ABC):
                         # child is resolved data_type by reference
                         data_model = get_most_of_parent(child)
                         # TODO: replace reference in all modules
-                        if data_model in models:  # pragma: no cover
+                        if data_model in models and isinstance(child, DataType):  # pragma: no cover
                             child.replace_reference(cached_model_reference)
                     duplicates.append(model)
                 else:
@@ -1011,7 +1012,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent is not None and data_type.parent.is_list:
+                    elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -1067,6 +1068,7 @@ class Parser(ABC):
 
                     data_type.remove_reference()
 
+                    assert isinstance(root_type_model, DataModel)
                     root_type_model.reference.children = [
                         c for c in root_type_model.reference.children if getattr(c, "parent", None)
                     ]
