@@ -1,3 +1,5 @@
+"""Tests for main CLI functionality with Korean locale settings."""
+
 from __future__ import annotations
 
 import shutil
@@ -24,6 +26,7 @@ TIMESTAMP = "1985-10-26T01:21:00-07:00"
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -31,6 +34,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @freeze_time("2019-07-26")
 def test_main(tmp_path: Path) -> None:
+    """Test basic main function with OpenAPI input."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -44,6 +48,7 @@ def test_main(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_base_class(tmp_path: Path) -> None:
+    """Test main function with custom base class."""
     output_file: Path = tmp_path / "output.py"
     shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
     return_code: Exit = main([
@@ -60,6 +65,7 @@ def test_main_base_class(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_target_python_version(tmp_path: Path) -> None:
+    """Test main function with target Python version."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -85,7 +91,6 @@ def test_main_modular(tmp_path: Path) -> None:
 
 def test_main_modular_no_file() -> None:
     """Test main function on modular file with no output name."""
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
 
     assert main(["--input", str(input_filename)]) == Exit.ERROR
@@ -93,7 +98,6 @@ def test_main_modular_no_file() -> None:
 
 def test_main_modular_filename(tmp_path: Path) -> None:
     """Test main function on modular file with filename."""
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_filename = tmp_path / "model.py"
 
@@ -101,8 +105,8 @@ def test_main_modular_filename(tmp_path: Path) -> None:
 
 
 def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.chdir(tmp_path)
     """Test main function on non-modular file with no output name."""
+    monkeypatch.chdir(tmp_path)
 
     input_filename = OPEN_API_DATA_PATH / "api.yaml"
 
@@ -118,8 +122,8 @@ def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch
 def test_main_custom_template_dir(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
+    monkeypatch.chdir(tmp_path)
 
     input_filename = OPEN_API_DATA_PATH / "api.yaml"
     custom_template_dir = DATA_PATH / "templates"
@@ -146,6 +150,7 @@ def test_main_custom_template_dir(
 )
 @freeze_time("2019-07-26")
 def test_pyproject(tmp_path: Path) -> None:
+    """Test main function with pyproject.toml configuration."""
     pyproject_toml = DATA_PATH / "project" / "pyproject.toml"
     shutil.copy(pyproject_toml, tmp_path)
     output_file: Path = tmp_path / "output.py"
@@ -161,6 +166,7 @@ def test_pyproject(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("language", ["UK", "US"])
 def test_pyproject_respects_both_spellings_of_capitalize_enum_members_flag(language: str, tmp_path: Path) -> None:
+    """Test that both UK and US spellings of capitalise are accepted."""
     pyproject_toml_data = f"""
 [tool.datamodel-codegen]
 capitali{"s" if language == "UK" else "z"}e-enum-members = true
@@ -227,9 +233,7 @@ class MyEnum(Enum):
 )
 @freeze_time("2019-07-26")
 def test_pyproject_with_tool_section(tmp_path: Path) -> None:
-    """Test that a pyproject.toml with a [tool.datamodel-codegen] section is
-    found and its configuration applied.
-    """
+    """Test that a pyproject.toml with [tool.datamodel-codegen] section is found and applied."""
     pyproject_toml = """
 [tool.datamodel-codegen]
 target-python-version = "3.10"
@@ -255,6 +259,7 @@ strict-types = ["str"]
 
 @freeze_time("2019-07-26")
 def test_main_use_schema_description(tmp_path: Path) -> None:
+    """Test --use-schema-description option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -269,6 +274,7 @@ def test_main_use_schema_description(tmp_path: Path) -> None:
 
 @freeze_time("2022-11-11")
 def test_main_use_field_description(tmp_path: Path) -> None:
+    """Test --use-field-description option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -283,6 +289,7 @@ def test_main_use_field_description(tmp_path: Path) -> None:
 
 @freeze_time("2022-11-11")
 def test_main_use_inline_field_description(tmp_path: Path) -> None:
+    """Test --use-inline-field-description option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -296,10 +303,7 @@ def test_main_use_inline_field_description(tmp_path: Path) -> None:
 
 
 def test_capitalise_enum_members(tmp_path: Path) -> None:
-    """capitalise-enum-members not working since v0.28.5
-
-    From https://github.com/koxudaxi/datamodel-code-generator/issues/2370
-    """
+    """Test capitalise-enum-members option (issue #2370)."""
     input_data = """
 openapi: 3.0.3
 info:
@@ -354,10 +358,7 @@ class EnumSystems(Enum):
 
 
 def test_capitalise_enum_members_and_use_subclass_enum(tmp_path: Path) -> None:
-    """Combination of capitalise-enum-members and use-subclass-enum not working since v0.28.5
-
-    From https://github.com/koxudaxi/datamodel-code-generator/issues/2395
-    """
+    """Test combination of capitalise-enum-members and use-subclass-enum (issue #2395)."""
     input_data = """
 openapi: 3.0.3
 info:

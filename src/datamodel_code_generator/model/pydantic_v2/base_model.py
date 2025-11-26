@@ -1,3 +1,9 @@
+"""Pydantic v2 BaseModel implementation.
+
+Provides Constraints, DataModelField, and BaseModel for Pydantic v2
+with support for Field() constraints and ConfigDict.
+"""
+
 from __future__ import annotations
 
 import re
@@ -28,17 +34,22 @@ if TYPE_CHECKING:
 
 
 class UnionMode(Enum):
+    """Union discriminator mode for Pydantic v2."""
+
     smart = "smart"
     left_to_right = "left_to_right"
 
 
 class Constraints(_Constraints):
+    """Pydantic v2 field constraints with pattern support."""
+
     # To override existing pattern alias
     regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
     pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
     @model_validator(mode="before")
     def validate_min_max_items(cls, values: Any) -> dict[str, Any]:  # noqa: N805
+        """Validate and convert minItems/maxItems to minLength/maxLength."""
         if not isinstance(values, dict):  # pragma: no cover
             return values
         min_items = values.pop("minItems", None)
@@ -51,6 +62,8 @@ class Constraints(_Constraints):
 
 
 class DataModelField(DataModelFieldV1):
+    """Pydantic v2 field with Field() constraints and json_schema_extra support."""
+
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",
@@ -101,6 +114,7 @@ class DataModelField(DataModelFieldV1):
 
     @field_validator("extras")
     def validate_extras(cls, values: Any) -> dict[str, Any]:  # noqa: N805
+        """Validate and convert example to examples list."""
         if not isinstance(values, dict):  # pragma: no cover
             return values
         if "examples" in values:
@@ -111,6 +125,7 @@ class DataModelField(DataModelFieldV1):
         return values
 
     def process_const(self) -> None:
+        """Process const field by converting it to a literal type with default value."""
         if "const" not in self.extras:
             return
         self.const = True
@@ -149,12 +164,16 @@ class DataModelField(DataModelFieldV1):
 
 
 class ConfigAttribute(NamedTuple):
+    """Configuration attribute mapping for ConfigDict conversion."""
+
     from_: str
     to: str
     invert: bool
 
 
 class BaseModel(BaseModelBase):
+    """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
+
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = [
@@ -181,6 +200,7 @@ class BaseModel(BaseModelBase):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize BaseModel with ConfigDict generation from template data."""
         super().__init__(
             reference=reference,
             fields=fields,

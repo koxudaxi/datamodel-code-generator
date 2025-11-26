@@ -1,3 +1,8 @@
+"""Scalar type model generator.
+
+Generates type aliases for GraphQL scalar types.
+"""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -35,7 +40,7 @@ DEFAULT_GRAPHQL_SCALAR_TYPES: dict[str, str] = {
 
 
 class _DataTypeScalarBase(DataModel):
-    """Base class for GraphQL scalar types with shared __init__ logic"""
+    """Base class for GraphQL scalar types with shared __init__ logic."""
 
     def __init__(  # noqa: PLR0913
         self,
@@ -55,6 +60,7 @@ class _DataTypeScalarBase(DataModel):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize GraphQL scalar type with Python type mapping."""
         extra_template_data = extra_template_data or defaultdict(dict)
 
         scalar_name = reference.name
@@ -87,7 +93,7 @@ class _DataTypeScalarBase(DataModel):
 
 
 class DataTypeScalar(_DataTypeScalarBase):
-    """GraphQL scalar using TypeAlias annotation for Python 3.10+ (Name: TypeAlias = type)"""
+    """GraphQL scalar using TypeAlias annotation for Python 3.10+ (Name: TypeAlias = type)."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeAliasAnnotation.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -95,7 +101,7 @@ class DataTypeScalar(_DataTypeScalarBase):
 
 
 class DataTypeScalarBackport(_DataTypeScalarBase):
-    """GraphQL scalar using TypeAlias annotation for Python 3.9 (Name: TypeAlias = type)"""
+    """GraphQL scalar using TypeAlias annotation for Python 3.9 (Name: TypeAlias = type)."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeAliasAnnotation.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -103,7 +109,7 @@ class DataTypeScalarBackport(_DataTypeScalarBase):
 
 
 class DataTypeScalarTypeBackport(_DataTypeScalarBase):
-    """GraphQL scalar using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", type))"""
+    """GraphQL scalar using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", type))."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -111,7 +117,7 @@ class DataTypeScalarTypeBackport(_DataTypeScalarBase):
 
 
 class DataTypeScalarTypeStatement(_DataTypeScalarBase):
-    """GraphQL scalar using type statement for Python 3.12+ (type Name = type)"""
+    """GraphQL scalar using type statement for Python 3.12+ (type Name = type)."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeStatement.jinja2"
     BASE_CLASS: ClassVar[str] = ""

@@ -1,3 +1,10 @@
+"""Abstract base parser and utilities for schema parsing.
+
+Provides the Parser abstract base class that defines the parsing algorithm,
+along with helper functions for model sorting, import resolution, and
+code generation.
+"""
+
 from __future__ import annotations
 
 import operator
@@ -50,6 +57,7 @@ SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
 
 def get_special_path(keyword: str, path: list[str]) -> list[str]:
+    """Create a special path marker for internal reference tracking."""
     return [*path, SPECIAL_PATH_FORMAT.format(keyword)]
 
 
@@ -66,6 +74,7 @@ escape_characters = str.maketrans({
 
 
 def to_hashable(item: Any) -> Any:
+    """Convert an item to a hashable representation for comparison."""
     if isinstance(
         item,
         (
@@ -94,6 +103,7 @@ def to_hashable(item: Any) -> Any:
 
 
 def dump_templates(templates: list[DataModel]) -> str:
+    """Join model templates into a single code string."""
     return "\n\n\n".join(str(m) for m in templates)
 
 
@@ -103,12 +113,13 @@ SortedDataModels = dict[str, DataModel]
 MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
 
-def sort_data_models(  # noqa: PLR0912
+def sort_data_models(  # noqa: PLR0912, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
     recursion_count: int = MAX_RECURSION_COUNT,
 ) -> tuple[list[DataModel], SortedDataModels, list[str]]:
+    """Sort data models by dependency order for correct forward references."""
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
     if require_update_action_models is None:
@@ -193,7 +204,6 @@ def sort_data_models(  # noqa: PLR0912
 
 def relative(current_module: str, reference: str) -> tuple[str, str]:
     """Find relative module path."""
-
     current_module_path = current_module.split(".") if current_module else []
     *reference_path, name = reference.split(".")
 
@@ -221,6 +231,7 @@ def relative(current_module: str, reference: str) -> tuple[str, str]:
 
 
 def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
+    """Create exact import path to avoid relative import issues."""
     if from_ == len(from_) * ".":
         # Prevents "from . import foo" becoming "from ..foo import Foo"
         # or "from .. import foo" becoming "from ...foo import Foo"
@@ -231,8 +242,11 @@ def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
 
 @runtime_checkable
 class Child(Protocol):
+    """Protocol for objects with a parent reference."""
+
     @property
     def parent(self) -> Any | None:
+        """Get the parent object reference."""
         raise NotImplementedError
 
 
@@ -240,12 +254,14 @@ T = TypeVar("T")
 
 
 def get_most_of_parent(value: Any, type_: type[T] | None = None) -> T | None:
+    """Traverse parent chain to find the outermost matching parent."""
     if isinstance(value, Child) and (type_ is None or not isinstance(value, type_)):
         return get_most_of_parent(value.parent, type_)
     return value
 
 
 def title_to_class_name(title: str) -> str:
+    """Convert a schema title to a valid Python class name."""
     classname = re.sub(r"[^A-Za-z0-9]+", " ", title)
     return "".join(x for x in classname.title() if not x.isspace())
 
@@ -287,16 +303,21 @@ def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
 
 
 class Result(BaseModel):
+    """Generated code result with optional source file reference."""
+
     body: str
     source: Optional[Path] = None  # noqa: UP045
 
 
 class Source(BaseModel):
+    """Schema source file with path and content."""
+
     path: Path
     text: str
 
     @classmethod
     def from_path(cls, path: Path, base_path: Path, encoding: str) -> Source:
+        """Create a Source from a file path relative to base_path."""
         return cls(
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),
@@ -304,6 +325,12 @@ class Source(BaseModel):
 
 
 class Parser(ABC):
+    """Abstract base class for schema parsers.
+
+    Provides the parsing algorithm and code generation. Subclasses implement
+    parse_raw() to handle specific schema formats.
+    """
+
     def __init__(  # noqa: PLR0913, PLR0915
         self,
         source: str | Path | list[Path] | ParseResult,
@@ -386,6 +413,7 @@ class Parser(ABC):
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
     ) -> None:
+        """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
         self.frozen_dataclasses = frozen_dataclasses
         self.data_type_manager: DataTypeManager = data_type_manager_type(
@@ -506,6 +534,7 @@ class Parser(ABC):
 
     @property
     def iter_source(self) -> Iterator[Source]:
+        """Iterate over all source files to be parsed."""
         if isinstance(self.source, str):
             yield Source(path=Path(), text=self.source)
         elif isinstance(self.source, Path):  # pragma: no cover
@@ -546,6 +575,7 @@ class Parser(ABC):
 
     @classmethod
     def get_url_path_parts(cls, url: ParseResult) -> list[str]:
+        """Split URL into scheme/host and path components."""
         return [
             f"{url.scheme}://{url.hostname}",
             *url.path.split("/")[1:],
@@ -553,10 +583,12 @@ class Parser(ABC):
 
     @property
     def data_type(self) -> type[DataType]:
+        """Get the DataType class from the type manager."""
         return self.data_type_manager.data_type
 
     @abstractmethod
     def parse_raw(self) -> None:
+        """Parse the raw schema source. Must be implemented by subclasses."""
         raise NotImplementedError
 
     def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
@@ -771,7 +803,7 @@ class Parser(ABC):
                         mapping: dict[str, str],
                         type_names: list[str] = type_names,
                     ) -> None:
-                        """Helper function to validate paths for a given model."""
+                        """Validate discriminator mapping paths for a model."""
                         for name, path in mapping.items():
                             if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
                                 path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
@@ -1254,6 +1286,7 @@ class Parser(ABC):
         settings_path: Path | None = None,
         disable_future_imports: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
+        """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
 
         if with_import and not disable_future_imports:

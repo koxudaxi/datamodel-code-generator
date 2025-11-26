@@ -1,3 +1,8 @@
+"""TypedDict model generator.
+
+Generates Python TypedDict classes for use with type checkers.
+"""
+
 from __future__ import annotations
 
 import keyword
@@ -40,6 +45,8 @@ def _is_valid_field_name(field: DataModelFieldBase) -> bool:
 
 
 class TypedDict(DataModel):
+    """DataModel implementation for Python TypedDict."""
+
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypedDict.jinja2"
     BASE_CLASS: ClassVar[str] = "typing.TypedDict"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
@@ -62,6 +69,7 @@ class TypedDict(DataModel):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize TypedDict model."""
         super().__init__(
             reference=reference,
             fields=fields,
@@ -81,10 +89,12 @@ class TypedDict(DataModel):
 
     @property
     def is_functional_syntax(self) -> bool:
+        """Check if TypedDict requires functional syntax."""
         return any(not _is_valid_field_name(f) for f in self.fields)
 
     @property
     def all_fields(self) -> Iterator[DataModelFieldBase]:
+        """Iterate over all fields including inherited ones."""
         for base_class in self.base_classes:
             if base_class.reference is None:  # pragma: no cover
                 continue
@@ -98,6 +108,7 @@ class TypedDict(DataModel):
         yield from self.fields
 
     def render(self, *, class_name: str | None = None) -> str:
+        """Render TypedDict class with appropriate syntax."""
         return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields,
@@ -112,9 +123,12 @@ class TypedDict(DataModel):
 
 
 class DataModelField(DataModelFieldBase):
+    """Field implementation for TypedDict models."""
+
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
 
     def process_const(self) -> None:
+        """Process const field constraint."""
         if "const" not in self.extras:
             return
         self.const = True
@@ -126,12 +140,14 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def key(self) -> str:
+        """Get escaped field key for TypedDict."""
         return (self.original_name or self.name or "").translate(  # pragma: no cover
             escape_characters
         )
 
     @property
     def type_hint(self) -> str:
+        """Get type hint with NotRequired wrapper if needed."""
         type_hint = super().type_hint
         if self._not_required:
             return f"{NOT_REQUIRED_PREFIX}{type_hint}]"
@@ -139,14 +155,17 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def _not_required(self) -> bool:
+        """Check if field should be marked as NotRequired."""
         return not self.required and isinstance(self.parent, TypedDict)
 
     @property
     def fall_back_to_nullable(self) -> bool:
+        """Check if field should fall back to nullable."""
         return not self._not_required
 
     @property
     def imports(self) -> tuple[Import, ...]:
+        """Get imports including NotRequired if needed."""
         return (
             *super().imports,
             *(self.DEFAULT_IMPORTS if self._not_required else ()),
@@ -154,4 +173,6 @@ class DataModelField(DataModelFieldBase):
 
 
 class DataModelFieldBackport(DataModelField):
+    """Field implementation for TypedDict models using typing_extensions."""
+
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)

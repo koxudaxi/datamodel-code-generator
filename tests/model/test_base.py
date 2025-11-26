@@ -1,3 +1,5 @@
+"""Tests for base model classes and utilities."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -18,31 +20,40 @@ from datamodel_code_generator.types import DataType, Types
 
 
 class A(TemplateBase):
+    """Test helper class for TemplateBase testing."""
+
     def __init__(self, path: Path) -> None:
+        """Initialize with template file path."""
         self._path = path
 
     @property
     def template_file_path(self) -> Path:
+        """Return the template file path."""
         return self._path
 
     def render(self) -> str:  # noqa: PLR6301
+        """Render the template."""
         return ""
 
 
 class B(DataModel):
+    """Test helper class for DataModel testing with template path."""
+
     @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102
         pass
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D107
         super().__init__(*args, **kwargs)
 
     TEMPLATE_FILE_PATH = ""
 
 
 class C(DataModel):
+    """Test helper class for DataModel testing without template path."""
+
     @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102
         pass
 
 
@@ -61,6 +72,7 @@ class {{ class_name }}:
 
 
 def test_template_base() -> None:
+    """Test TemplateBase rendering and file path handling."""
     with NamedTemporaryFile("w", delete=False, encoding="utf-8") as dummy_template:
         dummy_template.write("abc")
         dummy_template.seek(0)
@@ -72,6 +84,7 @@ def test_template_base() -> None:
 
 
 def test_data_model() -> None:
+    """Test DataModel rendering with fields and decorators."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="abc", required=True)
 
     with NamedTemporaryFile("w", delete=False, encoding="utf-8") as dummy_template:
@@ -94,6 +107,7 @@ def test_data_model() -> None:
 
 
 def test_data_model_exception() -> None:
+    """Test DataModel raises exception when TEMPLATE_FILE_PATH is undefined."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="abc", required=True)
     with pytest.raises(Exception, match="TEMPLATE_FILE_PATH is undefined"):
         C(
@@ -103,6 +117,7 @@ def test_data_model_exception() -> None:
 
 
 def test_data_field() -> None:
+    """Test DataModelFieldBase type hint generation for various configurations."""
     field = DataModelFieldBase(
         name="a",
         data_type=DataType(is_list=True),
@@ -279,6 +294,7 @@ def test_data_field() -> None:
 )
 @pytest.mark.parametrize("treat_dot_as_module", [True, False])
 def test_sanitize_module_name(name: str, expected_true: str, expected_false: str, treat_dot_as_module: bool) -> None:
+    """Test module name sanitization with different characters and options."""
     expected = expected_true if treat_dot_as_module else expected_false
     assert sanitize_module_name(name, treat_dot_as_module=treat_dot_as_module) == expected
 
@@ -291,6 +307,7 @@ def test_sanitize_module_name(name: str, expected_true: str, expected_false: str
     ],
 )
 def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: list[str]) -> None:
+    """Test module path generation with a file path."""
     file_path = Path("inputs/array-commons.schema.json")
     result = get_module_path("array-commons.schema", file_path, treat_dot_as_module=treat_dot_as_module)
     assert result == expected
@@ -298,6 +315,7 @@ def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: lis
 
 @pytest.mark.parametrize("treat_dot_as_module", [True, False])
 def test_get_module_path_without_file_path(treat_dot_as_module: bool) -> None:
+    """Test module path generation without a file path."""
     result = get_module_path("my_module.submodule", None, treat_dot_as_module=treat_dot_as_module)
     expected = ["my_module"]
     assert result == expected
@@ -317,5 +335,6 @@ def test_get_module_path_without_file_path(treat_dot_as_module: bool) -> None:
 def test_get_module_path_without_file_path_parametrized(
     treat_dot_as_module: bool, name: str, expected: list[str]
 ) -> None:
+    """Test module path generation without file path for various module names."""
     result = get_module_path(name, None, treat_dot_as_module=treat_dot_as_module)
     assert result == expected

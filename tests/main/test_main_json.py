@@ -1,3 +1,5 @@
+"""Tests for JSON input file code generation."""
+
 from __future__ import annotations
 
 from argparse import Namespace
@@ -32,6 +34,7 @@ assert_file_content = create_assert_file_content(EXPECTED_JSON_PATH)
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -39,6 +42,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json(tmp_path: Path) -> None:
+    """Test JSON input file code generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -54,6 +58,7 @@ def test_main_json(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_space_and_special_characters_json(tmp_path: Path) -> None:
+    """Test JSON code generation with space and special characters."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -69,6 +74,7 @@ def test_space_and_special_characters_json(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_failed(tmp_path: Path) -> None:
+    """Test JSON code generation with broken input file."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -83,6 +89,7 @@ def test_main_json_failed(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_array_include_null(tmp_path: Path) -> None:
+    """Test JSON code generation with arrays including null values."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -98,6 +105,7 @@ def test_main_json_array_include_null(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_reuse_model(tmp_path: Path) -> None:
+    """Test JSON code generation with model reuse."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -114,6 +122,7 @@ def test_main_json_reuse_model(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_reuse_model_pydantic2(tmp_path: Path) -> None:
+    """Test JSON code generation with model reuse and Pydantic v2."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -132,6 +141,7 @@ def test_main_json_reuse_model_pydantic2(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_simple_json_snake_case_field(tmp_path: Path) -> None:
+    """Test JSON code generation with snake case field naming."""
     output_file: Path = tmp_path / "output.py"
     with chdir(JSON_DATA_PATH / "simple.json"):
         return_code: Exit = main([
@@ -149,6 +159,8 @@ def test_simple_json_snake_case_field(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_http_json(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test JSON code generation from HTTP URL."""
+
     def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()
         mock.text = (JSON_DATA_PATH / path).read_text()
@@ -195,6 +207,7 @@ def test_main_http_json(mocker: MockerFixture, tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_typed_dict_space_and_special_characters(tmp_path: Path) -> None:
+    """Test TypedDict generation with space and special characters."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -212,6 +225,7 @@ def test_main_typed_dict_space_and_special_characters(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_snake_case_field(tmp_path: Path) -> None:
+    """Test JSON code generation with snake case field naming."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",

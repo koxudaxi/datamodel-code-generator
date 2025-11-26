@@ -1,3 +1,5 @@
+"""Tests for OpenAPI/Swagger schema parser."""
+
 from __future__ import annotations
 
 import os
@@ -36,6 +38,7 @@ def get_expected_file(
     base_class: str | None = None,
     prefix: str | None = None,
 ) -> Path:
+    """Get expected output file path for test."""
     params: list[str] = []
     if with_import:
         params.append("with_import")
@@ -133,6 +136,7 @@ class Pets(BaseModel):
     ],
 )
 def test_parse_object(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing OpenAPI object schemas."""
     parser = OpenAPIParser("")
     parser.parse_object("Pets", JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -176,6 +180,7 @@ class Pets(BaseModel):
     ],
 )
 def test_parse_array(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing OpenAPI array schemas."""
     parser = OpenAPIParser("")
     parser.parse_array("Pets", JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -203,6 +208,7 @@ def test_parse_array(source_obj: dict[str, Any], generated_classes: str) -> None
     ],
 )
 def test_openapi_parser_parse(with_import: bool, format_: bool, base_class: str | None) -> None:
+    """Test OpenAPI parser with various configurations."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / "api.yaml"),
@@ -228,12 +234,14 @@ def test_openapi_parser_parse(with_import: bool, format_: bool, base_class: str 
     ],
 )
 def test_parse_root_type(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing OpenAPI root type schemas."""
     parser = OpenAPIParser("")
     parser.parse_root_type("Name", JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
 def test_openapi_parser_parse_duplicate_models(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with duplicate model names."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "duplicate_models.yaml"),
@@ -242,6 +250,7 @@ def test_openapi_parser_parse_duplicate_models(tmp_path: Path, monkeypatch: pyte
 
 
 def test_openapi_parser_parse_duplicate_model_with_simplify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with duplicate models and simplification."""
     monkeypatch.chdir(tmp_path)
     raw = Path(DATA_PATH / "duplicate_model_simplify.yaml")
     parser = OpenAPIParser(raw)
@@ -251,6 +260,7 @@ def test_openapi_parser_parse_duplicate_model_with_simplify(tmp_path: Path, monk
 
 
 def test_openapi_parser_parse_resolved_models(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with resolved model references."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "resolved_models.yaml"),
@@ -259,6 +269,7 @@ def test_openapi_parser_parse_resolved_models(tmp_path: Path, monkeypatch: pytes
 
 
 def test_openapi_parser_parse_lazy_resolved_models(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with lazy resolved model references."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "lazy_resolved_models.yaml"),
@@ -304,6 +315,7 @@ class Results(BaseModel):
 
 
 def test_openapi_parser_parse_x_enum_varnames(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with x-enum-varnames extension."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "x_enum_varnames.yaml"),
@@ -358,6 +370,7 @@ class UnknownTypeNumber(Enum):
 
 @pytest.mark.skipif(pydantic.VERSION < "1.9.0", reason="Require Pydantic version 1.9.0 or later ")
 def test_openapi_parser_parse_enum_models() -> None:
+    """Test parsing OpenAPI enum models."""
     parser = OpenAPIParser(
         Path(DATA_PATH / "enum_models.yaml").read_text(encoding="utf-8"),
         target_python_version=PythonVersionMin,
@@ -367,6 +380,7 @@ def test_openapi_parser_parse_enum_models() -> None:
 
 
 def test_openapi_parser_parse_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with anyOf schemas."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "anyof.yaml"),
@@ -375,6 +389,7 @@ def test_openapi_parser_parse_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_openapi_parser_parse_anyof_required(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with anyOf and required fields."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "anyof_required.yaml"),
@@ -383,6 +398,7 @@ def test_openapi_parser_parse_anyof_required(tmp_path: Path, monkeypatch: pytest
 
 
 def test_openapi_parser_parse_nested_anyof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with nested anyOf schemas."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "nested_anyof.yaml").read_text(encoding="utf-8"),
@@ -391,6 +407,7 @@ def test_openapi_parser_parse_nested_anyof(tmp_path: Path, monkeypatch: pytest.M
 
 
 def test_openapi_parser_parse_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with oneOf schemas."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "oneof.yaml"),
@@ -399,6 +416,7 @@ def test_openapi_parser_parse_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_openapi_parser_parse_nested_oneof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with nested oneOf schemas."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "nested_oneof.yaml").read_text(encoding="utf-8"),
@@ -407,6 +425,7 @@ def test_openapi_parser_parse_nested_oneof(tmp_path: Path, monkeypatch: pytest.M
 
 
 def test_openapi_parser_parse_allof_ref(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with allOf references."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "allof_same_prefix_with_ref.yaml"),
@@ -417,6 +436,7 @@ def test_openapi_parser_parse_allof_ref(tmp_path: Path, monkeypatch: pytest.Monk
 
 
 def test_openapi_parser_parse_allof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with allOf schemas."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "allof.yaml"),
@@ -425,6 +445,7 @@ def test_openapi_parser_parse_allof(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_openapi_parser_parse_allof_required_fields(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with allOf and required fields."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "allof_required_fields.yaml"),
@@ -433,6 +454,7 @@ def test_openapi_parser_parse_allof_required_fields(tmp_path: Path, monkeypatch:
 
 
 def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with field aliases."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "alias.yaml"),
@@ -443,6 +465,7 @@ def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with modular structure."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(Path(DATA_PATH / "modular.yaml"), data_model_field_type=DataModelFieldBase)
     modules = parser.parse()
@@ -475,6 +498,7 @@ def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.Monkey
     ],
 )
 def test_openapi_parser_parse_additional_properties(with_import: bool, format_: bool, base_class: str | None) -> None:
+    """Test parsing OpenAPI with additional properties."""
     parser = OpenAPIParser(
         Path(DATA_PATH / "additional_properties.yaml").read_text(encoding="utf-8"),
         base_class=base_class,
@@ -493,6 +517,7 @@ def test_openapi_parser_parse_additional_properties(with_import: bool, format_: 
 
 
 def test_openapi_parser_parse_array_enum(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with array enum types."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(source=Path(DATA_PATH / "array_enum.yaml"))
     expected_file = get_expected_file("openapi_parser_parse_array_enum", True, True)
@@ -500,6 +525,7 @@ def test_openapi_parser_parse_array_enum(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_openapi_parser_parse_remote_ref(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with remote references."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -512,12 +538,14 @@ def test_openapi_parser_parse_remote_ref(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_openapi_parser_parse_required_null(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with required nullable fields."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(source=Path(DATA_PATH / "required_null.yaml"))
     assert_output(parser.parse(), EXPECTED_OPEN_API_PATH / "openapi_parser_parse_required_null" / "output.py")
 
 
 def test_openapi_model_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test OpenAPI model resolver functionality."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(source=(DATA_PATH / "api.yaml"))
     parser.parse()
@@ -610,6 +638,7 @@ def test_openapi_model_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
 
 def test_openapi_parser_parse_any(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI with any type schemas."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -619,6 +648,7 @@ def test_openapi_parser_parse_any(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
 
 def test_openapi_parser_responses_without_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI responses without content."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -630,6 +660,7 @@ def test_openapi_parser_responses_without_content(tmp_path: Path, monkeypatch: p
 
 
 def test_openapi_parser_responses_with_tag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing OpenAPI responses with tags."""
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
@@ -644,6 +675,7 @@ def test_openapi_parser_responses_with_tag(tmp_path: Path, monkeypatch: pytest.M
     reason="Installed black doesn't support the old style",
 )
 def test_openapi_parser_with_query_parameters() -> None:
+    """Test parsing OpenAPI with query parameters."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / "query_parameters.yaml"),
@@ -661,6 +693,7 @@ def test_openapi_parser_with_query_parameters() -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_openapi_parser_with_include_path_parameters() -> None:
+    """Test parsing OpenAPI with included path parameters."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source=Path(DATA_PATH / "query_parameters.yaml"),
@@ -677,6 +710,7 @@ def test_openapi_parser_with_include_path_parameters() -> None:
 
 
 def test_parse_all_parameters_duplicate_names_exception() -> None:
+    """Test parsing parameters with duplicate names raises exception."""
     parser = OpenAPIParser("", include_path_parameters=True)
     parameters = [
         ParameterObject.parse_obj({"name": "duplicate_param", "in": "path", "schema": {"type": "string"}}),
@@ -694,6 +728,7 @@ def test_parse_all_parameters_duplicate_names_exception() -> None:
     reason="Require Pydantic version 2.0.0 or later ",
 )
 def test_openapi_parser_array_called_fields_with_one_of_items() -> None:
+    """Test parsing OpenAPI array fields with oneOf items."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelField,
         source=Path(DATA_PATH / "array_called_fields_with_oneOf_items.yaml"),
@@ -754,6 +789,7 @@ def test_no_additional_imports() -> None:
     ],
 )
 def test_parse_request_body_return(request_body_data: dict[str, Any], expected_type_hints: dict[str, str]) -> None:
+    """Test parsing request body returns correct type hints."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source="",
@@ -793,6 +829,7 @@ def test_parse_request_body_return(request_body_data: dict[str, Any], expected_t
     ],
 )
 def test_parse_all_parameters_return(parameters_data: list[dict[str, Any]], expected_type_hint: str | None) -> None:
+    """Test parsing parameters returns correct type hints."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source="",
@@ -856,6 +893,7 @@ def test_parse_responses_return(
     responses_data: dict[str, dict[str, Any]],
     expected_type_hints: dict[str, dict[str, str]],
 ) -> None:
+    """Test parsing responses returns correct type hints."""
     parser = OpenAPIParser(
         data_model_field_type=DataModelFieldBase,
         source="",

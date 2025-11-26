@@ -1,3 +1,5 @@
+"""Tests for GraphQL annotated types generation."""
+
 from __future__ import annotations
 
 from argparse import Namespace
@@ -21,6 +23,7 @@ assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -28,6 +31,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @freeze_time("2019-07-26")
 def test_annotated(tmp_path: Path) -> None:
+    """Test GraphQL code generation with annotated types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -46,6 +50,7 @@ def test_annotated(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_annotated_use_standard_collections(tmp_path: Path) -> None:
+    """Test GraphQL annotated types with standard collections."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -65,6 +70,7 @@ def test_annotated_use_standard_collections(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_annotated_use_standard_collections_use_union_operator(tmp_path: Path) -> None:
+    """Test GraphQL annotated types with standard collections and union operator."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -85,6 +91,7 @@ def test_annotated_use_standard_collections_use_union_operator(tmp_path: Path) -
 
 @freeze_time("2019-07-26")
 def test_annotated_use_union_operator(tmp_path: Path) -> None:
+    """Test GraphQL annotated types with union operator."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -104,6 +111,7 @@ def test_annotated_use_union_operator(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_annotated_field_aliases(tmp_path: Path) -> None:
+    """Test GraphQL annotated types with field aliases."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",

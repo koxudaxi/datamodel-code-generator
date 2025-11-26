@@ -1,3 +1,5 @@
+"""Tests for YAML input file code generation."""
+
 from __future__ import annotations
 
 from argparse import Namespace
@@ -20,6 +22,7 @@ assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -28,6 +31,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_yaml(tmp_path: Path) -> None:
+    """Test YAML input file code generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",

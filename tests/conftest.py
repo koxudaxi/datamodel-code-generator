@@ -1,3 +1,5 @@
+"""Test configuration and shared fixtures."""
+
 from __future__ import annotations
 
 import inspect
@@ -32,13 +34,17 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
 
 
 class AssertFileContent(Protocol):
+    """Protocol for file content assertion callable."""
+
     def __call__(
         self,
         output_file: Path,
         expected_name: str | Path | None = None,
         encoding: str = "utf-8",
         transform: Callable[[str], str] | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Assert file content matches expected output."""
+        ...
 
 
 def create_assert_file_content(
@@ -185,4 +191,5 @@ def _inline_snapshot_file_formats() -> None:
 
 @pytest.fixture(scope="session")
 def min_version() -> str:
+    """Return minimum Python version as string."""
     return f"3.{MIN_VERSION}"

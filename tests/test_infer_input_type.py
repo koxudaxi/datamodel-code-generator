@@ -1,3 +1,5 @@
+"""Tests for input type inference functionality."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +12,8 @@ DATA_PATH: Path = Path(__file__).parent / "data"
 
 
 def test_infer_input_type() -> None:
+    """Test automatic input type detection for various file formats."""
+
     def assert_infer_input_type(file: Path, raw_data_type: InputFileType) -> None:
         __tracebackhide__ = True
         if file.is_dir():

@@ -1,3 +1,5 @@
+"""Tests for JSON Schema input file code generation."""
+
 from __future__ import annotations
 
 import contextlib
@@ -45,6 +47,7 @@ assert_file_content = create_assert_file_content(EXPECTED_JSON_SCHEMA_PATH)
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -53,6 +56,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_inheritance_forward_ref(tmp_path: Path) -> None:
+    """Test inheritance with forward references."""
     output_file: Path = tmp_path / "output.py"
     shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
     return_code: Exit = main([
@@ -68,6 +72,7 @@ def test_main_inheritance_forward_ref(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_inheritance_forward_ref_keep_model_order(tmp_path: Path) -> None:
+    """Test inheritance with forward references keeping model order."""
     output_file: Path = tmp_path / "output.py"
     shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
     return_code: Exit = main([
@@ -84,6 +89,7 @@ def test_main_inheritance_forward_ref_keep_model_order(tmp_path: Path) -> None:
 @pytest.mark.skip(reason="pytest-xdist does not support the test")
 @freeze_time("2019-07-26")
 def test_main_without_arguments() -> None:
+    """Test main function without arguments raises SystemExit."""
     with pytest.raises(SystemExit):
         main()
 
@@ -91,6 +97,7 @@ def test_main_without_arguments() -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_autodetect(tmp_path: Path) -> None:
+    """Test automatic input file type detection."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -106,6 +113,7 @@ def test_main_autodetect(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_autodetect_failed(tmp_path: Path) -> None:
+    """Test autodetect failure with invalid input."""
     input_file: Path = tmp_path / "input.yaml"
     output_file: Path = tmp_path / "output.py"
 
@@ -124,6 +132,7 @@ def test_main_autodetect_failed(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema(tmp_path: Path) -> None:
+    """Test JSON Schema file code generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -140,6 +149,7 @@ def test_main_jsonschema(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
+    """Test deeply nested JSON Schema generation."""
     output_init_file: Path = tmp_path / "__init__.py"
     output_nested_file: Path = tmp_path / "nested/deep.py"
     output_empty_parent_nested_file: Path = tmp_path / "empty_parent/nested/deep.py"
@@ -164,6 +174,7 @@ def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_nested_skip(tmp_path: Path) -> None:
+    """Test nested JSON Schema with skipped items."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "nested_skip.json"),
@@ -180,6 +191,7 @@ def test_main_jsonschema_nested_skip(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_external_files(tmp_path: Path) -> None:
+    """Test JSON Schema with external file references."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -196,6 +208,7 @@ def test_main_jsonschema_external_files(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
+    """Test collapsed external references in JSON Schema."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "external_reference"),
@@ -213,6 +226,7 @@ def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_multiple_files(tmp_path: Path) -> None:
+    """Test JSON Schema generation from multiple files."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "multiple_files"),
@@ -229,6 +243,7 @@ def test_main_jsonschema_multiple_files(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> None:
+    """Test no empty files with collapsed external models."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "external_collapse"),
@@ -258,6 +273,7 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
 )
 @freeze_time("2019-07-26")
 def test_main_null_and_array(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test handling of null and array types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -275,6 +291,7 @@ def test_main_null_and_array(output_model: str, expected_output: str, tmp_path: 
 
 @freeze_time("2019-07-26")
 def test_use_default_pydantic_v2_with_json_schema_const(tmp_path: Path) -> None:
+    """Test use-default with const in Pydantic v2."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -313,6 +330,7 @@ def test_use_default_pydantic_v2_with_json_schema_const(tmp_path: Path) -> None:
 def test_main_complicated_enum_default_member(
     output_model: str, expected_output: str, option: str | None, tmp_path: Path
 ) -> None:
+    """Test complicated enum with default member."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         a
@@ -334,6 +352,7 @@ def test_main_complicated_enum_default_member(
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_json_reuse_enum_default_member(tmp_path: Path) -> None:
+    """Test enum reuse with default member."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -351,6 +370,7 @@ def test_main_json_reuse_enum_default_member(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    """Test invalid model name error handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -369,6 +389,7 @@ def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture, tmp_path:
 
 @freeze_time("2019-07-26")
 def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    """Test invalid model name conversion error."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -385,6 +406,7 @@ def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture, tmp_pa
 
 @freeze_time("2019-07-26")
 def test_main_invalid_model_name(tmp_path: Path) -> None:
+    """Test invalid model name with custom class name."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -402,6 +424,7 @@ def test_main_invalid_model_name(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test root ID JSON Schema with local file reference."""
     root_id_response = mocker.Mock()
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
@@ -424,6 +447,7 @@ def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, tmp_path
 
 @freeze_time("2019-07-26")
 def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test root ID JSON Schema with remote file reference."""
     root_id_response = mocker.Mock()
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
@@ -457,6 +481,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test root ID JSON Schema self-references with local file."""
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
@@ -482,6 +507,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test root ID JSON Schema self-references with remote file."""
     person_response = mocker.Mock()
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
@@ -516,6 +542,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
 
 @freeze_time("2019-07-26")
 def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test root ID JSON Schema with absolute remote file URL."""
     root_id_response = mocker.Mock()
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
@@ -548,6 +575,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
 
 @freeze_time("2019-07-26")
 def test_main_root_id_jsonschema_with_absolute_local_file(tmp_path: Path) -> None:
+    """Test root ID JSON Schema with absolute local file path."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -564,6 +592,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(tmp_path: Path) -> Non
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_id(tmp_path: Path) -> None:
+    """Test JSON Schema with ID field."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -579,6 +608,7 @@ def test_main_jsonschema_id(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Test JSON Schema ID handling from stdin."""
     output_file: Path = tmp_path / "output.py"
     monkeypatch.setattr("sys.stdin", (JSON_SCHEMA_DATA_PATH / "id.json").open())
     return_code: Exit = main([
@@ -592,6 +622,7 @@ def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: 
 
 
 def test_main_jsonschema_ids(tmp_path: Path) -> None:
+    """Test JSON Schema with multiple IDs."""
     input_filename = JSON_SCHEMA_DATA_PATH / "ids" / "Organization.schema.json"
     output_path = tmp_path / "model"
 
@@ -611,6 +642,7 @@ def test_main_jsonschema_ids(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_external_definitions(tmp_path: Path) -> None:
+    """Test external definitions in JSON Schema."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -626,6 +658,7 @@ def test_main_external_definitions(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_external_files_in_directory(tmp_path: Path) -> None:
+    """Test external files in directory structure."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -642,6 +675,7 @@ def test_main_external_files_in_directory(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_nested_directory(tmp_path: Path) -> None:
+    """Test nested directory structure generation."""
     output_path = tmp_path / "model"
     return_code: Exit = main([
         "--input",
@@ -658,6 +692,7 @@ def test_main_nested_directory(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_circular_reference(tmp_path: Path) -> None:
+    """Test circular reference handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -673,6 +708,7 @@ def test_main_circular_reference(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_invalid_enum_name(tmp_path: Path) -> None:
+    """Test invalid enum name handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -688,6 +724,7 @@ def test_main_invalid_enum_name(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_invalid_enum_name_snake_case_field(tmp_path: Path) -> None:
+    """Test invalid enum name with snake case fields."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -704,6 +741,7 @@ def test_main_invalid_enum_name_snake_case_field(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_reuse_enum(tmp_path: Path) -> None:
+    """Test enum reuse in JSON generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -720,6 +758,7 @@ def test_main_json_reuse_enum(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_capitalise_enum_members(tmp_path: Path) -> None:
+    """Test enum member capitalization."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -736,6 +775,7 @@ def test_main_json_capitalise_enum_members(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_capitalise_enum_members_without_enum(tmp_path: Path) -> None:
+    """Test enum member capitalization without enum flag."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -752,6 +792,7 @@ def test_main_json_capitalise_enum_members_without_enum(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_similar_nested_array(tmp_path: Path) -> None:
+    """Test similar nested array structures."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -780,6 +821,7 @@ def test_main_similar_nested_array(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_require_referenced_field(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test required referenced fields."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "require_referenced_field/"),
@@ -813,6 +855,7 @@ def test_main_require_referenced_field(output_model: str, expected_output: str, 
 )
 @freeze_time("2019-07-26")
 def test_main_require_referenced_field_naive_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test required referenced field with naive datetime."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "require_referenced_field/"),
@@ -850,6 +893,7 @@ def test_main_require_referenced_field_naive_datetime(output_model: str, expecte
 )
 @freeze_time("2019-07-26")
 def test_main_require_referenced_field_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test required referenced field with datetime."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "require_referenced_field/"),
@@ -868,6 +912,7 @@ def test_main_require_referenced_field_datetime(output_model: str, expected_outp
 
 @freeze_time("2019-07-26")
 def test_main_json_pointer(tmp_path: Path) -> None:
+    """Test JSON pointer references."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -883,6 +928,7 @@ def test_main_json_pointer(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_nested_json_pointer(tmp_path: Path) -> None:
+    """Test nested JSON pointer references."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -898,6 +944,7 @@ def test_main_nested_json_pointer(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_multiple_files_json_pointer(tmp_path: Path) -> None:
+    """Test JSON pointer with multiple files."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "multiple_files_json_pointer"),
@@ -913,6 +960,7 @@ def test_main_jsonschema_multiple_files_json_pointer(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_root_model_with_additional_properties(tmp_path: Path) -> None:
+    """Test root model with additional properties."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -928,6 +976,7 @@ def test_main_root_model_with_additional_properties(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_root_model_with_additional_properties_use_generic_container_types(tmp_path: Path) -> None:
+    """Test root model additional properties with generic containers."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -944,6 +993,7 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
 
 @freeze_time("2019-07-26")
 def test_main_root_model_with_additional_properties_use_standard_collections(tmp_path: Path) -> None:
+    """Test root model additional properties with standard collections."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -960,6 +1010,7 @@ def test_main_root_model_with_additional_properties_use_standard_collections(tmp
 
 @freeze_time("2019-07-26")
 def test_main_root_model_with_additional_properties_literal(min_version: str, tmp_path: Path) -> None:
+    """Test root model additional properties with literal types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -979,6 +1030,7 @@ def test_main_root_model_with_additional_properties_literal(min_version: str, tm
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_multiple_files_ref(tmp_path: Path) -> None:
+    """Test multiple files with references."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "multiple_files_self_ref"),
@@ -994,6 +1046,7 @@ def test_main_jsonschema_multiple_files_ref(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_multiple_files_ref_test_json(tmp_path: Path) -> None:
+    """Test main jsonschema multiple files ref json."""
     output_file: Path = tmp_path / "output.py"
     with chdir(JSON_SCHEMA_DATA_PATH / "multiple_files_self_ref"):
         return_code: Exit = main([
@@ -1010,6 +1063,7 @@ def test_main_jsonschema_multiple_files_ref_test_json(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_space_field_enum_snake_case_field(tmp_path: Path) -> None:
+    """Test enum with space in field name using snake case."""
     output_file: Path = tmp_path / "output.py"
     with chdir(JSON_SCHEMA_DATA_PATH / "space_field_enum.json"):
         return_code: Exit = main([
@@ -1030,6 +1084,7 @@ def test_main_space_field_enum_snake_case_field(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_all_of_ref(tmp_path: Path) -> None:
+    """Test allOf with references."""
     output_file: Path = tmp_path / "output.py"
     with chdir(JSON_SCHEMA_DATA_PATH / "all_of_ref"):
         return_code: Exit = main([
@@ -1048,6 +1103,7 @@ def test_main_all_of_ref(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_all_of_with_object(tmp_path: Path) -> None:
+    """Test allOf with object types."""
     output_file: Path = tmp_path / "output.py"
     with chdir(JSON_SCHEMA_DATA_PATH):
         return_code: Exit = main([
@@ -1068,6 +1124,7 @@ def test_main_all_of_with_object(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_combined_array(tmp_path: Path) -> None:
+    """Test combined array types."""
     output_file: Path = tmp_path / "output.py"
     with chdir(JSON_SCHEMA_DATA_PATH):
         return_code: Exit = main([
@@ -1084,6 +1141,7 @@ def test_main_combined_array(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_pattern(tmp_path: Path) -> None:
+    """Test JSON Schema pattern validation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1099,6 +1157,7 @@ def test_main_jsonschema_pattern(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_generate(tmp_path: Path) -> None:
+    """Test code generation function."""
     output_file: Path = tmp_path / "output.py"
     input_ = (JSON_SCHEMA_DATA_PATH / "person.json").relative_to(Path.cwd())
     assert not input_.is_absolute()
@@ -1113,9 +1172,7 @@ def test_main_generate(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_generate_non_pydantic_output(tmp_path: Path) -> None:
-    """
-    See https://github.com/koxudaxi/datamodel-code-generator/issues/1452.
-    """
+    """Test generation with non-Pydantic output models (see issue #1452)."""
     output_file: Path = tmp_path / "output.py"
     input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
     assert not input_.is_absolute()
@@ -1131,6 +1188,7 @@ def test_main_generate_non_pydantic_output(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_generate_from_directory(tmp_path: Path) -> None:
+    """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
     assert not input_.is_absolute()
     assert input_.is_dir()
@@ -1146,6 +1204,8 @@ def test_main_generate_from_directory(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_generate_custom_class_name_generator(tmp_path: Path) -> None:
+    """Test custom class name generator."""
+
     def custom_class_name_generator(title: str) -> str:
         return f"Custom{title}"
 
@@ -1168,6 +1228,7 @@ def test_main_generate_custom_class_name_generator(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_generate_custom_class_name_generator_additional_properties(tmp_path: Path) -> None:
+    """Test custom class name generator with additional properties."""
     output_file = tmp_path / "models.py"
 
     def custom_class_name_generator(name: str) -> str:
@@ -1187,6 +1248,7 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
 
 @freeze_time("2019-07-26")
 def test_main_http_jsonschema(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
 
     def get_mock_response(path: str) -> mocker.Mock:
@@ -1320,6 +1382,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
     http_ignore_tls: bool,
     tmp_path: Path,
 ) -> None:
+    """Test HTTP JSON Schema with headers, query params, and TLS ignore."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
 
     def get_mock_response(path: str) -> mocker.Mock:
@@ -1428,6 +1491,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
 
 @freeze_time("2019-07-26")
 def test_main_self_reference(tmp_path: Path) -> None:
+    """Test self-referencing schemas."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1444,6 +1508,7 @@ def test_main_self_reference(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_strict_types(tmp_path: Path) -> None:
+    """Test strict type generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1463,6 +1528,7 @@ def test_main_strict_types(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_strict_types_all(tmp_path: Path) -> None:
+    """Test strict types for all fields."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1485,6 +1551,7 @@ def test_main_strict_types_all(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_strict_types_all_with_field_constraints(tmp_path: Path) -> None:
+    """Test strict types with field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1508,6 +1575,7 @@ def test_main_strict_types_all_with_field_constraints(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_special_enum(tmp_path: Path) -> None:
+    """Test special enum handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1523,6 +1591,7 @@ def test_main_jsonschema_special_enum(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_special_enum_special_field_name_prefix(tmp_path: Path) -> None:
+    """Test special enum with field name prefix."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1540,6 +1609,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix(tmp_path: Path) 
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private(tmp_path: Path) -> None:
+    """Test special enum with prefix keeping private fields."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1557,6 +1627,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private(tmp
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_special_model_remove_special_field_name_prefix(tmp_path: Path) -> None:
+    """Test removing special field name prefix from models."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1573,6 +1644,7 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix(tmp_path
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_subclass_enum(tmp_path: Path) -> None:
+    """Test enum subclassing."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1593,6 +1665,7 @@ def test_main_jsonschema_subclass_enum(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_jsonschema_specialized_enums(tmp_path: Path) -> None:
+    """Test specialized enum generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1614,6 +1687,7 @@ def test_main_jsonschema_specialized_enums(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_jsonschema_specialized_enums_disabled(tmp_path: Path) -> None:
+    """Test with specialized enums disabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1632,6 +1706,7 @@ def test_main_jsonschema_specialized_enums_disabled(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_special_enum_empty_enum_field_name(tmp_path: Path) -> None:
+    """Test special enum with empty field name."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1650,6 +1725,7 @@ def test_main_jsonschema_special_enum_empty_enum_field_name(tmp_path: Path) -> N
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_special_field_name(tmp_path: Path) -> None:
+    """Test special field name handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1665,6 +1741,7 @@ def test_main_jsonschema_special_field_name(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_complex_one_of(tmp_path: Path) -> None:
+    """Test complex oneOf schemas."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1681,6 +1758,7 @@ def test_main_jsonschema_complex_one_of(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_complex_any_of(tmp_path: Path) -> None:
+    """Test complex anyOf schemas."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1696,6 +1774,7 @@ def test_main_jsonschema_complex_any_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_combine_one_of_object(tmp_path: Path) -> None:
+    """Test combining oneOf with objects."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1729,6 +1808,7 @@ def test_main_jsonschema_combine_one_of_object(tmp_path: Path) -> None:
 def test_main_jsonschema_combine_any_of_object(
     union_mode: str | None, output_model: str, expected_output: str, tmp_path: Path
 ) -> None:
+    """Test combining anyOf with objects."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main(
         [
@@ -1750,6 +1830,7 @@ def test_main_jsonschema_combine_any_of_object(
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_field_include_all_keys(tmp_path: Path) -> None:
+    """Test field generation including all keys."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1781,6 +1862,7 @@ def test_main_jsonschema_field_include_all_keys(tmp_path: Path) -> None:
 def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, tmp_path: Path
 ) -> None:
+    """Test field extras including all keys."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1814,6 +1896,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     ],
 )
 def test_main_jsonschema_field_extras_field_extra_keys(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test field extras with extra keys."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1849,6 +1932,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(output_model: str, expect
     ],
 )
 def test_main_jsonschema_field_extras(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test field extras generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1883,6 +1967,7 @@ def test_main_jsonschema_field_extras(output_model: str, expected_output: str, t
 )
 @freeze_time("2019-07-26")
 def test_main_jsonschema_custom_type_path(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test custom type path handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1900,6 +1985,7 @@ def test_main_jsonschema_custom_type_path(output_model: str, expected_output: st
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_custom_base_path(tmp_path: Path) -> None:
+    """Test custom base path configuration."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1915,6 +2001,7 @@ def test_main_jsonschema_custom_base_path(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_long_description(tmp_path: Path) -> None:
+    """Test long description handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1934,6 +2021,7 @@ def test_long_description(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_long_description_wrap_string_literal(tmp_path: Path) -> None:
+    """Test long description with string literal wrapping."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1949,6 +2037,7 @@ def test_long_description_wrap_string_literal(tmp_path: Path) -> None:
 
 
 def test_version(capsys: pytest.CaptureFixture) -> None:
+    """Test version output."""
     with pytest.raises(SystemExit) as e:
         main(["--version"])
     assert e.value.code == Exit.OK
@@ -1959,6 +2048,7 @@ def test_version(capsys: pytest.CaptureFixture) -> None:
 
 @freeze_time("2019-07-26")
 def test_jsonschema_pattern_properties(tmp_path: Path) -> None:
+    """Test JSON Schema pattern properties."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1974,6 +2064,7 @@ def test_jsonschema_pattern_properties(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_jsonschema_pattern_properties_field_constraints(tmp_path: Path) -> None:
+    """Test pattern properties with field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1990,6 +2081,7 @@ def test_jsonschema_pattern_properties_field_constraints(tmp_path: Path) -> None
 
 @freeze_time("2019-07-26")
 def test_jsonschema_titles(tmp_path: Path) -> None:
+    """Test JSON Schema title handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2005,6 +2097,7 @@ def test_jsonschema_titles(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_jsonschema_titles_use_title_as_name(tmp_path: Path) -> None:
+    """Test using title as model name."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2021,6 +2114,7 @@ def test_jsonschema_titles_use_title_as_name(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_jsonschema_without_titles_use_title_as_name(tmp_path: Path) -> None:
+    """Test title as name without titles present."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2037,6 +2131,7 @@ def test_jsonschema_without_titles_use_title_as_name(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_has_default_value(tmp_path: Path) -> None:
+    """Test default value handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2052,6 +2147,7 @@ def test_main_jsonschema_has_default_value(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_boolean_property(tmp_path: Path) -> None:
+    """Test boolean property generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2069,6 +2165,7 @@ def test_main_jsonschema_boolean_property(tmp_path: Path) -> None:
 def test_main_jsonschema_modular_default_enum_member(
     tmp_path: Path,
 ) -> None:
+    """Test modular enum with default member."""
     input_filename = JSON_SCHEMA_DATA_PATH / "modular_default_enum_member"
     output_path = tmp_path / "model"
 
@@ -2090,6 +2187,7 @@ def test_main_jsonschema_modular_default_enum_member(
 )
 @freeze_time("2019-07-26")
 def test_main_use_union_operator(tmp_path: Path) -> None:
+    """Test union operator usage."""
     output_path = tmp_path / "model"
     return_code: Exit = main([
         "--input",
@@ -2108,6 +2206,7 @@ def test_main_use_union_operator(tmp_path: Path) -> None:
 @freeze_time("2019-07-26")
 @pytest.mark.parametrize("as_module", [True, False])
 def test_treat_dot_as_module(as_module: bool, tmp_path: Path) -> None:
+    """Test dot notation as module separator."""
     if as_module:
         return_code: Exit = main([
             "--input",
@@ -2131,6 +2230,7 @@ def test_treat_dot_as_module(as_module: bool, tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_duplicate_name(tmp_path: Path) -> None:
+    """Test duplicate name handling."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "duplicate_name"),
@@ -2146,6 +2246,7 @@ def test_main_jsonschema_duplicate_name(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_items_boolean(tmp_path: Path) -> None:
+    """Test items with boolean values."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2161,6 +2262,7 @@ def test_main_jsonschema_items_boolean(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_array_in_additional_properites(tmp_path: Path) -> None:
+    """Test array in additional properties."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2176,6 +2278,7 @@ def test_main_jsonschema_array_in_additional_properites(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_object_with_only_additional_properties(tmp_path: Path) -> None:
+    """Test object with only additional properties."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2191,6 +2294,7 @@ def test_main_jsonschema_object_with_only_additional_properties(tmp_path: Path) 
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_nullable_object(tmp_path: Path) -> None:
+    """Test nullable object handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2206,6 +2310,7 @@ def test_main_jsonschema_nullable_object(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_object_has_one_of(tmp_path: Path) -> None:
+    """Test object with oneOf constraint."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2221,6 +2326,7 @@ def test_main_jsonschema_object_has_one_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_json_pointer_array(tmp_path: Path) -> None:
+    """Test JSON pointer with arrays."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2236,6 +2342,7 @@ def test_main_jsonschema_json_pointer_array(tmp_path: Path) -> None:
 
 @pytest.mark.filterwarnings("error")
 def test_main_disable_warnings_config(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    """Test disable warnings configuration."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2256,6 +2363,7 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture, tmp_path: P
 
 @pytest.mark.filterwarnings("error")
 def test_main_disable_warnings(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    """Test disable warnings flag."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2273,6 +2381,7 @@ def test_main_disable_warnings(capsys: pytest.CaptureFixture, tmp_path: Path) ->
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_pattern_properties_by_reference(tmp_path: Path) -> None:
+    """Test pattern properties by reference."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2288,6 +2397,7 @@ def test_main_jsonschema_pattern_properties_by_reference(tmp_path: Path) -> None
 
 @freeze_time("2019-07-26")
 def test_main_dataclass_field(tmp_path: Path) -> None:
+    """Test dataclass field generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2307,6 +2417,7 @@ def test_main_dataclass_field(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_jsonschema_enum_root_literal(tmp_path: Path) -> None:
+    """Test enum root with literal type."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2334,6 +2445,7 @@ def test_main_jsonschema_enum_root_literal(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_nullable_any_of(tmp_path: Path) -> None:
+    """Test nullable anyOf schemas."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2348,6 +2460,7 @@ def test_main_nullable_any_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_nullable_any_of_use_union_operator(tmp_path: Path) -> None:
+    """Test nullable anyOf with union operator."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2363,6 +2476,7 @@ def test_main_nullable_any_of_use_union_operator(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_nested_all_of(tmp_path: Path) -> None:
+    """Test nested allOf schemas."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2376,6 +2490,7 @@ def test_main_nested_all_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_all_of_any_of(tmp_path: Path) -> None:
+    """Test combination of allOf and anyOf."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "all_of_any_of"),
@@ -2391,6 +2506,7 @@ def test_main_all_of_any_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_all_of_one_of(tmp_path: Path) -> None:
+    """Test combination of allOf and oneOf."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "all_of_one_of"),
@@ -2406,6 +2522,7 @@ def test_main_all_of_one_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_null(tmp_path: Path) -> None:
+    """Test null type handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2425,6 +2542,7 @@ def test_main_null(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_typed_dict_special_field_name_with_inheritance_model(tmp_path: Path) -> None:
+    """Test TypedDict special field names with inheritance."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2541,6 +2659,7 @@ def test_main_dataclass_const(tmp_path: Path) -> None:
 def test_main_jsonschema_discriminator_literals(
     output_model: str, expected_output: str, min_version: str, tmp_path: Path
 ) -> None:
+    """Test discriminator with literal types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2562,6 +2681,7 @@ def test_main_jsonschema_discriminator_literals(
     reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str, tmp_path: Path) -> None:
+    """Test discriminator literals without mapping."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2594,6 +2714,7 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
 def test_main_jsonschema_external_discriminator(
     output_model: str, expected_output: str, min_version: str, tmp_path: Path
 ) -> None:
+    """Test external discriminator references."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2626,6 +2747,7 @@ def test_main_jsonschema_external_discriminator(
 def test_main_jsonschema_external_discriminator_folder(
     output_model: str, expected_output: str, min_version: str, tmp_path: Path
 ) -> None:
+    """Test external discriminator in folder structure."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference"),
@@ -2643,6 +2765,7 @@ def test_main_jsonschema_external_discriminator_folder(
 
 @freeze_time("2019-07-26")
 def test_main_duplicate_field_constraints(tmp_path: Path) -> None:
+    """Test duplicate field constraint handling."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "duplicate_field_constraints"),
@@ -2665,6 +2788,7 @@ def test_main_duplicate_field_constraints(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_duplicate_field_constraints_msgspec(min_version: str, tmp_path: Path) -> None:
+    """Test duplicate field constraints with msgspec."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "duplicate_field_constraints"),
@@ -2684,6 +2808,7 @@ def test_main_duplicate_field_constraints_msgspec(min_version: str, tmp_path: Pa
 
 @freeze_time("2019-07-26")
 def test_main_dataclass_field_defs(tmp_path: Path) -> None:
+    """Test dataclass field definitions."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2703,6 +2828,7 @@ def test_main_dataclass_field_defs(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_dataclass_default(tmp_path: Path) -> None:
+    """Test dataclass default values."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2718,6 +2844,7 @@ def test_main_dataclass_default(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_all_of_ref_self(tmp_path: Path) -> None:
+    """Test allOf with self-reference."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2737,6 +2864,7 @@ def test_main_all_of_ref_self(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_array_field_constraints(tmp_path: Path) -> None:
+    """Test array field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2756,6 +2884,7 @@ def test_main_array_field_constraints(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_all_of_use_default(tmp_path: Path) -> None:
+    """Test allOf with use-default option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2770,6 +2899,7 @@ def test_all_of_use_default(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_root_one_of(tmp_path: Path) -> None:
+    """Test root-level oneOf schemas."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "root_one_of"),
@@ -2785,6 +2915,7 @@ def test_main_root_one_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_one_of_with_sub_schema_array_item(tmp_path: Path) -> None:
+    """Test oneOf with sub-schema array items."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2802,6 +2933,7 @@ def test_one_of_with_sub_schema_array_item(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_with_custom_formatters(tmp_path: Path) -> None:
+    """Test custom formatter integration."""
     output_file: Path = tmp_path / "output.py"
     formatter_config = {
         "license_file": str(Path(__file__).parent.parent.parent / "data/python/custom_formatters/license_example.txt")
@@ -2826,6 +2958,7 @@ def test_main_jsonschema_with_custom_formatters(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_imports_correct(tmp_path: Path) -> None:
+    """Test correct import generation."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "imports_correct"),
@@ -2854,6 +2987,7 @@ def test_main_imports_correct(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_jsonschema_duration(output_model: str, expected_output: str, min_version: str, tmp_path: Path) -> None:
+    """Test duration type handling."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2875,6 +3009,7 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str, min_v
     reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_keyword_only_msgspec(min_version: str, tmp_path: Path) -> None:
+    """Test msgspec keyword-only arguments."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2899,6 +3034,7 @@ def test_main_jsonschema_keyword_only_msgspec(min_version: str, tmp_path: Path) 
     reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_keyword_only_msgspec_with_extra_data(min_version: str, tmp_path: Path) -> None:
+    """Test msgspec keyword-only with extra data."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2925,6 +3061,7 @@ def test_main_jsonschema_keyword_only_msgspec_with_extra_data(min_version: str, 
     reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Path) -> None:
+    """Test OpenAPI msgspec keyword-only with extra data."""
     extra_data = json.loads((JSON_SCHEMA_DATA_PATH / "extra_data_msgspec.json").read_text())
     output_file: Path = tmp_path / "output.py"
     generate(
@@ -2944,6 +3081,7 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
 
 @freeze_time("2019-07-26")
 def test_main_invalid_import_name(tmp_path: Path) -> None:
+    """Test invalid import name handling."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "invalid_import_name"),
@@ -2972,6 +3110,7 @@ def test_main_invalid_import_name(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_jsonschema_field_has_same_name(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test field with same name as parent."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2990,6 +3129,7 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_jsonschema_required_and_any_of_required(tmp_path: Path) -> None:
+    """Test required field with anyOf required."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -3005,6 +3145,7 @@ def test_main_jsonschema_required_and_any_of_required(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_pointer_escaped_segments(tmp_path: Path) -> None:
+    """Test JSON pointer with escaped segments."""
     schema = {
         "definitions": {
             "foo/bar": {"type": "object", "properties": {"value": {"type": "string"}}},
@@ -3049,6 +3190,7 @@ def test_main_json_pointer_escaped_segments(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
+    """Test JSON pointer with percent-encoded segments."""
     schema = {
         "definitions": {
             "foo/bar": {"type": "object", "properties": {"value": {"type": "string"}}},
@@ -3134,6 +3276,7 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_extra_fields(extra_fields: str, output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test extra fields configuration."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -3153,9 +3296,7 @@ def test_main_extra_fields(extra_fields: str, output_model: str, expected_output
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_same_name_objects(tmp_path: Path) -> None:
-    """
-    See: https://github.com/koxudaxi/datamodel-code-generator/issues/2460
-    """
+    """Test objects with same name (see issue #2460)."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -3171,9 +3312,7 @@ def test_main_jsonschema_same_name_objects(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_jsonschema_forwarding_reference_collapse_root(tmp_path: Path) -> None:
-    """
-    See: https://github.com/koxudaxi/datamodel-code-generator/issues/1466
-    """
+    """Test forwarding reference with collapsed root (see issue #1466)."""
     return_code: Exit = main([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "forwarding_reference"),

@@ -1,3 +1,10 @@
+"""CLI argument definitions for datamodel-codegen.
+
+Defines the ArgumentParser and all command-line options organized into groups:
+base options, typing customization, field customization, model customization,
+template customization, OpenAPI-specific options, and general options.
+"""
+
 from __future__ import annotations
 
 import locale
@@ -22,14 +29,19 @@ namespace = Namespace(no_color=False)
 
 
 class SortingHelpFormatter(HelpFormatter):
+    """Help formatter that sorts arguments and adds color to section headers."""
+
     def _bold_cyan(self, text: str) -> str:  # noqa: PLR6301
+        """Wrap text in ANSI bold cyan escape codes."""
         return f"\x1b[36;1m{text}\x1b[0m"
 
     def add_arguments(self, actions: Iterable[Action]) -> None:
+        """Add arguments sorted by option strings."""
         actions = sorted(actions, key=attrgetter("option_strings"))
         super().add_arguments(actions)
 
     def start_section(self, heading: str | None) -> None:
+        """Start a section with optional colored heading."""
         return super().start_section(heading if namespace.no_color or not heading else self._bold_cyan(heading))
 
 

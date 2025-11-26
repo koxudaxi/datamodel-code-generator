@@ -1,3 +1,5 @@
+"""Tests for code formatting functionality."""
+
 from __future__ import annotations
 
 import sys
@@ -18,8 +20,7 @@ ADD_LICENSE_FORMATTER = "tests.data.python.custom_formatters.add_license"
 
 
 def test_python_version() -> None:
-    """Ensure that the python version used for the tests is properly listed"""
-
+    """Ensure that the python version used for the tests is properly listed."""
     _ = PythonVersion("{}.{}".format(*sys.version_info[:2]))
 
 
@@ -36,6 +37,7 @@ def test_format_code_with_skip_string_normalization(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Test code formatting with skip string normalization option."""
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(PythonVersionMin, skip_string_normalization=skip_string_normalization)
 
@@ -45,6 +47,7 @@ def test_format_code_with_skip_string_normalization(
 
 
 def test_format_code_un_exist_custom_formatter() -> None:
+    """Test error when custom formatter module doesn't exist."""
     with pytest.raises(ModuleNotFoundError):
         _ = CodeFormatter(
             PythonVersionMin,
@@ -53,6 +56,7 @@ def test_format_code_un_exist_custom_formatter() -> None:
 
 
 def test_format_code_invalid_formatter_name() -> None:
+    """Test error when custom formatter has no CodeFormatter class."""
     with pytest.raises(NameError):
         _ = CodeFormatter(
             PythonVersionMin,
@@ -61,6 +65,7 @@ def test_format_code_invalid_formatter_name() -> None:
 
 
 def test_format_code_is_not_subclass() -> None:
+    """Test error when custom formatter doesn't inherit CustomCodeFormatter."""
     with pytest.raises(TypeError):
         _ = CodeFormatter(
             PythonVersionMin,
@@ -69,6 +74,7 @@ def test_format_code_is_not_subclass() -> None:
 
 
 def test_format_code_with_custom_formatter_without_kwargs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test custom formatter that doesn't require kwargs."""
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersionMin,
@@ -81,6 +87,7 @@ def test_format_code_with_custom_formatter_without_kwargs(tmp_path: Path, monkey
 
 
 def test_format_code_with_custom_formatter_with_kwargs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test custom formatter with kwargs."""
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersionMin,
@@ -103,6 +110,7 @@ y = 2
 
 
 def test_format_code_with_two_custom_formatters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test chaining multiple custom formatters."""
     monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersionMin,
@@ -129,6 +137,7 @@ y = 2
 
 
 def test_format_code_ruff_format_formatter() -> None:
+    """Test ruff format formatter."""
     formatter = CodeFormatter(
         PythonVersionMin,
         formatters=[Formatter.RUFF_FORMAT],
@@ -142,6 +151,7 @@ def test_format_code_ruff_format_formatter() -> None:
 
 
 def test_format_code_ruff_check_formatter() -> None:
+    """Test ruff check formatter with auto-fix."""
     formatter = CodeFormatter(
         PythonVersionMin,
         formatters=[Formatter.RUFF_CHECK],

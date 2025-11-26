@@ -1,3 +1,5 @@
+"""Tests for GraphQL schema code generation."""
+
 from __future__ import annotations
 
 from argparse import Namespace
@@ -23,6 +25,7 @@ assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -47,6 +50,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test GraphQL code generation for simple Star Wars schema."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -68,6 +72,7 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
+    """Test GraphQL code generation with different field types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -83,6 +88,7 @@ def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_use_default_kwarg(tmp_path: Path) -> None:
+    """Test GraphQL code generation with use-default-kwarg flag."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -103,6 +109,7 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_custom_scalar_types(tmp_path: Path) -> None:
+    """Test GraphQL code generation with custom scalar types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -124,6 +131,7 @@ def test_main_graphql_custom_scalar_types(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_field_aliases(tmp_path: Path) -> None:
+    """Test GraphQL code generation with field aliases."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -145,6 +153,7 @@ def test_main_graphql_field_aliases(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_enums(tmp_path: Path) -> None:
+    """Test GraphQL code generation with enums."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -164,6 +173,7 @@ def test_main_graphql_enums(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_specialized_enums(tmp_path: Path) -> None:
+    """Test GraphQL code generation with specialized enums for Python 3.11+."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -185,6 +195,7 @@ def test_main_graphql_specialized_enums(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_specialized_enums_disabled(tmp_path: Path) -> None:
+    """Test GraphQL code generation with specialized enums disabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -207,6 +218,7 @@ def test_main_graphql_specialized_enums_disabled(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_enums_subclass(tmp_path: Path) -> None:
+    """Test GraphQL code generation with enum subclasses."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -227,6 +239,7 @@ def test_main_graphql_enums_subclass(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_union(tmp_path: Path) -> None:
+    """Test GraphQL code generation with union types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -246,6 +259,7 @@ def test_main_graphql_union(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
+    """Test GraphQL code generation with additional imports using isort 4.x."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -273,6 +287,7 @@ def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_additional_imports_isort_not_4(tmp_path: Path) -> None:
+    """Test GraphQL code generation with additional imports using not isort 4.x."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -296,6 +311,7 @@ def test_main_graphql_additional_imports_isort_not_4(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_custom_formatters(tmp_path: Path) -> None:
+    """Test GraphQL code generation with custom formatters."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -317,6 +333,7 @@ def test_main_graphql_custom_formatters(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
+    """Test GraphQL code generation with standard collections."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -337,6 +354,7 @@ def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_use_union_operator(tmp_path: Path) -> None:
+    """Test GraphQL code generation with union operator syntax."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -353,6 +371,7 @@ def test_main_graphql_use_union_operator(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
+    """Test GraphQL code generation with extra fields allowed."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",

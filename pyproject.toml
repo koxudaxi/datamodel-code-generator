@@ -159,7 +159,8 @@ lint.ignore = [
   "C901",   # complex structure
   "COM812", # Conflict with formatter
   "CPY",    # No copyright statements
-  "D",      # limited documentation
+  "D203",   # one-blank-line-before-class (conflicts with D211)
+  "D212",   # multi-line-summary-first-line (conflicts with D213)
   "DOC",    # limited documentation
   "FIX002", # line contains to do
   "ISC001", # Conflict with formatter
@@ -186,6 +187,7 @@ lint.isort = { known-first-party = [
   "from __future__ import annotations",
 ] }
 
+lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
