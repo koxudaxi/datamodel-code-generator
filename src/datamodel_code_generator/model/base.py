@@ -95,6 +95,7 @@ class DataModelFieldBase(_BaseModel):
     use_annotated: bool = False
     has_default: bool = False
     use_field_description: bool = False
+    use_inline_field_description: bool = False
     const: bool = False
     original_name: Optional[str] = None  # noqa: UP045
     use_default_kwarg: bool = False
@@ -165,6 +166,19 @@ class DataModelFieldBase(_BaseModel):
             description = self.extras.get("description", None)
             if description is not None:
                 return f"{description}"
+        elif self.use_inline_field_description:
+            # For inline mode, only use multi-line docstring format for multi-line descriptions
+            description = self.extras.get("description", None)
+            if description is not None and "\n" in description:
+                return f"{description}"
+        return None
+
+    @property
+    def inline_field_docstring(self) -> str | None:
+        if self.use_inline_field_description:
+            description = self.extras.get("description", None)
+            if description is not None and "\n" not in description:
+                return f'"""{description}"""'
         return None
 
     @property

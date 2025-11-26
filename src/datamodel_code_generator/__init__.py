@@ -234,6 +234,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_standard_collections: bool = False,
     use_schema_description: bool = False,
     use_field_description: bool = False,
+    use_inline_field_description: bool = False,
     use_default_kwarg: bool = False,
     reuse_model: bool = False,
     encoding: str = "utf-8",
@@ -448,6 +449,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         base_path=input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         use_schema_description=use_schema_description,
         use_field_description=use_field_description,
+        use_inline_field_description=use_inline_field_description,
         use_default_kwarg=use_default_kwarg,
         reuse_model=reuse_model,
         enum_field_as_literal=LiteralType.All

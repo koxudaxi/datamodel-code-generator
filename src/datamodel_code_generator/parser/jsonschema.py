@@ -438,6 +438,7 @@ class JsonSchemaParser(Parser):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
         encoding: str = "utf-8",
@@ -518,6 +519,7 @@ class JsonSchemaParser(Parser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             use_field_description=use_field_description,
+            use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
             encoding=encoding,
@@ -650,6 +652,7 @@ class JsonSchemaParser(Parser):
             extras=self.get_field_extras(field),
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
+            use_inline_field_description=self.use_inline_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=original_field_name,
             has_default=field.has_default,
@@ -970,6 +973,7 @@ class JsonSchemaParser(Parser):
                         strip_default_none=self.strip_default_none,
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,
+                        use_inline_field_description=self.use_inline_field_description,
                         original_name=original_field_name,
                     )
                 )
@@ -1230,6 +1234,7 @@ class JsonSchemaParser(Parser):
             extras=self.get_field_extras(obj),
             use_annotated=self.use_annotated,
             use_field_description=self.use_field_description,
+            use_inline_field_description=self.use_inline_field_description,
             original_name=None,
             has_default=obj.has_default,
         )
@@ -1263,6 +1268,7 @@ class JsonSchemaParser(Parser):
                 extras=field.extras,
                 use_annotated=self.use_annotated,
                 use_field_description=self.use_field_description,
+                use_inline_field_description=self.use_inline_field_description,
                 original_name=None,
                 has_default=field.has_default,
             )
@@ -1347,6 +1353,7 @@ class JsonSchemaParser(Parser):
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,
                     use_field_description=self.use_field_description,
+                    use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
                     has_default=obj.has_default,
                 )
@@ -1418,6 +1425,7 @@ class JsonSchemaParser(Parser):
                     strip_default_none=self.strip_default_none,
                     has_default=obj.has_default,
                     use_field_description=self.use_field_description,
+                    use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
                 )
             )
@@ -1487,6 +1495,7 @@ class JsonSchemaParser(Parser):
                     use_annotated=self.use_annotated,
                     has_default=obj.has_default,
                     use_field_description=self.use_field_description,
+                    use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
                 )
             ],

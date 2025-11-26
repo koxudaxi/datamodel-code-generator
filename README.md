@@ -437,6 +437,9 @@ Field customization:
                         default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-inline-field-description
+                        Use schema description to populate field docstring as inline
+                        docstring
 
 Model customization:
   --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is deprecated. Use

@@ -411,6 +411,12 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-inline-field-description",
+    help="Use schema description to populate field docstring as inline docstring",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--union-mode",
     help="Union mode for only pydantic v2 field",
     choices=[u.value for u in UnionMode],

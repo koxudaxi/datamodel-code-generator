@@ -281,6 +281,20 @@ def test_main_use_field_description(tmp_path: Path) -> None:
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py")
 
 
+@freeze_time("2022-11-11")
+def test_main_use_inline_field_description(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
+        "--output",
+        str(output_file),
+        "--use-inline-field-description",
+    ])
+    assert return_code == Exit.OK
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description" / "output.py")
+
+
 def test_capitalise_enum_members(tmp_path: Path) -> None:
     """capitalise-enum-members not working since v0.28.5
 
