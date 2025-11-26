@@ -272,7 +272,7 @@ def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_additional_imports_isort_5_or_6(tmp_path: Path) -> None:
+def test_main_graphql_additional_imports_isort_not_4(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
