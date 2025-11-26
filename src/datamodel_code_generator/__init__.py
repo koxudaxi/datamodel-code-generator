@@ -48,17 +48,22 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
 
+    # Type alias for static type checking (pyright/mypy)
+    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
+    YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
 
-YamlScalar: TypeAlias = Union[str, int, float, bool, None]
-if PYDANTIC_V2:
-    YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
-else:
-    # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
-    YamlValue: TypeAlias = Union[dict[str, Any], list[Any], YamlScalar]  # type: ignore[no-redef,misc]
+if not TYPE_CHECKING:
+    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
+    if PYDANTIC_V2:
+        YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+    else:
+        # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
+        YamlValue: TypeAlias = Union[dict[str, Any], list[Any], YamlScalar]
 
 try:
     import pysnooper
