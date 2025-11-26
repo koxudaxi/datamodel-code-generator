@@ -1,3 +1,5 @@
+"""Tests for Pydantic v2 RootModel generation."""
+
 from __future__ import annotations
 
 from datamodel_code_generator.model import DataModelFieldBase
@@ -7,6 +9,7 @@ from datamodel_code_generator.types import DataType
 
 
 def test_root_model() -> None:
+    """Test RootModel generation with optional field."""
     root_model = RootModel(
         fields=[
             DataModelFieldBase(
@@ -37,7 +40,6 @@ def test_root_model() -> None:
 
 def test_root_model_custom_base_class_is_ignored() -> None:
     """Verify that passing a custom_base_class is ignored."""
-
     root_model = RootModel(
         custom_base_class="test.Test",
         fields=[

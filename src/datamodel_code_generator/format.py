@@ -1,3 +1,9 @@
+"""Code formatting utilities and Python version handling.
+
+Provides CodeFormatter for applying black, isort, and ruff formatting,
+along with PythonVersion enum and DatetimeClassType for output configuration.
+"""
+
 from __future__ import annotations
 
 import subprocess  # noqa: S404
@@ -22,12 +28,16 @@ except ImportError:  # pragma: no cover
 
 
 class DatetimeClassType(Enum):
+    """Output datetime class type options."""
+
     Datetime = "datetime"
     Awaredatetime = "AwareDatetime"
     Naivedatetime = "NaiveDatetime"
 
 
 class PythonVersion(Enum):
+    """Supported Python version targets for code generation."""
+
     PY_39 = "3.9"
     PY_310 = "3.10"
     PY_311 = "3.11"
@@ -49,29 +59,32 @@ class PythonVersion(Enum):
 
     @property
     def has_union_operator(self) -> bool:  # pragma: no cover
+        """Check if Python version supports the union operator (|)."""
         return self._is_py_310_or_later
 
     @property
     def has_typed_dict_non_required(self) -> bool:
+        """Check if Python version supports TypedDict NotRequired."""
         return self._is_py_311_or_later
 
     @property
     def has_kw_only_dataclass(self) -> bool:
+        """Check if Python version supports kw_only in dataclasses."""
         return self._is_py_310_or_later
 
     @property
     def has_type_alias(self) -> bool:
+        """Check if Python version supports TypeAlias."""
         return self._is_py_310_or_later
 
     @property
     def has_type_statement(self) -> bool:
+        """Check if Python version supports type statements."""
         return self._is_py_312_or_later
 
     @property
     def has_strenum(self) -> bool:
-        """
-        Verifies if the Python version supports `StrEnum`.
-        """
+        """Check if Python version supports StrEnum."""
         return self._is_py_311_or_later
 
 
@@ -86,10 +99,12 @@ BLACK_PYTHON_VERSION: dict[PythonVersion, black.TargetVersion] = {
 
 
 def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
+    """Check if a Python version is supported by the installed black version."""
     return python_version in BLACK_PYTHON_VERSION
 
 
 def black_find_project_root(sources: Sequence[Path]) -> Path:
+    """Find the project root directory for black configuration."""
     from black import find_project_root as _find_project_root  # noqa: PLC0415
 
     project_root = _find_project_root(tuple(str(s) for s in sources))
@@ -100,6 +115,8 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
 
 
 class Formatter(Enum):
+    """Available code formatters for generated output."""
+
     BLACK = "black"
     ISORT = "isort"
     RUFF_CHECK = "ruff-check"
@@ -110,6 +127,8 @@ DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 
 
 class CodeFormatter:
+    """Formats generated code using black, isort, ruff, and custom formatters."""
+
     def __init__(  # noqa: PLR0912, PLR0913, PLR0917
         self,
         python_version: PythonVersion,
@@ -122,6 +141,7 @@ class CodeFormatter:
         encoding: str = "utf-8",
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
+        """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if not settings_path:
             settings_path = Path.cwd()
 
@@ -181,6 +201,7 @@ class CodeFormatter:
         self.formatters = formatters
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
+        """Load and instantiate a custom formatter from a module path."""
         import_ = import_module(custom_formatter_import)
 
         if not hasattr(import_, "CodeFormatter"):
@@ -196,6 +217,7 @@ class CodeFormatter:
         return formatter_class(formatter_kwargs=self.custom_formatters_kwargs)
 
     def _check_custom_formatters(self, custom_formatters: list[str] | None) -> list[CustomCodeFormatter]:
+        """Validate and load all custom formatters."""
         if custom_formatters is None:
             return []
 
@@ -205,6 +227,7 @@ class CodeFormatter:
         self,
         code: str,
     ) -> str:
+        """Apply all configured formatters to the code string."""
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
         if Formatter.BLACK in self.formatters:
@@ -222,12 +245,14 @@ class CodeFormatter:
         return code
 
     def apply_black(self, code: str) -> str:
+        """Format code using black."""
         return black.format_str(
             code,
             mode=self.black_mode,
         )
 
     def apply_ruff_lint(self, code: str) -> str:
+        """Run ruff check with auto-fix on code."""
         result = subprocess.run(
             ("ruff", "check", "--fix", "-"),
             input=code.encode(self.encoding),
@@ -237,6 +262,7 @@ class CodeFormatter:
         return result.stdout.decode(self.encoding)
 
     def apply_ruff_formatter(self, code: str) -> str:
+        """Format code using ruff format."""
         result = subprocess.run(
             ("ruff", "format", "-"),
             input=code.encode(self.encoding),
@@ -247,11 +273,14 @@ class CodeFormatter:
 
     if TYPE_CHECKING:
 
-        def apply_isort(self, code: str) -> str: ...
+        def apply_isort(self, code: str) -> str:
+            """Sort imports using isort."""
+            ...
 
     elif isort.__version__.startswith("4."):
 
         def apply_isort(self, code: str) -> str:
+            """Sort imports using isort v4."""
             return isort.SortImports(
                 file_contents=code,
                 settings_path=self.settings_path,
@@ -261,12 +290,20 @@ class CodeFormatter:
     else:
 
         def apply_isort(self, code: str) -> str:
+            """Sort imports using isort v5+."""
             return isort.code(code, config=self.isort_config)
 
 
 class CustomCodeFormatter:
+    """Base class for custom code formatters.
+
+    Subclasses must implement the apply() method to transform code.
+    """
+
     def __init__(self, formatter_kwargs: dict[str, Any]) -> None:
+        """Initialize custom formatter with optional keyword arguments."""
         self.formatter_kwargs = formatter_kwargs
 
     def apply(self, code: str) -> str:
+        """Apply formatting to code. Must be implemented by subclasses."""
         raise NotImplementedError

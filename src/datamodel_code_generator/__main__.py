@@ -1,6 +1,4 @@
-"""
-Main function.
-"""
+"""Main module for datamodel-code-generator CLI."""
 
 from __future__ import annotations
 
@@ -65,6 +63,7 @@ class Exit(IntEnum):
 
 
 def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
+    """Handle SIGINT signal gracefully."""
     sys.exit(Exit.OK)
 
 
@@ -72,35 +71,45 @@ signal.signal(signal.SIGINT, sig_int_handler)
 
 
 class Config(BaseModel):
+    """Configuration model for code generation."""
+
     if PYDANTIC_V2:
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
         def get(self, item: str) -> Any:
+            """Get attribute value by name."""
             return getattr(self, item)
 
         def __getitem__(self, item: str) -> Any:
+            """Get item by key."""
             return self.get(item)
 
         @classmethod
         def parse_obj(cls, obj: Any) -> Self:
+            """Parse object into Config model."""
             return cls.model_validate(obj)
 
         @classmethod
         def get_fields(cls) -> dict[str, Any]:
+            """Get model fields."""
             return cls.model_fields
 
     else:
 
         class Config:
+            """Pydantic v1 configuration."""
+
             # Pydantic 1.5.1 doesn't support validate_assignment correctly
             arbitrary_types_allowed = (TextIOBase,)
 
         @classmethod
         def get_fields(cls) -> dict[str, Any]:
+            """Get model fields."""
             return cls.__fields__
 
     @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
+        """Validate and open file path."""
         if value is None:  # pragma: no cover
             return value
 
@@ -119,12 +128,14 @@ class Config(BaseModel):
         mode="before",
     )
     def validate_path(cls, value: Any) -> Path | None:  # noqa: N805
+        """Validate and resolve path."""
         if value is None or isinstance(value, Path):
             return value  # pragma: no cover
         return Path(value).expanduser().resolve()
 
     @field_validator("url", mode="before")
     def validate_url(cls, value: Any) -> ParseResult | None:  # noqa: N805
+        """Validate and parse URL."""
         if isinstance(value, str) and is_url(value):  # pragma: no cover
             return urlparse(value)
         if value is None:  # pragma: no cover
@@ -135,6 +146,8 @@ class Config(BaseModel):
     # Pydantic 1.5.1 doesn't support each_item=True correctly
     @field_validator("http_headers", mode="before")
     def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
+        """Validate HTTP headers."""
+
         def validate_each_item(each_item: Any) -> tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
@@ -151,6 +164,8 @@ class Config(BaseModel):
 
     @field_validator("http_query_parameters", mode="before")
     def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
+        """Validate HTTP query parameters."""
+
         def validate_each_item(each_item: Any) -> tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
@@ -167,6 +182,7 @@ class Config(BaseModel):
 
     @model_validator(mode="before")
     def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        """Validate and split additional imports."""
         additional_imports = values.get("additional_imports")
         if additional_imports is not None:
             values["additional_imports"] = additional_imports.split(",")
@@ -174,6 +190,7 @@ class Config(BaseModel):
 
     @model_validator(mode="before")
     def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        """Validate and split custom formatters."""
         custom_formatters = values.get("custom_formatters")
         if custom_formatters is not None:
             values["custom_formatters"] = custom_formatters.split(",")
@@ -199,6 +216,7 @@ class Config(BaseModel):
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_output_datetime_class(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+            """Validate output datetime class compatibility."""
             datetime_class_type: DatetimeClassType | None = self.output_datetime_class
             if (
                 datetime_class_type
@@ -210,18 +228,21 @@ class Config(BaseModel):
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_original_field_name_delimiter(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+            """Validate original field name delimiter requires snake case."""
             if self.original_field_name_delimiter is not None and not self.snake_case_field:
                 raise Error(self.__validate_original_field_name_delimiter_err)
             return self
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_custom_file_header(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+            """Validate custom file header options are mutually exclusive."""
             if self.custom_file_header and self.custom_file_header_path:
                 raise Error(self.__validate_custom_file_header_err)
             return self
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_keyword_only(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+            """Validate keyword-only compatibility with target Python version."""
             output_model_type: DataModelType = self.output_model_type
             python_target: PythonVersion = self.target_python_version
             if (
@@ -234,6 +255,7 @@ class Config(BaseModel):
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_root(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+            """Validate root model configuration."""
             if self.use_annotated:
                 self.field_constraints = True
             return self
@@ -242,6 +264,7 @@ class Config(BaseModel):
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_output_datetime_class(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate output datetime class compatibility."""
             datetime_class_type: DatetimeClassType | None = values.get("output_datetime_class")
             if (
                 datetime_class_type
@@ -253,18 +276,21 @@ class Config(BaseModel):
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_original_field_name_delimiter(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate original field name delimiter requires snake case."""
             if values.get("original_field_name_delimiter") is not None and not values.get("snake_case_field"):
                 raise Error(cls.__validate_original_field_name_delimiter_err)
             return values
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_custom_file_header(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate custom file header options are mutually exclusive."""
             if values.get("custom_file_header") and values.get("custom_file_header_path"):
                 raise Error(cls.__validate_custom_file_header_err)
             return values
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_keyword_only(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate keyword-only compatibility with target Python version."""
             output_model_type: DataModelType = cast("DataModelType", values.get("output_model_type"))
             python_target: PythonVersion = cast("PythonVersion", values.get("target_python_version"))
             if (
@@ -277,6 +303,7 @@ class Config(BaseModel):
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_root(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate root model configuration."""
             if values.get("use_annotated"):
                 values["field_constraints"] = True
             return values
@@ -364,6 +391,7 @@ class Config(BaseModel):
     disable_future_imports: bool = False
 
     def merge_args(self, args: Namespace) -> None:
+        """Merge command-line arguments into config."""
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
 
         if set_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
@@ -378,10 +406,7 @@ class Config(BaseModel):
 
 
 def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
-    """Find and return the [tool.datamodel-codgen] section of the closest
-    pyproject.toml if it exists.
-    """
-
+    """Find and return the [tool.datamodel-codgen] section of the closest pyproject.toml if it exists."""
     current_path = source
     while current_path != current_path.parent:
         if (current_path / "pyproject.toml").is_file():
@@ -404,8 +429,7 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
 
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
-    """Main function."""
-
+    """Execute datamodel code generation from command-line arguments."""
     # add cli completion support
     argcomplete.autocomplete(arg_parser)
 

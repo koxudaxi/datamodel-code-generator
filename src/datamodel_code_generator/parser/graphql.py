@@ -1,3 +1,9 @@
+"""GraphQL schema parser implementation.
+
+Parses GraphQL schema files to generate Python data models including
+objects, interfaces, enums, scalars, inputs, and union types.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -58,6 +64,8 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
 
 @snooper_to_methods()
 class GraphQLParser(Parser):
+    """Parser for GraphQL schema files."""
+
     # raw graphql schema as `graphql-core` object
     raw_obj: graphql.GraphQLSchema
     # all processed graphql objects
@@ -166,6 +174,7 @@ class GraphQLParser(Parser):
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
     ) -> None:
+        """Initialize the GraphQL parser with configuration options."""
         super().__init__(
             source=source,
             data_model_type=data_model_type,
@@ -338,6 +347,7 @@ class GraphQLParser(Parser):
         return None
 
     def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:
+        """Parse a GraphQL scalar type and add it to results."""
         self.results.append(
             self.data_model_scalar_type(
                 reference=self.references[scalar_graphql_object.name],
@@ -349,6 +359,7 @@ class GraphQLParser(Parser):
         )
 
     def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse a GraphQL enum type and add it to results."""
         enum_fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
 
@@ -400,6 +411,7 @@ class GraphQLParser(Parser):
         alias: str | None,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
     ) -> DataModelFieldBase:
+        """Parse a GraphQL field and return a data model field."""
         final_data_type = DataType(
             is_optional=True,
             use_union_operator=self.use_union_operator,
@@ -461,6 +473,7 @@ class GraphQLParser(Parser):
         self,
         obj: graphql.GraphQLInterfaceType | graphql.GraphQLObjectType | graphql.GraphQLInputObjectType,
     ) -> None:
+        """Parse a GraphQL object-like type and add it to results."""
         fields = []
         exclude_field_names: set[str] = set()
 
@@ -494,15 +507,19 @@ class GraphQLParser(Parser):
         self.results.append(data_model_type)
 
     def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:
+        """Parse a GraphQL interface type and add it to results."""
         self.parse_object_like(interface_graphql_object)
 
     def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:
+        """Parse a GraphQL object type and add it to results."""
         self.parse_object_like(graphql_object)
 
     def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:
+        """Parse a GraphQL input object type and add it to results."""
         self.parse_object_like(input_graphql_object)  # pragma: no cover
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
+        """Parse a GraphQL union type and add it to results."""
         fields = [self.data_model_field_type(name=type_.name, data_type=DataType()) for type_ in union_object.types]
 
         data_model_type = self.data_model_union_type(
@@ -517,6 +534,7 @@ class GraphQLParser(Parser):
         self.results.append(data_model_type)
 
     def parse_raw(self) -> None:
+        """Parse the raw GraphQL schema and generate all data models."""
         self.all_graphql_objects = {}
         self.references: dict[str, Reference] = {}
 

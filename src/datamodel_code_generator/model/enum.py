@@ -1,3 +1,8 @@
+"""Enumeration model generator.
+
+Provides Enum, StrEnum, and specialized enum classes for code generation.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
@@ -32,6 +37,8 @@ SUBCLASS_BASE_CLASSES: dict[Types, str] = {
 
 
 class Enum(DataModel):
+    """DataModel implementation for Python enumerations."""
+
     TEMPLATE_FILE_PATH: ClassVar[str] = "Enum.jinja2"
     BASE_CLASS: ClassVar[str] = "enum.Enum"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_ENUM,)
@@ -55,6 +62,7 @@ class Enum(DataModel):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize Enum with optional specialized base class based on type."""
         super().__init__(
             reference=reference,
             fields=fields,
@@ -81,12 +89,15 @@ class Enum(DataModel):
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:
+        """Get data type for enum (not implemented)."""
         raise NotImplementedError
 
     def get_member(self, field: DataModelFieldBase) -> Member:
+        """Create a Member instance for the given field."""
         return Member(self, field)
 
     def find_member(self, value: Any) -> Member | None:
+        """Find enum member matching the given value."""
         repr_value = repr(value)
         # Remove surrounding quotes from the string representation
         str_value = str(value).strip("'\"")
@@ -107,15 +118,20 @@ class Enum(DataModel):
 
     @property
     def imports(self) -> tuple[Import, ...]:
+        """Get imports excluding Any."""
         return tuple(i for i in super().imports if i != IMPORT_ANY)
 
 
 class StrEnum(Enum):
+    """String enumeration type."""
+
     BASE_CLASS: ClassVar[str] = "enum.StrEnum"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_STR_ENUM,)
 
 
 class IntEnum(Enum):
+    """Integer enumeration type."""
+
     BASE_CLASS: ClassVar[str] = "enum.IntEnum"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_INT_ENUM,)
 
@@ -132,10 +148,14 @@ Map specialized enum types to their corresponding Enum subclasses.
 
 
 class Member:
+    """Represents an enum member with its parent enum and field."""
+
     def __init__(self, enum: Enum, field: DataModelFieldBase) -> None:
+        """Initialize enum member."""
         self.enum: Enum = enum
         self.field: DataModelFieldBase = field
         self.alias: Optional[str] = None  # noqa: UP045
 
     def __repr__(self) -> str:
+        """Return string representation of enum member."""
         return f"{self.alias or self.enum.name}.{self.field.name}"

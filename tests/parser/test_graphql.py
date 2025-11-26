@@ -1,3 +1,5 @@
+"""Tests for GraphQL schema parser."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -19,6 +21,7 @@ assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
 @freeze_time("2019-07-26")
 def test_graphql_field_enum(tmp_path: Path) -> None:
+    """Test parsing GraphQL field with enum default value."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -35,6 +38,7 @@ def test_graphql_field_enum(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_graphql_union_aliased_bug(tmp_path: Path) -> None:
+    """Test parsing GraphQL union with aliased types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -50,6 +54,7 @@ def test_graphql_union_aliased_bug(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_graphql_union_commented(tmp_path: Path) -> None:
+    """Test parsing GraphQL union with comments."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",

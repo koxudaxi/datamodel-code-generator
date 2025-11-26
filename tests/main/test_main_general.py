@@ -1,3 +1,5 @@
+"""General integration tests for main code generation functionality."""
+
 from __future__ import annotations
 
 from argparse import Namespace
@@ -31,12 +33,14 @@ TIMESTAMP = "1985-10-26T01:21:00-07:00"
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
 
 
 def test_debug(mocker: MockerFixture) -> None:
+    """Test debug flag functionality."""
     with pytest.raises(expected_exception=SystemExit):
         main(["--debug", "--help"])
 
@@ -47,6 +51,7 @@ def test_debug(mocker: MockerFixture) -> None:
 
 @freeze_time("2019-07-26")
 def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
+    """Test snooper_to_methods function without pysnooper installed."""
     mocker.patch("datamodel_code_generator.pysnooper", None)
     mock = mocker.Mock()
     assert snooper_to_methods()(mock) == mock
@@ -54,6 +59,7 @@ def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
 
 @pytest.mark.parametrize(argnames="no_color", argvalues=[False, True])
 def test_show_help(no_color: bool, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test help output with and without color."""
     args = ["--no-color"] if no_color else []
     args += ["--help"]
 
@@ -66,6 +72,7 @@ def test_show_help(no_color: bool, capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_show_help_when_no_input(mocker: MockerFixture) -> None:
+    """Test help display when no input is provided."""
     print_help_mock = mocker.patch("datamodel_code_generator.__main__.arg_parser.print_help")
     isatty_mock = mocker.patch("sys.stdin.isatty", return_value=True)
     return_code: Exit = main([])
@@ -89,6 +96,7 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @freeze_time("2019-07-26")
 def test_space_and_special_characters_dict(tmp_path: Path) -> None:
+    """Test dict input with space and special characters."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -104,6 +112,7 @@ def test_space_and_special_characters_dict(tmp_path: Path) -> None:
 
 @freeze_time("2024-12-14")
 def test_direct_input_dict(tmp_path: Path) -> None:
+    """Test direct dict input code generation."""
     output_file = tmp_path / "output.py"
     generate(
         {"foo": 1, "bar": {"baz": 2}},
@@ -132,7 +141,6 @@ def test_frozen_dataclasses(tmp_path: Path) -> None:
 @freeze_time(TIMESTAMP)
 def test_frozen_dataclasses_with_keyword_only(tmp_path: Path) -> None:
     """Test --frozen-dataclasses with --keyword-only flag combination."""
-
     output_file = tmp_path / "output.py"
     generate(
         DATA_PATH / "jsonschema" / "simple_frozen_test.json",
@@ -188,8 +196,7 @@ def test_frozen_dataclasses_with_keyword_only_command_line(tmp_path: Path) -> No
 
 
 def test_filename_with_newline_injection(tmp_path: Path) -> None:
-    """Test that filenames with newlines cannot inject code into generated files"""
-
+    """Test that filenames with newlines cannot inject code into generated files."""
     schema_content = """{"type": "object", "properties": {"name": {"type": "string"}}}"""
 
     malicious_filename = """schema.json
@@ -223,8 +230,7 @@ os.system('echo INJECTED')
 
 
 def test_filename_with_various_control_characters(tmp_path: Path) -> None:
-    """Test that various control characters in filenames are properly sanitized"""
-
+    """Test that various control characters in filenames are properly sanitized."""
     schema_content = """{"type": "object", "properties": {"test": {"type": "string"}}}"""
 
     test_cases = [

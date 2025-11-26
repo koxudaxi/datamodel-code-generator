@@ -1,3 +1,9 @@
+"""Base classes for data model generation.
+
+Provides ConstraintsBase for field constraints, DataModelFieldBase for field
+representation, and DataModel as the abstract base for all model types.
+"""
+
 from __future__ import annotations
 
 import re
@@ -41,6 +47,8 @@ ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
 
 
 class ConstraintsBase(_BaseModel):
+    """Base class for field constraints (min/max, patterns, etc.)."""
+
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
     _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
     if PYDANTIC_V2:
@@ -50,15 +58,19 @@ class ConstraintsBase(_BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 configuration for ConstraintsBase."""
+
             arbitrary_types_allowed = True
             keep_untouched = (cached_property,)
 
     @cached_property
     def has_constraints(self) -> bool:
+        """Check if any constraint values are set."""
         return any(v is not None for v in self.dict().values())
 
     @staticmethod
     def merge_constraints(a: ConstraintsBaseT, b: ConstraintsBaseT) -> ConstraintsBaseT | None:
+        """Merge two constraint objects, with b taking precedence over a."""
         constraints_class = None
         if isinstance(a, ConstraintsBase):  # pragma: no cover
             root_type_field_constraints = {k: v for k, v in a.dict(by_alias=True).items() if v is not None}
@@ -82,6 +94,8 @@ class ConstraintsBase(_BaseModel):
 
 
 class DataModelFieldBase(_BaseModel):
+    """Base class for model field representation and rendering."""
+
     name: Optional[str] = None  # noqa: UP045
     default: Optional[Any] = None  # noqa: UP045
     required: bool = False
@@ -108,12 +122,14 @@ class DataModelFieldBase(_BaseModel):
     if not TYPE_CHECKING:
 
         def __init__(self, **data: Any) -> None:
+            """Initialize the field and set up parent relationships."""
             super().__init__(**data)
             if self.data_type.reference or self.data_type.data_types:
                 self.data_type.parent = self
             self.process_const()
 
     def process_const(self) -> None:
+        """Process const values by setting them as defaults."""
         if "const" not in self.extras:
             return
         self.default = self.extras["const"]
@@ -123,6 +139,7 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
+        """Get the type hint string for this field, including nullability."""
         type_hint = self.data_type.type_hint
 
         if not type_hint:
@@ -143,6 +160,7 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def imports(self) -> tuple[Import, ...]:
+        """Get all imports required for this field's type hint."""
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
         imports: list[tuple[Import] | Iterator[Import]] = [
@@ -162,6 +180,7 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def docstring(self) -> str | None:
+        """Get the docstring for this field from its description."""
         if self.use_field_description:
             description = self.extras.get("description", None)
             if description is not None:
@@ -175,6 +194,7 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def inline_field_docstring(self) -> str | None:
+        """Get the inline docstring for this field if single-line."""
         if self.use_inline_field_description:
             description = self.extras.get("description", None)
             if description is not None and "\n" not in description:
@@ -183,42 +203,50 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def unresolved_types(self) -> frozenset[str]:
+        """Get the set of unresolved type references."""
         return self.data_type.unresolved_types
 
     @property
     def field(self) -> str | None:
-        """for backwards compatibility"""
+        """For backwards compatibility."""
         return None
 
     @property
     def method(self) -> str | None:
+        """Get the method string for this field, if any."""
         return None
 
     @property
     def represented_default(self) -> str:
+        """Get the repr() string of the default value."""
         return repr(self.default)
 
     @property
     def annotated(self) -> str | None:
+        """Get the Annotated type hint content, if any."""
         return None
 
     @property
     def has_default_factory(self) -> bool:
+        """Check if this field has a default_factory."""
         return "default_factory" in self.extras
 
     @property
     def fall_back_to_nullable(self) -> bool:
+        """Check if optional fields should be nullable by default."""
         return True
 
 
 @lru_cache
 def get_template(template_file_path: Path) -> Template:
+    """Load and cache a Jinja2 template from the template directory."""
     loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
     environment: Environment = Environment(loader=loader)  # noqa: S701
     return environment.get_template(template_file_path.name)
 
 
 def sanitize_module_name(name: str, *, treat_dot_as_module: bool) -> str:
+    """Sanitize a module name by replacing invalid characters."""
     pattern = r"[^0-9a-zA-Z_.]" if treat_dot_as_module else r"[^0-9a-zA-Z_]"
     sanitized = re.sub(pattern, "_", name)
     if sanitized and sanitized[0].isdigit():
@@ -227,6 +255,7 @@ def sanitize_module_name(name: str, *, treat_dot_as_module: bool) -> str:
 
 
 def get_module_path(name: str, file_path: Path | None, *, treat_dot_as_module: bool) -> list[str]:
+    """Get the module path components from a name and file path."""
     if file_path:
         sanitized_stem = sanitize_module_name(file_path.stem, treat_dot_as_module=treat_dot_as_module)
         return [
@@ -238,37 +267,51 @@ def get_module_path(name: str, file_path: Path | None, *, treat_dot_as_module: b
 
 
 def get_module_name(name: str, file_path: Path | None, *, treat_dot_as_module: bool) -> str:
+    """Get the full module name from a name and file path."""
     return ".".join(get_module_path(name, file_path, treat_dot_as_module=treat_dot_as_module))
 
 
 class TemplateBase(ABC):
+    """Abstract base class for template-based code generation."""
+
     @cached_property
     @abstractmethod
     def template_file_path(self) -> Path:
+        """Get the path to the template file."""
         raise NotImplementedError
 
     @cached_property
     def template(self) -> Template:
+        """Get the cached Jinja2 template instance."""
         return get_template(self.template_file_path)
 
     @abstractmethod
     def render(self) -> str:
+        """Render the template to a string."""
         raise NotImplementedError
 
     def _render(self, *args: Any, **kwargs: Any) -> str:
+        """Render the template with the given arguments."""
         return self.template.render(*args, **kwargs)
 
     def __str__(self) -> str:
+        """Return the rendered template as a string."""
         return self.render()
 
 
-class BaseClassDataType(DataType): ...
+class BaseClassDataType(DataType):
+    """DataType subclass for base class references."""
 
 
 UNDEFINED: Any = object()
 
 
 class DataModel(TemplateBase, Nullable, ABC):
+    """Abstract base class for all data model types.
+
+    Handles template rendering, import collection, and model relationships.
+    """
+
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
@@ -292,6 +335,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         frozen: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize a data model with fields, base classes, and configuration."""
         self.keyword_only = keyword_only
         self.frozen = frozen
         if not self.TEMPLATE_FILE_PATH:
@@ -362,6 +406,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         return unique_fields
 
     def set_base_class(self) -> None:
+        """Set up the base class for this model."""
         base_class = self.custom_base_class or self.BASE_CLASS
         if not base_class:
             self.base_classes = []
@@ -372,6 +417,7 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @cached_property
     def template_file_path(self) -> Path:
+        """Get the path to the template file, checking custom directory first."""
         template_file_path = Path(self.TEMPLATE_FILE_PATH)
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / template_file_path
@@ -381,6 +427,7 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def imports(self) -> tuple[Import, ...]:
+        """Get all imports required by this model and its fields."""
         return chain_as_tuple(
             (i for f in self.fields for i in f.imports),
             self._additional_imports,
@@ -388,6 +435,7 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def reference_classes(self) -> frozenset[str]:
+        """Get all referenced class paths used by this model."""
         return frozenset(
             {r.reference.path for r in self.base_classes if r.reference}
             | {t for f in self.fields for t in f.unresolved_types}
@@ -395,14 +443,17 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def name(self) -> str:
+        """Get the full name of this model."""
         return self.reference.name
 
     @property
     def duplicate_name(self) -> str:
+        """Get the duplicate name for this model if it exists."""
         return self.reference.duplicate_name or ""
 
     @property
     def base_class(self) -> str:
+        """Get the comma-separated string of base class names."""
         return ", ".join(b.type_hint for b in self.base_classes)
 
     @staticmethod
@@ -413,6 +464,7 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def class_name(self) -> str:
+        """Get the class name without module path."""
         return self._get_class_name(self.name)
 
     @class_name.setter
@@ -424,31 +476,38 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def duplicate_class_name(self) -> str:
+        """Get the duplicate class name without module path."""
         return self._get_class_name(self.duplicate_name)
 
     @property
     def module_path(self) -> list[str]:
+        """Get the module path components for this model."""
         return get_module_path(self.name, self.file_path, treat_dot_as_module=self._treat_dot_as_module)
 
     @property
     def module_name(self) -> str:
+        """Get the full module name for this model."""
         return get_module_name(self.name, self.file_path, treat_dot_as_module=self._treat_dot_as_module)
 
     @property
     def all_data_types(self) -> Iterator[DataType]:
+        """Iterate over all data types used in this model."""
         for field in self.fields:
             yield from field.data_type.all_data_types
         yield from self.base_classes
 
     @property
     def nullable(self) -> bool:
+        """Check if this model is nullable."""
         return self._nullable
 
     @cached_property
     def path(self) -> str:
+        """Get the full reference path for this model."""
         return self.reference.path
 
     def render(self, *, class_name: str | None = None) -> str:
+        """Render the model to a string using the template."""
         return self._render(
             class_name=class_name or self.class_name,
             fields=self.fields,

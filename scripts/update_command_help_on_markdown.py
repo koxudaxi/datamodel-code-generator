@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: INP001
+"""Update command help text in markdown documentation files."""  # noqa: INP001
+
+from __future__ import annotations
 
 import io
 import os
@@ -29,6 +31,7 @@ REPLACE_MAP = {"(default: UTF-8)": "(default: utf-8)", "'": r"''"}
 
 
 def get_help() -> str:
+    """Get formatted help text from argument parser."""
     with io.StringIO() as f:
         arg_parser.print_help(file=f)
         output = f.getvalue()
@@ -39,9 +42,7 @@ def get_help() -> str:
 
 
 def inject_help(markdown_text: str, help_text: str) -> str:
-    # Inject help_text into markdown_text at the position between <!-- start command help --> and <!-- end command
-    # help --> the start and end markers are included in the returned markdown_text
-
+    """Inject help text into markdown between start and end markers."""
     start_pos = markdown_text.find(START_MARK)
     end_pos = markdown_text.find(END_MARK)
     if start_pos == -1 or end_pos == -1:
@@ -60,6 +61,7 @@ def inject_help(markdown_text: str, help_text: str) -> str:
 
 
 def main() -> Exit:
+    """Update or validate command help in target markdown files."""
     help_text = get_help()
     arg_parser.add_argument(
         "--validate",

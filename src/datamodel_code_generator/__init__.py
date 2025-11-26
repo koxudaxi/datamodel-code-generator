@@ -1,3 +1,9 @@
+"""Main module for datamodel-code-generator.
+
+Provides the main `generate()` function and related enums/exceptions for generating
+Python data models (Pydantic, dataclasses, TypedDict, msgspec) from various schema formats.
+"""
+
 from __future__ import annotations
 
 import contextlib
@@ -56,15 +62,18 @@ DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
 def load_yaml(stream: str | TextIO) -> Any:
+    """Load YAML content from a string or file-like object."""
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
 def load_yaml_from_path(path: Path, encoding: str) -> Any:
+    """Load YAML content from a file path."""
     with path.open(encoding=encoding) as f:
         return load_yaml(f)
 
 
 def get_version() -> str:
+    """Return the installed package version."""
     package = "datamodel-code-generator"
 
     from importlib.metadata import version  # noqa: PLC0415
@@ -73,6 +82,7 @@ def get_version() -> str:
 
 
 def enable_debug_message() -> None:  # pragma: no cover
+    """Enable debug tracing with pysnooper."""
     if not pysnooper:
         msg = "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
         raise Exception(msg)  # noqa: TRY002
@@ -84,6 +94,8 @@ DEFAULT_MAX_VARIABLE_LENGTH: int = 100
 
 
 def snooper_to_methods() -> Callable[..., Any]:
+    """Class decorator to add pysnooper tracing to all methods."""
+
     def inner(cls: type[T]) -> type[T]:
         if not pysnooper:
             return cls
@@ -100,8 +112,7 @@ def snooper_to_methods() -> Callable[..., Any]:
 
 @contextlib.contextmanager
 def chdir(path: Path | None) -> Iterator[None]:
-    """Changes working directory and returns to previous on exit."""
-
+    """Change working directory and return to previous on exit."""
     if path is None:
         yield
     else:
@@ -114,6 +125,7 @@ def chdir(path: Path | None) -> Iterator[None]:
 
 
 def is_openapi(data: dict) -> bool:
+    """Check if the data dict is an OpenAPI specification."""
     return "openapi" in data
 
 
@@ -124,6 +136,7 @@ JSON_SCHEMA_URLS: tuple[str, ...] = (
 
 
 def is_schema(data: dict) -> bool:
+    """Check if the data dict is a JSON Schema."""
     schema = data.get("$schema")
     if isinstance(schema, str) and any(schema.startswith(u) for u in JSON_SCHEMA_URLS):  # pragma: no cover
         return True
@@ -142,6 +155,8 @@ def is_schema(data: dict) -> bool:
 
 
 class InputFileType(Enum):
+    """Supported input file types for schema parsing."""
+
     Auto = "auto"
     OpenAPI = "openapi"
     JsonSchema = "jsonschema"
@@ -162,6 +177,8 @@ RAW_DATA_TYPES: list[InputFileType] = [
 
 
 class DataModelType(Enum):
+    """Supported output data model types."""
+
     PydanticBaseModel = "pydantic.BaseModel"
     PydanticV2BaseModel = "pydantic_v2.BaseModel"
     DataclassesDataclass = "dataclasses.dataclass"
@@ -170,6 +187,8 @@ class DataModelType(Enum):
 
 
 class OpenAPIScope(Enum):
+    """Scopes for OpenAPI model generation."""
+
     Schemas = "schemas"
     Paths = "paths"
     Tags = "tags"
@@ -177,25 +196,35 @@ class OpenAPIScope(Enum):
 
 
 class GraphQLScope(Enum):
+    """Scopes for GraphQL model generation."""
+
     Schema = "schema"
 
 
 class Error(Exception):
+    """Base exception for datamodel-code-generator errors."""
+
     def __init__(self, message: str) -> None:
+        """Initialize with message."""
         self.message: str = message
 
     def __str__(self) -> str:
+        """Return string representation."""
         return self.message
 
 
 class InvalidClassNameError(Error):
+    """Raised when a schema title cannot be converted to a valid Python class name."""
+
     def __init__(self, class_name: str) -> None:
+        """Initialize with class name."""
         self.class_name = class_name
         message = f"title={class_name!r} is invalid class name."
         super().__init__(message=message)
 
 
 def get_first_file(path: Path) -> Path:  # pragma: no cover
+    """Find and return the first file in a path (file or directory)."""
     if path.is_file():
         return path
     if path.is_dir():
@@ -290,6 +319,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     parent_scoped_naming: bool = False,
     disable_future_imports: bool = False,
 ) -> None:
+    """Generate Python data models from schema definitions or structured data.
+
+    This is the main entry point for code generation. Supports OpenAPI, JSON Schema,
+    GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
+    """
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     if isinstance(input_, str):
         input_text: str | None = input_
@@ -573,6 +607,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
 
 def infer_input_type(text: str) -> InputFileType:
+    """Automatically detect the input file type from text content."""
     try:
         data = load_yaml(text)
     except yaml.parser.ParserError:

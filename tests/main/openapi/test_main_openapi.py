@@ -1,3 +1,5 @@
+"""Tests for OpenAPI/Swagger input file code generation."""
+
 from __future__ import annotations
 
 import contextlib
@@ -47,6 +49,7 @@ assert_file_content = create_assert_file_content(EXPECTED_OPENAPI_PATH)
 
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset argument namespace before each test."""
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
@@ -55,6 +58,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main(tmp_path: Path) -> None:
+    """Test OpenAPI file code generation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -72,6 +76,7 @@ def test_main(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_discriminator_enum(tmp_path: Path) -> None:
+    """Test OpenAPI generation with discriminator enum."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -95,6 +100,7 @@ def test_main_openapi_discriminator_enum(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_discriminator_enum_duplicate(tmp_path: Path) -> None:
+    """Test OpenAPI generation with duplicate discriminator enum."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -114,6 +120,7 @@ def test_main_openapi_discriminator_enum_duplicate(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_discriminator_with_properties(tmp_path: Path) -> None:
+    """Test OpenAPI generation with discriminator properties."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -130,6 +137,7 @@ def test_main_openapi_discriminator_with_properties(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_pydantic_basemodel(tmp_path: Path) -> None:
+    """Test OpenAPI generation with Pydantic BaseModel output."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -145,6 +153,7 @@ def test_main_pydantic_basemodel(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_base_class(tmp_path: Path) -> None:
+    """Test OpenAPI generation with custom base class."""
     output_file: Path = tmp_path / "output.py"
     shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
     return_code: Exit = main([
@@ -161,6 +170,7 @@ def test_main_base_class(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_target_python_version(tmp_path: Path) -> None:
+    """Test OpenAPI generation with target Python version."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -205,7 +215,6 @@ def test_main_modular_reuse_model(tmp_path: Path) -> None:
 
 def test_main_modular_no_file() -> None:
     """Test main function on modular file with no output name."""
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
 
     assert main(["--input", str(input_filename)]) == Exit.ERROR
@@ -257,7 +266,6 @@ def test_main_openapi_extra_template_data_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test main function with custom config data in extra template."""
-
     monkeypatch.chdir(tmp_path)
     input_filename = OPEN_API_DATA_PATH / "api.yaml"
     extra_template_data = OPEN_API_DATA_PATH / "extra_data.json"
@@ -281,7 +289,6 @@ def test_main_custom_template_dir_old_style(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test main function with custom template directory."""
-
     monkeypatch.chdir(tmp_path)
     input_filename = OPEN_API_DATA_PATH / "api.yaml"
     custom_template_dir = DATA_PATH / "templates_old_style"
@@ -305,8 +312,8 @@ def test_main_custom_template_dir_old_style(
 def test_main_openapi_custom_template_dir(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
+    monkeypatch.chdir(tmp_path)
 
     input_filename = OPEN_API_DATA_PATH / "api.yaml"
     custom_template_dir = DATA_PATH / "templates"
@@ -333,6 +340,7 @@ def test_main_openapi_custom_template_dir(
 )
 @freeze_time("2019-07-26")
 def test_pyproject(tmp_path: Path) -> None:
+    """Test code generation using pyproject.toml configuration."""
     if platform.system() == "Windows":
 
         def get_path(path: str) -> str:
@@ -366,6 +374,7 @@ def test_pyproject(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_pyproject_not_found(tmp_path: Path) -> None:
+    """Test code generation when pyproject.toml is not found."""
     with chdir(tmp_path):
         output_file: Path = tmp_path / "output.py"
         return_code: Exit = main([
@@ -380,6 +389,7 @@ def test_pyproject_not_found(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Test OpenAPI code generation from stdin input."""
     output_file: Path = tmp_path / "output.py"
     monkeypatch.setattr("sys.stdin", (OPEN_API_DATA_PATH / "api.yaml").open())
     return_code: Exit = main([
@@ -392,6 +402,7 @@ def test_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_validation(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test OpenAPI code generation with validation enabled."""
     mock_prance = mocker.patch("prance.BaseParser")
 
     output_file: Path = tmp_path / "output.py"
@@ -409,6 +420,7 @@ def test_validation(mocker: MockerFixture, tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_validation_failed(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test OpenAPI code generation with validation failure."""
     mock_prance = mocker.patch("prance.BaseParser", side_effect=Exception("error"))
     output_file: Path = tmp_path / "output.py"
     assert (
@@ -462,6 +474,7 @@ def test_validation_failed(mocker: MockerFixture, tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_with_field_constraints(output_model: str, expected_output: str, args: list[str], tmp_path: Path) -> None:
+    """Test OpenAPI generation with field constraints enabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -492,6 +505,7 @@ def test_main_with_field_constraints(output_model: str, expected_output: str, ar
 )
 @freeze_time("2019-07-26")
 def test_main_without_field_constraints(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation without field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -524,6 +538,7 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
     reason="Installed black doesn't support the old style",
 )
 def test_main_with_aliases(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with type aliases."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -542,6 +557,7 @@ def test_main_with_aliases(output_model: str, expected_output: str, tmp_path: Pa
 
 
 def test_main_with_bad_aliases(tmp_path: Path) -> None:
+    """Test OpenAPI generation with invalid aliases file."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -555,6 +571,7 @@ def test_main_with_bad_aliases(tmp_path: Path) -> None:
 
 
 def test_main_with_more_bad_aliases(tmp_path: Path) -> None:
+    """Test OpenAPI generation with malformed aliases file."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -568,6 +585,7 @@ def test_main_with_more_bad_aliases(tmp_path: Path) -> None:
 
 
 def test_main_with_bad_extra_data(tmp_path: Path) -> None:
+    """Test OpenAPI generation with invalid extra template data file."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -583,6 +601,7 @@ def test_main_with_bad_extra_data(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_with_snake_case_field(tmp_path: Path) -> None:
+    """Test OpenAPI generation with snake case field naming."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -598,6 +617,7 @@ def test_main_with_snake_case_field(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_with_strip_default_none(tmp_path: Path) -> None:
+    """Test OpenAPI generation with strip default none option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -611,6 +631,7 @@ def test_main_with_strip_default_none(tmp_path: Path) -> None:
 
 
 def test_disable_timestamp(tmp_path: Path) -> None:
+    """Test OpenAPI generation with timestamp disabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -625,6 +646,7 @@ def test_disable_timestamp(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_enable_version_header(tmp_path: Path) -> None:
+    """Test OpenAPI generation with version header enabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -660,6 +682,7 @@ def test_enable_version_header(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_allow_population_by_field_name(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with allow population by field name."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -693,6 +716,7 @@ def test_allow_population_by_field_name(output_model: str, expected_output: str,
     reason="Installed black doesn't support the old style",
 )
 def test_allow_extra_fields(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with allow extra fields option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -726,6 +750,7 @@ def test_allow_extra_fields(output_model: str, expected_output: str, tmp_path: P
     reason="Installed black doesn't support the old style",
 )
 def test_enable_faux_immutability(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with faux immutability enabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -743,6 +768,7 @@ def test_enable_faux_immutability(output_model: str, expected_output: str, tmp_p
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_use_default(tmp_path: Path) -> None:
+    """Test OpenAPI generation with use default option."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -758,6 +784,7 @@ def test_use_default(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_force_optional(tmp_path: Path) -> None:
+    """Test OpenAPI generation with force optional enabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -772,6 +799,7 @@ def test_force_optional(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_with_exclusive(tmp_path: Path) -> None:
+    """Test OpenAPI generation with exclusive keywords."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -785,6 +813,7 @@ def test_main_with_exclusive(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_subclass_enum(tmp_path: Path) -> None:
+    """Test OpenAPI generation with subclass enum."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -802,6 +831,7 @@ def test_main_subclass_enum(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_specialized_enum(tmp_path: Path) -> None:
+    """Test OpenAPI generation with specialized enum."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -821,6 +851,7 @@ def test_main_specialized_enum(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_specialized_enums_disabled(tmp_path: Path) -> None:
+    """Test OpenAPI generation with specialized enums disabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -836,6 +867,7 @@ def test_main_specialized_enums_disabled(tmp_path: Path) -> None:
 
 
 def test_main_use_standard_collections(tmp_path: Path) -> None:
+    """Test OpenAPI generation with standard collections."""
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_path = tmp_path / "model"
 
@@ -856,6 +888,7 @@ def test_main_use_standard_collections(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_use_generic_container_types(tmp_path: Path) -> None:
+    """Test OpenAPI generation with generic container types."""
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_path = tmp_path / "model"
 
@@ -879,6 +912,7 @@ def test_main_use_generic_container_types(tmp_path: Path) -> None:
 def test_main_use_generic_container_types_standard_collections(
     tmp_path: Path,
 ) -> None:
+    """Test OpenAPI generation with generic container types and standard collections."""
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_path = tmp_path / "model"
 
@@ -898,6 +932,7 @@ def test_main_use_generic_container_types_standard_collections(
 
 
 def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pytest.CaptureFixture) -> None:
+    """Test OpenAPI generation with original field name delimiter error."""
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
 
     return_code: Exit = main([
@@ -923,6 +958,7 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pyt
     ],
 )
 def test_main_openapi_aware_datetime(output_model: str, expected_output: str, date_type: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with aware datetime types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -955,6 +991,7 @@ def test_main_openapi_aware_datetime(output_model: str, expected_output: str, da
     ],
 )
 def test_main_openapi_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with datetime types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -972,6 +1009,7 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, tmp_path
 
 @freeze_time("2019-07-26")
 def test_main_models_not_found(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    """Test OpenAPI generation with models not found error."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -992,6 +1030,7 @@ def test_main_models_not_found(capsys: pytest.CaptureFixture, tmp_path: Path) ->
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_enum_models_as_literal_one(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with one enum model as literal."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1015,6 +1054,7 @@ def test_main_openapi_enum_models_as_literal_one(min_version: str, tmp_path: Pat
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_use_one_literal_as_default(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with one literal as default."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1043,6 +1083,7 @@ def test_main_openapi_use_one_literal_as_default(min_version: str, tmp_path: Pat
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_enum_models_as_literal_all(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with all enum models as literal."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1070,6 +1111,7 @@ def test_main_openapi_enum_models_as_literal_all(min_version: str, tmp_path: Pat
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_enum_models_as_literal(tmp_path: Path) -> None:
+    """Test OpenAPI generation with enum models as literal."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1091,6 +1133,7 @@ def test_main_openapi_enum_models_as_literal(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_openapi_all_of_required(tmp_path: Path) -> None:
+    """Test OpenAPI generation with allOf required fields."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1107,6 +1150,7 @@ def test_main_openapi_all_of_required(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_openapi_nullable(tmp_path: Path) -> None:
+    """Test OpenAPI generation with nullable types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1122,6 +1166,7 @@ def test_main_openapi_nullable(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_nullable_strict_nullable(tmp_path: Path) -> None:
+    """Test OpenAPI generation with strict nullable types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1159,6 +1204,7 @@ def test_main_openapi_nullable_strict_nullable(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_pattern(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with pattern validation."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1198,6 +1244,7 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, tmp_path:
 def test_main_openapi_pattern_with_lookaround_pydantic_v2(
     expected_output: str, args: list[str], tmp_path: Path
 ) -> None:
+    """Test OpenAPI generation with pattern lookaround for Pydantic v2."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1220,6 +1267,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
 def test_main_generate_custom_class_name_generator_modular(
     tmp_path: Path,
 ) -> None:
+    """Test OpenAPI generation with custom class name generator in modular mode."""
     output_path = tmp_path / "model"
     main_modular_custom_class_name_dir = EXPECTED_OPENAPI_PATH / "modular_custom_class_name"
 
@@ -1241,6 +1289,8 @@ def test_main_generate_custom_class_name_generator_modular(
 
 @freeze_time("2019-07-26")
 def test_main_http_openapi(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test OpenAPI code generation from HTTP URL."""
+
     def get_mock_response(path: str) -> Mock:
         mock = mocker.Mock()
         mock.text = (OPEN_API_DATA_PATH / path).read_text()
@@ -1285,6 +1335,7 @@ def test_main_http_openapi(mocker: MockerFixture, tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_disable_appending_item_suffix(tmp_path: Path) -> None:
+    """Test OpenAPI generation with item suffix disabled."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1300,6 +1351,7 @@ def test_main_disable_appending_item_suffix(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_body_and_parameters(tmp_path: Path) -> None:
+    """Test OpenAPI generation with body and parameters."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1318,6 +1370,7 @@ def test_main_openapi_body_and_parameters(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test OpenAPI generation with body and parameters remote reference."""
     input_path = OPEN_API_DATA_PATH / "body_and_parameters_remote_ref.yaml"
     person_response = mocker.Mock()
     person_response.text = input_path.read_text()
@@ -1350,6 +1403,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, tmp_
 
 @freeze_time("2019-07-26")
 def test_main_openapi_body_and_parameters_only_paths(tmp_path: Path) -> None:
+    """Test OpenAPI generation with only paths scope."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1367,6 +1421,7 @@ def test_main_openapi_body_and_parameters_only_paths(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_body_and_parameters_only_schemas(tmp_path: Path) -> None:
+    """Test OpenAPI generation with only schemas scope."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1384,6 +1439,7 @@ def test_main_openapi_body_and_parameters_only_schemas(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_content_in_parameters(tmp_path: Path) -> None:
+    """Test OpenAPI generation with content in parameters."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1399,6 +1455,7 @@ def test_main_openapi_content_in_parameters(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_oas_response_reference(tmp_path: Path) -> None:
+    """Test OpenAPI generation with OAS response reference."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1417,6 +1474,7 @@ def test_main_openapi_oas_response_reference(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_json_pointer(tmp_path: Path) -> None:
+    """Test OpenAPI generation with JSON pointer references."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1448,6 +1506,7 @@ def test_main_openapi_json_pointer(tmp_path: Path) -> None:
 def test_main_use_annotated_with_field_constraints(
     output_model: str, expected_output: str, min_version: str, tmp_path: Path
 ) -> None:
+    """Test OpenAPI generation with Annotated and field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1467,6 +1526,7 @@ def test_main_use_annotated_with_field_constraints(
 
 @freeze_time("2019-07-26")
 def test_main_nested_enum(tmp_path: Path) -> None:
+    """Test OpenAPI generation with nested enum."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1482,6 +1542,7 @@ def test_main_nested_enum(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_openapi_special_yaml_keywords(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test OpenAPI generation with special YAML keywords."""
     mock_prance = mocker.patch("prance.BaseParser")
 
     output_file: Path = tmp_path / "output.py"
@@ -1503,6 +1564,7 @@ def test_openapi_special_yaml_keywords(mocker: MockerFixture, tmp_path: Path) ->
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_nullable_use_union_operator(tmp_path: Path) -> None:
+    """Test OpenAPI generation with nullable using union operator."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1520,6 +1582,7 @@ def test_main_openapi_nullable_use_union_operator(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_external_relative_ref(tmp_path: Path) -> None:
+    """Test OpenAPI generation with external relative references."""
     return_code: Exit = main([
         "--input",
         str(OPEN_API_DATA_PATH / "external_relative_ref" / "model_b"),
@@ -1534,6 +1597,7 @@ def test_external_relative_ref(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_collapse_root_models(tmp_path: Path) -> None:
+    """Test OpenAPI generation with collapsed root models."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1548,6 +1612,7 @@ def test_main_collapse_root_models(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_collapse_root_models_field_constraints(tmp_path: Path) -> None:
+    """Test OpenAPI generation with collapsed root models and field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1563,6 +1628,7 @@ def test_main_collapse_root_models_field_constraints(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_collapse_root_models_with_references_to_flat_types(tmp_path: Path) -> None:
+    """Test OpenAPI generation with collapsed root models referencing flat types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1578,6 +1644,7 @@ def test_main_collapse_root_models_with_references_to_flat_types(tmp_path: Path)
 
 @freeze_time("2019-07-26")
 def test_main_openapi_max_items_enum(tmp_path: Path) -> None:
+    """Test OpenAPI generation with max items enum."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1606,6 +1673,7 @@ def test_main_openapi_max_items_enum(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_const(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with const values."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1648,6 +1716,7 @@ def test_main_openapi_const(output_model: str, expected_output: str, tmp_path: P
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_const_field(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with const field."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1666,6 +1735,7 @@ def test_main_openapi_const_field(output_model: str, expected_output: str, tmp_p
 
 @freeze_time("2019-07-26")
 def test_main_openapi_complex_reference(tmp_path: Path) -> None:
+    """Test OpenAPI generation with complex references."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1681,6 +1751,7 @@ def test_main_openapi_complex_reference(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_reference_to_object_properties(tmp_path: Path) -> None:
+    """Test OpenAPI generation with reference to object properties."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1696,6 +1767,7 @@ def test_main_openapi_reference_to_object_properties(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_reference_to_object_properties_collapse_root_models(tmp_path: Path) -> None:
+    """Test OpenAPI generation with reference to object properties and collapsed root models."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1712,6 +1784,7 @@ def test_main_openapi_reference_to_object_properties_collapse_root_models(tmp_pa
 
 @freeze_time("2019-07-26")
 def test_main_openapi_override_required_all_of_field(tmp_path: Path) -> None:
+    """Test OpenAPI generation with override required allOf field."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1728,6 +1801,7 @@ def test_main_openapi_override_required_all_of_field(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_use_default_kwarg(tmp_path: Path) -> None:
+    """Test OpenAPI generation with use default kwarg."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1757,6 +1831,7 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_discriminator(input_: str, output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with discriminator."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1789,6 +1864,7 @@ def test_main_openapi_discriminator(input_: str, output: str, tmp_path: Path) ->
     ],
 )
 def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expected: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with discriminator in array."""
     output_file: Path = tmp_path / "output.py"
     input_file = f"discriminator_in_array_{kind.lower()}.yaml"
     return_code: Exit = main([
@@ -1835,6 +1911,7 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_default_object(output_model: str, expected_output: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with default object values."""
     return_code: Exit = main([
         "--input",
         str(OPEN_API_DATA_PATH / "default_object.yaml"),
@@ -1855,6 +1932,7 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
 
 @freeze_time("2019-07-26")
 def test_main_dataclass(tmp_path: Path) -> None:
+    """Test OpenAPI generation with dataclass output."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1870,6 +1948,7 @@ def test_main_dataclass(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_dataclass_base_class(tmp_path: Path) -> None:
+    """Test OpenAPI generation with dataclass base class."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1887,6 +1966,7 @@ def test_main_dataclass_base_class(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None:
+    """Test OpenAPI generation with reference in same hierarchy directory."""
     with chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"):
         output_file: Path = tmp_path / "output.py"
         return_code: Exit = main([
@@ -1903,6 +1983,7 @@ def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None
 
 @freeze_time("2019-07-26")
 def test_main_multiple_required_any_of(tmp_path: Path) -> None:
+    """Test OpenAPI generation with multiple required anyOf."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1917,6 +1998,7 @@ def test_main_multiple_required_any_of(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_max_min(tmp_path: Path) -> None:
+    """Test OpenAPI generation with max and min constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1930,6 +2012,7 @@ def test_main_openapi_max_min(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_use_operation_id_as_name(tmp_path: Path) -> None:
+    """Test OpenAPI generation with operation ID as name."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1950,6 +2033,7 @@ def test_main_openapi_use_operation_id_as_name(tmp_path: Path) -> None:
 def test_main_openapi_use_operation_id_as_name_not_found_operation_id(
     capsys: pytest.CaptureFixture, tmp_path: Path
 ) -> None:
+    """Test OpenAPI generation with operation ID as name when ID not found."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1974,6 +2058,7 @@ def test_main_openapi_use_operation_id_as_name_not_found_operation_id(
 
 @freeze_time("2019-07-26")
 def test_main_unsorted_optional_fields(tmp_path: Path) -> None:
+    """Test OpenAPI generation with unsorted optional fields."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -1989,6 +2074,7 @@ def test_main_unsorted_optional_fields(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_typed_dict(tmp_path: Path) -> None:
+    """Test OpenAPI generation with TypedDict output."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2004,6 +2090,7 @@ def test_main_typed_dict(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_typed_dict_py(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with TypedDict for specific Python version."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2025,7 +2112,6 @@ def test_main_typed_dict_py(min_version: str, tmp_path: Path) -> None:
 )
 def test_main_modular_typed_dict(tmp_path: Path) -> None:
     """Test main function on modular file."""
-
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_path = tmp_path / "model"
 
@@ -2050,6 +2136,7 @@ def test_main_modular_typed_dict(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_typed_dict_nullable(tmp_path: Path) -> None:
+    """Test OpenAPI generation with nullable TypedDict."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2071,6 +2158,7 @@ def test_main_typed_dict_nullable(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_typed_dict_nullable_strict_nullable(tmp_path: Path) -> None:
+    """Test OpenAPI generation with strict nullable TypedDict."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2090,6 +2178,7 @@ def test_main_typed_dict_nullable_strict_nullable(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 @freeze_time("2019-07-26")
 def test_main_openapi_nullable_31(tmp_path: Path) -> None:
+    """Test OpenAPI 3.1 generation with nullable types."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2109,6 +2198,7 @@ def test_main_openapi_nullable_31(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_custom_file_header_path(tmp_path: Path) -> None:
+    """Test OpenAPI generation with custom file header path."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2124,6 +2214,7 @@ def test_main_custom_file_header_path(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    """Test OpenAPI generation with duplicate custom file header options."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2143,6 +2234,7 @@ def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture
 
 @freeze_time("2019-07-26")
 def test_main_pydantic_v2(tmp_path: Path) -> None:
+    """Test OpenAPI generation with Pydantic v2 output."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2158,6 +2250,7 @@ def test_main_pydantic_v2(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_custom_id_pydantic_v2(tmp_path: Path) -> None:
+    """Test OpenAPI generation with custom ID for Pydantic v2."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2177,6 +2270,7 @@ def test_main_openapi_custom_id_pydantic_v2(tmp_path: Path) -> None:
 )
 @freeze_time("2019-07-26")
 def test_main_openapi_custom_id_pydantic_v2_custom_base(tmp_path: Path) -> None:
+    """Test OpenAPI generation with custom ID and base for Pydantic v2."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2198,6 +2292,7 @@ def test_main_openapi_custom_id_pydantic_v2_custom_base(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_all_of_with_relative_ref(tmp_path: Path) -> None:
+    """Test OpenAPI generation with allOf and relative reference."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2221,6 +2316,7 @@ def test_main_openapi_all_of_with_relative_ref(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_msgspec_struct(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with msgspec Struct output."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2238,6 +2334,7 @@ def test_main_openapi_msgspec_struct(min_version: str, tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_msgspec_struct_snake_case(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with msgspec Struct and snake case."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2260,6 +2357,7 @@ def test_main_openapi_msgspec_struct_snake_case(min_version: str, tmp_path: Path
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_msgspec_use_annotated_with_field_constraints(tmp_path: Path) -> None:
+    """Test OpenAPI generation with msgspec using Annotated and field constraints."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2278,6 +2376,7 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(tmp_path: Pat
 
 @freeze_time("2019-07-26")
 def test_main_openapi_discriminator_one_literal_as_default(tmp_path: Path) -> None:
+    """Test OpenAPI generation with discriminator one literal as default."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2296,6 +2395,7 @@ def test_main_openapi_discriminator_one_literal_as_default(tmp_path: Path) -> No
 
 @freeze_time("2019-07-26")
 def test_main_openapi_discriminator_one_literal_as_default_dataclass(tmp_path: Path) -> None:
+    """Test OpenAPI generation with discriminator one literal as default for dataclass."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2320,6 +2420,7 @@ def test_main_openapi_discriminator_one_literal_as_default_dataclass(tmp_path: P
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_keyword_only_dataclass(tmp_path: Path) -> None:
+    """Test OpenAPI generation with keyword-only dataclass."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2340,6 +2441,7 @@ def test_main_openapi_keyword_only_dataclass(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture) -> None:
+    """Test OpenAPI generation with keyword-only dataclass for Python 3.9."""
     return_code = main([
         "--input",
         str(OPEN_API_DATA_PATH / "inheritance.yaml"),
@@ -2359,6 +2461,7 @@ def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.Capt
 
 @freeze_time("2019-07-26")
 def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixture) -> None:
+    """Test OpenAPI generation with dataclass using naive datetime."""
     return_code = main([
         "--input",
         str(OPEN_API_DATA_PATH / "inheritance.yaml"),
@@ -2384,6 +2487,7 @@ def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixtur
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_keyword_only_msgspec(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with keyword-only msgspec."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2408,6 +2512,7 @@ def test_main_openapi_keyword_only_msgspec(min_version: str, tmp_path: Path) -> 
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str, tmp_path: Path) -> None:
+    """Test OpenAPI generation with keyword-only msgspec and extra data."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2434,6 +2539,7 @@ def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str, tmp
     reason="Installed black doesn't support the old style",
 )
 def test_main_generate_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Path) -> None:
+    """Test OpenAPI generation with keyword-only msgspec using generate function."""
     extra_data = json.loads((OPEN_API_DATA_PATH / "extra_data_msgspec.json").read_text())
     output_file: Path = tmp_path / "output.py"
     generate(
@@ -2455,6 +2561,7 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Pa
 
 @freeze_time("2019-07-26")
 def test_main_openapi_referenced_default(tmp_path: Path) -> None:
+    """Test OpenAPI generation with referenced default values."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2472,6 +2579,7 @@ def test_main_openapi_referenced_default(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_duplicate_models(tmp_path: Path) -> None:
+    """Test OpenAPI generation with duplicate models."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2493,6 +2601,7 @@ def test_duplicate_models(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_shadowed_imports(tmp_path: Path) -> None:
+    """Test OpenAPI generation with shadowed imports."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2510,6 +2619,7 @@ def test_main_openapi_shadowed_imports(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_extra_fields_forbid(tmp_path: Path) -> None:
+    """Test OpenAPI generation with extra fields forbidden."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2527,6 +2637,7 @@ def test_main_openapi_extra_fields_forbid(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_same_name_objects(tmp_path: Path) -> None:
+    """Test OpenAPI generation with same name objects."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2584,6 +2695,7 @@ def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_byte_format(tmp_path: Path) -> None:
+    """Test OpenAPI generation with byte format."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
@@ -2601,6 +2713,7 @@ def test_main_openapi_byte_format(tmp_path: Path) -> None:
 
 @freeze_time("2019-07-26")
 def test_main_openapi_unquoted_null(tmp_path: Path) -> None:
+    """Test OpenAPI generation with unquoted null values."""
     output_file: Path = tmp_path / "output.py"
     return_code: Exit = main([
         "--input",
