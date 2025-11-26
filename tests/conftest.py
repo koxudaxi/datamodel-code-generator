@@ -74,7 +74,8 @@ def create_assert_file_content(
         """Assert that file content matches expected external file."""
         if expected_name is None:
             frame = inspect.currentframe()
-            assert frame is not None and frame.f_back is not None
+            assert frame is not None
+            assert frame.f_back is not None
             func_name = frame.f_back.f_code.co_name
             del frame
             name = func_name
