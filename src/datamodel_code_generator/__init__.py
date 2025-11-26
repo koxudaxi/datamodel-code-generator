@@ -412,7 +412,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     msg = f"Input must be a file for {input_file_type}"
                     raise Error(msg)  # noqa: TRY301
-                obj: dict[Any, Any]
+                obj: dict[str, Any]
                 if input_file_type == InputFileType.CSV:
                     import csv  # noqa: PLC0415
 
@@ -447,7 +447,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                     obj = (
                         ast.literal_eval(input_.read_text(encoding=encoding))
                         if isinstance(input_, Path)
-                        else cast("dict[Any, Any]", input_)
+                        else cast("dict[str, Any]", input_)
                     )
                 else:  # pragma: no cover
                     msg = f"Unsupported input file type: {input_file_type}"

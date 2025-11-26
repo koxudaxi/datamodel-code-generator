@@ -12,6 +12,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
+from collections.abc import Hashable
 from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
@@ -53,6 +54,14 @@ from datamodel_code_generator.types import DataType, DataTypeManager, StrictType
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+
+@runtime_checkable
+class HashableComparable(Hashable, Protocol):
+    """Protocol for types that are both hashable and support comparison."""
+
+    def __lt__(self, value: Any, /) -> bool: ...  # noqa: D105
+
+
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
 
@@ -73,8 +82,12 @@ escape_characters = str.maketrans({
 })
 
 
-def to_hashable(item: Any) -> Any:
-    """Convert an item to a hashable representation for comparison."""
+def to_hashable(item: Any) -> HashableComparable:
+    """Convert an item to a hashable and comparable representation.
+
+    Returns a value that is both hashable and supports comparison operators.
+    Used for caching and deduplication of models.
+    """
     if isinstance(
         item,
         (
@@ -94,12 +107,12 @@ def to_hashable(item: Any) -> Any:
             )
         )
     if isinstance(item, set):  # pragma: no cover
-        return frozenset(to_hashable(i) for i in item)
+        return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):
         return to_hashable(item.dict())
     if item is None:
         return ""
-    return item
+    return item  # type: ignore[return-value]
 
 
 def dump_templates(templates: list[DataModel]) -> str:
@@ -922,7 +935,7 @@ class Parser(ABC):
     def __reuse_model(self, models: list[DataModel], require_update_action_models: list[str]) -> None:
         if not self.reuse_model:
             return
-        model_cache: dict[tuple[str, ...], Reference] = {}
+        model_cache: dict[tuple[HashableComparable, ...], Reference] = {}
         duplicates = []
         for model in models.copy():
             model_key = tuple(to_hashable(v) for v in (model.render(class_name="M"), model.imports))

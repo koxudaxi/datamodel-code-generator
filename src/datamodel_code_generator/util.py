@@ -100,7 +100,7 @@ def model_validator(  # pyright: ignore[reportInconsistentOverload]
         if PYDANTIC_V2:
             from pydantic import model_validator as model_validator_v2  # noqa: PLC0415
 
-            if method == "before":
+            if mode == "before":
                 return model_validator_v2(mode=mode)(classmethod(method))  # type: ignore[reportReturnType]
             return model_validator_v2(mode=mode)(method)  # type: ignore[reportReturnType]
         from pydantic import root_validator  # noqa: PLC0415

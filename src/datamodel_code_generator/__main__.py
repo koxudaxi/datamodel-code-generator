@@ -147,8 +147,10 @@ class Config(BaseModel):
     @field_validator("http_headers", mode="before")
     def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
         """Validate HTTP headers."""
+        if value is None:  # pragma: no cover
+            return None
 
-        def validate_each_item(each_item: Any) -> tuple[str, str]:
+        def validate_each_item(each_item: str | tuple[str, str]) -> tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
                     field_name, field_value = each_item.split(":", maxsplit=1)
@@ -156,17 +158,20 @@ class Config(BaseModel):
                 except ValueError as exc:
                     msg = f"Invalid http header: {each_item!r}"
                     raise Error(msg) from exc
-            return each_item  # pragma: no cover
+            return each_item
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
-        return value  # pragma: no cover
+        msg = f"Invalid http_headers value: {value!r}"  # pragma: no cover
+        raise Error(msg)  # pragma: no cover
 
     @field_validator("http_query_parameters", mode="before")
     def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
         """Validate HTTP query parameters."""
+        if value is None:  # pragma: no cover
+            return None
 
-        def validate_each_item(each_item: Any) -> tuple[str, str]:
+        def validate_each_item(each_item: str | tuple[str, str]) -> tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
                     field_name, field_value = each_item.split("=", maxsplit=1)
@@ -174,11 +179,12 @@ class Config(BaseModel):
                 except ValueError as exc:
                     msg = f"Invalid http query parameter: {each_item!r}"
                     raise Error(msg) from exc
-            return each_item  # pragma: no cover
+            return each_item
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
-        return value  # pragma: no cover
+        msg = f"Invalid http_query_parameters value: {value!r}"  # pragma: no cover
+        raise Error(msg)  # pragma: no cover
 
     @model_validator(mode="before")
     def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
