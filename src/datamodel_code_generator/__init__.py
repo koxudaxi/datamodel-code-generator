@@ -39,7 +39,7 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.util import SafeLoader
+from datamodel_code_generator.util import PYDANTIC_V2, SafeLoader
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -54,7 +54,11 @@ MAX_VERSION: Final[int] = 13
 T = TypeVar("T")
 
 YamlScalar: TypeAlias = Union[str, int, float, bool, None]
-YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+if PYDANTIC_V2:
+    YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+else:
+    # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
+    YamlValue: TypeAlias = Union[dict[str, Any], list[Any], YamlScalar]  # type: ignore[no-redef,misc]
 
 try:
     import pysnooper
