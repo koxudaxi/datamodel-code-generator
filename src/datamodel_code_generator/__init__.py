@@ -54,7 +54,7 @@ MAX_VERSION: Final[int] = 13
 T = TypeVar("T")
 
 YamlScalar: TypeAlias = Union[str, int, float, bool, None]
-YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
+YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
 
 try:
     import pysnooper
