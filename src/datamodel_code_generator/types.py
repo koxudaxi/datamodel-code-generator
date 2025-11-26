@@ -317,7 +317,9 @@ class DataType(_BaseModel):
             @classmethod
             def model_rebuild(cls) -> None:
                 """Update forward references for Pydantic v1."""
-                cls.update_forward_refs()
+                from datamodel_code_generator.model.base import DataModelFieldBase
+
+                cls.update_forward_refs(DataModelFieldBase=DataModelFieldBase)
 
         class Config:
             """Pydantic v1 model configuration."""
