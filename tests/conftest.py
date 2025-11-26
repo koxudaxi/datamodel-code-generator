@@ -22,13 +22,13 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
     expected = external_file(expected_path)
     normalized_content = _normalize_line_endings(content)
-    if isinstance(expected, str):
+    if isinstance(expected, str):  # pragma: no branch
         assert normalized_content == _normalize_line_endings(expected)
     else:
-        expected_value = expected._load_value()
-        if _normalize_line_endings(expected_value) == normalized_content:
-            return
-        assert expected == normalized_content
+        expected_value = expected._load_value()  # pragma: no cover
+        if _normalize_line_endings(expected_value) == normalized_content:  # pragma: no cover
+            return  # pragma: no cover
+        assert expected == normalized_content  # pragma: no cover
 
 
 class AssertFileContent(Protocol):
@@ -74,19 +74,15 @@ def create_assert_file_content(
         """Assert that file content matches expected external file."""
         if expected_name is None:
             frame = inspect.currentframe()
-            if frame is None or frame.f_back is None:
-                msg = "Cannot determine caller frame"
-                raise RuntimeError(msg)
-            try:
-                func_name = frame.f_back.f_code.co_name
-                name = func_name
-                for prefix in ("test_main_", "test_"):
-                    if name.startswith(prefix):
-                        name = name[len(prefix) :]
-                        break
-                expected_name = f"{name}.py"
-            finally:
-                del frame
+            assert frame is not None and frame.f_back is not None
+            func_name = frame.f_back.f_code.co_name
+            del frame
+            name = func_name
+            for prefix in ("test_main_", "test_"):
+                if name.startswith(prefix):
+                    name = name[len(prefix) :]
+                    break
+            expected_name = f"{name}.py"
 
         expected_path = base_path / expected_name
         content = output_file.read_text(encoding=encoding)
@@ -177,11 +173,6 @@ def assert_parser_modules(
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(result.body, expected_path)
-
-
-register_format_alias(".py", ".txt")
-register_format_alias(".pyi", ".txt")
-register_format_alias(".snapshot", ".txt")
 
 
 @pytest.fixture(autouse=True)
