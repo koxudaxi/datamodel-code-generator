@@ -9,6 +9,7 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
 if TYPE_CHECKING:
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
 
 GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
+
+assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +59,7 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
         output_model,
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / expected_output).read_text()
+    assert_file_content(output_file, expected_output)
 
 
 @freeze_time("2019-07-26")
@@ -75,9 +78,7 @@ def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "different_types_of_fields.py").read_text()
-    )
+    assert_file_content(output_file, "different_types_of_fields.py")
 
 
 @freeze_time("2019-07-26")
@@ -93,10 +94,7 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
         "--use-default-kwarg",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_GRAPHQL_PATH / "annotated_use_default_kwarg.py").read_text()
-    )
+    assert_file_content(output_file, "annotated_use_default_kwarg.py")
 
 
 @freeze_time("2019-07-26")
@@ -117,7 +115,7 @@ def test_main_graphql_custom_scalar_types(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "custom-scalar-types.json"),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "custom_scalar_types.py").read_text()
+    assert_file_content(output_file, "custom_scalar_types.py")
 
 
 @freeze_time("2019-07-26")
@@ -138,7 +136,7 @@ def test_main_graphql_field_aliases(tmp_path: Path) -> None:
         str(GRAPHQL_DATA_PATH / "field-aliases.json"),
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field_aliases.py").read_text()
+    assert_file_content(output_file, "field_aliases.py")
 
 
 @freeze_time("2019-07-26")
@@ -157,7 +155,7 @@ def test_main_graphql_enums(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums.py").read_text()
+    assert_file_content(output_file, "enums.py")
 
 
 @freeze_time("2019-07-26")
@@ -178,7 +176,7 @@ def test_main_graphql_specialized_enums(tmp_path: Path) -> None:
         "3.11",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums_specialized.py").read_text()
+    assert_file_content(output_file, "enums_specialized.py")
 
 
 @freeze_time("2019-07-26")
@@ -200,7 +198,7 @@ def test_main_graphql_specialized_enums_disabled(tmp_path: Path) -> None:
         "--no-use-specialized-enum",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums_no_specialized.py").read_text()
+    assert_file_content(output_file, "enums_no_specialized.py")
 
 
 @freeze_time("2019-07-26")
@@ -220,7 +218,7 @@ def test_main_graphql_enums_subclass(tmp_path: Path) -> None:
         "--use-subclass-enum",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "enums_using_subclass.py").read_text()
+    assert_file_content(output_file, "enums_using_subclass.py")
 
 
 @freeze_time("2019-07-26")
@@ -239,7 +237,7 @@ def test_main_graphql_union(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "union.py").read_text()
+    assert_file_content(output_file, "union.py")
 
 
 @pytest.mark.skipif(
@@ -262,9 +260,7 @@ def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "additional_imports_isort4.py").read_text()
-    )
+    assert_file_content(output_file, "additional_imports_isort4.py")
 
 
 @pytest.mark.skipif(
@@ -291,9 +287,7 @@ def test_main_graphql_additional_imports_isort_not_4(tmp_path: Path) -> None:
         "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "additional_imports_isort5.py").read_text()
-    )
+    assert_file_content(output_file, "additional_imports_isort5.py")
 
 
 @freeze_time("2019-07-26")
@@ -314,7 +308,7 @@ def test_main_graphql_custom_formatters(tmp_path: Path) -> None:
         "tests.data.python.custom_formatters.add_comment",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "custom_formatters.py").read_text()
+    assert_file_content(output_file, "custom_formatters.py")
 
 
 @freeze_time("2019-07-26")
@@ -334,9 +328,7 @@ def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
         "--use-standard-collections",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "use_standard_collections.py").read_text()
-    )
+    assert_file_content(output_file, "use_standard_collections.py")
 
 
 @freeze_time("2019-07-26")
@@ -356,7 +348,7 @@ def test_main_graphql_use_union_operator(tmp_path: Path) -> None:
         "--use-union-operator",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "use_union_operator.py").read_text()
+    assert_file_content(output_file, "use_union_operator.py")
 
 
 @freeze_time("2019-07-26")
@@ -373,10 +365,7 @@ def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
         "allow",
     ])
     assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_GRAPHQL_PATH / "simple_star_wars_extra_fields_allow.py").read_text()
-    )
+    assert_file_content(output_file, "simple_star_wars_extra_fields_allow.py")
 
 
 @freeze_time("2019-07-26")
@@ -393,7 +382,7 @@ def test_main_graphql_type_alias(tmp_path: Path) -> None:
         "graphql",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias.py").read_text()
+    assert_file_content(output_file, "type_alias.py")
 
 
 @freeze_time("2019-07-26")
@@ -418,4 +407,4 @@ def test_main_graphql_type_alias_py312(tmp_path: Path) -> None:
         "pydantic_v2.BaseModel",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "type_alias_py312.py").read_text()
+    assert_file_content(output_file, "type_alias_py312.py")

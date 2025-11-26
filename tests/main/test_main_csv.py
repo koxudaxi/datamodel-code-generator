@@ -7,6 +7,7 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import create_assert_file_content
 from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
 
 if TYPE_CHECKING:
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
 
 CSV_DATA_PATH: Path = DATA_PATH / "csv"
 EXPECTED_CSV_PATH: Path = EXPECTED_MAIN_PATH / "csv"
+
+assert_file_content = create_assert_file_content(EXPECTED_CSV_PATH)
 
 
 @pytest.fixture(autouse=True)
@@ -35,7 +38,7 @@ def test_csv_file(tmp_path: Path) -> None:
         "csv",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_CSV_PATH / "csv_file_simple.py").read_text()
+    assert_file_content(output_file, "csv_file_simple.py")
 
 
 @freeze_time("2019-07-26")
@@ -49,4 +52,4 @@ def test_csv_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         "csv",
     ])
     assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_CSV_PATH / "csv_stdin_simple.py").read_text()
+    assert_file_content(output_file, "csv_stdin_simple.py")
