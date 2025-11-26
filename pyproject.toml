@@ -61,7 +61,7 @@ optional-dependencies.ruff = [
   "ruff>=0.9.10",
 ]
 optional-dependencies.validation = [
-  "openapi-spec-validator>=0.2.8,<0.7",
+  "openapi-spec-validator>=0.2.8,<0.8",
   "prance>=0.18.2",
 ]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
@@ -79,6 +79,7 @@ dev = [
 ]
 test = [
   "freezegun",
+  "inline-snapshot>=0.31.1",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -105,6 +106,7 @@ docs = [
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
+pydantic1 = [ "pydantic<2" ]
 fix = [ "pre-commit-uv>=4.1.4" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
@@ -120,6 +122,20 @@ build.targets.sdist.include = [
   "/tests",
 ]
 version.source = "vcs"
+
+[tool.uv]
+conflicts = [
+  [
+    { group = "black24" },
+    { group = "black22" },
+    { group = "black23" },
+    { group = "dev" },
+  ],
+  [
+    { group = "pydantic1" },
+    { group = "pkg-meta" },
+  ],
+]
 
 [tool.ruff]
 line-length = 120
@@ -214,13 +230,3 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
-
-[tool.uv]
-conflicts = [
-  [
-    { group = "black24" },
-    { group = "black22" },
-    { group = "black23" },
-    { group = "dev" },
-  ],
-]

@@ -800,6 +800,45 @@ def test_main_subclass_enum(tmp_path: Path) -> None:
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
 
 
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_specialized_enum(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
+        "--output",
+        str(output_file),
+        "--target-python-version",
+        "3.11",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_specialized.py").read_text()
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_specialized_enums_disabled(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
+        "--output",
+        str(output_file),
+        "--target-python-version",
+        "3.11",
+        "--no-use-specialized-enum",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
+
+
 def test_main_use_standard_collections(tmp_path: Path) -> None:
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_path = tmp_path / "model"
@@ -2586,3 +2625,79 @@ def test_main_openapi_same_name_objects(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "same_name_objects.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_type_alias(tmp_path: Path) -> None:
+    """Test that TypeAliasType is generated for OpenAPI schemas for Python 3.9-3.11."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "type_alias.yaml"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--input-file-type",
+        "openapi",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias.py").read_text()
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
+    """Test that type statement syntax is generated for OpenAPI schemas with Python 3.12+ and Pydantic v2."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "type_alias.yaml"),
+        "--output",
+        str(output_file),
+        "--use-type-alias",
+        "--input-file-type",
+        "openapi",
+        "--target-python-version",
+        "3.12",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py312.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_byte_format(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "byte_format.yaml"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "openapi",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "byte_format.py").read_text()
+
+
+@freeze_time("2019-07-26")
+def test_main_openapi_unquoted_null(tmp_path: Path) -> None:
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(OPEN_API_DATA_PATH / "unquoted_null.yaml"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "openapi",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+    assert return_code == Exit.OK
+    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unquoted_null.py").read_text()

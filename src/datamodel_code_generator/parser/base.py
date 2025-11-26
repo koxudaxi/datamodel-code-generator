@@ -339,6 +339,7 @@ class Parser(ABC):
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
+        use_specialized_enum: bool = True,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -363,6 +364,7 @@ class Parser(ABC):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
@@ -422,6 +424,7 @@ class Parser(ABC):
         self.enum_field_as_literal: LiteralType | None = enum_field_as_literal
         self.set_default_enum_member: bool = set_default_enum_member
         self.use_subclass_enum: bool = use_subclass_enum
+        self.use_specialized_enum: bool = use_specialized_enum
         self.strict_nullable: bool = strict_nullable
         self.use_generic_container_types: bool = use_generic_container_types
         self.use_union_operator: bool = use_union_operator
@@ -488,6 +491,7 @@ class Parser(ABC):
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
+        self.use_type_alias = use_type_alias
         self.capitalise_enum_members = capitalise_enum_members
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default

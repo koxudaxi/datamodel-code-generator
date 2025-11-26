@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator.imports import IMPORT_TYPE_ALIAS, IMPORT_UNION, Import
+from datamodel_code_generator.imports import (
+    IMPORT_TYPE_ALIAS,
+    IMPORT_TYPE_ALIAS_BACKPORT,
+    IMPORT_TYPE_ALIAS_TYPE,
+    IMPORT_UNION,
+    Import,
+)
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 
@@ -13,13 +19,8 @@ if TYPE_CHECKING:
     from datamodel_code_generator.reference import Reference
 
 
-class DataTypeUnion(DataModel):
-    TEMPLATE_FILE_PATH: ClassVar[str] = "Union.jinja2"
-    BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
-        IMPORT_TYPE_ALIAS,
-        IMPORT_UNION,
-    )
+class _DataTypeUnionBase(DataModel):
+    """Base class for GraphQL union types with shared __init__ logic"""
 
     def __init__(  # noqa: PLR0913
         self,
@@ -55,3 +56,44 @@ class DataTypeUnion(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
+
+
+class DataTypeUnion(_DataTypeUnionBase):
+    """GraphQL union using TypeAlias annotation for Python 3.10+ (Name: TypeAlias = Union[...])"""
+
+    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasAnnotation.jinja2"
+    BASE_CLASS: ClassVar[str] = ""
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
+        IMPORT_TYPE_ALIAS,
+        IMPORT_UNION,
+    )
+
+
+class DataTypeUnionBackport(_DataTypeUnionBase):
+    """GraphQL union using TypeAlias annotation for Python 3.9 (Name: TypeAlias = Union[...])"""
+
+    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasAnnotation.jinja2"
+    BASE_CLASS: ClassVar[str] = ""
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
+        IMPORT_TYPE_ALIAS_BACKPORT,
+        IMPORT_UNION,
+    )
+
+
+class DataTypeUnionTypeBackport(_DataTypeUnionBase):
+    """GraphQL union using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", Union[...]))"""
+
+    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasType.jinja2"
+    BASE_CLASS: ClassVar[str] = ""
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
+        IMPORT_TYPE_ALIAS_TYPE,
+        IMPORT_UNION,
+    )
+
+
+class DataTypeUnionTypeStatement(_DataTypeUnionBase):
+    """GraphQL union using type statement for Python 3.12+ (type Name = Union[...])"""
+
+    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeStatement.jinja2"
+    BASE_CLASS: ClassVar[str] = ""
+    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_UNION,)

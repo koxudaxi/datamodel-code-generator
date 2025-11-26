@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, Union
 
+from typing_extensions import TypeAliasType
+
 
 class RequestVersionEnum(Enum):
     v1 = 'v1'
@@ -30,4 +32,4 @@ class RequestV2(RequestBase):
     version: Literal['v2'] = 'v2'
 
 
-Request = Union[RequestV1, RequestV2]
+Request = TypeAliasType("Request", Union[RequestV1, RequestV2])

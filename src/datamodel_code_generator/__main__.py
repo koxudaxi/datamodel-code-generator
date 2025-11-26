@@ -20,11 +20,6 @@ import argcomplete
 import black
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from argparse import Namespace
-
-    from typing_extensions import Self
-
 from datamodel_code_generator import (
     DataModelType,
     Error,
@@ -50,11 +45,15 @@ from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed f
 from datamodel_code_generator.util import (
     PYDANTIC_V2,
     ConfigDict,
-    Model,
     field_validator,
     load_toml,
     model_validator,
 )
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from typing_extensions import Self
 
 
 class Exit(IntEnum):
@@ -82,20 +81,13 @@ class Config(BaseModel):
         def __getitem__(self, item: str) -> Any:
             return self.get(item)
 
-        if TYPE_CHECKING:
+        @classmethod
+        def parse_obj(cls, obj: Any) -> Self:
+            return cls.model_validate(obj)
 
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]: ...
-
-        else:
-
-            @classmethod
-            def parse_obj(cls: type[Model], obj: Any) -> Model:
-                return cls.model_validate(obj)
-
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]:
-                return cls.model_fields
+        @classmethod
+        def get_fields(cls) -> dict[str, Any]:
+            return cls.model_fields
 
     else:
 
@@ -103,11 +95,9 @@ class Config(BaseModel):
             # Pydantic 1.5.1 doesn't support validate_assignment correctly
             arbitrary_types_allowed = (TextIOBase,)
 
-        if not TYPE_CHECKING:
-
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]:
-                return cls.__fields__
+        @classmethod
+        def get_fields(cls) -> dict[str, Any]:
+            return cls.__fields__
 
     @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
@@ -325,6 +315,7 @@ class Config(BaseModel):
     use_one_literal_as_default: bool = False
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
+    use_specialized_enum: bool = True
     strict_nullable: bool = False
     use_generic_container_types: bool = False
     use_union_operator: bool = False
@@ -349,6 +340,7 @@ class Config(BaseModel):
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
+    use_type_alias: bool = False
     special_field_name_prefix: Optional[str] = None  # noqa: UP045
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
@@ -542,6 +534,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_one_literal_as_default=config.use_one_literal_as_default,
             set_default_enum_member=config.set_default_enum_member,
             use_subclass_enum=config.use_subclass_enum,
+            use_specialized_enum=config.use_specialized_enum,
             strict_nullable=config.strict_nullable,
             use_generic_container_types=config.use_generic_container_types,
             enable_faux_immutability=config.enable_faux_immutability,
@@ -564,6 +557,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
             collapse_root_models=config.collapse_root_models,
+            use_type_alias=config.use_type_alias,
             use_union_operator=config.use_union_operator,
             special_field_name_prefix=config.special_field_name_prefix,
             remove_special_field_name_prefix=config.remove_special_field_name_prefix,

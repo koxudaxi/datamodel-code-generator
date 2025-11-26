@@ -33,6 +33,13 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.util import SafeLoader
 
+if TYPE_CHECKING:
+    from collections import defaultdict
+
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.parser.base import Parser
+    from datamodel_code_generator.types import StrictTypes
+
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
 
@@ -57,23 +64,12 @@ def load_yaml_from_path(path: Path, encoding: str) -> Any:
         return load_yaml(f)
 
 
-if TYPE_CHECKING:
-    from collections import defaultdict
+def get_version() -> str:
+    package = "datamodel-code-generator"
 
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    from datamodel_code_generator.parser.base import Parser
-    from datamodel_code_generator.types import StrictTypes
+    from importlib.metadata import version  # noqa: PLC0415
 
-    def get_version() -> str: ...
-
-else:
-
-    def get_version() -> str:
-        package = "datamodel-code-generator"
-
-        from importlib.metadata import version  # noqa: PLC0415
-
-        return version(package)
+    return version(package)
 
 
 def enable_debug_message() -> None:  # pragma: no cover
@@ -245,6 +241,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_one_literal_as_default: bool = False,
     set_default_enum_member: bool = False,
     use_subclass_enum: bool = False,
+    use_specialized_enum: bool = True,
     strict_nullable: bool = False,
     use_generic_container_types: bool = False,
     enable_faux_immutability: bool = False,
@@ -270,6 +267,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_double_quotes: bool = False,
     use_union_operator: bool = False,
     collapse_root_models: bool = False,
+    use_type_alias: bool = False,
     special_field_name_prefix: str | None = None,
     remove_special_field_name_prefix: bool = False,
     capitalise_enum_members: bool = False,
@@ -414,7 +412,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version)
+    data_model_types = get_data_model_types(output_model_type, target_python_version, use_type_alias=use_type_alias)
+
+    # Add GraphQL-specific model types if needed
+    if input_file_type == InputFileType.GraphQL:
+        kwargs["data_model_scalar_type"] = data_model_types.scalar_model
+        kwargs["data_model_union_type"] = data_model_types.union_model
+
     source = input_text or input_
     assert not isinstance(source, Mapping)
     parser = parser_class(
@@ -454,6 +458,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         if output_model_type == DataModelType.DataclassesDataclass
         else set_default_enum_member,
         use_subclass_enum=use_subclass_enum,
+        use_specialized_enum=use_specialized_enum,
         strict_nullable=strict_nullable,
         use_generic_container_types=use_generic_container_types,
         enable_faux_immutability=enable_faux_immutability,
@@ -477,6 +482,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_double_quotes=use_double_quotes,
         use_union_operator=use_union_operator,
         collapse_root_models=collapse_root_models,
+        use_type_alias=use_type_alias,
         special_field_name_prefix=special_field_name_prefix,
         remove_special_field_name_prefix=remove_special_field_name_prefix,
         capitalise_enum_members=capitalise_enum_members,

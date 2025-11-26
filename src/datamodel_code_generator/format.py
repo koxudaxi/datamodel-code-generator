@@ -13,6 +13,8 @@ import isort
 
 from datamodel_code_generator.util import load_toml
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 try:
     import black.mode
 except ImportError:  # pragma: no cover
@@ -41,6 +43,10 @@ class PythonVersion(Enum):
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
         return self.value not in {self.PY_39.value, self.PY_310.value}
 
+    @cached_property
+    def _is_py_312_or_later(self) -> bool:  # pragma: no cover
+        return self.value not in {self.PY_39.value, self.PY_310.value, self.PY_311.value}
+
     @property
     def has_union_operator(self) -> bool:  # pragma: no cover
         return self._is_py_310_or_later
@@ -53,21 +59,30 @@ class PythonVersion(Enum):
     def has_kw_only_dataclass(self) -> bool:
         return self._is_py_310_or_later
 
+    @property
+    def has_type_alias(self) -> bool:
+        return self._is_py_310_or_later
+
+    @property
+    def has_type_statement(self) -> bool:
+        return self._is_py_312_or_later
+
+    @property
+    def has_strenum(self) -> bool:
+        """
+        Verifies if the Python version supports `StrEnum`.
+        """
+        return self._is_py_311_or_later
+
 
 PythonVersionMin = PythonVersion.PY_39
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
-    class _TargetVersion(Enum): ...
-
-    BLACK_PYTHON_VERSION: dict[PythonVersion, _TargetVersion]
-else:
-    BLACK_PYTHON_VERSION: dict[PythonVersion, black.TargetVersion] = {
-        v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
-        for v in PythonVersion
-        if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
-    }
+BLACK_PYTHON_VERSION: dict[PythonVersion, black.TargetVersion] = {
+    v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
+    for v in PythonVersion
+    if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
+}
 
 
 def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
@@ -75,15 +90,8 @@ def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no 
 
 
 def black_find_project_root(sources: Sequence[Path]) -> Path:
-    if TYPE_CHECKING:
-        from collections.abc import Iterable  # noqa: PLC0415
+    from black import find_project_root as _find_project_root  # noqa: PLC0415
 
-        def _find_project_root(
-            srcs: Sequence[str] | Iterable[str],
-        ) -> tuple[Path, str] | Path: ...
-
-    else:
-        from black import find_project_root as _find_project_root  # noqa: PLC0415
     project_root = _find_project_root(tuple(str(s) for s in sources))
     if isinstance(project_root, tuple):
         return project_root[0]
@@ -149,15 +157,12 @@ class CodeFormatter:
                 black_kwargs["unstable"] = config.get("unstable", False)
                 black_kwargs["enabled_features"] = {black.mode.Preview.string_processing}
 
-        if TYPE_CHECKING:
-            self.black_mode: black.FileMode
-        else:
-            self.black_mode = black.FileMode(
-                target_versions={BLACK_PYTHON_VERSION[python_version]},
-                line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
-                string_normalization=not skip_string_normalization or not config.get("skip-string-normalization", True),
-                **black_kwargs,
-            )
+        self.black_mode = black.FileMode(
+            target_versions={BLACK_PYTHON_VERSION[python_version]},
+            line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
+            string_normalization=not skip_string_normalization or not config.get("skip-string-normalization", True),
+            **black_kwargs,
+        )
 
         self.settings_path: str = str(settings_path)
 
