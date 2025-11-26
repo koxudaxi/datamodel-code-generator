@@ -342,7 +342,7 @@ class DataType(_BaseModel):
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None  # noqa: UP045
-    parent: DataModelFieldBase | DataType | None = None
+    parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
     children: list[DataType] = []  # noqa: RUF012
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045

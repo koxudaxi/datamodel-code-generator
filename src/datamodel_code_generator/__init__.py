@@ -21,6 +21,7 @@ from typing import (
     Final,
     TextIO,
     TypeVar,
+    Union,
     cast,
 )
 from urllib.parse import ParseResult
@@ -52,7 +53,7 @@ MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
 
-YamlScalar: TypeAlias = str | int | float | bool | None
+YamlScalar: TypeAlias = Union[str, int, float, bool, None]
 YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
 
 try:
