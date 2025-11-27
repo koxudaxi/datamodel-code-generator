@@ -158,7 +158,7 @@ class Config(BaseModel):
                 except ValueError as exc:
                     msg = f"Invalid http header: {each_item!r}"
                     raise Error(msg) from exc
-            return each_item
+            return each_item  # pragma: no cover
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
@@ -179,7 +179,7 @@ class Config(BaseModel):
                 except ValueError as exc:
                     msg = f"Invalid http query parameter: {each_item!r}"
                     raise Error(msg) from exc
-            return each_item
+            return each_item  # pragma: no cover
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]

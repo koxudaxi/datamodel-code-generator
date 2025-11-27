@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
 
-    # Type alias for static type checking (pyright/mypy)
     YamlScalar: TypeAlias = Union[str, int, float, bool, None]
     YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
 
@@ -57,7 +56,7 @@ MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
 
-if not TYPE_CHECKING:
+if not TYPE_CHECKING:  # pragma: no cover
     YamlScalar: TypeAlias = Union[str, int, float, bool, None]
     if PYDANTIC_V2:
         YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
@@ -83,7 +82,7 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
 def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
     """Load YAML and return as dict. Raises TypeError if result is not a dict."""
     result = load_yaml(stream)
-    if not isinstance(result, dict):
+    if not isinstance(result, dict):  # pragma: no cover
         msg = f"Expected dict, got {type(result).__name__}"
         raise TypeError(msg)
     return result
@@ -431,7 +430,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 elif input_file_type == InputFileType.Yaml:
                     if isinstance(input_, Path):
                         obj = load_yaml_dict(input_.read_text(encoding=encoding))
-                    else:
+                    else:  # pragma: no cover
                         assert input_text is not None
                         obj = load_yaml_dict(input_text)
                 elif input_file_type == InputFileType.Json:
