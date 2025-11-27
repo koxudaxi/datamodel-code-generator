@@ -92,7 +92,7 @@ def get_model_by_path(
         raise NotImplementedError(msg)  # pragma: no cover
     # Unescape the key if it's a string (JSON pointer segment)
     key = keys[0]
-    if isinstance(key, str):
+    if isinstance(key, str):  # pragma: no branch
         key = unescape_json_pointer_segment(key)
     value = schema.get(str(key), {}) if isinstance(schema, dict) else schema[int(key)]
     if len(keys) == 1:

@@ -626,7 +626,7 @@ class Parser(ABC):
                 ):
                     # Replace referenced duplicate model to original model
                     for child in model.reference.children[:]:
-                        if isinstance(child, DataType):
+                        if isinstance(child, DataType):  # pragma: no branch
                             child.replace_reference(root_data_type.reference)
                     models.remove(model)
                     for data_type in model.all_data_types:

@@ -56,7 +56,7 @@ MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
 
-if not TYPE_CHECKING:  # pragma: no cover
+if not TYPE_CHECKING:
     YamlScalar: TypeAlias = Union[str, int, float, bool, None]
     if PYDANTIC_V2:
         YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
@@ -82,7 +82,7 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
 def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
     """Load YAML and return as dict. Raises TypeError if result is not a dict."""
     result = load_yaml(stream)
-    if not isinstance(result, dict):  # pragma: no cover
+    if not isinstance(result, dict):
         msg = f"Expected dict, got {type(result).__name__}"
         raise TypeError(msg)
     return result
