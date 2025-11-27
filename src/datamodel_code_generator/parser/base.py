@@ -64,6 +64,7 @@ class HashableComparable(Hashable, Protocol):
     def __gt__(self, value: Any, /) -> bool: ...  # noqa: D105
     def __ge__(self, value: Any, /) -> bool: ...  # noqa: D105
 
+
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
 
