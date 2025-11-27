@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from argparse import Namespace
 from pathlib import Path
 
@@ -11,8 +10,9 @@ import pytest
 from freezegun import freeze_time
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, assert_output, create_assert_file_content
+from tests.main.conftest import run_main, run_main_and_assert_stdout, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -36,12 +36,10 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_main(tmp_path: Path) -> None:
     """Test basic main function with OpenAPI input."""
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api.yaml",
+        output_file,
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, "main/output.py")
 
@@ -50,15 +48,12 @@ def test_main(tmp_path: Path) -> None:
 def test_main_base_class(tmp_path: Path) -> None:
     """Test main function with custom base class."""
     output_file: Path = tmp_path / "output.py"
-    shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--base-class",
-        "custom_module.Base",
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api.yaml",
+        output_file,
+        extra_args=["--base-class", "custom_module.Base"],
+        copy_files=[(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")],
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_base_class" / "output.py")
 
@@ -67,14 +62,11 @@ def test_main_base_class(tmp_path: Path) -> None:
 def test_target_python_version(tmp_path: Path) -> None:
     """Test main function with target Python version."""
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        f"3.{MIN_VERSION}",
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api.yaml",
+        output_file,
+        extra_args=["--target-python-version", f"3.{MIN_VERSION}"],
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "target_python_version" / "output.py")
 
@@ -85,7 +77,7 @@ def test_main_modular(tmp_path: Path) -> None:
     output_path = tmp_path / "model"
 
     with freeze_time(TIMESTAMP):
-        main(["--input", str(input_filename), "--output", str(output_path)])
+        run_main(input_filename, output_path)
     assert_directory_content(output_path, EXPECTED_MAIN_KR_PATH / "main_modular")
 
 
@@ -93,7 +85,7 @@ def test_main_modular_no_file() -> None:
     """Test main function on modular file with no output name."""
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
 
-    assert main(["--input", str(input_filename)]) == Exit.ERROR
+    assert run_main_with_args(["--input", str(input_filename)]) == Exit.ERROR
 
 
 def test_main_modular_filename(tmp_path: Path) -> None:
@@ -101,7 +93,7 @@ def test_main_modular_filename(tmp_path: Path) -> None:
     input_filename = OPEN_API_DATA_PATH / "modular.yaml"
     output_filename = tmp_path / "model.py"
 
-    assert main(["--input", str(input_filename), "--output", str(output_filename)]) == Exit.ERROR
+    assert run_main(input_filename, output_filename) == Exit.ERROR
 
 
 def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -111,12 +103,12 @@ def test_main_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch
     input_filename = OPEN_API_DATA_PATH / "api.yaml"
 
     with freeze_time(TIMESTAMP):
-        main(["--input", str(input_filename)])
-
-    captured = capsys.readouterr()
-    assert_output(captured.out, EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py")
-
-    assert captured.err == inferred_message.format("openapi") + "\n"
+        run_main_and_assert_stdout(
+            input_path=input_filename,
+            expected_output_path=EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py",
+            capsys=capsys,
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
 
 
 def test_main_custom_template_dir(
@@ -130,18 +122,18 @@ def test_main_custom_template_dir(
     extra_template_data = OPEN_API_DATA_PATH / "extra_data.json"
 
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--custom-template-dir",
-            str(custom_template_dir),
-            "--extra-template-data",
-            str(extra_template_data),
-        ])
-
-    captured = capsys.readouterr()
-    assert_output(captured.out, EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py")
-    assert captured.err == inferred_message.format("openapi") + "\n"
+        run_main_and_assert_stdout(
+            input_path=input_filename,
+            expected_output_path=EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py",
+            capsys=capsys,
+            extra_args=[
+                "--custom-template-dir",
+                str(custom_template_dir),
+                "--extra-template-data",
+                str(extra_template_data),
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
 
 
 @pytest.mark.skipif(
@@ -152,14 +144,12 @@ def test_main_custom_template_dir(
 def test_pyproject(tmp_path: Path) -> None:
     """Test main function with pyproject.toml configuration."""
     pyproject_toml = DATA_PATH / "project" / "pyproject.toml"
-    shutil.copy(pyproject_toml, tmp_path)
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api.yaml",
+        output_file,
+        copy_files=[(pyproject_toml, tmp_path / "pyproject.toml")],
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, "pyproject/output.py")
 
@@ -214,13 +204,11 @@ class MyEnum(Enum):
 """
 
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--disable-timestamp",
-        "--input",
-        input_file.as_posix(),
-        "--output",
-        output_file.as_posix(),
-    ])
+    return_code: Exit = run_main(
+        input_file,
+        output_file,
+        extra_args=["--disable-timestamp"],
+    )
     assert return_code == Exit.OK
     assert output_file.read_text(encoding="utf-8") == expected_output, (
         f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file.read_text(encoding='utf-8')}"
@@ -242,18 +230,13 @@ strict-types = ["str"]
     (tmp_path / "pyproject.toml").write_text(pyproject_toml)
     output_file: Path = tmp_path / "output.py"
 
-    # Run main from within the output directory so we can find our
-    # pyproject.toml.
     with chdir(tmp_path):
-        return_code: Exit = main([
-            "--input",
-            str((OPEN_API_DATA_PATH / "api.yaml").resolve()),
-            "--output",
-            str(output_file.resolve()),
-        ])
+        return_code: Exit = run_main(
+            (OPEN_API_DATA_PATH / "api.yaml").resolve(),
+            output_file.resolve(),
+        )
 
     assert return_code == Exit.OK
-    # We expect the output to use pydantic.StrictStr in place of str
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "pyproject" / "output.strictstr.py")
 
 
@@ -261,13 +244,11 @@ strict-types = ["str"]
 def test_main_use_schema_description(tmp_path: Path) -> None:
     """Test --use-schema-description option."""
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
-        "--output",
-        str(output_file),
-        "--use-schema-description",
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
+        output_file,
+        extra_args=["--use-schema-description"],
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_schema_description" / "output.py")
 
@@ -276,13 +257,11 @@ def test_main_use_schema_description(tmp_path: Path) -> None:
 def test_main_use_field_description(tmp_path: Path) -> None:
     """Test --use-field-description option."""
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
-        "--output",
-        str(output_file),
-        "--use-field-description",
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
+        output_file,
+        extra_args=["--use-field-description"],
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_field_description" / "output.py")
 
@@ -291,13 +270,11 @@ def test_main_use_field_description(tmp_path: Path) -> None:
 def test_main_use_inline_field_description(tmp_path: Path) -> None:
     """Test --use-inline-field-description option."""
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml"),
-        "--output",
-        str(output_file),
-        "--use-inline-field-description",
-    ])
+    return_code: Exit = run_main(
+        OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
+        output_file,
+        extra_args=["--use-inline-field-description"],
+    )
     assert return_code == Exit.OK
     assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description" / "output.py")
 
@@ -339,17 +316,17 @@ class EnumSystems(Enum):
 """
 
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-        "--capitalise-enum-members",
-        "--snake-case-field",
-        "--input",
-        str(input_file),
-        "--output",
-        str(output_file),
-    ])
+    return_code: Exit = run_main(
+        input_file,
+        output_file,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--capitalise-enum-members",
+            "--snake-case-field",
+        ],
+    )
     assert return_code == Exit.OK
     output_file_read_text = output_file.read_text(encoding="utf_8")
     assert output_file_read_text == expected_output, (
@@ -394,18 +371,18 @@ class EnumSystems(str, Enum):
 """
 
     output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-        "--capitalise-enum-members",
-        "--snake-case-field",
-        "--use-subclass-enum",
-        "--input",
-        str(input_file),
-        "--output",
-        str(output_file),
-    ])
+    return_code: Exit = run_main(
+        input_file,
+        output_file,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--capitalise-enum-members",
+            "--snake-case-field",
+            "--use-subclass-enum",
+        ],
+    )
     assert return_code == Exit.OK
     output_file_read_text = output_file.read_text(encoding="utf_8")
     assert output_file_read_text == expected_output, (
@@ -418,7 +395,7 @@ EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH = EXPECTED_MAIN_KR_PATH / "generate_pypr
 
 def test_generate_pyproject_config_basic(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-pyproject-config with basic options."""
-    return_code: Exit = main([
+    return_code: Exit = run_main_with_args([
         "--generate-pyproject-config",
         "--input",
         "schema.yaml",
@@ -432,7 +409,7 @@ def test_generate_pyproject_config_basic(capsys: pytest.CaptureFixture[str]) -> 
 
 def test_generate_pyproject_config_with_boolean_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-pyproject-config with boolean options."""
-    return_code: Exit = main([
+    return_code: Exit = run_main_with_args([
         "--generate-pyproject-config",
         "--snake-case-field",
         "--use-annotated",
@@ -445,7 +422,7 @@ def test_generate_pyproject_config_with_boolean_options(capsys: pytest.CaptureFi
 
 def test_generate_pyproject_config_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-pyproject-config with list options."""
-    return_code: Exit = main([
+    return_code: Exit = run_main_with_args([
         "--generate-pyproject-config",
         "--strict-types",
         "str",
@@ -458,7 +435,7 @@ def test_generate_pyproject_config_with_list_options(capsys: pytest.CaptureFixtu
 
 def test_generate_pyproject_config_with_multiple_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-pyproject-config with various option types."""
-    return_code: Exit = main([
+    return_code: Exit = run_main_with_args([
         "--generate-pyproject-config",
         "--input",
         "schema.yaml",
@@ -480,7 +457,7 @@ def test_generate_pyproject_config_with_multiple_options(capsys: pytest.CaptureF
 
 def test_generate_pyproject_config_excludes_meta_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that meta options are excluded from generated config."""
-    return_code: Exit = main([
+    return_code: Exit = run_main_with_args([
         "--generate-pyproject-config",
         "--input",
         "schema.yaml",

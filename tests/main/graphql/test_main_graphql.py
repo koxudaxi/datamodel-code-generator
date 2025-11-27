@@ -2,33 +2,17 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from typing import TYPE_CHECKING
 
 import black
 import isort
 import pytest
-from freezegun import freeze_time
 
-from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import create_assert_file_content
-from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
+from tests.main.conftest import GRAPHQL_DATA_PATH, run_main_and_assert
+from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
-EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
-
-assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
-
-
-@pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reset argument namespace before each test."""
-    namespace_ = Namespace(no_color=False)
-    monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
-    monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
 
 
 @pytest.mark.parametrize(
@@ -44,386 +28,294 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, tmp_path: Path) -> None:
+def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, output_file: Path) -> None:
     """Test GraphQL code generation for simple Star Wars schema."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "simple-star-wars.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--output-model",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, expected_output)
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model", output_model],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_different_types_of_fields(tmp_path: Path) -> None:
+def test_main_graphql_different_types_of_fields(output_file: Path) -> None:
     """Test GraphQL code generation with different field types."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "different-types-of-fields.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "different_types_of_fields.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "different-types-of-fields.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="different_types_of_fields.py",
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_use_default_kwarg(tmp_path: Path) -> None:
+def test_main_use_default_kwarg(output_file: Path) -> None:
     """Test GraphQL code generation with use-default-kwarg flag."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "annotated.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--use-default-kwarg",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "annotated_use_default_kwarg.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="annotated_use_default_kwarg.py",
+        extra_args=["--use-default-kwarg"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_custom_scalar_types(tmp_path: Path) -> None:
+def test_main_graphql_custom_scalar_types(output_file: Path) -> None:
     """Test GraphQL code generation with custom scalar types."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "custom-scalar-types.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--extra-template-data",
-        str(GRAPHQL_DATA_PATH / "custom-scalar-types.json"),
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "custom_scalar_types.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "custom-scalar-types.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="custom_scalar_types.py",
+        extra_args=["--extra-template-data", str(GRAPHQL_DATA_PATH / "custom-scalar-types.json")],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_field_aliases(tmp_path: Path) -> None:
+def test_main_graphql_field_aliases(output_file: Path) -> None:
     """Test GraphQL code generation with field aliases."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "field-aliases.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--aliases",
-        str(GRAPHQL_DATA_PATH / "field-aliases.json"),
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "field_aliases.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "field-aliases.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="field_aliases.py",
+        extra_args=["--aliases", str(GRAPHQL_DATA_PATH / "field-aliases.json")],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_enums(tmp_path: Path) -> None:
+def test_main_graphql_enums(output_file: Path) -> None:
     """Test GraphQL code generation with enums."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "enums.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "enums.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums.py",
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_specialized_enums(tmp_path: Path) -> None:
+def test_main_graphql_specialized_enums(output_file: Path) -> None:
     """Test GraphQL code generation with specialized enums for Python 3.11+."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "enums.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--target-python-version",
-        "3.11",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "enums_specialized.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums_specialized.py",
+        extra_args=["--target-python-version", "3.11"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_specialized_enums_disabled(tmp_path: Path) -> None:
+def test_main_graphql_specialized_enums_disabled(output_file: Path) -> None:
     """Test GraphQL code generation with specialized enums disabled."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "enums.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--target-python-version",
-        "3.11",
-        "--no-use-specialized-enum",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "enums_no_specialized.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums_no_specialized.py",
+        extra_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_enums_subclass(tmp_path: Path) -> None:
+def test_main_graphql_enums_subclass(output_file: Path) -> None:
     """Test GraphQL code generation with enum subclasses."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "enums.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--use-subclass-enum",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "enums_using_subclass.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums_using_subclass.py",
+        extra_args=["--use-subclass-enum"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_union(tmp_path: Path) -> None:
+def test_main_graphql_union(output_file: Path) -> None:
     """Test GraphQL code generation with union types."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "union.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "union.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union.py",
+    )
 
 
 @pytest.mark.skipif(
     not isort.__version__.startswith("4."),
     reason="See https://github.com/PyCQA/isort/issues/1600 for example",
 )
-@freeze_time("2019-07-26")
-def test_main_graphql_additional_imports_isort_4(tmp_path: Path) -> None:
+def test_main_graphql_additional_imports_isort_4(output_file: Path) -> None:
     """Test GraphQL code generation with additional imports using isort 4.x."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "additional-imports.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--extra-template-data",
-        str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
-        "--additional-imports",
-        "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "additional_imports_isort4.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports_isort4.py",
+        extra_args=[
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
+            "--additional-imports",
+            "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
+        ],
+    )
 
 
 @pytest.mark.skipif(
     isort.__version__.startswith("4."),
     reason="See https://github.com/PyCQA/isort/issues/1600 for example",
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_additional_imports_isort_not_4(tmp_path: Path) -> None:
+def test_main_graphql_additional_imports_isort_not_4(output_file: Path) -> None:
     """Test GraphQL code generation with additional imports using not isort 4.x."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "additional-imports.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--extra-template-data",
-        str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
-        "--additional-imports",
-        "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "additional_imports_isort5.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports_isort5.py",
+        extra_args=[
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
+            "--additional-imports",
+            "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_custom_formatters(tmp_path: Path) -> None:
+def test_main_graphql_custom_formatters(output_file: Path) -> None:
     """Test GraphQL code generation with custom formatters."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "custom-scalar-types.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--custom-formatters",
-        "tests.data.python.custom_formatters.add_comment",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "custom_formatters.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "custom-scalar-types.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="custom_formatters.py",
+        extra_args=["--custom-formatters", "tests.data.python.custom_formatters.add_comment"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_use_standard_collections(tmp_path: Path) -> None:
+def test_main_graphql_use_standard_collections(output_file: Path) -> None:
     """Test GraphQL code generation with standard collections."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "use-standard-collections.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--use-standard-collections",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "use_standard_collections.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "use-standard-collections.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="use_standard_collections.py",
+        extra_args=["--use-standard-collections"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_use_union_operator(tmp_path: Path) -> None:
+def test_main_graphql_use_union_operator(output_file: Path) -> None:
     """Test GraphQL code generation with union operator syntax."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "use-union-operator.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--use-union-operator",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "use_union_operator.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "use-union-operator.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="use_union_operator.py",
+        extra_args=["--use-union-operator"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_graphql_extra_fields_allow(tmp_path: Path) -> None:
+def test_main_graphql_extra_fields_allow(output_file: Path) -> None:
     """Test GraphQL code generation with extra fields allowed."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "simple-star-wars.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--extra-fields",
-        "allow",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "simple_star_wars_extra_fields_allow.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="simple_star_wars_extra_fields_allow.py",
+        extra_args=["--extra-fields", "allow"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_graphql_type_alias(tmp_path: Path) -> None:
+def test_main_graphql_type_alias(output_file: Path) -> None:
     """Test that TypeAliasType is generated for GraphQL schemas for Python 3.9-3.11."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "type_alias.graphql"),
-        "--output",
-        str(output_file),
-        "--use-type-alias",
-        "--input-file-type",
-        "graphql",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "type_alias.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "type_alias.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="type_alias.py",
+        extra_args=["--use-type-alias"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
 )
-def test_main_graphql_type_alias_py312(tmp_path: Path) -> None:
+def test_main_graphql_type_alias_py312(output_file: Path) -> None:
     """Test that type statement syntax is generated for GraphQL schemas with Python 3.12+ and Pydantic v2."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "type_alias.graphql"),
-        "--output",
-        str(output_file),
-        "--use-type-alias",
-        "--input-file-type",
-        "graphql",
-        "--target-python-version",
-        "3.12",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "type_alias_py312.py")
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "type_alias.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="type_alias_py312.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
