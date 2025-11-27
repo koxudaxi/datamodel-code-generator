@@ -11,13 +11,13 @@ from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
 import black
 from pydantic import BaseModel
-from typing_extensions import TypeIs
+from typing_extensions import TypeAlias, TypeIs
 
 from datamodel_code_generator import (
     DataModelType,
