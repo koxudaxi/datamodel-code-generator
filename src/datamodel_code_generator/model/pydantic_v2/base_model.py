@@ -242,6 +242,10 @@ class BaseModel(BaseModelBase):
                 config_parameters["regex_engine"] = '"python-re"'
                 break
 
+        if any(field.use_field_description and field.docstring for field in self.fields):
+            # Configure Pydantic to use docstrings as description when generating docstrings
+            config_parameters["use_attribute_docstrings"] = True
+
         if isinstance(self.extra_template_data.get("config"), dict):
             for key, value in self.extra_template_data["config"].items():
                 config_parameters[key] = value  # noqa: PERF403
