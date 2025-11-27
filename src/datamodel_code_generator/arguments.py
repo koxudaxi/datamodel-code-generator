@@ -584,6 +584,12 @@ general_options.add_argument(
     help="disable colorized output",
 )
 general_options.add_argument(
+    "--generate-pyproject-config",
+    action="store_true",
+    default=None,
+    help="Generate pyproject.toml configuration from the provided CLI arguments and exit",
+)
+general_options.add_argument(
     "--version",
     action="store_true",
     help="show version",
