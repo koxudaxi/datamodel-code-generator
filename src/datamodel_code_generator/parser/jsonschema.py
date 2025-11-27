@@ -88,7 +88,7 @@ def get_model_by_path(
     if not keys:
         if isinstance(schema, dict):
             return schema
-        msg = f"Does not support json pointer to array. schema={schema}, key={keys}"
+        msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
         raise NotImplementedError(msg)  # pragma: no cover
     # Unescape the key if it's a string (JSON pointer segment)
     key = keys[0]
@@ -98,11 +98,11 @@ def get_model_by_path(
     if len(keys) == 1:
         if isinstance(value, dict):
             return value
-        msg = f"Does not support json pointer to array. schema={schema}, key={keys}"
+        msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
         raise NotImplementedError(msg)  # pragma: no cover
     if isinstance(value, (dict, list)):
         return get_model_by_path(value, keys[1:])
-    msg = f"Cannot traverse non-container value. schema={schema}, key={keys}"
+    msg = f"Cannot traverse non-container value. schema={schema}, key={keys}"  # pragma: no cover
     raise NotImplementedError(msg)  # pragma: no cover
 
 

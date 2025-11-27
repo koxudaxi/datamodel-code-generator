@@ -43,3 +43,19 @@ def test_main_yaml(tmp_path: Path) -> None:
     ])
     assert return_code == Exit.OK
     assert_file_content(output_file)
+
+
+def test_main_yaml_invalid_root_list(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test YAML file with list as root element fails with invalid file format error."""
+    output_file: Path = tmp_path / "output.py"
+    return_code: Exit = main([
+        "--input",
+        str(YAML_DATA_PATH / "invalid_root_list.yaml"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "yaml",
+    ])
+    assert return_code == Exit.ERROR
+    captured = capsys.readouterr()
+    assert "Invalid file format" in captured.err

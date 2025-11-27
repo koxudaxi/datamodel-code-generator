@@ -315,11 +315,14 @@ class DataType(_BaseModel):
         if not TYPE_CHECKING:
 
             @classmethod
-            def model_rebuild(cls) -> None:
+            def model_rebuild(
+                cls,
+                *,
+                _types_namespace: dict[str, type] | None = None,
+            ) -> None:
                 """Update forward references for Pydantic v1."""
-                from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: PLC0415
-
-                cls.update_forward_refs(DataModelFieldBase=DataModelFieldBase)
+                localns = _types_namespace or {}
+                cls.update_forward_refs(**localns)
 
         class Config:
             """Pydantic v1 model configuration."""

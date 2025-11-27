@@ -550,6 +550,7 @@ if PYDANTIC_V2:
     BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)
     DataModelFieldBase.model_rebuild(_types_namespace={"DataModel": DataModel})
 else:
-    DataType.update_forward_refs(Union=Union, DataModelFieldBase=DataModelFieldBase, DataType=DataType)
-    BaseClassDataType.update_forward_refs(Union=Union, DataModelFieldBase=DataModelFieldBase, DataType=DataType)
-    DataModelFieldBase.update_forward_refs(DataModel=DataModel)
+    _rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}
+    DataType.model_rebuild(_types_namespace=_rebuild_namespace)
+    BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)
+    DataModelFieldBase.model_rebuild(_types_namespace={"DataModel": DataModel})
