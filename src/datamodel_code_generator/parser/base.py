@@ -60,7 +60,9 @@ class HashableComparable(Hashable, Protocol):
     """Protocol for types that are both hashable and support comparison."""
 
     def __lt__(self, value: Any, /) -> bool: ...  # noqa: D105
-
+    def __le__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __gt__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __ge__(self, value: Any, /) -> bool: ...  # noqa: D105
 
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
