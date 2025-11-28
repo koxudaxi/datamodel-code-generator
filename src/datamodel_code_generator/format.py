@@ -300,7 +300,7 @@ class CodeFormatter:
     def apply_isort(self, code: str) -> str:
         """Sort imports using isort."""
         isort = _get_isort()
-        if self.isort_config is None:
+        if self.isort_config is None:  # pragma: no cover
             return isort.SortImports(
                 file_contents=code,
                 settings_path=self.settings_path,
