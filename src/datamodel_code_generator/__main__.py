@@ -17,7 +17,7 @@ from urllib.parse import ParseResult, urlparse
 import argcomplete
 import black
 from pydantic import BaseModel
-from typing_extensions import TypeAlias, TypeIs
+from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DataModelType,
@@ -445,7 +445,7 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
     return {}
 
 
-TomlValue: TypeAlias = Union[str, bool, int, float, list["TomlValue"], tuple["TomlValue", ...], set["TomlValue"]]
+TomlValue: TypeAlias = Union[str, bool, list["TomlValue"], tuple["TomlValue", ...]]
 
 
 def _format_toml_value(value: TomlValue) -> str:
@@ -454,22 +454,8 @@ def _format_toml_value(value: TomlValue) -> str:
         return "true" if value else "false"
     if isinstance(value, str):
         return f'"{value}"'
-    if isinstance(value, (list, tuple)):
-        formatted_items = [_format_toml_value(item) for item in value]
-        return f"[{', '.join(formatted_items)}]"
-    if isinstance(value, set):
-        formatted_items = [_format_toml_value(item) for item in sorted(value)]
-        return f"[{', '.join(formatted_items)}]"
-    return str(value)
-
-
-def _is_toml_value(value: object) -> TypeIs[TomlValue]:
-    """Check if a value can be formatted as TOML."""
-    if isinstance(value, (str, bool, int, float)):
-        return True
-    if isinstance(value, (list, tuple, set)):
-        return all(_is_toml_value(item) for item in value)
-    return False
+    formatted_items = [_format_toml_value(item) for item in value]
+    return f"[{', '.join(formatted_items)}]"
 
 
 def generate_pyproject_config(args: Namespace) -> str:
@@ -482,11 +468,9 @@ def generate_pyproject_config(args: Namespace) -> str:
             continue
         if key in EXCLUDED_CONFIG_OPTIONS:
             continue
-        if not _is_toml_value(value):
-            continue
 
         toml_key = key.replace("_", "-")
-        toml_value = _format_toml_value(value)
+        toml_value = _format_toml_value(cast(TomlValue, value))
         lines.append(f"{toml_key} = {toml_value}")
 
     return "\n".join(lines) + "\n"
