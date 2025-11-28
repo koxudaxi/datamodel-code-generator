@@ -131,8 +131,7 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
     project_root = _find_project_root(tuple(str(s) for s in sources))
     if isinstance(project_root, tuple):
         return project_root[0]
-    # pragma: no cover
-    return project_root
+    return project_root  # pragma: no cover
 
 
 class Formatter(Enum):
@@ -215,7 +214,7 @@ class CodeFormatter:
         if known_third_party:
             self.isort_config_kwargs["known_third_party"] = known_third_party
 
-        if isort.__version__.startswith("4."):
+        if isort.__version__.startswith("4."):  # pragma: no cover
             self.isort_config = None
         else:
             self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
