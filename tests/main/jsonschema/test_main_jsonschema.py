@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import call
 
 import black
-import isort
 import pytest
 from freezegun import freeze_time
 from packaging import version
@@ -1466,35 +1465,6 @@ def test_main_jsonschema_field_extras(output_model: str, expected_output: str, o
     """Test field extras generation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file=expected_output,
-        extra_args=["--output-model", output_model],
-    )
-
-
-@pytest.mark.skipif(
-    not isort.__version__.startswith("4."),
-    reason="isort 5.x don't sort pydantic modules",
-)
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "custom_type_path.py",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "custom_type_path_pydantic_v2.py",
-        ),
-    ],
-)
-def test_main_jsonschema_custom_type_path(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test custom type path handling."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "custom_type_path.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,

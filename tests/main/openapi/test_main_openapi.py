@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock, call
 
 import black
-import isort
 import pydantic
 import pytest
 from freezegun import freeze_time
@@ -1753,22 +1752,6 @@ def test_main_openapi_custom_id_pydantic_v2(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="custom_id_pydantic_v2.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
-    )
-
-
-@pytest.mark.skipif(
-    not isort.__version__.startswith("4."),
-    reason="isort 5.x don't sort pydantic modules",
-)
-def test_main_openapi_custom_id_pydantic_v2_custom_base(output_file: Path) -> None:
-    """Test OpenAPI generation with custom ID and base for Pydantic v2."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "custom_id.yaml",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file="custom_id_pydantic_v2_custom_base.py",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--base-class", "custom_base.Base"],
     )
 
 
