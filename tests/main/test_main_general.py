@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from argparse import Namespace
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -15,41 +14,36 @@ from datamodel_code_generator import (
     generate,
     snooper_to_methods,
 )
-from datamodel_code_generator.__main__ import Config, Exit, main
+from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.format import PythonVersion
 from tests.conftest import create_assert_file_content
+from tests.main.conftest import (
+    DATA_PATH,
+    EXPECTED_MAIN_PATH,
+    PYTHON_DATA_PATH,
+    TIMESTAMP,
+    run_main_and_assert,
+    run_main_with_args,
+)
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pytest_mock import MockerFixture
 
-DATA_PATH: Path = Path(__file__).parent.parent / "data"
-PYTHON_DATA_PATH: Path = DATA_PATH / "python"
-EXPECTED_MAIN_PATH = DATA_PATH / "expected" / "main"
-
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
-
-TIMESTAMP = "1985-10-26T01:21:00-07:00"
-
-
-@pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reset argument namespace before each test."""
-    namespace_ = Namespace(no_color=False)
-    monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
-    monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
 
 
 def test_debug(mocker: MockerFixture) -> None:
     """Test debug flag functionality."""
     with pytest.raises(expected_exception=SystemExit):
-        main(["--debug", "--help"])
+        run_main_with_args(["--debug", "--help"])
 
     mocker.patch("datamodel_code_generator.pysnooper", None)
     with pytest.raises(expected_exception=SystemExit):
-        main(["--debug", "--help"])
+        run_main_with_args(["--debug", "--help"])
 
 
-@freeze_time("2019-07-26")
 def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
     """Test snooper_to_methods function without pysnooper installed."""
     mocker.patch("datamodel_code_generator.pysnooper", None)
@@ -64,7 +58,7 @@ def test_show_help(no_color: bool, capsys: pytest.CaptureFixture[str]) -> None:
     args += ["--help"]
 
     with pytest.raises(expected_exception=SystemExit) as context:
-        main(args)
+        run_main_with_args(args)
     assert context.value.code == Exit.OK
 
     output = capsys.readouterr().out
@@ -75,39 +69,32 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     """Test help display when no input is provided."""
     print_help_mock = mocker.patch("datamodel_code_generator.__main__.arg_parser.print_help")
     isatty_mock = mocker.patch("sys.stdin.isatty", return_value=True)
-    return_code: Exit = main([])
+    return_code: Exit = run_main_with_args([], expected_exit=Exit.ERROR)
     assert return_code == Exit.ERROR
     assert isatty_mock.called
     assert print_help_mock.called
 
 
 def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    """
-    No argument should have a default value set because it would override pyproject.toml values.
+    """No argument should have a default value set because it would override pyproject.toml values.
 
     Default values are set in __main__.Config class.
     """
     namespace = Namespace()
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace)
-    main([])
+    run_main_with_args([], expected_exit=Exit.ERROR)
     for field in Config.get_fields():
         assert getattr(namespace, field, None) is None
 
 
-@freeze_time("2019-07-26")
-def test_space_and_special_characters_dict(tmp_path: Path) -> None:
+def test_space_and_special_characters_dict(output_file: Path) -> None:
     """Test dict input with space and special characters."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(PYTHON_DATA_PATH / "space_and_special_characters_dict.py"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "dict",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file)
+    run_main_and_assert(
+        input_path=PYTHON_DATA_PATH / "space_and_special_characters_dict.py",
+        output_path=output_file,
+        input_file_type="dict",
+        assert_func=assert_file_content,
+    )
 
 
 @freeze_time("2024-12-14")
@@ -155,44 +142,36 @@ def test_frozen_dataclasses_with_keyword_only(tmp_path: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_command_line(tmp_path: Path) -> None:
+def test_frozen_dataclasses_command_line(output_file: Path) -> None:
     """Test --frozen-dataclasses flag via command line."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--frozen-dataclasses",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "frozen_dataclasses.py")
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="frozen_dataclasses.py",
+        extra_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"],
+    )
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only_command_line(tmp_path: Path) -> None:
+def test_frozen_dataclasses_with_keyword_only_command_line(output_file: Path) -> None:
     """Test --frozen-dataclasses with --keyword-only flag via command line."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(DATA_PATH / "jsonschema" / "simple_frozen_test.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--frozen-dataclasses",
-        "--keyword-only",
-        "--target-python-version",
-        "3.10",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "frozen_dataclasses_keyword_only.py")
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="frozen_dataclasses_keyword_only.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--frozen-dataclasses",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
 
 
 def test_filename_with_newline_injection(tmp_path: Path) -> None:

@@ -2,129 +2,87 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from typing import TYPE_CHECKING
 
-import pytest
-from freezegun import freeze_time
-
-from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import create_assert_file_content
-from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH
+from tests.main.conftest import GRAPHQL_DATA_PATH, run_main_and_assert
+from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
-EXPECTED_GRAPHQL_PATH: Path = EXPECTED_MAIN_PATH / "graphql"
 
-assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
-
-
-@pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reset argument namespace before each test."""
-    namespace_ = Namespace(no_color=False)
-    monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
-    monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
-
-
-@freeze_time("2019-07-26")
-def test_annotated(tmp_path: Path) -> None:
+def test_annotated(output_file: Path) -> None:
     """Test GraphQL code generation with annotated types."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "annotated.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file)
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_annotated_use_standard_collections(tmp_path: Path) -> None:
+def test_annotated_use_standard_collections(output_file: Path) -> None:
     """Test GraphQL annotated types with standard collections."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "annotated.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-        "--use-standard-collections",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file)
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--use-standard-collections",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_annotated_use_standard_collections_use_union_operator(tmp_path: Path) -> None:
+def test_annotated_use_standard_collections_use_union_operator(output_file: Path) -> None:
     """Test GraphQL annotated types with standard collections and union operator."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "annotated.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-        "--use-standard-collections",
-        "--use-union-operator",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file)
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--use-standard-collections",
+            "--use-union-operator",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_annotated_use_union_operator(tmp_path: Path) -> None:
+def test_annotated_use_union_operator(output_file: Path) -> None:
     """Test GraphQL annotated types with union operator."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "annotated.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-        "--use-union-operator",
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file)
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--use-union-operator",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_annotated_field_aliases(tmp_path: Path) -> None:
+def test_annotated_field_aliases(output_file: Path) -> None:
     """Test GraphQL annotated types with field aliases."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "field-aliases.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-        "--aliases",
-        str(GRAPHQL_DATA_PATH / "field-aliases.json"),
-    ])
-    assert return_code == Exit.OK
-    assert_file_content(output_file)
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "field-aliases.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--aliases",
+            str(GRAPHQL_DATA_PATH / "field-aliases.json"),
+        ],
+    )
