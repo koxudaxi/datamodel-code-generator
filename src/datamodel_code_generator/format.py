@@ -28,11 +28,11 @@ def _get_black() -> Any:
 
 
 @lru_cache(maxsize=1)
-def _get_black_mode() -> Any:
+def _get_black_mode() -> Any:  # pragma: no cover
     black = _get_black()
     try:
         import black.mode  # noqa: PLC0415
-    except ImportError:  # pragma: no cover
+    except ImportError:
         return None
     else:
         return black.mode
