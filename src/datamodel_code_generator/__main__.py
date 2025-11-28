@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
-import black
 from pydantic import BaseModel
 from typing_extensions import TypeAlias
 
@@ -35,6 +34,7 @@ from datamodel_code_generator.format import (
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    _get_black,
     is_supported_in_black,
 )
 from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 # needed for pydantic
@@ -518,7 +518,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(  # noqa: T201
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
             f"You have to install a newer black.\n"
-            f"Installed black version: {black.__version__}",
+            f"Installed black version: {_get_black().__version__}",
             file=sys.stderr,
         )
         return Exit.ERROR
