@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Protocol
+import sys
+from typing import TYPE_CHECKING, Any, Protocol
 
 import pytest
 from inline_snapshot import external_file, register_format_alias
@@ -13,6 +14,37 @@ from datamodel_code_generator import MIN_VERSION
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+if sys.version_info >= (3, 10):
+    from datetime import datetime, timezone
+
+    import time_machine
+
+    def _parse_time_string(time_str: str) -> datetime:
+        """Parse time string to datetime with UTC timezone."""
+        for fmt in (
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S%z",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d",
+        ):
+            try:
+                dt = datetime.strptime(time_str, fmt)  # noqa: DTZ007
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt  # noqa: TRY300
+            except ValueError:  # noqa: PERF203
+                continue
+        return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
+
+    def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # noqa: ARG001
+        """Freeze time using time-machine (100-200x faster than freezegun)."""
+        dt = _parse_time_string(time_to_freeze)
+        return time_machine.travel(dt, tick=False)
+
+else:
+    from freezegun import freeze_time as freeze_time  # noqa: PLC0414
 
 
 def _normalize_line_endings(text: str) -> str:
@@ -200,3 +232,13 @@ def _inline_snapshot_file_formats() -> None:
 def min_version() -> str:
     """Return minimum Python version as string."""
     return f"3.{MIN_VERSION}"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _preload_heavy_modules() -> None:
+    """Pre-import heavy modules once per session to warm up the import cache.
+
+    This reduces per-test overhead when running with pytest-xdist,
+    as each worker only pays the import cost once at session start.
+    """
+    import datamodel_code_generator  # noqa: PLC0415, F401

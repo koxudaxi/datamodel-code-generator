@@ -10,7 +10,6 @@ from unittest.mock import call
 
 import black
 import pytest
-from freezegun import freeze_time
 from packaging import version
 
 from datamodel_code_generator import (
@@ -22,7 +21,7 @@ from datamodel_code_generator import (
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import assert_directory_content
+from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
