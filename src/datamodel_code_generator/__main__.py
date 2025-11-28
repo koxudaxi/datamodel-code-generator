@@ -470,7 +470,7 @@ def generate_pyproject_config(args: Namespace) -> str:
             continue
 
         toml_key = key.replace("_", "-")
-        toml_value = _format_toml_value(cast(TomlValue, value))
+        toml_value = _format_toml_value(cast("TomlValue", value))
         lines.append(f"{toml_key} = {toml_value}")
 
     return "\n".join(lines) + "\n"
