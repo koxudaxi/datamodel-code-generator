@@ -1,3 +1,5 @@
+"""Tests for TypedDict model field generation."""
+
 from __future__ import annotations
 
 from datamodel_code_generator.model.typed_dict import DataModelField

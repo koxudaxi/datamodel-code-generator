@@ -1,3 +1,5 @@
+"""Tests for import management functionality."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -24,7 +26,6 @@ if TYPE_CHECKING:
 )
 def test_dump(inputs: Sequence[tuple[str | None, str]], value: str) -> None:
     """Test creating import lines."""
-
     imports = Imports()
     imports.append(Import(from_=from_, import_=import_) for from_, import_ in inputs)
 

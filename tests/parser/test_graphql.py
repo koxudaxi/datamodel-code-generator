@@ -1,68 +1,50 @@
+"""Tests for GraphQL schema parser."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from freezegun import freeze_time
-
-from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import create_assert_file_content
+from tests.main.conftest import GRAPHQL_DATA_PATH, run_main_and_assert
 from tests.main.test_main_general import DATA_PATH
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-GRAPHQL_DATA_PATH: Path = DATA_PATH / "graphql"
 EXPECTED_GRAPHQL_PATH: Path = DATA_PATH / "expected" / "parser" / "graphql"
 
-
-@freeze_time("2019-07-26")
-def test_graphql_field_enum(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "field-default-enum.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-        "--set-default-enum-member",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_GRAPHQL_PATH / "field-default-enum.py").read_text()
+assert_file_content = create_assert_file_content(EXPECTED_GRAPHQL_PATH)
 
 
-@freeze_time("2019-07-26")
-def test_graphql_union_aliased_bug(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "union-aliased-bug.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-    ])
-    assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").rstrip()
-    expected = (EXPECTED_GRAPHQL_PATH / "union-aliased-bug.py").read_text().rstrip()
-    if actual != expected:
-        pass
-    assert actual == expected
+def test_graphql_field_enum(output_file: Path) -> None:
+    """Test parsing GraphQL field with enum default value."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "field-default-enum.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="field-default-enum.py",
+        extra_args=["--set-default-enum-member"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_graphql_union_commented(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(GRAPHQL_DATA_PATH / "union-commented.graphql"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "graphql",
-    ])
-    assert return_code == Exit.OK
-    actual = output_file.read_text(encoding="utf-8").rstrip()
-    expected = (EXPECTED_GRAPHQL_PATH / "union-commented.py").read_text().rstrip()
-    if actual != expected:
-        pass
-    assert actual == expected
+def test_graphql_union_aliased_bug(output_file: Path) -> None:
+    """Test parsing GraphQL union with aliased types."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union-aliased-bug.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union-aliased-bug.py",
+    )
+
+
+def test_graphql_union_commented(output_file: Path) -> None:
+    """Test parsing GraphQL union with comments."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union-commented.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union-commented.py",
+    )

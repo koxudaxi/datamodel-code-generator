@@ -380,6 +380,11 @@ Typing customization:
                         Set enum members as default values for enum field
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
                         Use strict types
+  --type-mappings TYPE_MAPPINGS [TYPE_MAPPINGS ...]
+                        Override default type mappings. Format: "type+format=target" (e.g.,
+                        "string+binary=string" to map binary format to string type) or
+                        "format=target" (e.g., "binary=string"). Can be specified multiple
+                        times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
   --use-generic-container-types
@@ -391,10 +396,14 @@ Typing customization:
                         corresponding con* constrained types.
   --use-one-literal-as-default
                         Use one literal as default value for one literal field
+  --use-specialized-enum, --no-use-specialized-enum
+                        Don''t use specialized Enum class (StrEnum, IntEnum) even if the
+                        target Python version supports it
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
-  --use-subclass-enum   Define Enum class as subclass with field type when enum has type
-                        (int, float, bytes, str)
+  --use-subclass-enum   Define generic Enum class as subclass with field type when enum has
+                        type (int, float, bytes, str)
+  --use-type-alias      Use TypeAlias instead of root models (experimental)
   --use-union-operator  Use | operator for Union type (PEP 604).
   --use-unique-items-as-set
                         define field type as `set` when the field attribute has
@@ -433,6 +442,9 @@ Field customization:
                         default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-inline-field-description
+                        Use schema description to populate field docstring as inline
+                        docstring
 
 Model customization:
   --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is deprecated. Use
@@ -522,6 +534,9 @@ General options:
   --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
                         generator[debug]''`)
   --disable-warnings    disable warnings
+  --generate-pyproject-config
+                        Generate pyproject.toml configuration from the provided CLI
+                        arguments and exit
   --no-color            disable colorized output
   --version             show version
   -h, --help            show this help message and exit

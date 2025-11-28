@@ -1,8 +1,15 @@
+"""CLI argument definitions for datamodel-codegen.
+
+Defines the ArgumentParser and all command-line options organized into groups:
+base options, typing customization, field customization, model customization,
+template customization, OpenAPI-specific options, and general options.
+"""
+
 from __future__ import annotations
 
 import json
 import locale
-from argparse import ArgumentParser, HelpFormatter, Namespace
+from argparse import ArgumentParser, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -23,14 +30,19 @@ namespace = Namespace(no_color=False)
 
 
 class SortingHelpFormatter(HelpFormatter):
+    """Help formatter that sorts arguments and adds color to section headers."""
+
     def _bold_cyan(self, text: str) -> str:  # noqa: PLR6301
+        """Wrap text in ANSI bold cyan escape codes."""
         return f"\x1b[36;1m{text}\x1b[0m"
 
     def add_arguments(self, actions: Iterable[Action]) -> None:
+        """Add arguments sorted by option strings."""
         actions = sorted(actions, key=attrgetter("option_strings"))
         super().add_arguments(actions)
 
     def start_section(self, heading: str | None) -> None:
+        """Start a section with optional colored heading."""
         return super().start_section(heading if namespace.no_color or not heading else self._bold_cyan(heading))
 
 
@@ -301,8 +313,14 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-subclass-enum",
-    help="Define Enum class as subclass with field type when enum has type (int, float, bytes, str)",
+    help="Define generic Enum class as subclass with field type when enum has type (int, float, bytes, str)",
     action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--use-specialized-enum",
+    help="Don't use specialized Enum class (StrEnum, IntEnum) even if the target Python version supports it",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(
@@ -318,9 +336,25 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-type-alias",
+    help="Use TypeAlias instead of root models (experimental)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--disable-future-imports",
     help="Disable __future__ imports",
     action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--type-mappings",
+    help="Override default type mappings. "
+    'Format: "type+format=target" (e.g., "string+binary=string" to map binary format to string type) '
+    'or "format=target" (e.g., "binary=string"). '
+    "Can be specified multiple times.",
+    nargs="+",
+    type=str,
     default=None,
 )
 
@@ -406,6 +440,12 @@ field_options.add_argument(
 field_options.add_argument(
     "--use-field-description",
     help="Use schema description to populate field docstring",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
+    "--use-inline-field-description",
+    help="Use schema description to populate field docstring as inline docstring",
     action="store_true",
     default=None,
 )
@@ -563,6 +603,12 @@ general_options.add_argument(
     action="store_true",
     default=False,
     help="disable colorized output",
+)
+general_options.add_argument(
+    "--generate-pyproject-config",
+    action="store_true",
+    default=None,
+    help="Generate pyproject.toml configuration from the provided CLI arguments and exit",
 )
 general_options.add_argument(
     "--version",

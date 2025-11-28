@@ -1,3 +1,8 @@
+"""Pydantic v2 type manager.
+
+Maps schema types to Pydantic v2 specific types with AwareDatetime, NaiveDatetime, etc.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
@@ -7,6 +12,7 @@ from datamodel_code_generator.model.pydantic import DataTypeManager as _DataType
 from datamodel_code_generator.model.pydantic.imports import IMPORT_CONSTR
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_AWARE_DATETIME,
+    IMPORT_BASE64STR,
     IMPORT_NAIVE_DATETIME,
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types
@@ -16,6 +22,8 @@ if TYPE_CHECKING:
 
 
 class DataTypeManager(_DataTypeManager):
+    """Type manager for Pydantic v2 with pattern key support."""
+
     PATTERN_KEY: ClassVar[str] = "pattern"
 
     def type_map_factory(
@@ -25,6 +33,7 @@ class DataTypeManager(_DataTypeManager):
         pattern_key: str,
         target_datetime_class: DatetimeClassType | None = None,
     ) -> dict[Types, DataType]:
+        """Create type mapping with Pydantic v2 specific types and datetime classes."""
         result = {
             **super().type_map_factory(
                 data_type,
@@ -41,6 +50,10 @@ class DataTypeManager(_DataTypeManager):
                     r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'",
                     **({"strict": True} if StrictTypes.str in strict_types else {}),
                 },
+            ),
+            Types.byte: self.data_type.from_import(
+                IMPORT_BASE64STR,
+                strict=StrictTypes.str in strict_types,
             ),
         }
         if target_datetime_class == DatetimeClassType.Awaredatetime:

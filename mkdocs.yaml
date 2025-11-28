@@ -37,6 +37,7 @@ nav:
       - Using as module: using_as_module.md
       - Formatting: formatting.md
       - Field Constraints: field-constraints.md
+      - Root Models and Type Aliases: root-model-and-type-alias.md
       - pyproject.toml: pyproject_toml.md
     - Development-Contributing: development-contributing.md
 
