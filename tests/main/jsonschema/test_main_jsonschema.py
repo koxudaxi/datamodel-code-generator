@@ -1266,6 +1266,10 @@ def test_main_jsonschema_specialized_enums(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
     """Test with specialized enums disabled."""
     run_main_and_assert(
