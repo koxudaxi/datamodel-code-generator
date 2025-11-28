@@ -73,6 +73,12 @@ def _copy_files(copy_files: CopyFilesMapping | None) -> None:
             shutil.copy(src, dst)
 
 
+def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
+    """Assert exit code matches expected value."""
+    if return_code != expected_exit:  # pragma: no cover
+        pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
+
+
 def _run_main(
     input_path: Path,
     output_path: Path,
@@ -136,8 +142,7 @@ def run_main_with_args(
     """
     __tracebackhide__ = True
     return_code = main(list(args))
-    if return_code != expected_exit:  # pragma: no cover
-        pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\nArgs: {args}")
+    _assert_exit_code(return_code, expected_exit, f"Args: {args}")
     if expected_stdout_path is not None:
         if capsys is None:  # pragma: no cover
             pytest.fail("capsys is required when expected_stdout_path is set")
@@ -242,9 +247,7 @@ def run_main_and_assert(  # noqa: PLR0912
             pytest.fail("input_path is required")
         return_code = _run_main(input_path, output_path, input_file_type, extra_args=extra_args, copy_files=copy_files)
 
-    # Assert exit code
-    if return_code != expected_exit:  # pragma: no cover
-        pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\nInput: {input_path}")
+    _assert_exit_code(return_code, expected_exit, f"Input: {input_path}")
 
     # Handle capture assertions
     if capsys is not None and (
@@ -316,7 +319,7 @@ def run_main_url_and_assert(
     output_path: Path,
     input_file_type: InputFileTypeLiteral | None,
     assert_func: AssertFileContent,
-    expected_file: str | Path | None = None,
+    expected_file: str | Path,
     extra_args: Sequence[str] | None = None,
     transform: Callable[[str], str] | None = None,
 ) -> None:
@@ -327,24 +330,11 @@ def run_main_url_and_assert(
         output_path: Path to output file
         input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
         assert_func: The assert_file_content function to use for verification
-        expected_file: Expected output filename (optional, inferred from test name if None)
+        expected_file: Expected output filename
         extra_args: Additional CLI arguments
         transform: Optional function to transform output before comparison
     """
     __tracebackhide__ = True
     return_code = _run_main_url(url, output_path, input_file_type, extra_args=extra_args)
-    if return_code != Exit.OK:  # pragma: no cover
-        pytest.fail(f"Expected exit code {Exit.OK!r}, got {return_code!r}\nURL: {url}")
-
-    if expected_file is None:
-        frame = inspect.currentframe()
-        assert frame is not None
-        assert frame.f_back is not None
-        func_name = frame.f_back.f_code.co_name
-        del frame
-        for prefix in ("test_main_", "test_"):
-            if func_name.startswith(prefix):
-                func_name = func_name[len(prefix) :]
-                break
-        expected_file = f"{func_name}.py"
+    _assert_exit_code(return_code, Exit.OK, f"URL: {url}")
     assert_func(output_path, expected_file, transform=transform)
