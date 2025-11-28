@@ -167,22 +167,20 @@ def test_main_modular_reuse_model(output_dir: Path) -> None:
 
 def test_main_modular_no_file(tmp_path: Path) -> None:
     """Test main function on modular file with no output name."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=tmp_path / "output.py",
         input_file_type=None,
     )
-    assert return_code == Exit.ERROR
 
 
 def test_main_modular_filename(output_file: Path) -> None:
     """Test main function on modular file with filename."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_file,
         input_file_type=None,
     )
-    assert return_code == Exit.ERROR
 
 
 def test_main_openapi_no_file(
@@ -316,7 +314,7 @@ def test_pyproject(tmp_path: Path) -> None:
         )
         (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
             output_path=output_file,
             input_file_type=None,
@@ -329,7 +327,7 @@ def test_pyproject_not_found(tmp_path: Path) -> None:
     """Test code generation when pyproject.toml is not found."""
     with chdir(tmp_path):
         output_file: Path = tmp_path / "output.py"
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
             output_path=output_file,
             input_file_type=None,
@@ -775,15 +773,14 @@ def test_main_original_field_name_delimiter_without_snake_case_field(
     capsys: pytest.CaptureFixture, output_file: Path
 ) -> None:
     """Test OpenAPI generation with original field name delimiter error."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_file,
         input_file_type=None,
         extra_args=["--original-field-name-delimiter", "-"],
+        capsys=capsys,
+        expected_stderr_contains="`--original-field-name-delimiter` can not be used without `--snake-case-field`.",
     )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "`--original-field-name-delimiter` can not be used without `--snake-case-field`.\n"
 
 
 @pytest.mark.parametrize(
@@ -837,14 +834,13 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, output_f
 
 def test_main_models_not_found(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with models not found error."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "no_components.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        capsys=capsys,
+        expected_stderr_contains="Models not found in the input data",
     )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "Models not found in the input data\n"
 
 
 @pytest.mark.skipif(
@@ -1557,7 +1553,7 @@ def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None
     """Test OpenAPI generation with reference in same hierarchy directory."""
     with chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"):
         output_file: Path = tmp_path / "output.py"
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=Path("./public/entities.yaml"),
             output_path=output_file,
             input_file_type="openapi",
@@ -1604,17 +1600,13 @@ def test_main_openapi_use_operation_id_as_name_not_found_operation_id(
     capsys: pytest.CaptureFixture, output_file: Path
 ) -> None:
     """Test OpenAPI generation with operation ID as name when ID not found."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
         output_path=output_file,
         input_file_type="openapi",
         extra_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
-    )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert (
-        captured.err == "All operations must have an operationId when --use_operation_id_as_name is set."
-        "The following path was missing an operationId: pets\n"
+        capsys=capsys,
+        expected_stderr_contains="All operations must have an operationId when --use_operation_id_as_name is set.",
     )
 
 
@@ -1723,7 +1715,7 @@ def test_main_custom_file_header_path(output_file: Path) -> None:
 
 def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with duplicate custom file header options."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
         input_file_type=None,
@@ -1733,10 +1725,9 @@ def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture
             "--custom-file-header",
             "abc",
         ],
+        capsys=capsys,
+        expected_stderr_contains="`--custom_file_header_path` can not be used with `--custom_file_header`.",
     )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "`--custom_file_header_path` can not be used with `--custom_file_header`.\n"
 
 
 def test_main_pydantic_v2(output_file: Path) -> None:
@@ -1897,32 +1888,32 @@ def test_main_openapi_keyword_only_dataclass(output_file: Path) -> None:
 
 def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with keyword-only dataclass for Python 3.9."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
         output_path=output_file,
         input_file_type="openapi",
         extra_args=["--output-model-type", "dataclasses.dataclass", "--keyword-only", "--target-python-version", "3.9"],
+        capsys=capsys,
+        expected_stderr_contains="`--keyword-only` requires `--target-python-version` 3.10 or higher.",
     )
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert captured.err == "`--keyword-only` requires `--target-python-version` 3.10 or higher.\n"
 
 
 def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with dataclass using naive datetime."""
-    return_code = run_main(
+    run_main_and_assert_error(
         input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
         output_path=output_file,
         input_file_type="openapi",
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--output-datetime-class", "NaiveDatetime"],
-    )
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert (
-        captured.err
-        == '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass\n'
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--output-datetime-class",
+            "NaiveDatetime",
+        ],
+        capsys=capsys,
+        expected_stderr_contains=(
+            '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass'
+        ),
     )
 
 

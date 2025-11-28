@@ -121,7 +121,7 @@ def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     output_init_file: Path = tmp_path / "__init__.py"
     output_nested_file: Path = tmp_path / "nested/deep.py"
     output_empty_parent_nested_file: Path = tmp_path / "empty_parent/nested/deep.py"
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "nested_person.json",
         output_path=tmp_path,
         input_file_type="jsonschema",
@@ -160,7 +160,7 @@ def test_main_jsonschema_external_files(output_file: Path) -> None:
 @pytest.mark.benchmark
 def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
     """Test collapsed external references in JSON Schema."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "external_reference",
         output_path=tmp_path,
         input_file_type="jsonschema",
@@ -185,7 +185,7 @@ def test_main_jsonschema_multiple_files(output_dir: Path) -> None:
 @pytest.mark.benchmark
 def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> None:
     """Test no empty files with collapsed external models."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "external_collapse",
         output_path=tmp_path,
         input_file_type="jsonschema",
@@ -280,29 +280,27 @@ def test_main_json_reuse_enum_default_member(output_file: Path) -> None:
     )
 
 
-def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test invalid model name error handling."""
-    return_code: Exit = run_main(
+    run_main_and_assert_error(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_model_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--class-name", "with"],
+        capsys=capsys,
+        expected_stderr_contains="title='with' is invalid class name. You have to set `--class-name` option",
     )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "title='with' is invalid class name. You have to set `--class-name` option\n"
 
 
-def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test invalid model name conversion error."""
-    return_code: Exit = run_main(
+    run_main_and_assert_error(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_model_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
+        capsys=capsys,
+        expected_stderr_contains="title='1Xyz' is invalid class name. You have to set `--class-name` option",
     )
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "title='1Xyz' is invalid class name. You have to set `--class-name` option\n"
 
 
 def test_main_invalid_model_name(output_file: Path) -> None:
@@ -600,7 +598,7 @@ def test_main_similar_nested_array(output_file: Path) -> None:
 )
 def test_main_require_referenced_field(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test required referenced fields."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         input_file_type="jsonschema",
@@ -626,7 +624,7 @@ def test_main_require_referenced_field(output_model: str, expected_output: str, 
 )
 def test_main_require_referenced_field_naive_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test required referenced field with naive datetime."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         input_file_type="jsonschema",
@@ -656,7 +654,7 @@ def test_main_require_referenced_field_naive_datetime(output_model: str, expecte
 )
 def test_main_require_referenced_field_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test required referenced field with datetime."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         input_file_type="jsonschema",
@@ -753,7 +751,7 @@ def test_main_jsonschema_multiple_files_ref(output_dir: Path) -> None:
 def test_main_jsonschema_multiple_files_ref_test_json(output_file: Path) -> None:
     """Test main jsonschema multiple files ref json."""
     with chdir(JSON_SCHEMA_DATA_PATH / "multiple_files_self_ref"):
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=Path("test.json"),
             output_path=output_file,
             input_file_type="jsonschema",
@@ -765,7 +763,7 @@ def test_main_jsonschema_multiple_files_ref_test_json(output_file: Path) -> None
 def test_main_space_field_enum_snake_case_field(output_file: Path) -> None:
     """Test enum with space in field name using snake case."""
     with chdir(JSON_SCHEMA_DATA_PATH / "space_field_enum.json"):
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=Path("space_field_enum.json"),
             output_path=output_file,
             input_file_type="jsonschema",
@@ -779,7 +777,7 @@ def test_main_space_field_enum_snake_case_field(output_file: Path) -> None:
 def test_main_all_of_ref(output_file: Path) -> None:
     """Test allOf with references."""
     with chdir(JSON_SCHEMA_DATA_PATH / "all_of_ref"):
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=Path("test.json"),
             output_path=output_file,
             input_file_type="jsonschema",
@@ -792,7 +790,7 @@ def test_main_all_of_ref(output_file: Path) -> None:
 def test_main_all_of_with_object(output_file: Path) -> None:
     """Test allOf with object types."""
     with chdir(JSON_SCHEMA_DATA_PATH):
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=Path("all_of_with_object.json"),
             output_path=output_file,
             input_file_type="jsonschema",
@@ -808,7 +806,7 @@ def test_main_all_of_with_object(output_file: Path) -> None:
 def test_main_combined_array(output_file: Path) -> None:
     """Test combined array types."""
     with chdir(JSON_SCHEMA_DATA_PATH):
-        return_code: Exit = run_main(
+        return_code = run_main(
             input_path=Path("combined_array.json"),
             output_path=output_file,
             input_file_type="jsonschema",
@@ -1223,7 +1221,7 @@ def test_main_jsonschema_special_enum_special_field_name_prefix(output_file: Pat
 
 def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private(output_file: Path) -> None:
     """Test special enum with prefix keeping private fields."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "special_enum.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1275,7 +1273,7 @@ def test_main_jsonschema_specialized_enums(output_file: Path) -> None:
 
 def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
     """Test with specialized enums disabled."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "subclass_enum.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1333,7 +1331,7 @@ def test_main_jsonschema_complex_any_of(output_file: Path) -> None:
 
 def test_main_jsonschema_combine_one_of_object(output_file: Path) -> None:
     """Test combining oneOf with objects."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "combine_one_of_object.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1365,7 +1363,7 @@ def test_main_jsonschema_combine_any_of_object(
     extra_args = ["--output-model", output_model]
     if union_mode is not None:
         extra_args.extend(["--union-mode", union_mode])
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "combine_any_of_object.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1405,7 +1403,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
     """Test field extras including all keys."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1438,7 +1436,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
     """Test field extras with extra keys."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1471,7 +1469,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(
 )
 def test_main_jsonschema_field_extras(output_model: str, expected_output: str, output_file: Path) -> None:
     """Test field extras generation."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1500,7 +1498,7 @@ def test_main_jsonschema_field_extras(output_model: str, expected_output: str, o
 )
 def test_main_jsonschema_custom_type_path(output_model: str, expected_output: str, output_file: Path) -> None:
     """Test custom type path handling."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "custom_type_path.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1512,7 +1510,7 @@ def test_main_jsonschema_custom_type_path(output_model: str, expected_output: st
 
 def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
     """Test custom base path configuration."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "custom_base_path.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1554,7 +1552,7 @@ def test_version(capsys: pytest.CaptureFixture) -> None:
 
 def test_jsonschema_pattern_properties(output_file: Path) -> None:
     """Test JSON Schema pattern properties."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1683,7 +1681,7 @@ def test_main_jsonschema_duplicate_name(output_dir: Path) -> None:
 
 def test_main_jsonschema_items_boolean(output_file: Path) -> None:
     """Test items with boolean values."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "items_boolean.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1705,7 +1703,7 @@ def test_main_jsonschema_array_in_additional_properites(output_file: Path) -> No
 
 def test_main_jsonschema_object_with_only_additional_properties(output_file: Path) -> None:
     """Test object with only additional properties."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "string_dict.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1727,7 +1725,7 @@ def test_main_jsonschema_nullable_object(output_file: Path) -> None:
 
 def test_main_jsonschema_object_has_one_of(output_file: Path) -> None:
     """Test object with oneOf constraint."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "object_has_one_of.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1738,7 +1736,7 @@ def test_main_jsonschema_object_has_one_of(output_file: Path) -> None:
 
 def test_main_jsonschema_json_pointer_array(output_file: Path) -> None:
     """Test JSON pointer with arrays."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "json_pointer_array.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1748,9 +1746,9 @@ def test_main_jsonschema_json_pointer_array(output_file: Path) -> None:
 
 
 @pytest.mark.filterwarnings("error")
-def test_main_disable_warnings_config(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+def test_main_disable_warnings_config(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test disable warnings configuration."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1767,9 +1765,9 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture, output_file
 
 
 @pytest.mark.filterwarnings("error")
-def test_main_disable_warnings(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+def test_main_disable_warnings(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test disable warnings flag."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_with_object.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1782,7 +1780,7 @@ def test_main_disable_warnings(capsys: pytest.CaptureFixture, output_file: Path)
 
 def test_main_jsonschema_pattern_properties_by_reference(output_file: Path) -> None:
     """Test pattern properties by reference."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_by_reference.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1804,7 +1802,7 @@ def test_main_dataclass_field(output_file: Path) -> None:
 
 def test_main_jsonschema_enum_root_literal(output_file: Path) -> None:
     """Test enum root with literal type."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "enum_in_root" / "enum_in_root.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -1840,7 +1838,7 @@ def test_main_nullable_any_of(output_file: Path) -> None:
 
 def test_main_nullable_any_of_use_union_operator(output_file: Path) -> None:
     """Test nullable anyOf with union operator."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "nullable_any_of.json",
         output_path=output_file,
         input_file_type=None,
@@ -1896,7 +1894,7 @@ def test_main_null(output_file: Path) -> None:
 )
 def test_main_typed_dict_special_field_name_with_inheritance_model(output_file: Path) -> None:
     """Test TypedDict special field names with inheritance."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "special_field_name_with_inheritance_model.json",
         output_path=output_file,
         input_file_type=None,
@@ -1912,7 +1910,7 @@ def test_main_typed_dict_special_field_name_with_inheritance_model(output_file: 
 )
 def test_main_typed_dict_not_required_nullable(output_file: Path) -> None:
     """Test main function writing to TypedDict, with combos of Optional/NotRequired."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "not_required_nullable.json",
         output_path=output_file,
         input_file_type=None,
@@ -1924,7 +1922,7 @@ def test_main_typed_dict_not_required_nullable(output_file: Path) -> None:
 
 def test_main_typed_dict_const(output_file: Path) -> None:
     """Test main function writing to TypedDict with const fields."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "const.json",
         output_path=output_file,
         input_file_type=None,
@@ -1940,7 +1938,7 @@ def test_main_typed_dict_const(output_file: Path) -> None:
 )
 def test_main_typed_dict_additional_properties(output_file: Path) -> None:
     """Test main function writing to TypedDict with additional properties, and no other fields."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "string_dict.json",
         output_path=output_file,
         input_file_type=None,
@@ -1952,7 +1950,7 @@ def test_main_typed_dict_additional_properties(output_file: Path) -> None:
 
 def test_main_dataclass_const(output_file: Path) -> None:
     """Test main function writing to dataclass with const fields."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "const.json",
         output_path=output_file,
         input_file_type=None,
@@ -1983,7 +1981,7 @@ def test_main_jsonschema_discriminator_literals(
     output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test discriminator with literal types."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "discriminator_literals.json",
         output_path=output_file,
         input_file_type=None,
@@ -1999,7 +1997,7 @@ def test_main_jsonschema_discriminator_literals(
 )
 def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str, output_file: Path) -> None:
     """Test discriminator literals without mapping."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "discriminator_no_mapping.json",
         output_path=output_file,
         input_file_type=None,
@@ -2026,7 +2024,7 @@ def test_main_jsonschema_external_discriminator(
     output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test external discriminator references."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference" / "inner_folder" / "schema.json",
         output_path=output_file,
         input_file_type=None,
@@ -2103,7 +2101,7 @@ def test_main_duplicate_field_constraints_msgspec(min_version: str, output_dir: 
 
 def test_main_dataclass_field_defs(output_file: Path) -> None:
     """Test dataclass field definitions."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "user_defs.json",
         output_path=output_file,
         input_file_type=None,
@@ -2119,7 +2117,7 @@ def test_main_dataclass_field_defs(output_file: Path) -> None:
 
 def test_main_dataclass_default(output_file: Path) -> None:
     """Test dataclass default values."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "user_default.json",
         output_path=output_file,
         input_file_type=None,
@@ -2156,7 +2154,7 @@ def test_main_array_field_constraints(output_file: Path) -> None:
 
 def test_all_of_use_default(output_file: Path) -> None:
     """Test allOf with use-default option."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_default.json",
         output_path=output_file,
         input_file_type=None,
@@ -2194,7 +2192,7 @@ def test_main_jsonschema_with_custom_formatters(output_file: Path, tmp_path: Pat
     }
     formatter_config_path = tmp_path / "formatter_config"
     formatter_config_path.write_text(json.dumps(formatter_config))
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2237,7 +2235,7 @@ def test_main_imports_correct(output_dir: Path) -> None:
 )
 def test_main_jsonschema_duration(output_model: str, expected_output: str, min_version: str, output_file: Path) -> None:
     """Test duration type handling."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "duration.json",
         output_path=output_file,
         input_file_type=None,
@@ -2253,7 +2251,7 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str, min_v
 )
 def test_main_jsonschema_keyword_only_msgspec(min_version: str, output_file: Path) -> None:
     """Test msgspec keyword-only arguments."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "discriminator_literals.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2275,7 +2273,7 @@ def test_main_jsonschema_keyword_only_msgspec(min_version: str, output_file: Pat
 )
 def test_main_jsonschema_keyword_only_msgspec_with_extra_data(min_version: str, output_file: Path) -> None:
     """Test msgspec keyword-only with extra data."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "discriminator_literals.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2344,7 +2342,7 @@ def test_main_invalid_import_name(output_dir: Path) -> None:
 )
 def test_main_jsonschema_field_has_same_name(output_model: str, expected_output: str, output_file: Path) -> None:
     """Test field with same name as parent."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "field_has_same_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2357,7 +2355,7 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
 @pytest.mark.benchmark
 def test_main_jsonschema_required_and_any_of_required(output_file: Path) -> None:
     """Test required field with anyOf required."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "required_and_any_of_required.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2396,7 +2394,7 @@ def test_main_json_pointer_escaped_segments(tmp_path: Path) -> None:
     input_file = tmp_path / "input.json"
     output_file = tmp_path / "output.py"
     input_file.write_text(json.dumps(schema))
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2442,7 +2440,7 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
     input_file = tmp_path / "input.json"
     output_file = tmp_path / "output.py"
     input_file.write_text(json.dumps(schema))
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2489,7 +2487,7 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
 )
 def test_main_extra_fields(extra_fields: str, output_model: str, expected_output: str, output_file: Path) -> None:
     """Test extra fields configuration."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "extra_fields.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2501,7 +2499,7 @@ def test_main_extra_fields(extra_fields: str, output_model: str, expected_output
 
 def test_main_jsonschema_same_name_objects(output_file: Path) -> None:
     """Test objects with same name (see issue #2460)."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "same_name_objects.json",
         output_path=output_file,
         input_file_type="jsonschema",
@@ -2523,7 +2521,7 @@ def test_main_jsonschema_forwarding_reference_collapse_root(output_dir: Path) ->
 
 def test_main_jsonschema_type_alias(output_file: Path) -> None:
     """Test that TypeAliasType is generated for Python 3.9-3.11."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
         input_file_type=None,
@@ -2539,7 +2537,7 @@ def test_main_jsonschema_type_alias(output_file: Path) -> None:
 )
 def test_main_jsonschema_type_alias_py312(output_file: Path) -> None:
     """Test that type statement syntax is generated for Python 3.12+ with Pydantic v2."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
         input_file_type=None,
@@ -2557,7 +2555,7 @@ def test_main_jsonschema_type_alias_py312(output_file: Path) -> None:
 
 def test_main_jsonschema_type_alias_with_field_description(output_file: Path) -> None:
     """Test that TypeAliasType is generated with field descriptions for Python 3.9-3.11."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
         input_file_type=None,
@@ -2573,7 +2571,7 @@ def test_main_jsonschema_type_alias_with_field_description(output_file: Path) ->
 )
 def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Path) -> None:
     """Test that type statement syntax is generated with field descriptions for Python 3.12+ and Pydantic v2."""
-    return_code: Exit = run_main(
+    return_code = run_main(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
         input_file_type=None,

@@ -73,16 +73,31 @@ def _copy_files(copy_files: CopyFilesMapping | None) -> None:
             shutil.copy(src, dst)
 
 
-def run_main_with_args(args: Sequence[str]) -> Exit:
+def run_main_with_args(
+    args: Sequence[str],
+    *,
+    expected_exit: Exit = Exit.OK,
+    capsys: pytest.CaptureFixture[str] | None = None,
+    expected_stdout_path: Path | None = None,
+) -> Exit:
     """Execute main() with custom arguments.
 
     Args:
         args: Command line arguments to pass to main()
+        expected_exit: Expected exit code (default: Exit.OK)
+        capsys: pytest capsys fixture for capturing output (required if expected_stdout_path is set)
+        expected_stdout_path: Path to file with expected stdout content
 
     Returns:
         Exit code from main()
     """
-    return main(list(args))
+    return_code = main(list(args))
+    assert return_code == expected_exit
+    if expected_stdout_path is not None:
+        assert capsys is not None
+        captured = capsys.readouterr()
+        assert_output(captured.out, expected_stdout_path)
+    return return_code
 
 
 def run_main(
@@ -317,3 +332,28 @@ def run_main_and_assert_error(
         assert capsys is not None
         captured = capsys.readouterr()
         assert expected_stderr_contains in captured.err
+
+
+def run_main_and_assert_output(
+    *,
+    input_path: Path,
+    output_path: Path,
+    expected_output: str,
+    input_file_type: InputFileTypeLiteral | None = None,
+    extra_args: Sequence[str] | None = None,
+) -> None:
+    """Execute main() and assert output matches expected string.
+
+    Args:
+        input_path: Path to input schema file
+        output_path: Path to output file
+        expected_output: Expected output content as string
+        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
+        extra_args: Additional CLI arguments
+    """
+    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
+    assert return_code == Exit.OK
+    actual_output = output_path.read_text(encoding="utf-8")
+    assert actual_output == expected_output, (
+        f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
+    )
