@@ -8,23 +8,41 @@ from __future__ import annotations
 
 import subprocess  # noqa: S404
 from enum import Enum
-from functools import cached_property
+from functools import cached_property, lru_cache
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
-import black
-import isort
-
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-try:
-    import black.mode
-except ImportError:  # pragma: no cover
-    black.mode = None
+
+
+@lru_cache(maxsize=1)
+def _get_black() -> Any:
+    import black as _black  # noqa: PLC0415
+
+    return _black
+
+
+@lru_cache(maxsize=1)
+def _get_black_mode() -> Any:  # pragma: no cover
+    black = _get_black()
+    try:
+        import black.mode  # noqa: PLC0415
+    except ImportError:
+        return None
+    else:
+        return black.mode
+
+
+@lru_cache(maxsize=1)
+def _get_isort() -> Any:
+    import isort as _isort  # noqa: PLC0415
+
+    return _isort
 
 
 class DatetimeClassType(Enum):
@@ -91,16 +109,19 @@ class PythonVersion(Enum):
 PythonVersionMin = PythonVersion.PY_39
 
 
-BLACK_PYTHON_VERSION: dict[PythonVersion, black.TargetVersion] = {
-    v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
-    for v in PythonVersion
-    if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
-}
+@lru_cache(maxsize=1)
+def _get_black_python_version_map() -> dict[PythonVersion, Any]:
+    black = _get_black()
+    return {
+        v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
+        for v in PythonVersion
+        if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
+    }
 
 
 def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
     """Check if a Python version is supported by the installed black version."""
-    return python_version in BLACK_PYTHON_VERSION
+    return python_version in _get_black_python_version_map()
 
 
 def black_find_project_root(sources: Sequence[Path]) -> Path:
@@ -153,6 +174,10 @@ class CodeFormatter:
         else:
             config = {}
 
+        black = _get_black()
+        black_mode = _get_black_mode()
+        isort = _get_isort()
+
         black_kwargs: dict[str, Any] = {}
         if wrap_string_literal is not None:
             experimental_string_processing = wrap_string_literal
@@ -175,10 +200,10 @@ class CodeFormatter:
             elif experimental_string_processing:
                 black_kwargs["preview"] = True
                 black_kwargs["unstable"] = config.get("unstable", False)
-                black_kwargs["enabled_features"] = {black.mode.Preview.string_processing}
+                black_kwargs["enabled_features"] = {black_mode.Preview.string_processing}
 
         self.black_mode = black.FileMode(
-            target_versions={BLACK_PYTHON_VERSION[python_version]},
+            target_versions={_get_black_python_version_map()[python_version]},
             line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
             string_normalization=not skip_string_normalization or not config.get("skip-string-normalization", True),
             **black_kwargs,
@@ -246,6 +271,7 @@ class CodeFormatter:
 
     def apply_black(self, code: str) -> str:
         """Format code using black."""
+        black = _get_black()
         return black.format_str(
             code,
             mode=self.black_mode,
@@ -271,27 +297,16 @@ class CodeFormatter:
         )
         return result.stdout.decode(self.encoding)
 
-    if TYPE_CHECKING:
-
-        def apply_isort(self, code: str) -> str:
-            """Sort imports using isort."""
-            ...
-
-    elif isort.__version__.startswith("4."):
-
-        def apply_isort(self, code: str) -> str:
-            """Sort imports using isort v4."""
+    def apply_isort(self, code: str) -> str:
+        """Sort imports using isort."""
+        isort = _get_isort()
+        if self.isort_config is None:  # pragma: no cover
             return isort.SortImports(
                 file_contents=code,
                 settings_path=self.settings_path,
                 **self.isort_config_kwargs,
             ).output
-
-    else:
-
-        def apply_isort(self, code: str) -> str:
-            """Sort imports using isort v5+."""
-            return isort.code(code, config=self.isort_config)
+        return isort.code(code, config=self.isort_config)
 
 
 class CustomCodeFormatter:
