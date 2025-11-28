@@ -1,0 +1,72 @@
+openapi: 3.1.0
+info:
+  title: API with Non-Operations and Security
+  version: 1.0.0
+security:
+  - api_key: []
+paths:
+  /pets:
+    summary: "This is not an operation"
+    description: "Also not an operation"
+    parameters:
+      - name: test_param
+        in: query
+        schema:
+          type: string
+    get:
+      summary: Get pets
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+    post:
+      summary: Create pet
+      security:
+        - oauth2: ['write']
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '201':
+          description: Created
+webhooks:
+  pet.created:
+    summary: "Not an operation for webhooks"
+    description: "Also not an operation for webhooks"
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+  securitySchemes:
+    api_key:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: /token
+          scopes:
+            write: Write access

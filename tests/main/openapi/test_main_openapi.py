@@ -2093,3 +2093,25 @@ def test_main_openapi_unquoted_null(output_file: Path) -> None:
         expected_file="unquoted_null.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def test_main_openapi_webhooks(output_file: Path) -> None:
+    """Test OpenAPI generation with webhooks scope."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "webhooks.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        extra_args=["--openapi-scopes", "schemas", "webhooks"],
+    )
+
+
+def test_main_openapi_non_operations_and_security(output_file: Path) -> None:
+    """Test OpenAPI generation with non-operation fields and security inheritance."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "non_operations_and_security.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        extra_args=["--openapi-scopes", "schemas", "paths", "webhooks"],
+    )
