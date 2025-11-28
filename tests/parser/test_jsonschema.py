@@ -656,46 +656,6 @@ def test_create_data_model_frozen_and_keyword_only_cleanup() -> None:
     assert result.name == "TestModel"
 
 
-def test_create_data_model_without_frozen_dataclasses_attr() -> None:
-    """Test _create_data_model when frozen_dataclasses attribute doesn't exist."""
-    parser = JsonSchemaParser(
-        "",
-        data_model_type=DataClass,
-        data_model_root_type=DataClass,
-    )
-    parser.keyword_only = True
-
-    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-
-    result = parser._create_data_model(
-        reference=Reference(name="TestModel", path="test_model"),
-        fields=[field],
-    )
-
-    assert isinstance(result, DataClass)
-    assert result.name == "TestModel"
-
-
-def test_create_data_model_without_keyword_only_attr() -> None:
-    """Test _create_data_model when keyword_only attribute doesn't exist."""
-    parser = JsonSchemaParser(
-        "",
-        data_model_type=DataClass,
-        data_model_root_type=DataClass,
-    )
-    parser.frozen_dataclasses = True
-
-    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-
-    result = parser._create_data_model(
-        reference=Reference(name="TestModel", path="test_model"),
-        fields=[field],
-    )
-
-    assert isinstance(result, DataClass)
-    assert result.name == "TestModel"
-
-
 def test_create_data_model_with_complex_existing_arguments() -> None:
     """Test _create_data_model with complex existing dataclass_arguments that get merged."""
     parser = JsonSchemaParser(
