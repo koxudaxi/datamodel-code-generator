@@ -13,10 +13,11 @@ import yaml
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
-from datamodel_code_generator.parser.base import dump_templates
+from datamodel_code_generator.parser.base import Parser, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
+    Types,
     get_model_by_path,
 )
 from datamodel_code_generator.types import DataType
@@ -523,3 +524,38 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     )
     parser.parse_object("Person", AltJsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+def test_parse_type_mappings_invalid_format() -> None:
+    """Test _parse_type_mappings raises ValueError for invalid format."""
+    with pytest.raises(ValueError, match="Invalid type mapping format"):
+        Parser._parse_type_mappings(["invalid_without_equals"])
+
+
+def test_parse_type_mappings_valid_formats() -> None:
+    """Test _parse_type_mappings with valid formats."""
+    result = Parser._parse_type_mappings(["binary=string", "string+date=string"])
+    assert result == {
+        ("string", "binary"): "string",
+        ("string", "date"): "string",
+    }
+
+
+def test_get_type_with_mappings_to_format() -> None:
+    """Test _get_type_with_mappings mapping to a format within type_formats."""
+    parser = JsonSchemaParser(
+        source="",
+        type_mappings=["binary=byte"],
+    )
+    result = parser._get_type_with_mappings("string", "binary")
+    assert result == Types.byte
+
+
+def test_get_type_with_mappings_to_type_default() -> None:
+    """Test _get_type_with_mappings mapping to a top-level type's default."""
+    parser = JsonSchemaParser(
+        source="",
+        type_mappings=["binary=boolean"],
+    )
+    result = parser._get_type_with_mappings("string", "binary")
+    assert result == Types.boolean
