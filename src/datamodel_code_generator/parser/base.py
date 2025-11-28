@@ -47,6 +47,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -1174,13 +1175,19 @@ class Parser(ABC):
         models.sort(key=lambda x: x.class_name)
 
         imported = {i for v in imports.values() for i in v}
-        model_class_name_baseclasses: dict[DataModel, tuple[str, set[str]]] = {}
+        model_class_name_refs: dict[DataModel, tuple[str, set[str]]] = {}
         for model in models:
             class_name = model.class_name
-            model_class_name_baseclasses[model] = (
-                class_name,
-                {b.type_hint for b in model.base_classes if b.reference} - {class_name},
-            )
+            base_class_refs = {b.type_hint for b in model.base_classes if b.reference}
+            if base_class_refs:
+                refs = base_class_refs - {class_name}
+            elif isinstance(model, TypeAliasBase):
+                refs = {
+                    t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference
+                } - {class_name}
+            else:
+                refs = set()
+            model_class_name_refs[model] = (class_name, refs)
 
         changed: bool = True
         while changed:
@@ -1188,8 +1195,8 @@ class Parser(ABC):
             resolved = imported.copy()
             for i in range(len(models) - 1):
                 model = models[i]
-                class_name, baseclasses = model_class_name_baseclasses[model]
-                if not baseclasses - resolved:
+                class_name, refs = model_class_name_refs[model]
+                if not refs - resolved:
                     resolved.add(class_name)
                     continue
                 models[i], models[i + 1] = models[i + 1], model
