@@ -1,3 +1,9 @@
+"""Utility functions and Pydantic version compatibility helpers.
+
+Provides Pydantic version detection (PYDANTIC_V2), YAML/TOML loading,
+and version-compatible decorators (model_validator, field_validator).
+"""
+
 from __future__ import annotations
 
 import copy
@@ -26,6 +32,7 @@ except ImportError:
 
 
 def load_toml(path: Path) -> dict[str, Any]:
+    """Load and parse a TOML file."""
     with path.open("rb") as f:
         return load_tomllib(f)
 
@@ -76,14 +83,7 @@ def model_validator(  # pyright: ignore[reportInconsistentOverload]
     | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
     | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
 ):
-    """
-    Decorator for model validators in Pydantic models.
-
-    Uses `model_validator` in Pydantic v2 and `root_validator` in Pydantic v1.
-
-    We support only `before` mode because `after` mode needs different validator
-    implementation for v1 and v2.
-    """
+    """Decorate model validators for both Pydantic v1 and v2."""
 
     @overload
     def inner(method: Callable[[type[Model], T], T]) -> Callable[[type[Model], T], T]: ...
@@ -100,7 +100,7 @@ def model_validator(  # pyright: ignore[reportInconsistentOverload]
         if PYDANTIC_V2:
             from pydantic import model_validator as model_validator_v2  # noqa: PLC0415
 
-            if method == "before":
+            if mode == "before":
                 return model_validator_v2(mode=mode)(classmethod(method))  # type: ignore[reportReturnType]
             return model_validator_v2(mode=mode)(method)  # type: ignore[reportReturnType]
         from pydantic import root_validator  # noqa: PLC0415
@@ -115,6 +115,8 @@ def field_validator(
     *fields: str,
     mode: Literal["before", "after"] = "after",
 ) -> Callable[[Any], Callable[[BaseModel, Any], Any]]:
+    """Decorate field validators for both Pydantic v1 and v2."""
+
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
         if PYDANTIC_V2:
             from pydantic import field_validator as field_validator_v2  # noqa: PLC0415
@@ -134,5 +136,7 @@ else:
 
 
 class BaseModel(_BaseModel):
+    """Base Pydantic model with version-compatible configuration."""
+
     if PYDANTIC_V2:
         model_config = ConfigDict(strict=False)  # pyright: ignore[reportAssignmentType]

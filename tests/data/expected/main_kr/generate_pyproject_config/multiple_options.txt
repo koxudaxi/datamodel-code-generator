@@ -1,0 +1,8 @@
+[tool.datamodel-codegen]
+input = "schema.yaml"
+output = "model.py"
+output-model-type = "pydantic_v2.BaseModel"
+snake-case-field = true
+strict-types = ["str", "bytes"]
+target-python-version = "3.11"
+

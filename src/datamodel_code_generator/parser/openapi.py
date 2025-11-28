@@ -1,3 +1,9 @@
+"""OpenAPI and Swagger specification parser.
+
+Extends JsonSchemaParser to handle OpenAPI 2.0 (Swagger), 3.0, and 3.1
+specifications, including paths, operations, parameters, and request/response bodies.
+"""
+
 from __future__ import annotations
 
 import re
@@ -15,13 +21,13 @@ from datamodel_code_generator import (
     OpenAPIScope,
     PythonVersion,
     PythonVersionMin,
-    load_yaml,
+    YamlValue,
+    load_yaml_dict,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.parser import DefaultPutDict  # noqa: TC001 # needed for type check
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -42,6 +48,8 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator.parser import DefaultPutDict
+
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r"^application/.*json$")
 
@@ -58,6 +66,8 @@ OPERATION_NAMES: list[str] = [
 
 
 class ParameterLocation(Enum):
+    """Represent OpenAPI parameter locations."""
+
     query = "query"
     header = "header"
     path = "path"
@@ -68,57 +78,73 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
 
 class ReferenceObject(BaseModel):
+    """Represent an OpenAPI reference object ($ref)."""
+
     ref: str = Field(..., alias="$ref")
 
 
 class ExampleObject(BaseModel):
+    """Represent an OpenAPI example object."""
+
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
-    value: Any = None
+    value: YamlValue = None
     externalValue: Optional[str] = None  # noqa: N815, UP045
 
 
 class MediaObject(BaseModel):
+    """Represent an OpenAPI media type object."""
+
     schema_: Optional[Union[ReferenceObject, JsonSchemaObject]] = Field(None, alias="schema")  # noqa: UP007, UP045
-    example: Any = None
+    example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
 
 
 class ParameterObject(BaseModel):
+    """Represent an OpenAPI parameter object."""
+
     name: Optional[str] = None  # noqa: UP045
     in_: Optional[ParameterLocation] = Field(None, alias="in")  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
-    example: Any = None
+    example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
     content: dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class HeaderObject(BaseModel):
+    """Represent an OpenAPI header object."""
+
     description: Optional[str] = None  # noqa: UP045
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
-    example: Any = None
+    example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
     content: dict[str, MediaObject] = {}  # noqa: RUF012
 
 
 class RequestBodyObject(BaseModel):
+    """Represent an OpenAPI request body object."""
+
     description: Optional[str] = None  # noqa: UP045
     content: dict[str, MediaObject] = {}  # noqa: RUF012
     required: bool = False
 
 
 class ResponseObject(BaseModel):
+    """Represent an OpenAPI response object."""
+
     description: Optional[str] = None  # noqa: UP045
     headers: dict[str, ParameterObject] = {}  # noqa: RUF012
     content: dict[Union[str, int], MediaObject] = {}  # noqa: RUF012, UP007
 
 
 class Operation(BaseModel):
+    """Represent an OpenAPI operation object."""
+
     tags: list[str] = []  # noqa: RUF012
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
@@ -130,6 +156,8 @@ class Operation(BaseModel):
 
 
 class ComponentsObject(BaseModel):
+    """Represent an OpenAPI components object."""
+
     schemas: dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012, UP007
     responses: dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
     examples: dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012, UP007
@@ -139,6 +167,8 @@ class ComponentsObject(BaseModel):
 
 @snooper_to_methods()
 class OpenAPIParser(JsonSchemaParser):
+    """Parser for OpenAPI 2.0/3.0/3.1 and Swagger specifications."""
+
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
 
     def __init__(  # noqa: PLR0913
@@ -170,6 +200,7 @@ class OpenAPIParser(JsonSchemaParser):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
         encoding: str = "utf-8",
@@ -177,6 +208,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_one_literal_as_default: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
+        use_specialized_enum: bool = True,
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
@@ -203,6 +235,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
@@ -221,7 +254,9 @@ class OpenAPIParser(JsonSchemaParser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        type_mappings: list[str] | None = None,
     ) -> None:
+        """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
         super().__init__(
             source=source,
@@ -250,6 +285,7 @@ class OpenAPIParser(JsonSchemaParser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             use_field_description=use_field_description,
+            use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
             encoding=encoding,
@@ -257,6 +293,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_one_literal_as_default=use_one_literal_as_default,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
+            use_specialized_enum=use_specialized_enum,
             strict_nullable=strict_nullable,
             use_generic_container_types=use_generic_container_types,
             enable_faux_immutability=enable_faux_immutability,
@@ -281,6 +318,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            use_type_alias=use_type_alias,
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
             capitalise_enum_members=capitalise_enum_members,
@@ -299,16 +337,19 @@ class OpenAPIParser(JsonSchemaParser):
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
+            type_mappings=type_mappings,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
 
     def get_ref_model(self, ref: str) -> dict[str, Any]:
+        """Resolve a reference to its model definition."""
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
         ref_body = self._get_ref_body(ref_file) if ref_file else self.raw_obj
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+        """Get data type from JSON schema object, handling OpenAPI nullable semantics."""
         # OpenAPI 3.0 doesn't allow `null` in the `type` field and list of types
         # https://swagger.io/docs/specification/data-models/data-types/#null
         # OpenAPI 3.1 does allow `null` in the `type` field and is equivalent to
@@ -319,6 +360,7 @@ class OpenAPIParser(JsonSchemaParser):
         return super().get_data_type(obj)
 
     def resolve_object(self, obj: ReferenceObject | BaseModelT, object_type: type[BaseModelT]) -> BaseModelT:
+        """Resolve a reference object to its actual type or return the object as-is."""
         if isinstance(obj, ReferenceObject):
             ref_obj = self.get_ref_model(obj.ref)
             return object_type.parse_obj(ref_obj)
@@ -330,6 +372,7 @@ class OpenAPIParser(JsonSchemaParser):
         obj: JsonSchemaObject,
         path: list[str],
     ) -> DataType:
+        """Parse a JSON schema object into a data type."""
         if obj.is_array:
             data_type = self.parse_array(name, obj, [*path, name])
         elif obj.allOf:  # pragma: no cover
@@ -355,6 +398,7 @@ class OpenAPIParser(JsonSchemaParser):
         request_body: RequestBodyObject,
         path: list[str],
     ) -> dict[str, DataType]:
+        """Parse request body content into data types by media type."""
         data_types: dict[str, DataType] = {}
         for (
             media_type,
@@ -372,6 +416,7 @@ class OpenAPIParser(JsonSchemaParser):
         responses: dict[str | int, ReferenceObject | ResponseObject],
         path: list[str],
     ) -> dict[str | int, dict[str, DataType]]:
+        """Parse response objects into data types by status code and content type."""
         data_types: defaultdict[str | int, dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
             if isinstance(detail, ReferenceObject):
@@ -409,6 +454,7 @@ class OpenAPIParser(JsonSchemaParser):
         tags: list[str],
         path: list[str],  # noqa: ARG003
     ) -> list[str]:
+        """Parse operation tags."""
         return tags
 
     @classmethod
@@ -422,6 +468,7 @@ class OpenAPIParser(JsonSchemaParser):
         parameters: list[ReferenceObject | ParameterObject],
         path: list[str],
     ) -> DataType | None:
+        """Parse all operation parameters into a data model."""
         fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
@@ -496,6 +543,7 @@ class OpenAPIParser(JsonSchemaParser):
                         extras=self.get_field_extras(object_schema) if object_schema else {},
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,
+                        use_inline_field_description=self.use_inline_field_description,
                         use_default_kwarg=self.use_default_kwarg,
                         original_name=parameter_name,
                         has_default=object_schema.has_default if object_schema else False,
@@ -525,6 +573,7 @@ class OpenAPIParser(JsonSchemaParser):
         raw_operation: dict[str, Any],
         path: list[str],
     ) -> None:
+        """Parse an OpenAPI operation including parameters, request body, and responses."""
         operation = Operation.parse_obj(raw_operation)
         path_name, method = path[-2:]
         if self.use_operation_id_as_name:
@@ -567,6 +616,7 @@ class OpenAPIParser(JsonSchemaParser):
             )
 
     def parse_raw(self) -> None:  # noqa: PLR0912, PLR0915
+        """Parse OpenAPI specification including schemas, paths, and operations."""
         for source, path_parts in self._get_context_source_path_parts():  # noqa: PLR1702
             if self.validation:
                 warn(
@@ -592,22 +642,19 @@ class OpenAPIParser(JsonSchemaParser):
                         stacklevel=2,
                     )
 
-            specification: dict[str, Any] = load_yaml(source.text)
+            specification: dict[str, Any] = load_yaml_dict(source.text)
             self.raw_obj = specification
-            schemas: dict[Any, Any] = specification.get("components", {}).get("schemas", {})
+            schemas: dict[str, Any] = specification.get("components", {}).get("schemas", {})
             security: list[dict[str, list[str]]] | None = specification.get("security")
             if OpenAPIScope.Schemas in self.open_api_scopes:
-                for (
-                    obj_name,
-                    raw_obj,
-                ) in schemas.items():
+                for obj_name, raw_obj in schemas.items():
                     self.parse_raw_obj(
                         obj_name,
                         raw_obj,
                         [*path_parts, "#/components", "schemas", obj_name],
                     )
             if OpenAPIScope.Paths in self.open_api_scopes:
-                paths: dict[str, dict[str, Any]] = specification.get("paths", {})
+                paths: dict[str, Any] = specification.get("paths", {})
                 parameters: list[dict[str, Any]] = [
                     self._get_ref_body(p["$ref"]) if "$ref" in p else p
                     for p in paths.get("parameters", [])

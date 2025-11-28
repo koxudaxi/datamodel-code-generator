@@ -32,5 +32,8 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     """
     {{ field.docstring | indent(4) }}
     """
+    {%- elif field.inline_field_docstring %}
+    {{ field.inline_field_docstring }}
+
     {%- endif %}
 {%- endif %}

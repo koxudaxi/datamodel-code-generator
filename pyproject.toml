@@ -23,6 +23,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython",
 ]
 dynamic = [
@@ -33,7 +34,7 @@ dependencies = [
   "black>=19.10b0",
   "genson>=1.2.1,<2",
   "inflect>=4.1,<8",
-  "isort>=4.3.21,<7",
+  "isort>=4.3.21,<8",
   "jinja2>=2.10.1,<4",
   "packaging",
   "pydantic>=1.5",
@@ -60,7 +61,7 @@ optional-dependencies.ruff = [
   "ruff>=0.9.10",
 ]
 optional-dependencies.validation = [
-  "openapi-spec-validator>=0.2.8,<0.7",
+  "openapi-spec-validator>=0.2.8,<0.8",
   "prance>=0.18.2",
 ]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
@@ -77,7 +78,8 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "freezegun",
+  "freezegun; python_version<'3.10'",
+  "inline-snapshot>=0.31.1",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -86,7 +88,8 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.10'", # PyCharm debugger needs it
+  "setuptools; python_version<'3.10'",         # PyCharm debugger needs it
+  "time-machine>=3.1; python_version>='3.10'",
   { include-group = "coverage" },
 ]
 type = [
@@ -104,12 +107,16 @@ docs = [
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
+isort5 = [ "isort>=5,<6" ]
+isort6 = [ "isort>=6,<7" ]
+isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
+pydantic1 = [ "pydantic<2" ]
 fix = [ "pre-commit-uv>=4.1.4" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
   "covdefaults>=2.3",
   "coverage[toml]>=7.6.1",
-  "diff-cover>=7.7",
+  "diff-cover>=9.7.2",
 ]
 
 [tool.hatch]
@@ -119,6 +126,26 @@ build.targets.sdist.include = [
   "/tests",
 ]
 version.source = "vcs"
+
+[tool.uv]
+conflicts = [
+  [
+    { group = "black24" },
+    { group = "black22" },
+    { group = "black23" },
+    { group = "dev" },
+  ],
+  [
+    { group = "isort5" },
+    { group = "isort6" },
+    { group = "isort7" },
+    { group = "dev" },
+  ],
+  [
+    { group = "pydantic1" },
+    { group = "pkg-meta" },
+  ],
+]
 
 [tool.ruff]
 line-length = 120
@@ -133,7 +160,8 @@ lint.ignore = [
   "C901",   # complex structure
   "COM812", # Conflict with formatter
   "CPY",    # No copyright statements
-  "D",      # limited documentation
+  "D203",   # one-blank-line-before-class (conflicts with D211)
+  "D212",   # multi-line-summary-first-line (conflicts with D213)
   "DOC",    # limited documentation
   "FIX002", # line contains to do
   "ISC001", # Conflict with formatter
@@ -160,6 +188,7 @@ lint.isort = { known-first-party = [
   "from __future__ import annotations",
 ] }
 
+lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
@@ -213,13 +242,3 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
-
-[tool.uv]
-conflicts = [
-  [
-    { group = "black24" },
-    { group = "black22" },
-    { group = "black23" },
-    { group = "dev" },
-  ],
-]

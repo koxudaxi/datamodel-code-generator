@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SimpleString": {
+      "type": "string"
+    },
+    "UnionType": {
+      "anyOf": [
+        {"type": "string"},
+        {"type": "integer"}
+      ]
+    },
+    "ArrayType": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "AnnotatedType": {
+      "title": "MyAnnotatedType",
+      "description": "An annotated union type",
+      "anyOf": [
+        {"type": "string"},
+        {"type": "boolean"}
+      ]
+    },
+    "ModelWithTypeAliasField": {
+      "type": "object",
+      "properties": {
+        "simple_field": {"$ref": "#/definitions/SimpleString"},
+        "union_field": {"$ref": "#/definitions/UnionType"},
+        "array_field": {"$ref": "#/definitions/ArrayType"},
+        "annotated_field": {"$ref": "#/definitions/AnnotatedType"}
+      }
+    }
+  }
+}
