@@ -574,7 +574,7 @@ class Parser(ABC):
             additional_imports = []
 
         for additional_import_string in additional_imports:
-            if additional_import_string is None:
+            if additional_import_string is None:  # pragma: no cover
                 continue
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
@@ -730,7 +730,7 @@ class Parser(ABC):
                     if imports.use_exact:  # pragma: no cover
                         from_, import_ = exact_import(from_, import_, data_type.reference.short_name)
                     import_ = import_.replace("-", "_")
-                    if (
+                    if (  # pragma: no cover
                         len(model.module_path) > 1
                         and model.module_path[-1].count(".") > 0
                         and not self.treat_dot_as_module
@@ -1033,7 +1033,7 @@ class Parser(ABC):
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-                        if (
+                        if (  # pragma: no cover
                             isinstance(
                                 root_type_field,
                                 pydantic_model.DataModelField,

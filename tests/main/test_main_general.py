@@ -9,6 +9,7 @@ import pytest
 
 from datamodel_code_generator import (
     DataModelType,
+    Error,
     InputFileType,
     generate,
     snooper_to_methods,
@@ -246,3 +247,28 @@ def test_filename_with_various_control_characters(tmp_path: Path) -> None:
         ), f"System call found for {test_name}"
 
         compile(generated_content, str(output_path), "exec")
+
+
+def test_generate_with_nonexistent_file(tmp_path: Path) -> None:
+    """Test that generating from a nonexistent file raises an error."""
+    nonexistent_file = tmp_path / "nonexistent.json"
+    output_file = tmp_path / "output.py"
+
+    with pytest.raises(Error, match="File not found"):
+        generate(
+            input_=nonexistent_file,
+            output=output_file,
+        )
+
+
+def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
+    """Test that generating from an invalid file format raises an error."""
+    invalid_file = tmp_path / "invalid.txt"
+    invalid_file.write_text("this is not valid json or yaml or anything")
+    output_file = tmp_path / "output.py"
+
+    with pytest.raises(Error, match="Invalid file format"):
+        generate(
+            input_=invalid_file,
+            output=output_file,
+        )

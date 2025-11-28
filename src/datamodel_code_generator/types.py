@@ -180,29 +180,6 @@ def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
     return tuple(chain(*iterables))
 
 
-@lru_cache
-def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: str) -> list[str]:
-    """Remove None from a type string and return the remaining types."""
-    types: list[str] = []
-    split_type: str = ""
-    inner_count: int = 0
-    for part in re.split(split_pattern, type_):
-        if part == NONE:
-            continue
-        inner_count += part.count("[") - part.count("]")
-        if split_type:
-            split_type += delimiter
-        if inner_count == 0:
-            if split_type:
-                types.append(f"{split_type}{part}")
-            else:
-                types.append(part)
-            split_type = ""
-            continue
-        split_type += part
-    return types
-
-
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
     """Remove None from a Union type string, handling nested unions."""
     if use_union_operator:
