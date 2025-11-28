@@ -88,12 +88,6 @@ def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
     return result
 
 
-def load_yaml_from_path(path: Path, encoding: str) -> YamlValue:
-    """Load YAML content from a file path."""
-    with path.open(encoding=encoding) as f:
-        return load_yaml(f)
-
-
 def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
     """Load YAML and return as dict from a file path."""
     with path.open(encoding=encoding) as f:

@@ -87,11 +87,11 @@ class Config(BaseModel):
     if PYDANTIC_V2:
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
-        def get(self, item: str) -> Any:
+        def get(self, item: str) -> Any:  # pragma: no cover
             """Get attribute value by name."""
             return getattr(self, item)
 
-        def __getitem__(self, item: str) -> Any:
+        def __getitem__(self, item: str) -> Any:  # pragma: no cover
             """Get item by key."""
             return self.get(item)
 
@@ -128,7 +128,7 @@ class Config(BaseModel):
         if path.is_file():
             return cast("TextIOBase", path.expanduser().resolve().open("rt"))
 
-        msg = f"A file was expected but {value} is not a file."
+        msg = f"A file was expected but {value} is not a file."  # pragma: no cover
         raise Error(msg)  # pragma: no cover
 
     @field_validator(
@@ -151,7 +151,7 @@ class Config(BaseModel):
             return urlparse(value)
         if value is None:  # pragma: no cover
             return None
-        msg = f"This protocol doesn't support only http/https. --input={value}"
+        msg = f"This protocol doesn't support only http/https. --input={value}"  # pragma: no cover
         raise Error(msg)  # pragma: no cover
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
@@ -433,7 +433,9 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
                 # Convert options from kebap- to snake-case
                 pyproject_config = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
                 # Replace US-american spelling if present (ignore if british spelling is present)
-                if "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config:
+                if (
+                    "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config
+                ):  # pragma: no cover
                     pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
                 return pyproject_config
 

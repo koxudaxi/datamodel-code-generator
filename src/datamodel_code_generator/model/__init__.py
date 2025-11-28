@@ -133,7 +133,7 @@ def get_data_model_types(
             scalar_model=scalar_class,
             union_model=union_class,
         )
-    msg = f"{data_model_type} is unsupported data model type"
+    msg = f"{data_model_type} is unsupported data model type"  # pragma: no cover
     raise ValueError(msg)  # pragma: no cover
 
 
