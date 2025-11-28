@@ -30,7 +30,6 @@ from typing import (
 )
 from urllib.parse import ParseResult, urlparse
 
-import inflect
 import pydantic
 from packaging import version
 from pydantic import BaseModel, Field
@@ -41,6 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
+    import inflect
     from pydantic.typing import DictStrAny
 
 
@@ -760,10 +760,23 @@ class ModelResolver:  # noqa: PLR0904
         return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(field_name, excludes)
 
 
+def _get_inflect_engine() -> inflect.engine:
+    """Get or create the inflect engine lazily."""
+    global _inflect_engine  # noqa: PLW0603
+    if _inflect_engine is None:
+        import inflect  # noqa: PLC0415
+
+        _inflect_engine = inflect.engine()
+    return _inflect_engine
+
+
+_inflect_engine: inflect.engine | None = None
+
+
 @lru_cache
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     """Convert a plural name to singular form."""
-    singular_name = inflect_engine.singular_noun(cast("inflect.Word", name))
+    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))
     if singular_name is False:
         singular_name = f"{name}{suffix}"
     return singular_name  # pyright: ignore[reportReturnType]
@@ -783,6 +796,3 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 def is_url(ref: str) -> bool:
     """Check if a reference string is a URL."""
     return ref.startswith(("https://", "http://"))
-
-
-inflect_engine = inflect.engine()
