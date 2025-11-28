@@ -346,6 +346,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
     disable_future_imports: bool = False,
+    type_mappings: list[str] | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -566,6 +567,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
+        type_mappings=type_mappings,
         **kwargs,
     )
 

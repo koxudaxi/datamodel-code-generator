@@ -2537,3 +2537,37 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+def test_main_jsonschema_type_mappings(output_file: Path) -> None:
+    """Test --type-mappings option to override format-to-type mappings."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_mappings.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "binary=string",
+        ],
+    )
+
+
+def test_main_jsonschema_type_mappings_with_type_prefix(output_file: Path) -> None:
+    """Test --type-mappings option with type+format syntax."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_mappings.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "string+binary=string",
+        ],
+    )
