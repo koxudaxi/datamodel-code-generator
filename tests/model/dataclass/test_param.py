@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datamodel_code_generator.model.dataclass import DataClass, DataModelField
-from datamodel_code_generator.parser.jsonschema import Types
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
@@ -155,7 +154,7 @@ def test_dataclass_legacy_keyword_only() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -174,7 +173,7 @@ def test_dataclass_legacy_frozen() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -193,7 +192,7 @@ def test_dataclass_with_custom_dataclass_arguments() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
@@ -213,7 +212,7 @@ def test_dataclass_both_legacy_and_dataclass_arguments() -> None:
     reference = Reference(path="TestModel", name="TestModel")
     field = DataModelField(
         name="field1",
-        data_type=DataType(type=Types.string),
+        data_type=DataType(type="str"),
         required=True,
     )
 
