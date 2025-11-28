@@ -372,6 +372,11 @@ Typing customization:
                         Set enum members as default values for enum field
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
                         Use strict types
+  --type-mappings TYPE_MAPPINGS [TYPE_MAPPINGS ...]
+                        Override default type mappings. Format: "type+format=target" (e.g.,
+                        "string+binary=string" to map binary format to string type) or
+                        "format=target" (e.g., "binary=string"). Can be specified multiple
+                        times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
   --use-generic-container-types
