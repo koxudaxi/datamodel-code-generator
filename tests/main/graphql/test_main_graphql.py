@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import black
-import isort
 import pytest
 
 from tests.main.conftest import GRAPHQL_DATA_PATH, run_main_and_assert
@@ -182,42 +181,17 @@ def test_main_graphql_union(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(
-    not isort.__version__.startswith("4."),
-    reason="See https://github.com/PyCQA/isort/issues/1600 for example",
-)
-def test_main_graphql_additional_imports_isort_4(output_file: Path) -> None:
-    """Test GraphQL code generation with additional imports using isort 4.x."""
-    run_main_and_assert(
-        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
-        output_path=output_file,
-        input_file_type="graphql",
-        assert_func=assert_file_content,
-        expected_file="additional_imports_isort4.py",
-        extra_args=[
-            "--extra-template-data",
-            str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),
-            "--additional-imports",
-            "datetime.datetime,datetime.date,mymodule.myclass.MyCustomPythonClass",
-        ],
-    )
-
-
-@pytest.mark.skipif(
-    isort.__version__.startswith("4."),
-    reason="See https://github.com/PyCQA/isort/issues/1600 for example",
-)
-@pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_graphql_additional_imports_isort_not_4(output_file: Path) -> None:
-    """Test GraphQL code generation with additional imports using not isort 4.x."""
+def test_main_graphql_additional_imports(output_file: Path) -> None:
+    """Test GraphQL code generation with additional imports."""
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
         output_path=output_file,
         input_file_type="graphql",
         assert_func=assert_file_content,
-        expected_file="additional_imports_isort5.py",
+        expected_file="additional_imports.py",
         extra_args=[
             "--extra-template-data",
             str(GRAPHQL_DATA_PATH / "additional-imports-types.json"),

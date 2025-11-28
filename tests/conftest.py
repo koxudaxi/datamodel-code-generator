@@ -26,7 +26,7 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     expected = external_file(expected_path)
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
-        if normalized_content != _normalize_line_endings(expected):
+        if normalized_content != _normalize_line_endings(expected):  # pragma: no cover
             pytest.fail(f"Content mismatch for {expected_path}\nExpected:\n{expected}\n\nActual:\n{content}")
     else:
         expected_value = expected._load_value()  # pragma: no cover
