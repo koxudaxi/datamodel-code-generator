@@ -577,7 +577,7 @@ class Parser(ABC):
                 type_ = "string"
                 format_ = source
 
-            result[(type_, format_)] = target
+            result[type_, format_] = target
 
         return result
 

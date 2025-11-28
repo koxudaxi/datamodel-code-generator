@@ -338,7 +338,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--type-mappings",
-    help='Override default type mappings. '
+    help="Override default type mappings. "
     'Format: "type+format=target" (e.g., "string+binary=string" to map binary format to string type) '
     'or "format=target" (e.g., "binary=string"). '
     "Can be specified multiple times.",

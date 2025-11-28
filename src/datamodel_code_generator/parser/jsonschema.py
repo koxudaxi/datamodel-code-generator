@@ -653,14 +653,13 @@ class JsonSchemaParser(Parser):
         Custom mappings from --type-mappings are checked first, then falls back to
         the default json_schema_data_formats mappings.
         """
-        if self.type_mappings and format_ is not None:
-            if (type_, format_) in self.type_mappings:
-                target_format = self.type_mappings[(type_, format_)]
-                for type_formats in json_schema_data_formats.values():
-                    if target_format in type_formats:
-                        return type_formats[target_format]
-                if target_format in json_schema_data_formats:
-                    return json_schema_data_formats[target_format]["default"]
+        if self.type_mappings and format_ is not None and (type_, format_) in self.type_mappings:
+            target_format = self.type_mappings[type_, format_]
+            for type_formats in json_schema_data_formats.values():
+                if target_format in type_formats:
+                    return type_formats[target_format]
+            if target_format in json_schema_data_formats:
+                return json_schema_data_formats[target_format]["default"]
 
         return _get_type(type_, format_)
 
@@ -1512,7 +1511,9 @@ class JsonSchemaParser(Parser):
             )
 
         def create_enum(reference_: Reference) -> DataType:
-            type_: Types | None = self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
+            type_: Types | None = (
+                self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
+            )
 
             enum_cls: type[Enum] = Enum
             if (
