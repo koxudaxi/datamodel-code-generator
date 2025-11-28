@@ -241,6 +241,8 @@ def _preload_heavy_modules() -> None:
     This reduces per-test overhead when running with pytest-xdist,
     as each worker only pays the import cost once at session start.
     """
+    import black  # noqa: PLC0415, F401
     import inflect  # noqa: PLC0415, F401
+    import isort  # noqa: PLC0415, F401
 
     import datamodel_code_generator  # noqa: PLC0415, F401
