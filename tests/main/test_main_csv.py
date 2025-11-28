@@ -9,7 +9,6 @@ from tests.main.conftest import (
     CSV_DATA_PATH,
     EXPECTED_CSV_PATH,
     run_main_and_assert,
-    run_main_and_assert_stdin,
 )
 
 if TYPE_CHECKING:
@@ -34,7 +33,7 @@ def test_csv_file(output_file: Path) -> None:
 
 def test_csv_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
     """Test CSV stdin input code generation."""
-    run_main_and_assert_stdin(
+    run_main_and_assert(
         stdin_path=CSV_DATA_PATH / "simple.csv",
         output_path=output_file,
         monkeypatch=monkeypatch,

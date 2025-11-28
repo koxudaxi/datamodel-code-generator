@@ -69,7 +69,7 @@ def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     """Test help display when no input is provided."""
     print_help_mock = mocker.patch("datamodel_code_generator.__main__.arg_parser.print_help")
     isatty_mock = mocker.patch("sys.stdin.isatty", return_value=True)
-    return_code: Exit = run_main_with_args([])
+    return_code: Exit = run_main_with_args([], expected_exit=Exit.ERROR)
     assert return_code == Exit.ERROR
     assert isatty_mock.called
     assert print_help_mock.called
@@ -82,7 +82,7 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     namespace = Namespace()
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace)
-    run_main_with_args([])
+    run_main_with_args([], expected_exit=Exit.ERROR)
     for field in Config.get_fields():
         assert getattr(namespace, field, None) is None
 
