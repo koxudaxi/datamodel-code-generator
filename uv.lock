@@ -1257,13 +1257,13 @@ black24 = [{ name = "black", specifier = "==24.1" }]
 coverage = [
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
-    { name = "diff-cover", specifier = ">=7.7" },
+    { name = "diff-cover", specifier = ">=9.7.2" },
 ]
 dev = [
     { name = "check-wheel-contents", specifier = ">=0.6.1" },
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
-    { name = "diff-cover", specifier = ">=7.7" },
+    { name = "diff-cover", specifier = ">=9.7.2" },
     { name = "freezegun" },
     { name = "inline-snapshot", specifier = ">=0.31.1" },
     { name = "mkdocs", specifier = ">=1.6" },
@@ -1304,7 +1304,7 @@ pydantic1 = [{ name = "pydantic", specifier = "<2" }]
 test = [
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
-    { name = "diff-cover", specifier = ">=7.7" },
+    { name = "diff-cover", specifier = ">=9.7.2" },
     { name = "freezegun" },
     { name = "inline-snapshot", specifier = ">=0.31.1" },
     { name = "pytest", specifier = ">=6.1" },
@@ -1321,7 +1321,7 @@ test = [
 type = [
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
-    { name = "diff-cover", specifier = ">=7.7" },
+    { name = "diff-cover", specifier = ">=9.7.2" },
     { name = "freezegun" },
     { name = "inline-snapshot", specifier = ">=0.31.1" },
     { name = "pyright", specifier = ">=1.1.393" },
