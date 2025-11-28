@@ -64,6 +64,27 @@ def test_main_inheritance_forward_ref_keep_model_order(output_file: Path, tmp_pa
     )
 
 
+@pytest.mark.benchmark
+def test_main_type_alias_forward_ref_keep_model_order(output_file: Path) -> None:
+    """Test TypeAliasType with forward references keeping model order."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_forward_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--keep-model-order",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--use-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.skip(reason="pytest-xdist does not support the test")
 def test_main_without_arguments() -> None:
     """Test main function without arguments raises SystemExit."""
