@@ -6,16 +6,15 @@ security:
   - api_key: []
 paths:
   /pets:
-    summary: "This is not an operation"  # This should be ignored as it's not in OPERATION_NAMES
-    description: "Also not an operation"  # This should be ignored as it's not in OPERATION_NAMES
-    parameters:  # This should be ignored as it's not in OPERATION_NAMES
+    summary: "This is not an operation"
+    description: "Also not an operation"
+    parameters:
       - name: test_param
         in: query
         schema:
           type: string
     get:
       summary: Get pets
-      # Note: no security defined here, should inherit from global
       responses:
         '200':
           description: Success
@@ -28,7 +27,7 @@ paths:
     post:
       summary: Create pet
       security:
-        - oauth2: ['write']  # This has its own security, should not inherit global
+        - oauth2: ['write']
       requestBody:
         content:
           application/json:
@@ -39,10 +38,9 @@ paths:
           description: Created
 webhooks:
   pet.created:
-    summary: "Not an operation for webhooks"  # This should be ignored
-    description: "Also not an operation for webhooks"  # This should be ignored
+    summary: "Not an operation for webhooks"
+    description: "Also not an operation for webhooks"
     post:
-      # Note: no security defined here, should inherit from global
       requestBody:
         content:
           application/json:
