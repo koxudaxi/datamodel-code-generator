@@ -202,6 +202,34 @@ def run_main_and_assert_directory(
     assert_directory_content(output_path, expected_directory)
 
 
+OutputToExpectedMapping = Sequence[tuple[str, str | Path]]
+
+
+def run_main_and_assert_files(
+    *,
+    input_path: Path,
+    output_path: Path,
+    output_to_expected: OutputToExpectedMapping,
+    assert_func: AssertFileContent,
+    input_file_type: InputFileTypeLiteral | None = None,
+    extra_args: Sequence[str] | None = None,
+) -> None:
+    """Execute main() and assert specific output files match expected files.
+
+    Args:
+        input_path: Path to input schema file
+        output_path: Path to output directory
+        output_to_expected: List of (output_relative_path, expected_file_path) tuples
+        assert_func: The assert_file_content function to use for verification
+        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
+        extra_args: Additional CLI arguments
+    """
+    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
+    assert return_code == Exit.OK
+    for output_relative, expected_file in output_to_expected:
+        assert_func(output_path / output_relative, expected_file)
+
+
 def run_main_and_assert_stdout(
     *,
     input_path: Path,
@@ -307,6 +335,44 @@ def run_main_url(
     return main(args)
 
 
+def run_main_url_and_assert(
+    *,
+    url: str,
+    output_path: Path,
+    input_file_type: InputFileTypeLiteral | None,
+    assert_func: AssertFileContent,
+    expected_file: str | Path | None = None,
+    extra_args: Sequence[str] | None = None,
+    transform: Callable[[str], str] | None = None,
+) -> None:
+    """Execute main() with URL input and assert output.
+
+    Args:
+        url: URL to fetch schema from
+        output_path: Path to output file
+        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
+        assert_func: The assert_file_content function to use for verification
+        expected_file: Expected output filename (optional, inferred from test name if None)
+        extra_args: Additional CLI arguments
+        transform: Optional function to transform output before comparison
+    """
+    return_code = run_main_url(url, output_path, input_file_type, extra_args=extra_args)
+    assert return_code == Exit.OK
+
+    if expected_file is None:
+        frame = inspect.currentframe()
+        assert frame is not None
+        assert frame.f_back is not None
+        func_name = frame.f_back.f_code.co_name
+        del frame
+        for prefix in ("test_main_", "test_"):
+            if func_name.startswith(prefix):
+                func_name = func_name[len(prefix) :]
+                break
+        expected_file = f"{func_name}.py"
+    assert_func(output_path, expected_file, transform=transform)
+
+
 def run_main_and_assert_error(
     input_path: Path,
     output_path: Path,
@@ -341,6 +407,7 @@ def run_main_and_assert_output(
     expected_output: str,
     input_file_type: InputFileTypeLiteral | None = None,
     extra_args: Sequence[str] | None = None,
+    ignore_whitespace: bool = False,
 ) -> None:
     """Execute main() and assert output matches expected string.
 
@@ -350,10 +417,61 @@ def run_main_and_assert_output(
         expected_output: Expected output content as string
         input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
         extra_args: Additional CLI arguments
+        ignore_whitespace: If True, compare outputs ignoring all whitespace
     """
     return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
     assert return_code == Exit.OK
     actual_output = output_path.read_text(encoding="utf-8")
-    assert actual_output == expected_output, (
-        f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
-    )
+    if ignore_whitespace:
+        assert "".join(actual_output.split()) == "".join(expected_output.split()), (
+            f"\nExpected output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
+        )
+    else:
+        assert actual_output == expected_output, (
+            f"\nExpected output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
+        )
+
+
+def run_main_and_assert_no_stderr(
+    *,
+    input_path: Path,
+    output_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    input_file_type: InputFileTypeLiteral | None = None,
+    extra_args: Sequence[str] | None = None,
+) -> None:
+    """Execute main() and assert no stderr output.
+
+    Args:
+        input_path: Path to input schema file
+        output_path: Path to output file
+        capsys: pytest capsys fixture for capturing output
+        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
+        extra_args: Additional CLI arguments
+    """
+    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
+    captured = capsys.readouterr()
+    assert return_code == Exit.OK
+    assert not captured.err
+
+
+def run_main_and_assert_file_not_exists(
+    *,
+    input_path: Path,
+    output_path: Path,
+    file_should_not_exist: Path,
+    input_file_type: InputFileTypeLiteral | None = None,
+    extra_args: Sequence[str] | None = None,
+) -> None:
+    """Execute main() and assert a specific file does not exist.
+
+    Args:
+        input_path: Path to input schema file
+        output_path: Path to output directory
+        file_should_not_exist: Path to file that should NOT exist after generation
+        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
+        extra_args: Additional CLI arguments
+    """
+    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
+    assert return_code == Exit.OK
+    assert not file_should_not_exist.exists()

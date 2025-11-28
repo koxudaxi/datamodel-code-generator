@@ -10,15 +10,13 @@ import pytest
 from packaging import version
 
 from datamodel_code_generator import chdir
-from datamodel_code_generator.__main__ import Exit
 from tests.conftest import create_assert_file_content
 from tests.main.conftest import (
     EXPECTED_JSON_PATH,
     JSON_DATA_PATH,
-    run_main,
     run_main_and_assert,
     run_main_and_assert_error,
-    run_main_url,
+    run_main_url_and_assert,
 )
 
 if TYPE_CHECKING:
@@ -96,14 +94,13 @@ def test_main_json_reuse_model_pydantic2(output_file: Path) -> None:
 def test_simple_json_snake_case_field(output_file: Path) -> None:
     """Test JSON code generation with snake case field naming."""
     with chdir(JSON_DATA_PATH):
-        return_code = run_main(
-            JSON_DATA_PATH / "simple.json",
-            output_file,
-            "json",
+        run_main_and_assert(
+            input_path=JSON_DATA_PATH / "simple.json",
+            output_path=output_file,
+            input_file_type="json",
+            assert_func=assert_file_content,
             extra_args=["--snake-case-field"],
         )
-        assert return_code == Exit.OK
-        assert_file_content(output_file)
 
 
 def test_main_http_json(mocker: MockerFixture, output_file: Path) -> None:
@@ -120,15 +117,12 @@ def test_main_http_json(mocker: MockerFixture, output_file: Path) -> None:
             get_mock_response("pet.json"),
         ],
     )
-    return_code = run_main_url(
-        "https://example.com/pet.json",
-        output_file,
-        "json",
-    )
-    assert return_code == Exit.OK
-    assert_file_content(
-        output_file,
-        "general.py",
+    run_main_url_and_assert(
+        url="https://example.com/pet.json",
+        output_path=output_file,
+        input_file_type="json",
+        assert_func=assert_file_content,
+        expected_file="general.py",
         transform=lambda s: s.replace(
             "#   filename:  https://example.com/pet.json",
             "#   filename:  pet.json",

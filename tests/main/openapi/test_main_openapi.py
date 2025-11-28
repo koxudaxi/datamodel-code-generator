@@ -28,19 +28,17 @@ from datamodel_code_generator import (
     get_version,
     inferred_message,
 )
-from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content
 from tests.main.conftest import (
     DATA_PATH,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
-    run_main,
     run_main_and_assert,
     run_main_and_assert_directory,
     run_main_and_assert_error,
     run_main_and_assert_stdin,
     run_main_and_assert_stdout,
-    run_main_url,
+    run_main_url_and_assert,
 )
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
 
@@ -298,42 +296,40 @@ def test_pyproject(tmp_path: Path) -> None:
         def get_path(path: str) -> str:
             return str(path)
 
-    with chdir(tmp_path):
-        output_file: Path = tmp_path / "output.py"
-        pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
-        pyproject_toml = (
-            pyproject_toml_path.read_text()
-            .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
-            .replace("OUTPUT_PATH", get_path(output_file))
-            .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
-            .replace(
-                "EXTRA_TEMPLATE_DATA_PATH",
-                get_path(OPEN_API_DATA_PATH / "empty_data.json"),
-            )
-            .replace("CUSTOM_TEMPLATE_DIR_PATH", get_path(tmp_path))
+    output_file: Path = tmp_path / "output.py"
+    pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
+    pyproject_toml = (
+        pyproject_toml_path.read_text()
+        .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
+        .replace("OUTPUT_PATH", get_path(output_file))
+        .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
+        .replace(
+            "EXTRA_TEMPLATE_DATA_PATH",
+            get_path(OPEN_API_DATA_PATH / "empty_data.json"),
         )
-        (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+        .replace("CUSTOM_TEMPLATE_DIR_PATH", get_path(tmp_path))
+    )
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
-        return_code = run_main(
+    with chdir(tmp_path):
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
             output_path=output_file,
             input_file_type=None,
+            assert_func=assert_file_content,
         )
-        assert return_code == Exit.OK
-        assert_file_content(output_file)
 
 
 def test_pyproject_not_found(tmp_path: Path) -> None:
     """Test code generation when pyproject.toml is not found."""
+    output_file: Path = tmp_path / "output.py"
     with chdir(tmp_path):
-        output_file: Path = tmp_path / "output.py"
-        return_code = run_main(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
             output_path=output_file,
             input_file_type=None,
+            assert_func=assert_file_content,
         )
-        assert return_code == Exit.OK
-        assert_file_content(output_file)
 
 
 def test_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
@@ -1058,13 +1054,13 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
         ],
     )
 
-    return_code = run_main_url(
+    run_main_url_and_assert(
         url="https://example.com/refs.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="http_refs.py",
     )
-    assert return_code == Exit.OK
-    assert_file_content(output_file, "http_refs.py")
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/refs.yaml",
@@ -1551,15 +1547,15 @@ def test_main_dataclass_base_class(output_file: Path) -> None:
 
 def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None:
     """Test OpenAPI generation with reference in same hierarchy directory."""
+    output_file: Path = tmp_path / "output.py"
     with chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"):
-        output_file: Path = tmp_path / "output.py"
-        return_code = run_main(
+        run_main_and_assert(
             input_path=Path("./public/entities.yaml"),
             output_path=output_file,
             input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="reference_same_hierarchy_directory.py",
         )
-        assert return_code == Exit.OK
-        assert_file_content(output_file, "reference_same_hierarchy_directory.py")
 
 
 def test_main_multiple_required_any_of(output_file: Path) -> None:
