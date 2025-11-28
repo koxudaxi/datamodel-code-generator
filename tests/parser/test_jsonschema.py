@@ -559,3 +559,13 @@ def test_get_type_with_mappings_to_type_default() -> None:
     )
     result = parser._get_type_with_mappings("string", "binary")
     assert result == Types.boolean
+
+
+def test_get_type_with_mappings_unknown_target_fallback() -> None:
+    """Test _get_type_with_mappings falls back to _get_type for unknown target."""
+    parser = JsonSchemaParser(
+        source="",
+        type_mappings=["binary=unknown_format"],
+    )
+    result = parser._get_type_with_mappings("string", "binary")
+    assert result == Types.binary
