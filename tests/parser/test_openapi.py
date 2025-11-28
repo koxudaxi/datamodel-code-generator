@@ -922,7 +922,7 @@ def test_openapi_parser_webhooks() -> None:
         source=Path(DATA_PATH / "webhooks.yaml"),
         openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Webhooks],
     )
-    assert parser.parse() == (EXPECTED_OPEN_API_PATH / "openapi_parser_webhooks" / "output.py").read_text()
+    assert_output(parser.parse(), EXPECTED_OPEN_API_PATH / "openapi_parser_webhooks" / "output.py")
 
 
 def test_openapi_parser_webhooks_only() -> None:
