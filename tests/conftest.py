@@ -22,10 +22,12 @@ def _normalize_line_endings(text: str) -> str:
 
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
+    __tracebackhide__ = True
     expected = external_file(expected_path)
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
-        assert normalized_content == _normalize_line_endings(expected)
+        if normalized_content != _normalize_line_endings(expected):
+            pytest.fail(f"Content mismatch for {expected_path}\nExpected:\n{expected}\n\nActual:\n{content}")
     else:
         expected_value = expected._load_value()  # pragma: no cover
         if _normalize_line_endings(expected_value) == normalized_content:  # pragma: no cover
@@ -78,6 +80,7 @@ def create_assert_file_content(
         transform: Callable[[str], str] | None = None,
     ) -> None:
         """Assert that file content matches expected external file."""
+        __tracebackhide__ = True
         if expected_name is None:
             frame = inspect.currentframe()
             assert frame is not None
@@ -114,6 +117,7 @@ def assert_output(
         assert_output(captured.out, EXPECTED_PATH / "output.py")
         assert_output(parser.parse(), EXPECTED_PATH / "output.py")
     """
+    __tracebackhide__ = True
     _assert_with_external_file(output, expected_path)
 
 
@@ -134,6 +138,7 @@ def assert_directory_content(
     Usage:
         assert_directory_content(tmp_path / "model", EXPECTED_PATH / "main_modular")
     """
+    __tracebackhide__ = True
     for expected_path in expected_dir.rglob(pattern):
         relative_path = expected_path.relative_to(expected_dir)
         output_path = output_dir / relative_path
@@ -157,6 +162,7 @@ def assert_parser_results(
         results = {delimiter.join(p): r for p, r in parser.parse().items()}
         assert_parser_results(results, EXPECTED_PATH / "parser_output")
     """
+    __tracebackhide__ = True
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
         result_obj = results.pop(key)
@@ -177,6 +183,7 @@ def assert_parser_modules(
         modules = parser.parse()
         assert_parser_modules(modules, EXPECTED_PATH / "parser_modular")
     """
+    __tracebackhide__ = True
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(result.body, expected_path)
