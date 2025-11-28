@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -37,9 +36,6 @@ from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_fil
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
-
-with contextlib.suppress(ImportError):
-    pass
 
 
 FixtureRequest = pytest.FixtureRequest

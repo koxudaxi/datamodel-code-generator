@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 import platform
 from collections import defaultdict
@@ -38,9 +37,6 @@ from tests.main.conftest import (
     run_main_url_and_assert,
 )
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
-
-with contextlib.suppress(ImportError):
-    pass
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture

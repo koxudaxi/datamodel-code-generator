@@ -79,6 +79,25 @@ def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> N
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
 
 
+def _extend_args(
+    args: list[str],
+    *,
+    input_path: Path | None = None,
+    output_path: Path | None = None,
+    input_file_type: InputFileTypeLiteral | None = None,
+    extra_args: Sequence[str] | None = None,
+) -> None:
+    """Extend args with optional input_path, output_path, input_file_type and extra_args."""
+    if input_path is not None:
+        args.extend(["--input", str(input_path)])
+    if output_path is not None:
+        args.extend(["--output", str(output_path)])
+    if input_file_type is not None:
+        args.extend(["--input-file-type", input_file_type])
+    if extra_args is not None:
+        args.extend(extra_args)
+
+
 def _run_main(
     input_path: Path,
     output_path: Path,
@@ -89,20 +108,10 @@ def _run_main(
 ) -> Exit:
     """Execute main() with standard arguments (internal use)."""
     _copy_files(copy_files)
-
-    args = [
-        "--input",
-        str(input_path),
-        "--output",
-        str(output_path),
-    ]
-
-    if input_file_type is not None:
-        args.extend(["--input-file-type", input_file_type])
-
-    if extra_args is not None:
-        args.extend(extra_args)
-
+    args: list[str] = []
+    _extend_args(
+        args, input_path=input_path, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
+    )
     return main(args)
 
 
@@ -114,11 +123,8 @@ def _run_main_url(
     extra_args: Sequence[str] | None = None,
 ) -> Exit:
     """Execute main() with URL input (internal use)."""
-    args = ["--url", url, "--output", str(output_path)]
-    if input_file_type is not None:
-        args.extend(["--input-file-type", input_file_type])
-    if extra_args is not None:
-        args.extend(extra_args)
+    args = ["--url", url]
+    _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
     return main(args)
 
 
@@ -143,7 +149,7 @@ def run_main_with_args(
     __tracebackhide__ = True
     return_code = main(list(args))
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
-    if expected_stdout_path is not None:
+    if expected_stdout_path is not None:  # pragma: no branch
         if capsys is None:  # pragma: no cover
             pytest.fail("capsys is required when expected_stdout_path is set")
         captured = capsys.readouterr()
@@ -224,22 +230,14 @@ def run_main_and_assert(  # noqa: PLR0912
             pytest.fail("monkeypatch is required when using stdin_path")
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
-        if output_path is not None:
-            args.extend(["--output", str(output_path)])
-        if input_file_type is not None:
-            args.extend(["--input-file-type", input_file_type])
-        if extra_args is not None:
-            args.extend(extra_args)
+        _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
         return_code = main(args)
     # Handle stdout-only output (no output_path)
     elif output_path is None:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required when output_path is None")
-        args = ["--input", str(input_path)]
-        if input_file_type is not None:
-            args.extend(["--input-file-type", input_file_type])
-        if extra_args is not None:
-            args.extend(extra_args)
+        args = []
+        _extend_args(args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args)
         return_code = main(args)
     # Standard file input
     else:
@@ -299,13 +297,13 @@ def run_main_and_assert(  # noqa: PLR0912
     elif assert_func is not None:
         if output_path is None:  # pragma: no cover
             pytest.fail("output_path is required when using assert_func")
-        if expected_file is None:
+        if expected_file is None:  # pragma: no branch
             frame = inspect.currentframe()
             assert frame is not None
             assert frame.f_back is not None
             func_name = frame.f_back.f_code.co_name
             del frame
-            for prefix in ("test_main_", "test_"):
+            for prefix in ("test_main_", "test_"):  # pragma: no branch
                 if func_name.startswith(prefix):
                     func_name = func_name[len(prefix) :]
                     break
