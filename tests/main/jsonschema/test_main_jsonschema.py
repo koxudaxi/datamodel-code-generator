@@ -2558,3 +2558,88 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+def test_main_jsonschema_type_mappings(output_file: Path) -> None:
+    """Test --type-mappings option to override format-to-type mappings."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_mappings.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "binary=string",
+        ],
+    )
+
+
+def test_main_jsonschema_type_mappings_with_type_prefix(output_file: Path) -> None:
+    """Test --type-mappings option with type+format syntax."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_mappings.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "string+binary=string",
+        ],
+    )
+
+
+def test_main_jsonschema_type_mappings_to_type_default(output_file: Path) -> None:
+    """Test --type-mappings option mapping to a type's default (e.g., binary=integer)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_mappings_to_integer.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "binary=integer",
+        ],
+    )
+
+
+def test_main_jsonschema_type_mappings_to_boolean(output_file: Path) -> None:
+    """Test --type-mappings option mapping to a top-level type (e.g., binary=boolean)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_mappings_to_boolean.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "binary=boolean",
+        ],
+    )
+
+
+def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None:
+    """Test --type-mappings option with invalid format raises error."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "invalid_without_equals",
+        ],
+        expected_stderr_contains="Invalid type mapping format",
+    )

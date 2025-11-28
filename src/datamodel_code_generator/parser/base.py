@@ -429,6 +429,7 @@ class Parser(ABC):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
@@ -548,6 +549,38 @@ class Parser(ABC):
         self.treat_dot_as_module = treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
+        self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
+
+    @staticmethod
+    def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
+        """Parse type mappings from CLI format to internal format.
+
+        Supports two formats:
+        - "type+format=target" (e.g., "string+binary=string")
+        - "format=target" (e.g., "binary=string", assumes type="string")
+
+        Returns a dict mapping (type, format) tuples to target type names.
+        """
+        if not type_mappings:
+            return {}
+
+        result: dict[tuple[str, str], str] = {}
+        for mapping in type_mappings:
+            if "=" not in mapping:
+                msg = f"Invalid type mapping format: {mapping!r}. Expected 'type+format=target' or 'format=target'."
+                raise ValueError(msg)
+
+            source, target = mapping.split("=", 1)
+            if "+" in source:
+                type_, format_ = source.split("+", 1)
+            else:
+                # Default to "string" type if only format is specified
+                type_ = "string"
+                format_ = source
+
+            result[type_, format_] = target
+
+        return result
 
     @property
     def iter_source(self) -> Iterator[Source]:

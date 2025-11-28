@@ -525,6 +525,7 @@ class JsonSchemaParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -607,6 +608,7 @@ class JsonSchemaParser(Parser):
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
+            type_mappings=type_mappings,
         )
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
@@ -644,6 +646,22 @@ class JsonSchemaParser(Parser):
         if self.default_field_extras:
             extras.update(self.default_field_extras)
         return extras
+
+    def _get_type_with_mappings(self, type_: str, format_: str | None = None) -> Types:
+        """Get the Types enum for a given type and format, applying custom type mappings.
+
+        Custom mappings from --type-mappings are checked first, then falls back to
+        the default json_schema_data_formats mappings.
+        """
+        if self.type_mappings and format_ is not None and (type_, format_) in self.type_mappings:
+            target_format = self.type_mappings[type_, format_]
+            for type_formats in json_schema_data_formats.values():
+                if target_format in type_formats:
+                    return type_formats[target_format]
+            if target_format in json_schema_data_formats:
+                return json_schema_data_formats[target_format]["default"]
+
+        return _get_type(type_, format_)
 
     @cached_property
     def schema_paths(self) -> list[tuple[str, list[str]]]:
@@ -713,7 +731,7 @@ class JsonSchemaParser(Parser):
 
         def _get_data_type(type_: str, format__: str) -> DataType:
             return self.data_type_manager.get_data_type(
-                _get_type(type_, format__),
+                self._get_type_with_mappings(type_, format__),
                 **obj.dict() if not self.field_constraints else {},
             )
 
@@ -1493,7 +1511,9 @@ class JsonSchemaParser(Parser):
             )
 
         def create_enum(reference_: Reference) -> DataType:
-            type_: Types | None = _get_type(obj.type, obj.format) if isinstance(obj.type, str) else None
+            type_: Types | None = (
+                self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
+            )
 
             enum_cls: type[Enum] = Enum
             if (
