@@ -78,7 +78,7 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "freezegun",
+  "freezegun; python_version<'3.10'",
   "inline-snapshot>=0.31.1",
   "pytest>=6.1",
   "pytest>=8.3.4",
