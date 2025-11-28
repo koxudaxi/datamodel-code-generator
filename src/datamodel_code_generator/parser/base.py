@@ -12,6 +12,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
+from collections.abc import Hashable
 from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
@@ -53,6 +54,17 @@ from datamodel_code_generator.types import DataType, DataTypeManager, StrictType
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+
+@runtime_checkable
+class HashableComparable(Hashable, Protocol):
+    """Protocol for types that are both hashable and support comparison."""
+
+    def __lt__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __le__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __gt__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __ge__(self, value: Any, /) -> bool: ...  # noqa: D105
+
+
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
 
@@ -73,8 +85,12 @@ escape_characters = str.maketrans({
 })
 
 
-def to_hashable(item: Any) -> Any:
-    """Convert an item to a hashable representation for comparison."""
+def to_hashable(item: Any) -> HashableComparable:
+    """Convert an item to a hashable and comparable representation.
+
+    Returns a value that is both hashable and supports comparison operators.
+    Used for caching and deduplication of models.
+    """
     if isinstance(
         item,
         (
@@ -94,12 +110,12 @@ def to_hashable(item: Any) -> Any:
             )
         )
     if isinstance(item, set):  # pragma: no cover
-        return frozenset(to_hashable(i) for i in item)
+        return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):
         return to_hashable(item.dict())
     if item is None:
         return ""
-    return item
+    return item  # type: ignore[return-value]
 
 
 def dump_templates(templates: list[DataModel]) -> str:
@@ -610,7 +626,8 @@ class Parser(ABC):
                 ):
                     # Replace referenced duplicate model to original model
                     for child in model.reference.children[:]:
-                        child.replace_reference(root_data_type.reference)
+                        if isinstance(child, DataType):  # pragma: no branch
+                            child.replace_reference(root_data_type.reference)
                     models.remove(model)
                     for data_type in model.all_data_types:
                         if data_type.reference:
@@ -921,7 +938,7 @@ class Parser(ABC):
     def __reuse_model(self, models: list[DataModel], require_update_action_models: list[str]) -> None:
         if not self.reuse_model:
             return
-        model_cache: dict[tuple[str, ...], Reference] = {}
+        model_cache: dict[tuple[HashableComparable, ...], Reference] = {}
         duplicates = []
         for model in models.copy():
             model_key = tuple(to_hashable(v) for v in (model.render(class_name="M"), model.imports))
@@ -932,7 +949,7 @@ class Parser(ABC):
                         # child is resolved data_type by reference
                         data_model = get_most_of_parent(child)
                         # TODO: replace reference in all modules
-                        if data_model in models:  # pragma: no cover
+                        if data_model in models and isinstance(child, DataType):  # pragma: no cover
                             child.replace_reference(cached_model_reference)
                     duplicates.append(model)
                 else:
@@ -1011,7 +1028,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent is not None and data_type.parent.is_list:
+                    elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -1067,6 +1084,7 @@ class Parser(ABC):
 
                     data_type.remove_reference()
 
+                    assert isinstance(root_type_model, DataModel)
                     root_type_model.reference.children = [
                         c for c in root_type_model.reference.children if getattr(c, "parent", None)
                     ]

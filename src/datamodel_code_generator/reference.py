@@ -16,13 +16,24 @@ from itertools import zip_longest
 from keyword import iskeyword
 from pathlib import Path, PurePath
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, NamedTuple, Optional, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    NamedTuple,
+    Optional,
+    Protocol,
+    TypeVar,
+    cast,
+    runtime_checkable,
+)
 from urllib.parse import ParseResult, urlparse
 
 import inflect
 import pydantic
 from packaging import version
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
 
@@ -31,6 +42,22 @@ if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
 
     from pydantic.typing import DictStrAny
+
+
+@runtime_checkable
+class ReferenceChild(Protocol):
+    """Protocol for objects that can be stored in Reference.children.
+
+    This is a minimal protocol - actual usage checks isinstance for DataType
+    or DataModel to access specific methods like replace_reference or class_name.
+    Using a property makes the type covariant, allowing both DataModel (Reference)
+    and DataType (Reference | None) to satisfy this protocol.
+    """
+
+    @property
+    def reference(self) -> Reference | None:
+        """Return the reference associated with this object."""
+        ...
 
 
 class _BaseModel(BaseModel):
@@ -104,8 +131,8 @@ class Reference(_BaseModel):
     name: str
     duplicate_name: Optional[str] = None  # noqa: UP045
     loaded: bool = True
-    source: Optional[Any] = None  # noqa: UP045
-    children: list[Any] = []
+    source: Optional[ReferenceChild] = None  # noqa: UP045
+    children: list[ReferenceChild] = Field(default_factory=list)
     _exclude_fields: ClassVar[set[str]] = {"children"}
 
     @model_validator(mode="before")
@@ -555,8 +582,7 @@ class ModelResolver:  # noqa: PLR0904
     def add_ref(self, ref: str, resolved: bool = False) -> Reference:  # noqa: FBT001, FBT002
         """Add a reference and return the Reference object."""
         path = self.resolve_ref(ref) if not resolved else ref
-        reference = self.references.get(path)
-        if reference:
+        if reference := self.references.get(path):
             return reference
         split_ref = ref.rsplit("/", 1)
         if len(split_ref) == 1:
@@ -576,15 +602,11 @@ class ModelResolver:  # noqa: PLR0904
 
     def _check_parent_scope_option(self, name: str, path: Sequence[str]) -> str:
         if self.parent_scoped_naming:
-            parent_reference = None
             parent_path = path[:-1]
             while parent_path:
-                parent_reference = self.references.get(self.join_path(parent_path))
-                if parent_reference is not None:
-                    break
+                if parent_reference := self.references.get(self.join_path(parent_path)):
+                    return f"{parent_reference.name}_{name}"
                 parent_path = parent_path[:-1]
-            if parent_reference:
-                name = f"{parent_reference.name}_{name}"
         return name
 
     def add(  # noqa: PLR0913

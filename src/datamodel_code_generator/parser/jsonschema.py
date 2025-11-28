@@ -21,8 +21,10 @@ from pydantic import (
 
 from datamodel_code_generator import (
     InvalidClassNameError,
+    YamlValue,
     load_yaml,
-    load_yaml_from_path,
+    load_yaml_dict,
+    load_yaml_dict_from_path,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import (
@@ -79,28 +81,29 @@ def unescape_json_pointer_segment(segment: str) -> str:
     return unquote(segment.replace("~1", "/").replace("~0", "~"))
 
 
-def get_model_by_path(schema: dict[str, Any] | list[Any], keys: list[str] | list[int]) -> dict[Any, Any]:
+def get_model_by_path(
+    schema: dict[str, YamlValue] | list[YamlValue], keys: list[str] | list[int]
+) -> dict[str, YamlValue]:
     """Retrieve a model from schema by traversing the given path keys."""
-    model: dict[Any, Any] | list[Any]
     if not keys:
-        model = schema
-    else:
-        # Unescape the key if it's a string (JSON pointer segment)
-        key = keys[0]
-        if isinstance(key, str):
-            key = unescape_json_pointer_segment(key)
-        if len(keys) == 1:
-            model = schema.get(str(key), {}) if isinstance(schema, dict) else schema[int(key)]
-        elif isinstance(schema, dict):
-            model = get_model_by_path(schema[str(key)], keys[1:])
-        else:
-            model = get_model_by_path(schema[int(key)], keys[1:])
-    if isinstance(model, dict):
-        return model
-    msg = f"Does not support json pointer to array. schema={schema}, key={keys}"
-    raise NotImplementedError(  # pragma: no cover
-        msg
-    )
+        if isinstance(schema, dict):
+            return schema
+        msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
+        raise NotImplementedError(msg)  # pragma: no cover
+    # Unescape the key if it's a string (JSON pointer segment)
+    key = keys[0]
+    if isinstance(key, str):  # pragma: no branch
+        key = unescape_json_pointer_segment(key)
+    value = schema.get(str(key), {}) if isinstance(schema, dict) else schema[int(key)]
+    if len(keys) == 1:
+        if isinstance(value, dict):
+            return value
+        msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
+        raise NotImplementedError(msg)  # pragma: no cover
+    if isinstance(value, (dict, list)):
+        return get_model_by_path(value, keys[1:])
+    msg = f"Cannot traverse non-container value. schema={schema}, key={keys}"  # pragma: no cover
+    raise NotImplementedError(msg)  # pragma: no cover
 
 
 # TODO: This dictionary contains formats valid only for OpenAPI and not for
@@ -399,8 +402,7 @@ def _get_type(type_: str, format__: str | None = None) -> Types:
     """Get the appropriate Types enum for a given JSON Schema type and format."""
     if type_ not in json_schema_data_formats:
         return Types.any
-    data_formats: Types | None = json_schema_data_formats[type_].get("default" if format__ is None else format__)
-    if data_formats is not None:
+    if (data_formats := json_schema_data_formats[type_].get("default" if format__ is None else format__)) is not None:
         return data_formats
 
     warn(f"format of {format__!r} not understood for {type_!r} - using default", stacklevel=2)
@@ -607,8 +609,8 @@ class JsonSchemaParser(Parser):
             parent_scoped_naming=parent_scoped_naming,
         )
 
-        self.remote_object_cache: DefaultPutDict[str, dict[str, Any]] = DefaultPutDict()
-        self.raw_obj: dict[Any, Any] = {}
+        self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
+        self.raw_obj: dict[str, YamlValue] = {}
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
@@ -1570,20 +1572,20 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
 
-    def _get_ref_body(self, resolved_ref: str) -> dict[Any, Any]:
+    def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
-    def _get_ref_body_from_url(self, ref: str) -> dict[Any, Any]:
+    def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
         """Get reference body from a URL."""
         # URL Reference: $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
         return self.remote_object_cache.get_or_put(
-            ref, default_factory=lambda key: load_yaml(self._get_text_from_url(key))
+            ref, default_factory=lambda key: load_yaml_dict(self._get_text_from_url(key))
         )
 
-    def _get_ref_body_from_remote(self, resolved_ref: str) -> dict[Any, Any]:
+    def _get_ref_body_from_remote(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get reference body from a remote file path."""
         # Remote Reference: $ref: 'document.json' Uses the whole document located on the same server and in
         # the same location. TODO treat edge case
@@ -1591,7 +1593,7 @@ class JsonSchemaParser(Parser):
 
         return self.remote_object_cache.get_or_put(
             str(full_path),
-            default_factory=lambda _: load_yaml_from_path(full_path, self.encoding),
+            default_factory=lambda _: load_yaml_dict_from_path(full_path, self.encoding),
         )
 
     def resolve_ref(self, object_ref: str) -> Reference:
@@ -1687,16 +1689,15 @@ class JsonSchemaParser(Parser):
     @contextmanager
     def root_id_context(self, root_raw: dict[str, Any]) -> Generator[None, None, None]:
         """Context manager to temporarily set the root $id during parsing."""
-        root_id: str | None = root_raw.get("$id")
-        previous_root_id: str | None = self.root_id
-        self.root_id = root_id or None
+        previous_root_id = self.root_id
+        self.root_id = root_raw.get("$id") or None
         yield
         self.root_id = previous_root_id
 
     def parse_raw_obj(
         self,
         name: str,
-        raw: dict[str, Any],
+        raw: dict[str, YamlValue] | YamlValue,
         path: list[str],
     ) -> None:
         """Parse a raw dictionary into a JsonSchemaObject and process it."""
@@ -1756,18 +1757,21 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
         for source, path_parts in self._get_context_source_path_parts():
-            self.raw_obj = load_yaml(source.text)
-            if self.raw_obj is None:  # pragma: no cover
-                warn(f"{source.path} is empty. Skipping this file", stacklevel=2)
+            raw_obj = load_yaml(source.text)
+            if not isinstance(raw_obj, dict):  # pragma: no cover
+                warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
                 continue
+            self.raw_obj = raw_obj
+            title = self.raw_obj.get("title")
+            title_str = str(title) if title is not None else "Model"
             if self.custom_class_name_generator:
-                obj_name = self.raw_obj.get("title", "Model")
+                obj_name = title_str
             else:
                 if self.class_name:
                     obj_name = self.class_name
                 else:
                     # backward compatible
-                    obj_name = self.raw_obj.get("title", "Model")
+                    obj_name = title_str
                     if not self.model_resolver.validate_name(obj_name):
                         obj_name = title_to_class_name(obj_name)
                 if not self.model_resolver.validate_name(obj_name):
@@ -1781,8 +1785,7 @@ class JsonSchemaParser(Parser):
         model_count: int = len(self.results)
         for source in self.iter_source:
             path_parts = list(source.path.parts)
-            reserved_refs = self.reserved_refs.get(tuple(path_parts))
-            if not reserved_refs:
+            if not (reserved_refs := self.reserved_refs.get(tuple(path_parts))):
                 continue
             if self.current_source_path is not None:
                 self.current_source_path = source.path
@@ -1795,14 +1798,14 @@ class JsonSchemaParser(Parser):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
                     # for root model
-                    self.raw_obj = load_yaml(source.text)
+                    self.raw_obj = load_yaml_dict(source.text)
                     self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
 
         if model_count != len(self.results):
             # New model have been generated. It try to resolve json pointer again.
             self._resolve_unparsed_json_pointer()
 
-    def parse_json_pointer(self, raw: dict[str, Any], ref: str, path_parts: list[str]) -> None:
+    def parse_json_pointer(self, raw: dict[str, YamlValue], ref: str, path_parts: list[str]) -> None:
         """Parse a JSON pointer reference into a model."""
         path = ref.split("#", 1)[-1]
         if path[0] == "/":  # pragma: no cover
@@ -1813,7 +1816,7 @@ class JsonSchemaParser(Parser):
 
         self.parse_raw_obj(model_name, models, [*path_parts, f"#/{object_paths[0]}", *object_paths[1:]])
 
-    def _parse_file(  # noqa: PLR0912
+    def _parse_file(
         self,
         raw: dict[str, Any],
         obj_name: str,
@@ -1831,17 +1834,14 @@ class JsonSchemaParser(Parser):
                 # parse $id before parsing $ref
                 root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
-                definitions: dict[Any, Any] | None = None
+                definitions: dict[str, YamlValue] = {}
                 _schema_path = ""
                 for _schema_path, split_schema_path in self.schema_paths:
                     try:
-                        definitions = get_model_by_path(raw, split_schema_path)
-                        if definitions:
+                        if definitions := get_model_by_path(raw, split_schema_path):
                             break
                     except KeyError:
                         continue
-                if definitions is None:
-                    definitions = {}
 
                 for key, model in definitions.items():
                     obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)

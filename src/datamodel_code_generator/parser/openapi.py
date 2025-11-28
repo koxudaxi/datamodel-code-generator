@@ -21,7 +21,8 @@ from datamodel_code_generator import (
     OpenAPIScope,
     PythonVersion,
     PythonVersionMin,
-    load_yaml,
+    YamlValue,
+    load_yaml_dict,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
@@ -87,7 +88,7 @@ class ExampleObject(BaseModel):
 
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
-    value: Any = None
+    value: YamlValue = None
     externalValue: Optional[str] = None  # noqa: N815, UP045
 
 
@@ -95,7 +96,7 @@ class MediaObject(BaseModel):
     """Represent an OpenAPI media type object."""
 
     schema_: Optional[Union[ReferenceObject, JsonSchemaObject]] = Field(None, alias="schema")  # noqa: UP007, UP045
-    example: Any = None
+    example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
 
 
@@ -108,7 +109,7 @@ class ParameterObject(BaseModel):
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
-    example: Any = None
+    example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
     content: dict[str, MediaObject] = {}  # noqa: RUF012
 
@@ -120,7 +121,7 @@ class HeaderObject(BaseModel):
     required: bool = False
     deprecated: bool = False
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
-    example: Any = None
+    example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
     content: dict[str, MediaObject] = {}  # noqa: RUF012
 
@@ -639,22 +640,19 @@ class OpenAPIParser(JsonSchemaParser):
                         stacklevel=2,
                     )
 
-            specification: dict[str, Any] = load_yaml(source.text)
+            specification: dict[str, Any] = load_yaml_dict(source.text)
             self.raw_obj = specification
-            schemas: dict[Any, Any] = specification.get("components", {}).get("schemas", {})
+            schemas: dict[str, Any] = specification.get("components", {}).get("schemas", {})
             security: list[dict[str, list[str]]] | None = specification.get("security")
             if OpenAPIScope.Schemas in self.open_api_scopes:
-                for (
-                    obj_name,
-                    raw_obj,
-                ) in schemas.items():
+                for obj_name, raw_obj in schemas.items():
                     self.parse_raw_obj(
                         obj_name,
                         raw_obj,
                         [*path_parts, "#/components", "schemas", obj_name],
                     )
             if OpenAPIScope.Paths in self.open_api_scopes:
-                paths: dict[str, dict[str, Any]] = specification.get("paths", {})
+                paths: dict[str, Any] = specification.get("paths", {})
                 parameters: list[dict[str, Any]] = [
                     self._get_ref_body(p["$ref"]) if "$ref" in p else p
                     for p in paths.get("parameters", [])

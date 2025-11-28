@@ -56,6 +56,8 @@ if TYPE_CHECKING:
     import builtins
     from collections.abc import Iterable, Iterator, Sequence
 
+    from datamodel_code_generator.model.base import DataModelFieldBase
+
 if PYDANTIC_V2:
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import core_schema
@@ -313,9 +315,14 @@ class DataType(_BaseModel):
         if not TYPE_CHECKING:
 
             @classmethod
-            def model_rebuild(cls) -> None:
+            def model_rebuild(
+                cls,
+                *,
+                _types_namespace: dict[str, type] | None = None,
+            ) -> None:
                 """Update forward references for Pydantic v1."""
-                cls.update_forward_refs()
+                localns = _types_namespace or {}
+                cls.update_forward_refs(**localns)
 
         class Config:
             """Pydantic v1 model configuration."""
@@ -340,8 +347,8 @@ class DataType(_BaseModel):
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None  # noqa: UP045
-    parent: Optional[Any] = None  # noqa: UP045
-    children: list[Any] = []  # noqa: RUF012
+    parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
+    children: list[DataType] = []  # noqa: RUF012
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
     treat_dot_as_module: bool = False
@@ -578,8 +585,6 @@ class DataType(_BaseModel):
         """Return whether this DataType represents a union of multiple types."""
         return len(self.data_types) > 1
 
-
-DataType.model_rebuild()
 
 DataTypeT = TypeVar("DataTypeT", bound=DataType)
 
