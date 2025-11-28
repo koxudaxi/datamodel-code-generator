@@ -12,14 +12,7 @@ from freezegun import freeze_time
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit
 from tests.conftest import create_assert_file_content
-from tests.main.conftest import (
-    run_main_and_assert,
-    run_main_and_assert_directory,
-    run_main_and_assert_error,
-    run_main_and_assert_output,
-    run_main_and_assert_stdout,
-    run_main_with_args,
-)
+from tests.main.conftest import run_main_and_assert, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -93,7 +86,7 @@ def test_target_python_version(output_file: Path) -> None:
 def test_main_modular(output_dir: Path) -> None:
     """Test main function on modular file."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_MAIN_KR_PATH / "main_modular",
@@ -107,9 +100,10 @@ def test_main_modular_no_file() -> None:
 
 def test_main_modular_filename(output_file: Path) -> None:
     """Test main function on modular file with filename."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_file,
+        expected_exit=Exit.ERROR,
     )
 
 
@@ -118,9 +112,10 @@ def test_main_no_file(capsys: pytest.CaptureFixture[str], tmp_path: Path, monkey
     monkeypatch.chdir(tmp_path)
 
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_stdout(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
-            expected_output_path=EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py",
+            output_path=None,
+            expected_stdout_path=EXPECTED_MAIN_KR_PATH / "main_no_file" / "output.py",
             capsys=capsys,
             expected_stderr=inferred_message.format("openapi") + "\n",
         )
@@ -136,9 +131,10 @@ def test_main_custom_template_dir(
     extra_template_data = OPEN_API_DATA_PATH / "extra_data.json"
 
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_stdout(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
-            expected_output_path=EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py",
+            output_path=None,
+            expected_stdout_path=EXPECTED_MAIN_KR_PATH / "main_custom_template_dir" / "output.py",
             capsys=capsys,
             extra_args=[
                 "--custom-template-dir",
@@ -217,7 +213,7 @@ class MyEnum(Enum):
 """
 
     output_file: Path = tmp_path / "output.py"
-    run_main_and_assert_output(
+    run_main_and_assert(
         input_path=input_file,
         output_path=output_file,
         expected_output=expected_output,
@@ -325,7 +321,7 @@ class EnumSystems(Enum):
 """
 
     output_file: Path = tmp_path / "output.py"
-    run_main_and_assert_output(
+    run_main_and_assert(
         input_path=input_file,
         output_path=output_file,
         expected_output=expected_output,
@@ -376,7 +372,7 @@ class EnumSystems(str, Enum):
 """
 
     output_file: Path = tmp_path / "output.py"
-    run_main_and_assert_output(
+    run_main_and_assert(
         input_path=input_file,
         output_path=output_file,
         expected_output=expected_output,

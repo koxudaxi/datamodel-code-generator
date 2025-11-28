@@ -30,13 +30,6 @@ from tests.main.conftest import (
     JSON_SCHEMA_DATA_PATH,
     TIMESTAMP,
     run_main_and_assert,
-    run_main_and_assert_directory,
-    run_main_and_assert_error,
-    run_main_and_assert_file_not_exists,
-    run_main_and_assert_files,
-    run_main_and_assert_no_stderr,
-    run_main_and_assert_output,
-    run_main_and_assert_stdin,
     run_main_url_and_assert,
     run_main_with_args,
 )
@@ -100,10 +93,11 @@ def test_main_autodetect_failed(tmp_path: Path) -> None:
     input_file: Path = tmp_path / "input.yaml"
     output_file: Path = tmp_path / "output.py"
     input_file.write_text(":", encoding="utf-8")
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=input_file,
         output_path=output_file,
         input_file_type="auto",
+        expected_exit=Exit.ERROR,
     )
 
 
@@ -121,7 +115,7 @@ def test_main_jsonschema(output_file: Path) -> None:
 @pytest.mark.benchmark
 def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     """Test deeply nested JSON Schema generation."""
-    run_main_and_assert_files(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "nested_person.json",
         output_path=tmp_path,
         output_to_expected=[
@@ -139,7 +133,7 @@ def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
 
 def test_main_jsonschema_nested_skip(output_dir: Path) -> None:
     """Test nested JSON Schema with skipped items."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "nested_skip.json",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "nested_skip",
@@ -162,7 +156,7 @@ def test_main_jsonschema_external_files(output_file: Path) -> None:
 @pytest.mark.benchmark
 def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
     """Test collapsed external references in JSON Schema."""
-    run_main_and_assert_files(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_reference",
         output_path=tmp_path,
         output_to_expected=[
@@ -178,7 +172,7 @@ def test_main_jsonschema_collapsed_external_references(tmp_path: Path) -> None:
 @pytest.mark.benchmark
 def test_main_jsonschema_multiple_files(output_dir: Path) -> None:
     """Test JSON Schema generation from multiple files."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "multiple_files",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "multiple_files",
@@ -189,7 +183,7 @@ def test_main_jsonschema_multiple_files(output_dir: Path) -> None:
 @pytest.mark.benchmark
 def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> None:
     """Test no empty files with collapsed external models."""
-    run_main_and_assert_file_not_exists(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_collapse",
         output_path=tmp_path,
         file_should_not_exist=tmp_path / "child.py",
@@ -285,11 +279,12 @@ def test_main_json_reuse_enum_default_member(output_file: Path) -> None:
 
 def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test invalid model name error handling."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_model_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--class-name", "with"],
+        expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="title='with' is invalid class name. You have to set `--class-name` option",
     )
@@ -297,10 +292,11 @@ def test_main_invalid_model_name_failed(capsys: pytest.CaptureFixture[str], outp
 
 def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test invalid model name conversion error."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_model_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="title='1Xyz' is invalid class name. You have to set `--class-name` option",
     )
@@ -460,7 +456,7 @@ def test_main_jsonschema_id(output_file: Path) -> None:
 
 def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
     """Test JSON Schema ID handling from stdin."""
-    run_main_and_assert_stdin(
+    run_main_and_assert(
         stdin_path=JSON_SCHEMA_DATA_PATH / "id.json",
         output_path=output_file,
         monkeypatch=monkeypatch,
@@ -473,7 +469,7 @@ def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, output_fil
 def test_main_jsonschema_ids(output_dir: Path) -> None:
     """Test JSON Schema with multiple IDs."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=JSON_SCHEMA_DATA_PATH / "ids" / "Organization.schema.json",
             output_path=output_dir,
             expected_directory=EXPECTED_JSON_SCHEMA_PATH / "ids",
@@ -504,7 +500,7 @@ def test_main_external_files_in_directory(output_file: Path) -> None:
 
 def test_main_nested_directory(output_dir: Path) -> None:
     """Test nested directory structure generation."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_files_in_directory",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "nested_directory",
@@ -601,7 +597,7 @@ def test_main_similar_nested_array(output_file: Path) -> None:
 )
 def test_main_require_referenced_field(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test required referenced fields."""
-    run_main_and_assert_files(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         output_to_expected=[
@@ -629,7 +625,7 @@ def test_main_require_referenced_field(output_model: str, expected_output: str, 
 )
 def test_main_require_referenced_field_naive_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test required referenced field with naive datetime."""
-    run_main_and_assert_files(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         output_to_expected=[
@@ -661,7 +657,7 @@ def test_main_require_referenced_field_naive_datetime(output_model: str, expecte
 )
 def test_main_require_referenced_field_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test required referenced field with datetime."""
-    run_main_and_assert_files(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         output_to_expected=[
@@ -696,7 +692,7 @@ def test_main_nested_json_pointer(output_file: Path) -> None:
 
 def test_main_jsonschema_multiple_files_json_pointer(output_dir: Path) -> None:
     """Test JSON pointer with multiple files."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "multiple_files_json_pointer",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "multiple_files_json_pointer",
@@ -749,7 +745,7 @@ def test_main_root_model_with_additional_properties_literal(min_version: str, ou
 
 def test_main_jsonschema_multiple_files_ref(output_dir: Path) -> None:
     """Test multiple files with references."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "multiple_files_self_ref",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "multiple_files_self_ref",
@@ -1632,7 +1628,7 @@ def test_main_jsonschema_boolean_property(output_file: Path) -> None:
 def test_main_jsonschema_modular_default_enum_member(output_dir: Path) -> None:
     """Test modular enum with default member."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=JSON_SCHEMA_DATA_PATH / "modular_default_enum_member",
             output_path=output_dir,
             expected_directory=EXPECTED_JSON_SCHEMA_PATH / "modular_default_enum_member",
@@ -1646,7 +1642,7 @@ def test_main_jsonschema_modular_default_enum_member(output_dir: Path) -> None:
 )
 def test_main_use_union_operator(output_dir: Path) -> None:
     """Test union operator usage."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_files_in_directory",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "use_union_operator",
@@ -1660,7 +1656,7 @@ def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
     """Test dot notation as module separator."""
     path_extension = "treat_dot_as_module" if as_module else "treat_dot_not_as_module"
     extra_args = ["--treat-dot-as-module"] if as_module else None
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / path_extension,
@@ -1670,7 +1666,7 @@ def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
 
 def test_main_jsonschema_duplicate_name(output_dir: Path) -> None:
     """Test duplicate name handling."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_name",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "duplicate_name",
@@ -1747,10 +1743,11 @@ def test_main_jsonschema_json_pointer_array(output_file: Path) -> None:
 @pytest.mark.filterwarnings("error")
 def test_main_disable_warnings_config(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test disable warnings configuration."""
-    run_main_and_assert_no_stderr(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         capsys=capsys,
+        assert_no_stderr=True,
         input_file_type="jsonschema",
         extra_args=[
             "--use-union-operator",
@@ -1764,10 +1761,11 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture[str], output
 @pytest.mark.filterwarnings("error")
 def test_main_disable_warnings(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test disable warnings flag."""
-    run_main_and_assert_no_stderr(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_with_object.json",
         output_path=output_file,
         capsys=capsys,
+        assert_no_stderr=True,
         input_file_type="jsonschema",
         extra_args=["--disable-warnings"],
     )
@@ -1854,7 +1852,7 @@ def test_main_nested_all_of(output_file: Path) -> None:
 
 def test_main_all_of_any_of(output_dir: Path) -> None:
     """Test combination of allOf and anyOf."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_any_of",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "all_of_any_of",
@@ -1864,7 +1862,7 @@ def test_main_all_of_any_of(output_dir: Path) -> None:
 
 def test_main_all_of_one_of(output_dir: Path) -> None:
     """Test combination of allOf and oneOf."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_one_of",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "all_of_one_of",
@@ -2041,7 +2039,7 @@ def test_main_jsonschema_external_discriminator_folder(
     output_model: str, expected_output: str, min_version: str, output_dir: Path
 ) -> None:
     """Test external discriminator in folder structure."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_external_reference",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_output,
@@ -2056,7 +2054,7 @@ def test_main_jsonschema_external_discriminator_folder(
 
 def test_main_duplicate_field_constraints(output_dir: Path) -> None:
     """Test duplicate field constraint handling."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_field_constraints",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "duplicate_field_constraints",
@@ -2075,7 +2073,7 @@ def test_main_duplicate_field_constraints(output_dir: Path) -> None:
 )
 def test_main_duplicate_field_constraints_msgspec(min_version: str, output_dir: Path) -> None:
     """Test duplicate field constraints with msgspec."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_field_constraints",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "duplicate_field_constraints_msgspec",
@@ -2152,7 +2150,7 @@ def test_all_of_use_default(output_file: Path) -> None:
 
 def test_main_root_one_of(output_dir: Path) -> None:
     """Test root-level oneOf schemas."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_one_of",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "root_one_of",
@@ -2195,7 +2193,7 @@ def test_main_jsonschema_with_custom_formatters(output_file: Path, tmp_path: Pat
 
 def test_main_imports_correct(output_dir: Path) -> None:
     """Test correct import generation."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "imports_correct",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "imports_correct",
@@ -2302,7 +2300,7 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
 
 def test_main_invalid_import_name(output_dir: Path) -> None:
     """Test invalid import name handling."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_import_name",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "invalid_import_name",
@@ -2380,7 +2378,7 @@ def test_main_json_pointer_escaped_segments(tmp_path: Path) -> None:
     input_file = tmp_path / "input.json"
     output_file = tmp_path / "output.py"
     input_file.write_text(json.dumps(schema))
-    run_main_and_assert_output(
+    run_main_and_assert(
         input_path=input_file,
         output_path=output_file,
         expected_output=expected,
@@ -2425,7 +2423,7 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
     input_file = tmp_path / "input.json"
     output_file = tmp_path / "output.py"
     input_file.write_text(json.dumps(schema))
-    run_main_and_assert_output(
+    run_main_and_assert(
         input_path=input_file,
         output_path=output_file,
         expected_output=expected,
@@ -2494,7 +2492,7 @@ def test_main_jsonschema_same_name_objects(output_file: Path) -> None:
 
 def test_main_jsonschema_forwarding_reference_collapse_root(output_dir: Path) -> None:
     """Test forwarding reference with collapsed root (see issue #1466)."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "forwarding_reference",
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "forwarding_reference",

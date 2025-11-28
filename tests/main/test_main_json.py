@@ -10,12 +10,12 @@ import pytest
 from packaging import version
 
 from datamodel_code_generator import chdir
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import create_assert_file_content
 from tests.main.conftest import (
     EXPECTED_JSON_PATH,
     JSON_DATA_PATH,
     run_main_and_assert,
-    run_main_and_assert_error,
     run_main_url_and_assert,
 )
 
@@ -50,12 +50,15 @@ def test_space_and_special_characters_json(output_file: Path) -> None:
     )
 
 
-def test_main_json_failed(output_file: Path) -> None:
+def test_main_json_failed(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test JSON code generation with broken input file."""
-    run_main_and_assert_error(
-        JSON_DATA_PATH / "broken.json",
-        output_file,
-        "json",
+    run_main_and_assert(
+        input_path=JSON_DATA_PATH / "broken.json",
+        output_path=output_file,
+        input_file_type="json",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Invalid file format",
     )
 
 

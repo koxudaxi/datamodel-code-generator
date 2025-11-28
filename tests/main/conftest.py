@@ -73,6 +73,49 @@ def _copy_files(copy_files: CopyFilesMapping | None) -> None:
             shutil.copy(src, dst)
 
 
+def _run_main(
+    input_path: Path,
+    output_path: Path,
+    input_file_type: InputFileTypeLiteral | None = None,
+    *,
+    extra_args: Sequence[str] | None = None,
+    copy_files: CopyFilesMapping | None = None,
+) -> Exit:
+    """Execute main() with standard arguments (internal use)."""
+    _copy_files(copy_files)
+
+    args = [
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+    ]
+
+    if input_file_type is not None:
+        args.extend(["--input-file-type", input_file_type])
+
+    if extra_args is not None:
+        args.extend(extra_args)
+
+    return main(args)
+
+
+def _run_main_url(
+    url: str,
+    output_path: Path,
+    input_file_type: InputFileTypeLiteral | None = None,
+    *,
+    extra_args: Sequence[str] | None = None,
+) -> Exit:
+    """Execute main() with URL input (internal use)."""
+    args = ["--url", url, "--output", str(output_path)]
+    if input_file_type is not None:
+        args.extend(["--input-file-type", input_file_type])
+    if extra_args is not None:
+        args.extend(extra_args)
+    return main(args)
+
+
 def run_main_with_args(
     args: Sequence[str],
     *,
@@ -100,72 +143,145 @@ def run_main_with_args(
     return return_code
 
 
-def run_main(
-    input_path: Path,
-    output_path: Path,
+def run_main_and_assert(  # noqa: PLR0912
+    *,
+    input_path: Path | None = None,
+    output_path: Path | None = None,
     input_file_type: InputFileTypeLiteral | None = None,
-    *,
     extra_args: Sequence[str] | None = None,
-    copy_files: CopyFilesMapping | None = None,
-) -> Exit:
-    """Execute main() with standard arguments.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output file/directory
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments (e.g., ["--keyword-only", "--target-python-version", "3.10"])
-        copy_files: Files to copy before running (list of (source, destination) tuples)
-
-    Returns:
-        Exit code from main()
-    """
-    _copy_files(copy_files)
-
-    args = [
-        "--input",
-        str(input_path),
-        "--output",
-        str(output_path),
-    ]
-
-    if input_file_type is not None:
-        args.extend(["--input-file-type", input_file_type])
-
-    if extra_args is not None:
-        args.extend(extra_args)
-
-    return main(args)
-
-
-def run_main_and_assert(
-    *,
-    input_path: Path,
-    output_path: Path,
-    input_file_type: InputFileTypeLiteral | None,
-    assert_func: AssertFileContent,
-    expected_file: str | Path | None = None,
     expected_exit: Exit = Exit.OK,
-    extra_args: Sequence[str] | None = None,
+    # Output verification options (use one)
+    assert_func: AssertFileContent | None = None,
+    expected_file: str | Path | None = None,
+    expected_output: str | None = None,
+    expected_directory: Path | None = None,
+    output_to_expected: Sequence[tuple[str, str | Path]] | None = None,
+    file_should_not_exist: Path | None = None,
+    # Verification options
+    ignore_whitespace: bool = False,
     transform: Callable[[str], str] | None = None,
+    # Capture options
+    capsys: pytest.CaptureFixture[str] | None = None,
+    expected_stdout_path: Path | None = None,
+    expected_stderr: str | None = None,
+    expected_stderr_contains: str | None = None,
+    assert_no_stderr: bool = False,
+    # Other options
     copy_files: CopyFilesMapping | None = None,
+    # stdin options
+    stdin_path: Path | None = None,
+    monkeypatch: pytest.MonkeyPatch | None = None,
 ) -> None:
-    """Execute main() and assert success with file content check.
+    """Execute main() and assert output.
 
-    Args:
+    This is the unified helper function for testing file-based input.
+
+    Input options:
         input_path: Path to input schema file
-        output_path: Path to output file/directory
+        stdin_path: Path to file that will be used as stdin (requires monkeypatch)
+        monkeypatch: pytest monkeypatch fixture for mocking stdin
+
+    Output options:
+        output_path: Path to output file/directory (None for stdout-only tests)
+
+    Common options:
         input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        assert_func: The assert_file_content function to use for verification
-        expected_file: Expected output filename (optional, inferred from test name if None)
+        extra_args: Additional CLI arguments
         expected_exit: Expected exit code (default: Exit.OK)
-        extra_args: Additional CLI arguments (e.g., ["--keyword-only"])
-        transform: Optional function to transform output before comparison
-        copy_files: Files to copy before running (list of (source, destination) tuples)
+        copy_files: Files to copy before running
+
+    Output verification (use one):
+        assert_func + expected_file: Compare with expected file using assert function
+        expected_output: Compare with string directly
+        expected_directory: Compare entire directory
+        output_to_expected: Compare multiple files
+        file_should_not_exist: Assert a file does NOT exist
+
+    Verification modifiers:
+        ignore_whitespace: Ignore whitespace when comparing (for expected_output)
+        transform: Transform output before comparison
+
+    Capture verification:
+        capsys: pytest capsys fixture
+        expected_stdout_path: Compare stdout with file
+        expected_stderr: Assert exact stderr match
+        expected_stderr_contains: Assert stderr contains string
+        assert_no_stderr: Assert stderr is empty
     """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args, copy_files=copy_files)
+    # Handle stdin input
+    if stdin_path is not None:
+        assert monkeypatch is not None, "monkeypatch is required when using stdin_path"
+        monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
+        args: list[str] = []
+        if output_path is not None:
+            args.extend(["--output", str(output_path)])
+        if input_file_type is not None:
+            args.extend(["--input-file-type", input_file_type])
+        if extra_args is not None:
+            args.extend(extra_args)
+        return_code = main(args)
+    # Handle stdout-only output (no output_path)
+    elif output_path is None:
+        assert input_path is not None, "input_path is required when output_path is None"
+        args = ["--input", str(input_path)]
+        if input_file_type is not None:
+            args.extend(["--input-file-type", input_file_type])
+        if extra_args is not None:
+            args.extend(extra_args)
+        return_code = main(args)
+    # Standard file input
+    else:
+        assert input_path is not None, "input_path is required"
+        return_code = _run_main(input_path, output_path, input_file_type, extra_args=extra_args, copy_files=copy_files)
+
+    # Assert exit code
     assert return_code == expected_exit
-    if expected_exit == Exit.OK:
+
+    # Handle capture assertions
+    if capsys is not None and (
+        expected_stdout_path is not None
+        or expected_stderr is not None
+        or expected_stderr_contains is not None
+        or assert_no_stderr
+    ):
+        captured = capsys.readouterr()
+        if expected_stdout_path is not None:
+            assert_output(captured.out, expected_stdout_path)
+        if expected_stderr is not None:
+            assert captured.err == expected_stderr
+        if expected_stderr_contains is not None:
+            assert expected_stderr_contains in captured.err
+        if assert_no_stderr:
+            assert not captured.err
+
+    # Skip output verification if expected_exit is not OK
+    if expected_exit != Exit.OK:
+        return
+
+    # Output verification
+    if expected_directory is not None:
+        assert output_path is not None
+        assert_directory_content(output_path, expected_directory)
+    elif output_to_expected is not None:
+        assert output_path is not None
+        assert assert_func is not None, "assert_func is required when using output_to_expected"
+        for output_relative, exp_file in output_to_expected:
+            assert_func(output_path / output_relative, exp_file)
+    elif expected_output is not None:
+        assert output_path is not None
+        actual_output = output_path.read_text(encoding="utf-8")
+        if ignore_whitespace:
+            assert "".join(actual_output.split()) == "".join(expected_output.split()), (
+                f"\nExpected output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
+            )
+        else:
+            assert actual_output == expected_output, (
+                f"\nExpected output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
+            )
+    elif file_should_not_exist is not None:
+        assert not file_should_not_exist.exists()
+    elif assert_func is not None:
+        assert output_path is not None
         if expected_file is None:
             frame = inspect.currentframe()
             assert frame is not None
@@ -178,161 +294,6 @@ def run_main_and_assert(
                     break
             expected_file = f"{func_name}.py"
         assert_func(output_path, expected_file, transform=transform)
-
-
-def run_main_and_assert_directory(
-    *,
-    input_path: Path,
-    output_path: Path,
-    expected_directory: Path,
-    input_file_type: InputFileTypeLiteral | None = None,
-    extra_args: Sequence[str] | None = None,
-) -> None:
-    """Execute main() and assert directory output matches expected.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output directory
-        expected_directory: Path to directory with expected files
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-    """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
-    assert return_code == Exit.OK
-    assert_directory_content(output_path, expected_directory)
-
-
-OutputToExpectedMapping = Sequence[tuple[str, str | Path]]
-
-
-def run_main_and_assert_files(
-    *,
-    input_path: Path,
-    output_path: Path,
-    output_to_expected: OutputToExpectedMapping,
-    assert_func: AssertFileContent,
-    input_file_type: InputFileTypeLiteral | None = None,
-    extra_args: Sequence[str] | None = None,
-) -> None:
-    """Execute main() and assert specific output files match expected files.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output directory
-        output_to_expected: List of (output_relative_path, expected_file_path) tuples
-        assert_func: The assert_file_content function to use for verification
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-    """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
-    assert return_code == Exit.OK
-    for output_relative, expected_file in output_to_expected:
-        assert_func(output_path / output_relative, expected_file)
-
-
-def run_main_and_assert_stdout(
-    *,
-    input_path: Path,
-    expected_output_path: Path,
-    capsys: pytest.CaptureFixture[str],
-    input_file_type: InputFileTypeLiteral | None = None,
-    extra_args: Sequence[str] | None = None,
-    expected_stderr: str | None = None,
-) -> None:
-    """Execute main() without output file and assert stdout matches expected.
-
-    Args:
-        input_path: Path to input schema file
-        expected_output_path: Path to file with expected stdout content
-        capsys: pytest capsys fixture for capturing output
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-        expected_stderr: Expected stderr content (if any)
-    """
-    args = ["--input", str(input_path)]
-    if input_file_type is not None:
-        args.extend(["--input-file-type", input_file_type])
-    if extra_args is not None:
-        args.extend(extra_args)
-
-    main(args)
-    captured = capsys.readouterr()
-    assert_output(captured.out, expected_output_path)
-    if expected_stderr is not None:
-        assert captured.err == expected_stderr
-
-
-def run_main_and_assert_stdin(
-    *,
-    stdin_path: Path,
-    output_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    input_file_type: InputFileTypeLiteral | None = None,
-    assert_func: AssertFileContent,
-    expected_file: str | Path | None = None,
-    extra_args: Sequence[str] | None = None,
-    transform: Callable[[str], str] | None = None,
-) -> None:
-    """Execute main() with stdin input and assert output.
-
-    Args:
-        stdin_path: Path to file that will be used as stdin
-        output_path: Path to output file
-        monkeypatch: pytest monkeypatch fixture for mocking stdin
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        assert_func: The assert_file_content function to use for verification
-        expected_file: Expected output filename (optional, inferred from test name if None)
-        extra_args: Additional CLI arguments
-        transform: Optional function to transform output before comparison
-    """
-    monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
-    args = ["--output", str(output_path)]
-    if input_file_type is not None:
-        args.extend(["--input-file-type", input_file_type])
-    if extra_args is not None:
-        args.extend(extra_args)
-
-    return_code = main(args)
-    assert return_code == Exit.OK
-
-    if expected_file is None:
-        frame = inspect.currentframe()
-        assert frame is not None
-        assert frame.f_back is not None
-        func_name = frame.f_back.f_code.co_name
-        del frame
-        for prefix in ("test_main_", "test_"):
-            if func_name.startswith(prefix):
-                func_name = func_name[len(prefix) :]
-                break
-        expected_file = f"{func_name}.py"
-    assert_func(output_path, expected_file, transform=transform)
-
-
-def run_main_url(
-    url: str,
-    output_path: Path,
-    input_file_type: InputFileTypeLiteral | None = None,
-    *,
-    extra_args: Sequence[str] | None = None,
-) -> Exit:
-    """Execute main() with URL input.
-
-    Args:
-        url: URL to fetch schema from
-        output_path: Path to output file/directory
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-
-    Returns:
-        Exit code from main()
-    """
-    args = ["--url", url, "--output", str(output_path)]
-    if input_file_type is not None:
-        args.extend(["--input-file-type", input_file_type])
-    if extra_args is not None:
-        args.extend(extra_args)
-    return main(args)
 
 
 def run_main_url_and_assert(
@@ -356,7 +317,7 @@ def run_main_url_and_assert(
         extra_args: Additional CLI arguments
         transform: Optional function to transform output before comparison
     """
-    return_code = run_main_url(url, output_path, input_file_type, extra_args=extra_args)
+    return_code = _run_main_url(url, output_path, input_file_type, extra_args=extra_args)
     assert return_code == Exit.OK
 
     if expected_file is None:
@@ -371,107 +332,3 @@ def run_main_url_and_assert(
                 break
         expected_file = f"{func_name}.py"
     assert_func(output_path, expected_file, transform=transform)
-
-
-def run_main_and_assert_error(
-    input_path: Path,
-    output_path: Path,
-    input_file_type: InputFileTypeLiteral | None = None,
-    *,
-    extra_args: Sequence[str] | None = None,
-    capsys: pytest.CaptureFixture[str] | None = None,
-    expected_stderr_contains: str | None = None,
-) -> None:
-    """Execute main() and assert it returns an error.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output file/directory
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-        capsys: pytest capsys fixture for capturing output (required if expected_stderr_contains is set)
-        expected_stderr_contains: String that should be contained in stderr
-    """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
-    assert return_code == Exit.ERROR
-    if expected_stderr_contains is not None:
-        assert capsys is not None
-        captured = capsys.readouterr()
-        assert expected_stderr_contains in captured.err
-
-
-def run_main_and_assert_output(
-    *,
-    input_path: Path,
-    output_path: Path,
-    expected_output: str,
-    input_file_type: InputFileTypeLiteral | None = None,
-    extra_args: Sequence[str] | None = None,
-    ignore_whitespace: bool = False,
-) -> None:
-    """Execute main() and assert output matches expected string.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output file
-        expected_output: Expected output content as string
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-        ignore_whitespace: If True, compare outputs ignoring all whitespace
-    """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
-    assert return_code == Exit.OK
-    actual_output = output_path.read_text(encoding="utf-8")
-    if ignore_whitespace:
-        assert "".join(actual_output.split()) == "".join(expected_output.split()), (
-            f"\nExpected output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
-        )
-    else:
-        assert actual_output == expected_output, (
-            f"\nExpected output:\n{expected_output}\n\nGenerated output:\n{actual_output}"
-        )
-
-
-def run_main_and_assert_no_stderr(
-    *,
-    input_path: Path,
-    output_path: Path,
-    capsys: pytest.CaptureFixture[str],
-    input_file_type: InputFileTypeLiteral | None = None,
-    extra_args: Sequence[str] | None = None,
-) -> None:
-    """Execute main() and assert no stderr output.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output file
-        capsys: pytest capsys fixture for capturing output
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-    """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
-    captured = capsys.readouterr()
-    assert return_code == Exit.OK
-    assert not captured.err
-
-
-def run_main_and_assert_file_not_exists(
-    *,
-    input_path: Path,
-    output_path: Path,
-    file_should_not_exist: Path,
-    input_file_type: InputFileTypeLiteral | None = None,
-    extra_args: Sequence[str] | None = None,
-) -> None:
-    """Execute main() and assert a specific file does not exist.
-
-    Args:
-        input_path: Path to input schema file
-        output_path: Path to output directory
-        file_should_not_exist: Path to file that should NOT exist after generation
-        input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
-        extra_args: Additional CLI arguments
-    """
-    return_code = run_main(input_path, output_path, input_file_type, extra_args=extra_args)
-    assert return_code == Exit.OK
-    assert not file_should_not_exist.exists()

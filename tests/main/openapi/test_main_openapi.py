@@ -28,16 +28,13 @@ from datamodel_code_generator import (
     get_version,
     inferred_message,
 )
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content
 from tests.main.conftest import (
     DATA_PATH,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
     run_main_and_assert,
-    run_main_and_assert_directory,
-    run_main_and_assert_error,
-    run_main_and_assert_stdin,
-    run_main_and_assert_stdout,
     run_main_url_and_assert,
 )
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
@@ -145,7 +142,7 @@ def test_target_python_version(output_file: Path) -> None:
 def test_main_modular(output_dir: Path) -> None:
     """Test main function on modular file."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "modular",
@@ -155,7 +152,7 @@ def test_main_modular(output_dir: Path) -> None:
 def test_main_modular_reuse_model(output_dir: Path) -> None:
     """Test main function on modular file."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "modular_reuse_model",
@@ -165,19 +162,21 @@ def test_main_modular_reuse_model(output_dir: Path) -> None:
 
 def test_main_modular_no_file(tmp_path: Path) -> None:
     """Test main function on modular file with no output name."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=tmp_path / "output.py",
         input_file_type=None,
+        expected_exit=Exit.ERROR,
     )
 
 
 def test_main_modular_filename(output_file: Path) -> None:
     """Test main function on modular file with filename."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_file,
         input_file_type=None,
+        expected_exit=Exit.ERROR,
     )
 
 
@@ -188,9 +187,10 @@ def test_main_openapi_no_file(
     monkeypatch.chdir(tmp_path)
 
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_stdout(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
-            expected_output_path=EXPECTED_OPENAPI_PATH / "no_file.py",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "no_file.py",
             capsys=capsys,
             expected_stderr=inferred_message.format("openapi") + "\n",
         )
@@ -223,9 +223,10 @@ def test_main_openapi_extra_template_data_config(
     """Test main function with custom config data in extra template."""
     monkeypatch.chdir(tmp_path)
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_stdout(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
-            expected_output_path=EXPECTED_OPENAPI_PATH / expected_output,
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / expected_output,
             capsys=capsys,
             input_file_type=None,
             extra_args=[
@@ -244,9 +245,10 @@ def test_main_custom_template_dir_old_style(
     """Test main function with custom template directory."""
     monkeypatch.chdir(tmp_path)
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_stdout(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
-            expected_output_path=EXPECTED_OPENAPI_PATH / "custom_template_dir.py",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "custom_template_dir.py",
             capsys=capsys,
             input_file_type=None,
             extra_args=[
@@ -265,9 +267,10 @@ def test_main_openapi_custom_template_dir(
     """Test main function with custom template directory."""
     monkeypatch.chdir(tmp_path)
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_stdout(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "api.yaml",
-            expected_output_path=EXPECTED_OPENAPI_PATH / "custom_template_dir.py",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "custom_template_dir.py",
             capsys=capsys,
             input_file_type=None,
             extra_args=[
@@ -334,7 +337,7 @@ def test_pyproject_not_found(tmp_path: Path) -> None:
 
 def test_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
     """Test OpenAPI code generation from stdin input."""
-    run_main_and_assert_stdin(
+    run_main_and_assert(
         stdin_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
         monkeypatch=monkeypatch,
@@ -362,10 +365,11 @@ def test_validation(mocker: MockerFixture, output_file: Path) -> None:
 def test_validation_failed(mocker: MockerFixture, output_file: Path) -> None:
     """Test OpenAPI code generation with validation failure."""
     mock_prance = mocker.patch("prance.BaseParser", side_effect=Exception("error"))
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "invalid.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        expected_exit=Exit.ERROR,
         extra_args=["--validation"],
     )
     mock_prance.assert_called_once()
@@ -482,30 +486,33 @@ def test_main_with_aliases(output_model: str, expected_output: str, output_file:
 
 def test_main_with_bad_aliases(output_file: Path) -> None:
     """Test OpenAPI generation with invalid aliases file."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
         input_file_type=None,
+        expected_exit=Exit.ERROR,
         extra_args=["--aliases", str(OPEN_API_DATA_PATH / "not.json")],
     )
 
 
 def test_main_with_more_bad_aliases(output_file: Path) -> None:
     """Test OpenAPI generation with malformed aliases file."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
         input_file_type=None,
+        expected_exit=Exit.ERROR,
         extra_args=["--aliases", str(OPEN_API_DATA_PATH / "list.json")],
     )
 
 
 def test_main_with_bad_extra_data(output_file: Path) -> None:
     """Test OpenAPI generation with invalid extra template data file."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
         input_file_type=None,
+        expected_exit=Exit.ERROR,
         extra_args=["--extra-template-data", str(OPEN_API_DATA_PATH / "not.json")],
     )
 
@@ -724,7 +731,7 @@ def test_main_specialized_enums_disabled(output_file: Path) -> None:
 def test_main_use_standard_collections(output_dir: Path) -> None:
     """Test OpenAPI generation with standard collections."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "use_standard_collections",
@@ -739,7 +746,7 @@ def test_main_use_standard_collections(output_dir: Path) -> None:
 def test_main_use_generic_container_types(output_dir: Path) -> None:
     """Test OpenAPI generation with generic container types."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "use_generic_container_types",
@@ -757,7 +764,7 @@ def test_main_use_generic_container_types_standard_collections(
 ) -> None:
     """Test OpenAPI generation with generic container types and standard collections."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "use_generic_container_types_standard_collections",
@@ -769,10 +776,11 @@ def test_main_original_field_name_delimiter_without_snake_case_field(
     capsys: pytest.CaptureFixture, output_file: Path
 ) -> None:
     """Test OpenAPI generation with original field name delimiter error."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_file,
         input_file_type=None,
+        expected_exit=Exit.ERROR,
         extra_args=["--original-field-name-delimiter", "-"],
         capsys=capsys,
         expected_stderr_contains="`--original-field-name-delimiter` can not be used without `--snake-case-field`.",
@@ -830,10 +838,11 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, output_f
 
 def test_main_models_not_found(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with models not found error."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "no_components.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Models not found in the input data",
     )
@@ -1263,7 +1272,7 @@ def test_main_openapi_nullable_use_union_operator(output_file: Path) -> None:
 
 def test_external_relative_ref(tmp_path: Path) -> None:
     """Test OpenAPI generation with external relative references."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "external_relative_ref" / "model_b",
         output_path=tmp_path,
         expected_directory=EXPECTED_OPENAPI_PATH / "external_relative_ref",
@@ -1514,7 +1523,7 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
 )
 def test_main_openapi_default_object(output_model: str, expected_output: str, tmp_path: Path) -> None:
     """Test OpenAPI generation with default object values."""
-    run_main_and_assert_directory(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "default_object.yaml",
         output_path=tmp_path,
         expected_directory=EXPECTED_OPENAPI_PATH / expected_output,
@@ -1596,10 +1605,11 @@ def test_main_openapi_use_operation_id_as_name_not_found_operation_id(
     capsys: pytest.CaptureFixture, output_file: Path
 ) -> None:
     """Test OpenAPI generation with operation ID as name when ID not found."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        expected_exit=Exit.ERROR,
         extra_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
         capsys=capsys,
         expected_stderr_contains="All operations must have an operationId when --use_operation_id_as_name is set.",
@@ -1646,7 +1656,7 @@ def test_main_typed_dict_py(min_version: str, output_file: Path) -> None:
 def test_main_modular_typed_dict(output_dir: Path) -> None:
     """Test main function on modular file."""
     with freeze_time(TIMESTAMP):
-        run_main_and_assert_directory(
+        run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "modular.yaml",
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "modular_typed_dict",
@@ -1711,10 +1721,11 @@ def test_main_custom_file_header_path(output_file: Path) -> None:
 
 def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with duplicate custom file header options."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
         input_file_type=None,
+        expected_exit=Exit.ERROR,
         extra_args=[
             "--custom-file-header-path",
             str(DATA_PATH / "custom_file_header.txt"),
@@ -1884,10 +1895,11 @@ def test_main_openapi_keyword_only_dataclass(output_file: Path) -> None:
 
 def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with keyword-only dataclass for Python 3.9."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        expected_exit=Exit.ERROR,
         extra_args=["--output-model-type", "dataclasses.dataclass", "--keyword-only", "--target-python-version", "3.9"],
         capsys=capsys,
         expected_stderr_contains="`--keyword-only` requires `--target-python-version` 3.10 or higher.",
@@ -1896,10 +1908,11 @@ def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.Capt
 
 def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixture, output_file: Path) -> None:
     """Test OpenAPI generation with dataclass using naive datetime."""
-    run_main_and_assert_error(
+    run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
         output_path=output_file,
         input_file_type="openapi",
+        expected_exit=Exit.ERROR,
         extra_args=[
             "--output-model-type",
             "dataclasses.dataclass",
