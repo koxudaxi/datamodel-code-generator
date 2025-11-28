@@ -411,3 +411,80 @@ class EnumSystems(str, Enum):
     assert output_file_read_text == expected_output, (
         f"\nExpected  output:\n{expected_output}\n\nGenerated output:\n{output_file_read_text}"
     )
+
+
+EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH = EXPECTED_MAIN_KR_PATH / "generate_pyproject_config"
+
+
+def test_generate_pyproject_config_basic(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config with basic options."""
+    return_code: Exit = main([
+        "--generate-pyproject-config",
+        "--input",
+        "schema.yaml",
+        "--output",
+        "model.py",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "basic.txt")
+
+
+def test_generate_pyproject_config_with_boolean_options(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config with boolean options."""
+    return_code: Exit = main([
+        "--generate-pyproject-config",
+        "--snake-case-field",
+        "--use-annotated",
+        "--collapse-root-models",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "boolean_options.txt")
+
+
+def test_generate_pyproject_config_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config with list options."""
+    return_code: Exit = main([
+        "--generate-pyproject-config",
+        "--strict-types",
+        "str",
+        "int",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "list_options.txt")
+
+
+def test_generate_pyproject_config_with_multiple_options(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config with various option types."""
+    return_code: Exit = main([
+        "--generate-pyproject-config",
+        "--input",
+        "schema.yaml",
+        "--output",
+        "model.py",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--target-python-version",
+        "3.11",
+        "--snake-case-field",
+        "--strict-types",
+        "str",
+        "bytes",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "multiple_options.txt")
+
+
+def test_generate_pyproject_config_excludes_meta_options(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that meta options are excluded from generated config."""
+    return_code: Exit = main([
+        "--generate-pyproject-config",
+        "--input",
+        "schema.yaml",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+    assert_output(captured.out, EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "excludes_meta_options.txt")

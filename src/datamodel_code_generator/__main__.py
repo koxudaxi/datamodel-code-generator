@@ -17,6 +17,7 @@ from urllib.parse import ParseResult, urlparse
 import argcomplete
 import black
 from pydantic import BaseModel
+from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DataModelType,
@@ -52,6 +53,16 @@ if TYPE_CHECKING:
     from argparse import Namespace
 
     from typing_extensions import Self
+
+# Options that should be excluded from pyproject.toml config generation
+EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
+    "generate_pyproject_config",
+    "version",
+    "help",
+    "debug",
+    "no_color",
+    "disable_warnings",
+})
 
 
 class Exit(IntEnum):
@@ -434,6 +445,37 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
     return {}
 
 
+TomlValue: TypeAlias = Union[str, bool, list["TomlValue"], tuple["TomlValue", ...]]
+
+
+def _format_toml_value(value: TomlValue) -> str:
+    """Format a Python value as a TOML value string."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return f'"{value}"'
+    formatted_items = [_format_toml_value(item) for item in value]
+    return f"[{', '.join(formatted_items)}]"
+
+
+def generate_pyproject_config(args: Namespace) -> str:
+    """Generate pyproject.toml [tool.datamodel-codegen] section from CLI arguments."""
+    lines: list[str] = ["[tool.datamodel-codegen]"]
+
+    args_dict: dict[str, object] = vars(args)
+    for key, value in sorted(args_dict.items()):
+        if value is None:
+            continue
+        if key in EXCLUDED_CONFIG_OPTIONS:
+            continue
+
+        toml_key = key.replace("_", "-")
+        toml_value = _format_toml_value(cast("TomlValue", value))
+        lines.append(f"{toml_key} = {toml_value}")
+
+    return "\n".join(lines) + "\n"
+
+
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
     """Execute datamodel code generation from command-line arguments."""
     # add cli completion support
@@ -449,6 +491,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
         print(get_version())  # noqa: T201
         sys.exit(0)
+
+    if namespace.generate_pyproject_config:
+        config_output = generate_pyproject_config(namespace)
+        print(config_output)  # noqa: T201
+        return Exit.OK
 
     pyproject_config = _get_pyproject_toml_config(Path.cwd())
 
