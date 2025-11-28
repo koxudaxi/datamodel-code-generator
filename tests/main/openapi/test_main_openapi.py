@@ -12,7 +12,6 @@ from unittest.mock import Mock, call
 import black
 import pydantic
 import pytest
-from freezegun import freeze_time
 from packaging import version
 
 from datamodel_code_generator import (
@@ -27,7 +26,7 @@ from datamodel_code_generator import (
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import assert_directory_content
+from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     OPEN_API_DATA_PATH,

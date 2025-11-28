@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import Literal
 
 import pytest
-from freezegun import freeze_time
 
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import AssertFileContent, assert_directory_content, assert_output
+from tests.conftest import AssertFileContent, assert_directory_content, assert_output, freeze_time
 
 InputFileTypeLiteral = Literal["auto", "openapi", "jsonschema", "json", "yaml", "dict", "csv", "graphql"]
 CopyFilesMapping = Sequence[tuple[Path, Path]]

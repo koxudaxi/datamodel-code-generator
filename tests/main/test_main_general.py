@@ -6,7 +6,6 @@ from argparse import Namespace
 from typing import TYPE_CHECKING
 
 import pytest
-from freezegun import freeze_time
 
 from datamodel_code_generator import (
     DataModelType,
@@ -16,7 +15,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.format import PythonVersion
-from tests.conftest import create_assert_file_content
+from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,

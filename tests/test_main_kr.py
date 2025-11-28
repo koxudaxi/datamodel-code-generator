@@ -7,11 +7,10 @@ from pathlib import Path
 
 import black
 import pytest
-from freezegun import freeze_time
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import create_assert_file_content
+from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import run_main_and_assert, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
