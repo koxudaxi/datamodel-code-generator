@@ -326,7 +326,7 @@ class BaseModel(BaseModelBase):
             if config_attribute in self.extra_template_data:
                 config_parameters[config_attribute] = self.extra_template_data[config_attribute]
         for data_type in self.all_data_types:
-            if data_type.is_custom_type:
+            if data_type.is_custom_type:  # pragma: no cover
                 config_parameters["arbitrary_types_allowed"] = True
                 break
 

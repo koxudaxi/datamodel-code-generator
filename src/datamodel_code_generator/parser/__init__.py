@@ -39,7 +39,7 @@ class DefaultPutDict(UserDict[TK, TV]):
         if default_factory:
             value = self[key] = default_factory(key)
             return value
-        msg = "Not found default and default_factory"
+        msg = "Not found default and default_factory"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
 

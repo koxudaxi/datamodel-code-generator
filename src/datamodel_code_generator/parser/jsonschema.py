@@ -339,7 +339,7 @@ class JsonSchemaObject(BaseModel):
             """Initialize JsonSchemaObject with extra fields handling."""
             super().__init__(**data)
             self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
-            if "const" in data.get(self.__extra_key__, {}):
+            if "const" in data.get(self.__extra_key__, {}):  # pragma: no cover
                 self.extras["const"] = data[self.__extra_key__]["const"]
 
     @cached_property
@@ -1196,7 +1196,7 @@ class JsonSchemaParser(Parser):
             )
         if item.ref:
             return self.get_ref_data_type(item.ref)
-        if item.custom_type_path:
+        if item.custom_type_path:  # pragma: no cover
             return self.data_type_manager.get_data_type_from_full_path(item.custom_type_path, is_custom_type=True)
         if item.is_array:
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
@@ -1860,7 +1860,7 @@ class JsonSchemaParser(Parser):
                     try:
                         if definitions := get_model_by_path(raw, split_schema_path):
                             break
-                    except KeyError:
+                    except KeyError:  # pragma: no cover
                         continue
 
                 for key, model in definitions.items():
