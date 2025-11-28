@@ -445,7 +445,7 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
     return {}
 
 
-TomlValue: TypeAlias = str | bool | int | float | list["TomlValue"] | tuple["TomlValue", ...] | set["TomlValue"]
+TomlValue: TypeAlias = Union[str, bool, int, float, list["TomlValue"], tuple["TomlValue", ...], set["TomlValue"]]
 
 
 def _format_toml_value(value: TomlValue) -> str:
