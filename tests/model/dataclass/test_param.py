@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datamodel_code_generator.model.dataclass import DataClass, DataModelField
+from datamodel_code_generator.parser.jsonschema import Types
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
