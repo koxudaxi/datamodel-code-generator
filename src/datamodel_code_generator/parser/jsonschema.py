@@ -833,11 +833,10 @@ class JsonSchemaParser(Parser):
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         data_model_class = model_type or self.data_model_type
         if issubclass(data_model_class, DataClass):
-            dataclass_arguments = {}
-            if hasattr(self, "frozen_dataclasses"):
-                dataclass_arguments["frozen"] = self.frozen_dataclasses
-            if hasattr(self, "keyword_only"):
-                dataclass_arguments["kw_only"] = self.keyword_only
+            dataclass_arguments = {
+                "frozen": self.frozen_dataclasses,
+                "kw_only": self.keyword_only,
+            }
             existing = kwargs.pop("dataclass_arguments", None)
             if existing:
                 dataclass_arguments.update(existing)
