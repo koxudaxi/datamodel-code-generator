@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, RootModel
 class Animal(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
+        use_attribute_docstrings=True,
     )
     kind: Optional[Kind] = None
     """
@@ -32,6 +33,7 @@ class Kind(Enum):
 class Pet(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
+        use_attribute_docstrings=True,
     )
     kind: Optional[Kind] = None
     """
