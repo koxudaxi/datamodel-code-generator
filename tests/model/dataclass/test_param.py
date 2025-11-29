@@ -1,3 +1,5 @@
+"""Tests for dataclass parameter options (frozen, keyword_only)."""
+
 from __future__ import annotations
 
 from datamodel_code_generator.model.dataclass import DataClass, DataModelField

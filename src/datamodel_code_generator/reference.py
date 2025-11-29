@@ -1,3 +1,10 @@
+"""Reference resolution and model tracking system.
+
+Provides Reference for tracking model references across schemas, ModelResolver
+for managing class names and field names, and FieldNameResolver for converting
+schema field names to valid Python identifiers.
+"""
+
 from __future__ import annotations
 
 import re
@@ -9,13 +16,23 @@ from itertools import zip_longest
 from keyword import iskeyword
 from pathlib import Path, PurePath
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, NamedTuple, Optional, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    NamedTuple,
+    Optional,
+    Protocol,
+    TypeVar,
+    cast,
+    runtime_checkable,
+)
 from urllib.parse import ParseResult, urlparse
 
-import inflect
 import pydantic
 from packaging import version
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
 
@@ -23,10 +40,29 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
+    import inflect
     from pydantic.typing import DictStrAny
 
 
+@runtime_checkable
+class ReferenceChild(Protocol):
+    """Protocol for objects that can be stored in Reference.children.
+
+    This is a minimal protocol - actual usage checks isinstance for DataType
+    or DataModel to access specific methods like replace_reference or class_name.
+    Using a property makes the type covariant, allowing both DataModel (Reference)
+    and DataType (Reference | None) to satisfy this protocol.
+    """
+
+    @property
+    def reference(self) -> Reference | None:
+        """Return the reference associated with this object."""
+        ...
+
+
 class _BaseModel(BaseModel):
+    """Base model with field exclusion and pass-through support."""
+
     _exclude_fields: ClassVar[set[str]] = set()
     _pass_fields: ClassVar[set[str]] = set()
 
@@ -85,20 +121,23 @@ class _BaseModel(BaseModel):
 
 
 class Reference(_BaseModel):
+    """Represents a reference to a model in the schema.
+
+    Tracks path, name, and relationships between models for resolution.
+    """
+
     path: str
     original_name: str = ""
     name: str
     duplicate_name: Optional[str] = None  # noqa: UP045
     loaded: bool = True
-    source: Optional[Any] = None  # noqa: UP045
-    children: list[Any] = []
+    source: Optional[ReferenceChild] = None  # noqa: UP045
+    children: list[ReferenceChild] = Field(default_factory=list)
     _exclude_fields: ClassVar[set[str]] = {"children"}
 
     @model_validator(mode="before")
     def validate_original_name(cls, values: Any) -> Any:  # noqa: N805
-        """
-        If original_name is empty then, `original_name` is assigned `name`
-        """
+        """Assign name to original_name if original_name is empty."""
         if not isinstance(values, dict):  # pragma: no cover
             return values
         original_name = values.get("original_name")
@@ -119,12 +158,15 @@ class Reference(_BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 configuration for Reference model."""
+
             arbitrary_types_allowed = True
             keep_untouched = (cached_property,)
             copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse("1.9.2") else "none"
 
     @property
     def short_name(self) -> str:
+        """Return the last component of the dotted name."""
         return self.name.rsplit(".", 1)[-1]
 
 
@@ -137,6 +179,7 @@ T = TypeVar("T")
 
 @contextmanager
 def context_variable(setter: Callable[[T], None], current_value: T, new_value: T) -> Generator[None, None, None]:
+    """Context manager that temporarily sets a value and restores it on exit."""
     previous_value: T = current_value
     setter(new_value)
     try:
@@ -151,11 +194,14 @@ _UNDER_SCORE_2: Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
 
 @lru_cache
 def camel_to_snake(string: str) -> str:
+    """Convert camelCase or PascalCase to snake_case."""
     subbed = _UNDER_SCORE_1.sub(r"\1_\2", string)
     return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
 
 
 class FieldNameResolver:
+    """Converts schema field names to valid Python identifiers."""
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         aliases: Mapping[str, str] | None = None,
@@ -167,6 +213,7 @@ class FieldNameResolver:
         capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
         no_alias: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
+        """Initialize field name resolver with transformation options."""
         self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
         self.empty_field_name: str = empty_field_name or "_"
         self.snake_case_field = snake_case_field
@@ -180,6 +227,7 @@ class FieldNameResolver:
 
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:  # noqa: ARG003
+        """Check if a field name is valid. Subclasses may override."""
         return True
 
     def get_valid_name(  # noqa: PLR0912
@@ -189,6 +237,7 @@ class FieldNameResolver:
         ignore_snake_case_field: bool = False,  # noqa: FBT001, FBT002
         upper_camel: bool = False,  # noqa: FBT001, FBT002
     ) -> str:
+        """Convert a name to a valid Python identifier."""
         if not name:
             name = self.empty_field_name
         if name[0] == "#":
@@ -232,6 +281,7 @@ class FieldNameResolver:
     def get_valid_field_name_and_alias(
         self, field_name: str, excludes: set[str] | None = None
     ) -> tuple[str, str | None]:
+        """Get valid field name and original alias if different."""
         if field_name in self.aliases:
             return self.aliases[field_name], field_name
         valid_name = self.get_valid_name(field_name, excludes=excludes)
@@ -242,13 +292,18 @@ class FieldNameResolver:
 
 
 class PydanticFieldNameResolver(FieldNameResolver):
+    """Field name resolver that avoids Pydantic reserved names."""
+
     @classmethod
     def _validate_field_name(cls, field_name: str) -> bool:
+        """Check field name doesn't conflict with BaseModel attributes."""
         # TODO: Support Pydantic V2
         return not hasattr(BaseModel, field_name)
 
 
 class EnumFieldNameResolver(FieldNameResolver):
+    """Field name resolver for enum members with special handling for 'mro'."""
+
     def get_valid_name(
         self,
         name: str,
@@ -256,6 +311,7 @@ class EnumFieldNameResolver(FieldNameResolver):
         ignore_snake_case_field: bool = False,  # noqa: FBT001, FBT002
         upper_camel: bool = False,  # noqa: FBT001, FBT002
     ) -> str:
+        """Convert name to valid enum member, handling reserved names."""
         return super().get_valid_name(
             name="mro_" if name == "mro" else name,
             excludes={"mro"} | (excludes or set()),
@@ -265,6 +321,8 @@ class EnumFieldNameResolver(FieldNameResolver):
 
 
 class ModelType(Enum):
+    """Type of model for field name resolution strategy."""
+
     PYDANTIC = auto()
     ENUM = auto()
     CLASS = auto()
@@ -278,11 +336,14 @@ DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]] = {
 
 
 class ClassName(NamedTuple):
+    """A class name with optional duplicate name for disambiguation."""
+
     name: str
     duplicate_name: str | None
 
 
 def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
+    """Calculate relative path from base to target."""
     if base_path == target_path:
         return Path()
     if not target_path.is_absolute():
@@ -300,6 +361,12 @@ def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
 
 
 class ModelResolver:  # noqa: PLR0904
+    """Manages model references, class names, and field name resolution.
+
+    Central registry for all model references during parsing, handling
+    name uniqueness, path resolution, and field name transformations.
+    """
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         exclude_names: set[str] | None = None,
@@ -320,6 +387,7 @@ class ModelResolver:  # noqa: PLR0904
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
+        """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
         self._current_root: Sequence[str] = []
         self._root_id: str | None = None
@@ -356,20 +424,25 @@ class ModelResolver:  # noqa: PLR0904
 
     @property
     def current_base_path(self) -> Path | None:
+        """Return the current base path for file resolution."""
         return self._current_base_path
 
     def set_current_base_path(self, base_path: Path | None) -> None:
+        """Set the current base path for file resolution."""
         self._current_base_path = base_path
 
     @property
     def base_url(self) -> str | None:
+        """Return the base URL for reference resolution."""
         return self._base_url
 
     def set_base_url(self, base_url: str | None) -> None:
+        """Set the base URL for reference resolution."""
         self._base_url = base_url
 
     @contextmanager
     def current_base_path_context(self, base_path: Path | None) -> Generator[None, None, None]:
+        """Temporarily set the current base path within a context."""
         if base_path:
             base_path = (self._base_path / base_path).resolve()
         with context_variable(self.set_current_base_path, self.current_base_path, base_path):
@@ -377,6 +450,7 @@ class ModelResolver:  # noqa: PLR0904
 
     @contextmanager
     def base_url_context(self, base_url: str) -> Generator[None, None, None]:
+        """Temporarily set the base URL within a context."""
         if self._base_url:
             with context_variable(self.set_base_url, self.base_url, base_url):
                 yield
@@ -385,27 +459,33 @@ class ModelResolver:  # noqa: PLR0904
 
     @property
     def current_root(self) -> Sequence[str]:
+        """Return the current root path components."""
         if len(self._current_root) > 1:
             return self._current_root
         return self._current_root
 
     def set_current_root(self, current_root: Sequence[str]) -> None:
+        """Set the current root path components."""
         self._current_root = current_root
 
     @contextmanager
     def current_root_context(self, current_root: Sequence[str]) -> Generator[None, None, None]:
+        """Temporarily set the current root path within a context."""
         with context_variable(self.set_current_root, self.current_root, current_root):
             yield
 
     @property
     def root_id(self) -> str | None:
+        """Return the root identifier for the current schema."""
         return self._root_id
 
     @property
     def root_id_base_path(self) -> str | None:
+        """Return the base path component of the root identifier."""
         return self._root_id_base_path
 
     def set_root_id(self, root_id: str | None) -> None:
+        """Set the root identifier and extract its base path."""
         if root_id and "/" in root_id:
             self._root_id_base_path = root_id.rsplit("/", 1)[0]
         else:
@@ -414,9 +494,11 @@ class ModelResolver:  # noqa: PLR0904
         self._root_id = root_id
 
     def add_id(self, id_: str, path: Sequence[str]) -> None:
+        """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912
+        """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(path)
         if joined_path == "#":
             return f"{'/'.join(self.current_root)}#"
@@ -470,6 +552,7 @@ class ModelResolver:  # noqa: PLR0904
         return ref
 
     def is_after_load(self, ref: str) -> bool:
+        """Check if a reference points to a file loaded after the current one."""
         if is_url(ref) or not self.current_base_path:
             return False
         file_part, *_ = ref.split("#", 1)
@@ -480,23 +563,26 @@ class ModelResolver:  # noqa: PLR0904
 
     @staticmethod
     def is_external_ref(ref: str) -> bool:
+        """Check if a reference points to an external file."""
         return "#" in ref and ref[0] != "#"
 
     @staticmethod
     def is_external_root_ref(ref: str) -> bool:
+        """Check if a reference points to an external file root."""
         return ref[-1] == "#"
 
     @staticmethod
     def join_path(path: Sequence[str]) -> str:
+        """Join path components with slashes and normalize anchors."""
         joined_path = "/".join(p for p in path if p).replace("/#", "#")
         if "#" not in joined_path:
             joined_path += "#"
         return joined_path
 
     def add_ref(self, ref: str, resolved: bool = False) -> Reference:  # noqa: FBT001, FBT002
+        """Add a reference and return the Reference object."""
         path = self.resolve_ref(ref) if not resolved else ref
-        reference = self.references.get(path)
-        if reference:
+        if reference := self.references.get(path):
             return reference
         split_ref = ref.rsplit("/", 1)
         if len(split_ref) == 1:
@@ -516,15 +602,11 @@ class ModelResolver:  # noqa: PLR0904
 
     def _check_parent_scope_option(self, name: str, path: Sequence[str]) -> str:
         if self.parent_scoped_naming:
-            parent_reference = None
             parent_path = path[:-1]
             while parent_path:
-                parent_reference = self.references.get(self.join_path(parent_path))
-                if parent_reference is not None:
-                    break
+                if parent_reference := self.references.get(self.join_path(parent_path)):
+                    return f"{parent_reference.name}_{name}"
                 parent_path = parent_path[:-1]
-            if parent_reference:
-                name = f"{parent_reference.name}_{name}"
         return name
 
     def add(  # noqa: PLR0913
@@ -538,6 +620,7 @@ class ModelResolver:  # noqa: PLR0904
         singular_name_suffix: str | None = None,
         loaded: bool = False,
     ) -> Reference:
+        """Add or update a model reference with the given path and name."""
         joined_path = self.join_path(path)
         reference: Reference | None = self.references.get(joined_path)
         if reference:
@@ -583,13 +666,16 @@ class ModelResolver:  # noqa: PLR0904
         return reference
 
     def get(self, path: Sequence[str] | str) -> Reference | None:
+        """Get a reference by path, returning None if not found."""
         return self.references.get(self.resolve_ref(path))
 
     def delete(self, path: Sequence[str] | str) -> None:
+        """Delete a reference by path if it exists."""
         if self.resolve_ref(path) in self.references:
             del self.references[self.resolve_ref(path)]
 
     def default_class_name_generator(self, name: str) -> str:
+        """Generate a valid class name from a string."""
         # TODO: create a validate for class name
         return self.field_name_resolvers[ModelType.CLASS].get_valid_name(
             name, ignore_snake_case_field=True, upper_camel=True
@@ -603,6 +689,7 @@ class ModelResolver:  # noqa: PLR0904
         singular_name: bool = False,  # noqa: FBT001, FBT002
         singular_name_suffix: str | None = None,
     ) -> ClassName:
+        """Generate a unique class name with optional singularization."""
         if "." in name:
             split_name = name.split(".")
             prefix = ".".join(
@@ -651,6 +738,7 @@ class ModelResolver:  # noqa: PLR0904
 
     @classmethod
     def validate_name(cls, name: str) -> bool:
+        """Check if a name is a valid Python identifier."""
         return name.isidentifier() and not iskeyword(name)
 
     def get_valid_field_name(
@@ -659,6 +747,7 @@ class ModelResolver:  # noqa: PLR0904
         excludes: set[str] | None = None,
         model_type: ModelType = ModelType.PYDANTIC,
     ) -> str:
+        """Get a valid field name for the specified model type."""
         return self.field_name_resolvers[model_type].get_valid_name(name, excludes)
 
     def get_valid_field_name_and_alias(
@@ -667,12 +756,27 @@ class ModelResolver:  # noqa: PLR0904
         excludes: set[str] | None = None,
         model_type: ModelType = ModelType.PYDANTIC,
     ) -> tuple[str, str | None]:
+        """Get a valid field name and alias for the specified model type."""
         return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(field_name, excludes)
+
+
+def _get_inflect_engine() -> inflect.engine:
+    """Get or create the inflect engine lazily."""
+    global _inflect_engine  # noqa: PLW0603
+    if _inflect_engine is None:
+        import inflect  # noqa: PLC0415
+
+        _inflect_engine = inflect.engine()
+    return _inflect_engine
+
+
+_inflect_engine: inflect.engine | None = None
 
 
 @lru_cache
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
-    singular_name = inflect_engine.singular_noun(name)
+    """Convert a plural name to singular form."""
+    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))
     if singular_name is False:
         singular_name = f"{name}{suffix}"
     return singular_name  # pyright: ignore[reportReturnType]
@@ -680,6 +784,7 @@ def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
 
 @lru_cache
 def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
+    """Convert snake_case or delimited string to UpperCamelCase."""
     prefix = ""
     if word.startswith(delimiter):
         prefix = "_"
@@ -689,7 +794,5 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 
 
 def is_url(ref: str) -> bool:
+    """Check if a reference string is a URL."""
     return ref.startswith(("https://", "http://"))
-
-
-inflect_engine = inflect.engine()

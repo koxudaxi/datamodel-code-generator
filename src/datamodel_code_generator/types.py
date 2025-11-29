@@ -1,3 +1,10 @@
+"""Core type system for data model generation.
+
+Provides DataType for representing types with references and constraints,
+DataTypeManager as the abstract base for type mappings, and supporting
+utilities for handling unions, optionals, and type hints.
+"""
+
 from __future__ import annotations
 
 import re
@@ -49,6 +56,8 @@ if TYPE_CHECKING:
     import builtins
     from collections.abc import Iterable, Iterator, Sequence
 
+    from datamodel_code_generator.model.base import DataModelFieldBase
+
 if PYDANTIC_V2:
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import core_schema
@@ -83,6 +92,8 @@ NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
 
 class StrictTypes(Enum):
+    """Strict type options for generated models."""
+
     str = "str"
     bytes = "bytes"
     int = "int"
@@ -91,26 +102,34 @@ class StrictTypes(Enum):
 
 
 class UnionIntFloat:
+    """Pydantic-compatible type that accepts both int and float values."""
+
     def __init__(self, value: float) -> None:
+        """Initialize with an int or float value."""
         self.value: int | float = value
 
     def __int__(self) -> int:
+        """Convert value to int."""
         return int(self.value)
 
     def __float__(self) -> float:
+        """Convert value to float."""
         return float(self.value)
 
     def __str__(self) -> str:
+        """Convert value to string."""
         return str(self.value)
 
     @classmethod
     def __get_validators__(cls) -> Iterator[Callable[[Any], Any]]:  # noqa: PLW3201
+        """Return Pydantic v1 validators."""
         yield cls.validate
 
     @classmethod
     def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
+        """Return Pydantic v2 core schema."""
         from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
             [
                 core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
@@ -136,6 +155,7 @@ class UnionIntFloat:
 
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
+        """Validate and convert value to UnionIntFloat."""
         if isinstance(v, UnionIntFloat):
             return v
         if not isinstance(v, (int, float)):  # pragma: no cover
@@ -156,32 +176,12 @@ class UnionIntFloat:
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
+    """Chain multiple iterables and return as a tuple."""
     return tuple(chain(*iterables))
 
 
-@lru_cache
-def _remove_none_from_type(type_: str, split_pattern: Pattern[str], delimiter: str) -> list[str]:
-    types: list[str] = []
-    split_type: str = ""
-    inner_count: int = 0
-    for part in re.split(split_pattern, type_):
-        if part == NONE:
-            continue
-        inner_count += part.count("[") - part.count("]")
-        if split_type:
-            split_type += delimiter
-        if inner_count == 0:
-            if split_type:
-                types.append(f"{split_type}{part}")
-            else:
-                types.append(part)
-            split_type = ""
-            continue
-        split_type += part
-    return types
-
-
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
+    """Remove None from a Union type string, handling nested unions."""
     if use_union_operator:
         if " | " not in type_:
             return type_
@@ -248,6 +248,7 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
 
 @lru_cache
 def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+    """Wrap a type string in Optional or add | None suffix."""
     type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
 
     if not type_ or type_ == NONE:
@@ -259,19 +260,27 @@ def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT
 
 @runtime_checkable
 class Modular(Protocol):
+    """Protocol for objects with a module name property."""
+
     @property
     def module_name(self) -> str:
+        """Return the module name."""
         raise NotImplementedError
 
 
 @runtime_checkable
 class Nullable(Protocol):
+    """Protocol for objects with a nullable property."""
+
     @property
     def nullable(self) -> bool:
+        """Return whether the type is nullable."""
         raise NotImplementedError
 
 
 class DataType(_BaseModel):
+    """Represents a type in generated code with imports and references."""
+
     if PYDANTIC_V2:
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
@@ -283,10 +292,18 @@ class DataType(_BaseModel):
         if not TYPE_CHECKING:
 
             @classmethod
-            def model_rebuild(cls) -> None:
-                cls.update_forward_refs()
+            def model_rebuild(
+                cls,
+                *,
+                _types_namespace: dict[str, type] | None = None,
+            ) -> None:
+                """Update forward references for Pydantic v1."""
+                localns = _types_namespace or {}
+                cls.update_forward_refs(**localns)
 
         class Config:
+            """Pydantic v1 model configuration."""
+
             extra = "forbid"
             copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse("1.9.2") else "none"
 
@@ -307,8 +324,8 @@ class DataType(_BaseModel):
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None  # noqa: UP045
-    parent: Optional[Any] = None  # noqa: UP045
-    children: list[Any] = []  # noqa: RUF012
+    parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
+    children: list[DataType] = []  # noqa: RUF012
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
     treat_dot_as_module: bool = False
@@ -329,6 +346,7 @@ class DataType(_BaseModel):
         strict: bool = False,
         kwargs: dict[str, Any] | None = None,
     ) -> DataTypeT:
+        """Create a DataType from an Import object."""
         return cls(
             type=import_.import_,
             import_=import_,
@@ -344,12 +362,14 @@ class DataType(_BaseModel):
 
     @property
     def unresolved_types(self) -> frozenset[str]:
+        """Return set of unresolved type reference paths."""
         return frozenset(
             {t.reference.path for data_types in self.data_types for t in data_types.all_data_types if t.reference}
             | ({self.reference.path} if self.reference else set())
         )
 
     def replace_reference(self, reference: Reference | None) -> None:
+        """Replace this DataType's reference with a new one."""
         if not self.reference:  # pragma: no cover
             msg = f"`{self.__class__.__name__}.replace_reference()` can't be called when `reference` field is empty."
             raise Exception(msg)  # noqa: TRY002
@@ -360,16 +380,19 @@ class DataType(_BaseModel):
             reference.children.append(self)
 
     def remove_reference(self) -> None:
+        """Remove the reference from this DataType."""
         self.replace_reference(None)
 
     @property
     def module_name(self) -> str | None:
+        """Return the module name from the reference source."""
         if self.reference and isinstance(self.reference.source, Modular):
             return self.reference.source.module_name
         return None  # pragma: no cover
 
     @property
     def full_name(self) -> str:
+        """Return the fully qualified name including module."""
         module_name = self.module_name
         if module_name:
             return f"{module_name}.{self.reference.short_name if self.reference else ''}"
@@ -377,18 +400,21 @@ class DataType(_BaseModel):
 
     @property
     def all_data_types(self) -> Iterator[DataType]:
+        """Recursively yield all nested DataTypes including self."""
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
 
     @property
     def all_imports(self) -> Iterator[Import]:
+        """Recursively yield all imports from nested DataTypes and self."""
         for data_type in self.data_types:
             yield from data_type.all_imports
         yield from self.imports
 
     @property
     def imports(self) -> Iterator[Import]:
+        """Yield imports required by this DataType."""
         # Add base import if exists
         if self.import_:
             yield self.import_
@@ -433,6 +459,7 @@ class DataType(_BaseModel):
             yield from self.dict_key.imports
 
     def __init__(self, **values: Any) -> None:
+        """Initialize DataType with validation and reference setup."""
         if not TYPE_CHECKING:
             super().__init__(**values)
 
@@ -452,6 +479,7 @@ class DataType(_BaseModel):
 
     @property
     def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
+        """Generate the Python type hint string for this DataType."""
         type_: str | None = self.alias or self.type
         if not type_:
             if self.is_union:
@@ -531,19 +559,20 @@ class DataType(_BaseModel):
 
     @property
     def is_union(self) -> bool:
+        """Return whether this DataType represents a union of multiple types."""
         return len(self.data_types) > 1
 
-
-DataType.model_rebuild()
 
 DataTypeT = TypeVar("DataTypeT", bound=DataType)
 
 
 class EmptyDataType(DataType):
-    pass
+    """A DataType placeholder for empty or unresolved types."""
 
 
 class Types(Enum):
+    """Standard type identifiers for schema type mapping."""
+
     integer = auto()
     int32 = auto()
     int64 = auto()
@@ -581,6 +610,11 @@ class Types(Enum):
 
 
 class DataTypeManager(ABC):
+    """Abstract base class for managing type mappings in code generation.
+
+    Subclasses implement get_data_type() to map schema types to DataType objects.
+    """
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         python_version: PythonVersion = PythonVersionMin,
@@ -593,6 +627,7 @@ class DataTypeManager(ABC):
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
+        """Initialize DataTypeManager with code generation options."""
         self.python_version = python_version
         self.use_standard_collections: bool = use_standard_collections
         self.use_generic_container_types: bool = use_generic_container_types
@@ -617,12 +652,15 @@ class DataTypeManager(ABC):
 
     @abstractmethod
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+        """Map a Types enum value to a DataType. Must be implemented by subclasses."""
         raise NotImplementedError
 
     def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:  # noqa: FBT001
+        """Create a DataType from a fully qualified Python path."""
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
 
     def get_data_type_from_value(self, value: Any) -> DataType:
+        """Infer a DataType from a Python value."""
         type_: Types | None = None
         if isinstance(value, str):
             type_ = Types.string

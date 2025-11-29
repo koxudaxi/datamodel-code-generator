@@ -1,3 +1,5 @@
+"""Tests for Pydantic dataclass generation."""
+
 from __future__ import annotations
 
 from datamodel_code_generator.model import DataModelFieldBase
@@ -8,6 +10,7 @@ from datamodel_code_generator.types import DataType, Types
 
 
 def test_data_class() -> None:
+    """Test basic DataClass generation with required field."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
 
     data_class = DataClass(
@@ -22,6 +25,7 @@ def test_data_class() -> None:
 
 
 def test_data_class_base_class() -> None:
+    """Test DataClass generation with base class inheritance."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
 
     data_class = DataClass(
@@ -37,6 +41,7 @@ def test_data_class_base_class() -> None:
 
 
 def test_data_class_optional() -> None:
+    """Test DataClass generation with field default value."""
     field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="'abc'", required=True)
 
     data_class = DataClass(
@@ -51,5 +56,6 @@ def test_data_class_optional() -> None:
 
 
 def test_data_class_get_data_type() -> None:
+    """Test data type retrieval for DataClass fields."""
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type="int")

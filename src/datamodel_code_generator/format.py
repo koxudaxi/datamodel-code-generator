@@ -1,33 +1,61 @@
+"""Code formatting utilities and Python version handling.
+
+Provides CodeFormatter for applying black, isort, and ruff formatting,
+along with PythonVersion enum and DatetimeClassType for output configuration.
+"""
+
 from __future__ import annotations
 
 import subprocess  # noqa: S404
 from enum import Enum
-from functools import cached_property
+from functools import cached_property, lru_cache
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
-import black
-import isort
-
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-try:
-    import black.mode
-except ImportError:  # pragma: no cover
-    black.mode = None
+
+
+@lru_cache(maxsize=1)
+def _get_black() -> Any:
+    import black as _black  # noqa: PLC0415
+
+    return _black
+
+
+@lru_cache(maxsize=1)
+def _get_black_mode() -> Any:  # pragma: no cover
+    black = _get_black()
+    try:
+        import black.mode  # noqa: PLC0415
+    except ImportError:
+        return None
+    else:
+        return black.mode
+
+
+@lru_cache(maxsize=1)
+def _get_isort() -> Any:
+    import isort as _isort  # noqa: PLC0415
+
+    return _isort
 
 
 class DatetimeClassType(Enum):
+    """Output datetime class type options."""
+
     Datetime = "datetime"
     Awaredatetime = "AwareDatetime"
     Naivedatetime = "NaiveDatetime"
 
 
 class PythonVersion(Enum):
+    """Supported Python version targets for code generation."""
+
     PY_39 = "3.9"
     PY_310 = "3.10"
     PY_311 = "3.11"
@@ -49,57 +77,66 @@ class PythonVersion(Enum):
 
     @property
     def has_union_operator(self) -> bool:  # pragma: no cover
+        """Check if Python version supports the union operator (|)."""
         return self._is_py_310_or_later
 
     @property
     def has_typed_dict_non_required(self) -> bool:
+        """Check if Python version supports TypedDict NotRequired."""
         return self._is_py_311_or_later
 
     @property
     def has_kw_only_dataclass(self) -> bool:
+        """Check if Python version supports kw_only in dataclasses."""
         return self._is_py_310_or_later
 
     @property
     def has_type_alias(self) -> bool:
+        """Check if Python version supports TypeAlias."""
         return self._is_py_310_or_later
 
     @property
     def has_type_statement(self) -> bool:
+        """Check if Python version supports type statements."""
         return self._is_py_312_or_later
 
     @property
     def has_strenum(self) -> bool:
-        """
-        Verifies if the Python version supports `StrEnum`.
-        """
+        """Check if Python version supports StrEnum."""
         return self._is_py_311_or_later
 
 
 PythonVersionMin = PythonVersion.PY_39
 
 
-BLACK_PYTHON_VERSION: dict[PythonVersion, black.TargetVersion] = {
-    v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
-    for v in PythonVersion
-    if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
-}
+@lru_cache(maxsize=1)
+def _get_black_python_version_map() -> dict[PythonVersion, Any]:
+    black = _get_black()
+    return {
+        v: getattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
+        for v in PythonVersion
+        if hasattr(black.TargetVersion, f"PY{v.name.split('_')[-1]}")
+    }
 
 
 def is_supported_in_black(python_version: PythonVersion) -> bool:  # pragma: no cover
-    return python_version in BLACK_PYTHON_VERSION
+    """Check if a Python version is supported by the installed black version."""
+    return python_version in _get_black_python_version_map()
 
 
 def black_find_project_root(sources: Sequence[Path]) -> Path:
+    """Find the project root directory for black configuration."""
     from black import find_project_root as _find_project_root  # noqa: PLC0415
 
     project_root = _find_project_root(tuple(str(s) for s in sources))
     if isinstance(project_root, tuple):
         return project_root[0]
-    # pragma: no cover
-    return project_root
+    return project_root  # pragma: no cover
 
 
 class Formatter(Enum):
+    """Available code formatters for generated output."""
+
     BLACK = "black"
     ISORT = "isort"
     RUFF_CHECK = "ruff-check"
@@ -110,6 +147,8 @@ DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 
 
 class CodeFormatter:
+    """Formats generated code using black, isort, ruff, and custom formatters."""
+
     def __init__(  # noqa: PLR0912, PLR0913, PLR0917
         self,
         python_version: PythonVersion,
@@ -122,6 +161,7 @@ class CodeFormatter:
         encoding: str = "utf-8",
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
     ) -> None:
+        """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if not settings_path:
             settings_path = Path.cwd()
 
@@ -132,6 +172,10 @@ class CodeFormatter:
             config = pyproject_toml.get("tool", {}).get("black", {})
         else:
             config = {}
+
+        black = _get_black()
+        black_mode = _get_black_mode()
+        isort = _get_isort()
 
         black_kwargs: dict[str, Any] = {}
         if wrap_string_literal is not None:
@@ -155,10 +199,10 @@ class CodeFormatter:
             elif experimental_string_processing:
                 black_kwargs["preview"] = True
                 black_kwargs["unstable"] = config.get("unstable", False)
-                black_kwargs["enabled_features"] = {black.mode.Preview.string_processing}
+                black_kwargs["enabled_features"] = {black_mode.Preview.string_processing}
 
         self.black_mode = black.FileMode(
-            target_versions={BLACK_PYTHON_VERSION[python_version]},
+            target_versions={_get_black_python_version_map()[python_version]},
             line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
             string_normalization=not skip_string_normalization or not config.get("skip-string-normalization", True),
             **black_kwargs,
@@ -170,7 +214,7 @@ class CodeFormatter:
         if known_third_party:
             self.isort_config_kwargs["known_third_party"] = known_third_party
 
-        if isort.__version__.startswith("4."):
+        if isort.__version__.startswith("4."):  # pragma: no cover
             self.isort_config = None
         else:
             self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
@@ -181,6 +225,7 @@ class CodeFormatter:
         self.formatters = formatters
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
+        """Load and instantiate a custom formatter from a module path."""
         import_ = import_module(custom_formatter_import)
 
         if not hasattr(import_, "CodeFormatter"):
@@ -196,6 +241,7 @@ class CodeFormatter:
         return formatter_class(formatter_kwargs=self.custom_formatters_kwargs)
 
     def _check_custom_formatters(self, custom_formatters: list[str] | None) -> list[CustomCodeFormatter]:
+        """Validate and load all custom formatters."""
         if custom_formatters is None:
             return []
 
@@ -205,6 +251,7 @@ class CodeFormatter:
         self,
         code: str,
     ) -> str:
+        """Apply all configured formatters to the code string."""
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
         if Formatter.BLACK in self.formatters:
@@ -222,12 +269,15 @@ class CodeFormatter:
         return code
 
     def apply_black(self, code: str) -> str:
+        """Format code using black."""
+        black = _get_black()
         return black.format_str(
             code,
             mode=self.black_mode,
         )
 
     def apply_ruff_lint(self, code: str) -> str:
+        """Run ruff check with auto-fix on code."""
         result = subprocess.run(
             ("ruff", "check", "--fix", "-"),
             input=code.encode(self.encoding),
@@ -237,6 +287,7 @@ class CodeFormatter:
         return result.stdout.decode(self.encoding)
 
     def apply_ruff_formatter(self, code: str) -> str:
+        """Format code using ruff format."""
         result = subprocess.run(
             ("ruff", "format", "-"),
             input=code.encode(self.encoding),
@@ -245,28 +296,28 @@ class CodeFormatter:
         )
         return result.stdout.decode(self.encoding)
 
-    if TYPE_CHECKING:
-
-        def apply_isort(self, code: str) -> str: ...
-
-    elif isort.__version__.startswith("4."):
-
-        def apply_isort(self, code: str) -> str:
+    def apply_isort(self, code: str) -> str:
+        """Sort imports using isort."""
+        isort = _get_isort()
+        if self.isort_config is None:  # pragma: no cover
             return isort.SortImports(
                 file_contents=code,
                 settings_path=self.settings_path,
                 **self.isort_config_kwargs,
             ).output
-
-    else:
-
-        def apply_isort(self, code: str) -> str:
-            return isort.code(code, config=self.isort_config)
+        return isort.code(code, config=self.isort_config)
 
 
 class CustomCodeFormatter:
+    """Base class for custom code formatters.
+
+    Subclasses must implement the apply() method to transform code.
+    """
+
     def __init__(self, formatter_kwargs: dict[str, Any]) -> None:
+        """Initialize custom formatter with optional keyword arguments."""
         self.formatter_kwargs = formatter_kwargs
 
     def apply(self, code: str) -> str:
+        """Apply formatting to code. Must be implemented by subclasses."""
         raise NotImplementedError

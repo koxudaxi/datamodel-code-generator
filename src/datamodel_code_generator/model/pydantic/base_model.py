@@ -1,3 +1,8 @@
+"""Pydantic v1 BaseModel implementation.
+
+Provides Constraints, DataModelField, and BaseModel for Pydantic v1.
+"""
+
 from __future__ import annotations
 
 from abc import ABC
@@ -28,6 +33,8 @@ if TYPE_CHECKING:
 
 
 class Constraints(ConstraintsBase):
+    """Pydantic v1 field constraints (gt, ge, lt, le, regex, etc.)."""
+
     gt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMinimum")  # noqa: UP045
     ge: Optional[UnionIntFloat] = Field(None, alias="minimum")  # noqa: UP045
     lt: Optional[UnionIntFloat] = Field(None, alias="exclusiveMaximum")  # noqa: UP045
@@ -41,6 +48,8 @@ class Constraints(ConstraintsBase):
 
 
 class DataModelField(DataModelFieldBase):
+    """Field implementation for Pydantic v1 models."""
+
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",
@@ -62,16 +71,18 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def method(self) -> str | None:
+        """Get the validation method name."""
         return self.validator
 
     @property
     def validator(self) -> str | None:
+        """Get the validator name."""
         return None
         # TODO refactor this method for other validation logic
 
     @property
     def field(self) -> str | None:
-        """for backwards compatibility"""
+        """For backwards compatibility."""
         result = str(self)
         if (
             self.use_default_kwarg
@@ -87,6 +98,7 @@ class DataModelField(DataModelFieldBase):
         return result
 
     def self_reference(self) -> bool:
+        """Check if this field references its parent model."""
         return isinstance(self.parent, BaseModelBase) and self.parent.reference.path in {
             d.reference.path for d in self.data_type.all_data_types if d.reference
         }
@@ -131,6 +143,7 @@ class DataModelField(DataModelFieldBase):
         return field_arguments
 
     def __str__(self) -> str:  # noqa: PLR0912
+        """Return Field() call with all constraints and metadata."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data["alias"] = self.alias
@@ -186,18 +199,22 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def annotated(self) -> str | None:
+        """Get the Annotated type hint if use_annotated is enabled."""
         if not self.use_annotated or not str(self):
             return None
         return f"Annotated[{self.type_hint}, {self!s}]"
 
     @property
     def imports(self) -> tuple[Import, ...]:
+        """Get all required imports including Field if needed."""
         if self.field:
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 
 
 class BaseModelBase(DataModel, ABC):
+    """Abstract base class for Pydantic BaseModel implementations."""
+
     def __init__(  # noqa: PLR0913
         self,
         *,
@@ -215,6 +232,7 @@ class BaseModelBase(DataModel, ABC):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize the BaseModel with fields and configuration."""
         methods: list[str] = [field.method for field in fields if field.method]
 
         super().__init__(
@@ -236,6 +254,7 @@ class BaseModelBase(DataModel, ABC):
 
     @cached_property
     def template_file_path(self) -> Path:
+        """Get the template file path with backward compatibility support."""
         # This property is for Backward compatibility
         # Current version supports '{custom_template_dir}/BaseModel.jinja'
         # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
@@ -247,6 +266,8 @@ class BaseModelBase(DataModel, ABC):
 
 
 class BaseModel(BaseModelBase):
+    """Pydantic v1 BaseModel implementation."""
+
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
 
@@ -267,6 +288,7 @@ class BaseModel(BaseModelBase):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize the BaseModel with Config and extra fields support."""
         super().__init__(
             reference=reference,
             fields=fields,
@@ -304,7 +326,7 @@ class BaseModel(BaseModelBase):
             if config_attribute in self.extra_template_data:
                 config_parameters[config_attribute] = self.extra_template_data[config_attribute]
         for data_type in self.all_data_types:
-            if data_type.is_custom_type:
+            if data_type.is_custom_type:  # pragma: no cover
                 config_parameters["arbitrary_types_allowed"] = True
                 break
 

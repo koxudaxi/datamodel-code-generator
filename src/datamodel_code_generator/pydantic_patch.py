@@ -1,3 +1,9 @@
+"""Pydantic compatibility patches for Python 3.12+.
+
+Patches pydantic.typing.evaluate_forwardref for forward reference evaluation
+compatibility with newer Python versions.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -9,6 +15,7 @@ import pydantic.typing
 def patched_evaluate_forwardref(
     forward_ref: Any, globalns: dict[str, Any], localns: dict[str, Any] | None = None
 ) -> None:  # pragma: no cover
+    """Evaluate a forward reference with Python 3.12+ compatibility."""
     try:
         return forward_ref._evaluate(globalns, localns or None, set())  # pragma: no cover  # noqa: SLF001
     except TypeError:

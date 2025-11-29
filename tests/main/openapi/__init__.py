@@ -1,0 +1,1 @@
+"""OpenAPI integration tests package."""

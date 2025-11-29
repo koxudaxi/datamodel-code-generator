@@ -1,3 +1,9 @@
+"""Type alias model generators.
+
+Provides classes for generating type aliases using different Python syntax:
+TypeAlias annotation, TypeAliasType, and type statement (Python 3.12+).
+"""
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -18,6 +24,7 @@ class TypeAliasBase(DataModel):
 
     @property
     def imports(self) -> tuple[Import, ...]:
+        """Get imports including Annotated if needed."""
         imports = super().imports
         if self.fields and (self.fields[0].annotated or self.fields[0].field):
             imports = chain_as_tuple(imports, (IMPORT_ANNOTATED,))
@@ -26,7 +33,7 @@ class TypeAliasBase(DataModel):
 
 
 class TypeAlias(TypeAliasBase):
-    """TypeAlias annotation for Python 3.10+ (Name: TypeAlias = type)"""
+    """TypeAlias annotation for Python 3.10+ (Name: TypeAlias = type)."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAliasAnnotation.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -34,7 +41,7 @@ class TypeAlias(TypeAliasBase):
 
 
 class TypeAliasBackport(TypeAliasBase):
-    """TypeAlias annotation for Python 3.9 (Name: TypeAlias = type) using typing_extensions"""
+    """TypeAlias annotation for Python 3.9 (Name: TypeAlias = type) using typing_extensions."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAliasAnnotation.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -42,7 +49,7 @@ class TypeAliasBackport(TypeAliasBase):
 
 
 class TypeAliasTypeBackport(TypeAliasBase):
-    """TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", type))"""
+    """TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", type))."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -50,7 +57,7 @@ class TypeAliasTypeBackport(TypeAliasBase):
 
 
 class TypeStatement(TypeAliasBase):
-    """Type statement for Python 3.12+ (type Name = type)"""
+    """Type statement for Python 3.12+ (type Name = type)."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypeStatement.jinja2"
     BASE_CLASS: ClassVar[str] = ""

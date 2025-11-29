@@ -380,6 +380,11 @@ Typing customization:
                         Set enum members as default values for enum field
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
                         Use strict types
+  --type-mappings TYPE_MAPPINGS [TYPE_MAPPINGS ...]
+                        Override default type mappings. Format: "type+format=target" (e.g.,
+                        "string+binary=string" to map binary format to string type) or
+                        "format=target" (e.g., "binary=string"). Can be specified multiple
+                        times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
   --use-generic-container-types
@@ -437,6 +442,9 @@ Field customization:
                         default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-inline-field-description
+                        Use schema description to populate field docstring as inline
+                        docstring
 
 Model customization:
   --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is deprecated. Use
@@ -522,6 +530,9 @@ General options:
   --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
                         generator[debug]''`)
   --disable-warnings    disable warnings
+  --generate-pyproject-config
+                        Generate pyproject.toml configuration from the provided CLI
+                        arguments and exit
   --no-color            disable colorized output
   --version             show version
   -h, --help            show this help message and exit

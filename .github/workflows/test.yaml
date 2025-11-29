@@ -28,6 +28,9 @@ jobs:
           - tox_env: py3.12-black24
           - tox_env: py3.12-black23
           - tox_env: py3.12-black22
+          - tox_env: py3.12-isort7
+          - tox_env: py3.12-isort6
+          - tox_env: py3.12-isort5
           - tox_env: py3.12-pydantic1
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:

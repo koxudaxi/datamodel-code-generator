@@ -1,24 +1,18 @@
+"""Tests for OpenAPI/Swagger input file code generation."""
+
 from __future__ import annotations
 
-import contextlib
 import json
 import platform
-import shutil
-from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, call
 
 import black
-import isort
 import pydantic
 import pytest
-from freezegun import freeze_time
 from packaging import version
-
-with contextlib.suppress(ImportError):
-    pass
 
 from datamodel_code_generator import (
     MIN_VERSION,
@@ -31,231 +25,188 @@ from datamodel_code_generator import (
     get_version,
     inferred_message,
 )
-from datamodel_code_generator.__main__ import Exit, main
-from tests.main.test_main_general import DATA_PATH, EXPECTED_MAIN_PATH, TIMESTAMP
+from datamodel_code_generator.__main__ import Exit
+from tests.conftest import assert_directory_content, freeze_time
+from tests.main.conftest import (
+    DATA_PATH,
+    OPEN_API_DATA_PATH,
+    TIMESTAMP,
+    run_main_and_assert,
+    run_main_url_and_assert,
+)
+from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
-OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
-EXPECTED_OPENAPI_PATH: Path = EXPECTED_MAIN_PATH / "openapi"
-
-
-@pytest.fixture(autouse=True)
-def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
-    namespace_ = Namespace(no_color=False)
-    monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
-    monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
-
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "general.py").read_text()
+def test_main(output_file: Path) -> None:
+    """Test OpenAPI file code generation."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_discriminator_enum(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_enum.yaml"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        "3.10",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum.py").read_text()
+def test_main_openapi_discriminator_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator enum."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator/enum.py",
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_discriminator_enum_duplicate(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_enum_duplicate.yaml"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        "3.10",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_duplicate.py").read_text()
+def test_main_openapi_discriminator_enum_duplicate(output_file: Path) -> None:
+    """Test OpenAPI generation with duplicate discriminator enum."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum_duplicate.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "enum_duplicate.py",
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_discriminator_with_properties(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_with_properties.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py").read_text()
+def test_main_openapi_discriminator_with_properties(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator properties."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_with_properties.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "with_properties.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_discriminator_allof(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_allof.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--snake-case-field",
-        "--use-annotated",
-        "--use-union-operator",
-        "--collapse-root-models",
-    ])
-    assert return_code == Exit.OK
-
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / "allof.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_pydantic_basemodel(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "general.py").read_text()
+def test_main_openapi_discriminator_allof(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf discriminator polymorphism."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_allof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "allof.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+            "--use-annotated",
+            "--use-union-operator",
+            "--collapse-root-models",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_base_class(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    shutil.copy(DATA_PATH / "pyproject.toml", tmp_path / "pyproject.toml")
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--base-class",
-        "custom_module.Base",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "base_class.py").read_text()
+def test_main_pydantic_basemodel(output_file: Path) -> None:
+    """Test OpenAPI generation with Pydantic BaseModel output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_target_python_version(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        f"3.{MIN_VERSION}",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "target_python_version.py").read_text()
+def test_main_base_class(output_file: Path) -> None:
+    """Test OpenAPI generation with custom base class."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="base_class.py",
+        extra_args=["--base-class", "custom_module.Base"],
+        copy_files=[(DATA_PATH / "pyproject.toml", output_file.parent / "pyproject.toml")],
+    )
+
+
+def test_target_python_version(output_file: Path) -> None:
+    """Test OpenAPI generation with target Python version."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--target-python-version", f"3.{MIN_VERSION}"],
+    )
 
 
 @pytest.mark.benchmark
-def test_main_modular(tmp_path: Path) -> None:
+def test_main_modular(output_dir: Path) -> None:
     """Test main function on modular file."""
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = tmp_path / "model"
-
     with freeze_time(TIMESTAMP):
-        main(["--input", str(input_filename), "--output", str(output_path)])
-    main_modular_dir = EXPECTED_OPENAPI_PATH / "modular"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == path.read_text()
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "modular.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "modular",
+        )
 
 
-def test_main_modular_reuse_model(tmp_path: Path) -> None:
+def test_main_modular_reuse_model(output_dir: Path) -> None:
     """Test main function on modular file."""
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = tmp_path / "model"
-
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--output",
-            str(output_path),
-            "--reuse-model",
-        ])
-    main_modular_dir = EXPECTED_OPENAPI_PATH / "modular_reuse_model"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == path.read_text()
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "modular.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "modular_reuse_model",
+            extra_args=["--reuse-model"],
+        )
 
 
-def test_main_modular_no_file() -> None:
+def test_main_modular_no_file(tmp_path: Path) -> None:
     """Test main function on modular file with no output name."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=tmp_path / "output.py",
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+    )
 
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
 
-    assert main(["--input", str(input_filename)]) == Exit.ERROR
-
-
-def test_main_modular_filename(tmp_path: Path) -> None:
+def test_main_modular_filename(output_file: Path) -> None:
     """Test main function on modular file with filename."""
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_filename = tmp_path / "model.py"
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+    )
 
-    assert main(["--input", str(input_filename), "--output", str(output_filename)]) == Exit.ERROR
 
-
-def test_main_openapi_no_file(capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_openapi_no_file(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test main function on non-modular file with no output name."""
     monkeypatch.chdir(tmp_path)
-    input_filename = OPEN_API_DATA_PATH / "api.yaml"
 
     with freeze_time(TIMESTAMP):
-        main(["--input", str(input_filename)])
-
-    captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_OPENAPI_PATH / "no_file.py").read_text()
-    assert captured.err == inferred_message.format("openapi") + "\n"
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "no_file.py",
+            capsys=capsys,
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
 
 
 @pytest.mark.parametrize(
@@ -283,82 +234,74 @@ def test_main_openapi_extra_template_data_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test main function with custom config data in extra template."""
-
     monkeypatch.chdir(tmp_path)
-    input_filename = OPEN_API_DATA_PATH / "api.yaml"
-    extra_template_data = OPEN_API_DATA_PATH / "extra_data.json"
-
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--extra-template-data",
-            str(extra_template_data),
-            "--output-model",
-            output_model,
-        ])
-
-    captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
-    assert captured.err == inferred_message.format("openapi") + "\n"
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / expected_output,
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--extra-template-data",
+                str(OPEN_API_DATA_PATH / "extra_data.json"),
+                "--output-model",
+                output_model,
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
 
 
 def test_main_custom_template_dir_old_style(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test main function with custom template directory."""
-
     monkeypatch.chdir(tmp_path)
-    input_filename = OPEN_API_DATA_PATH / "api.yaml"
-    custom_template_dir = DATA_PATH / "templates_old_style"
-    extra_template_data = OPEN_API_DATA_PATH / "extra_data.json"
-
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--custom-template-dir",
-            str(custom_template_dir),
-            "--extra-template-data",
-            str(extra_template_data),
-        ])
-
-    captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_OPENAPI_PATH / "custom_template_dir.py").read_text()
-    assert captured.err == inferred_message.format("openapi") + "\n"
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "custom_template_dir.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_old_style"),
+                "--extra-template-data",
+                str(OPEN_API_DATA_PATH / "extra_data.json"),
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
 
 
 def test_main_openapi_custom_template_dir(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.chdir(tmp_path)
     """Test main function with custom template directory."""
-
-    input_filename = OPEN_API_DATA_PATH / "api.yaml"
-    custom_template_dir = DATA_PATH / "templates"
-    extra_template_data = OPEN_API_DATA_PATH / "extra_data.json"
-
+    monkeypatch.chdir(tmp_path)
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--custom-template-dir",
-            str(custom_template_dir),
-            "--extra-template-data",
-            str(extra_template_data),
-        ])
-
-    captured = capsys.readouterr()
-    assert captured.out == (EXPECTED_OPENAPI_PATH / "custom_template_dir.py").read_text()
-    assert captured.err == inferred_message.format("openapi") + "\n"
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "custom_template_dir.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates"),
+                "--extra-template-data",
+                str(OPEN_API_DATA_PATH / "extra_data.json"),
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
 
 
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
-@freeze_time("2019-07-26")
 def test_pyproject(tmp_path: Path) -> None:
+    """Test code generation using pyproject.toml configuration."""
     if platform.system() == "Windows":
 
         def get_path(path: str) -> str:
@@ -369,85 +312,78 @@ def test_pyproject(tmp_path: Path) -> None:
         def get_path(path: str) -> str:
             return str(path)
 
-    with chdir(tmp_path):
-        output_file: Path = tmp_path / "output.py"
-        pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
-        pyproject_toml = (
-            pyproject_toml_path.read_text()
-            .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
-            .replace("OUTPUT_PATH", get_path(output_file))
-            .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
-            .replace(
-                "EXTRA_TEMPLATE_DATA_PATH",
-                get_path(OPEN_API_DATA_PATH / "empty_data.json"),
-            )
-            .replace("CUSTOM_TEMPLATE_DIR_PATH", get_path(tmp_path))
+    output_file: Path = tmp_path / "output.py"
+    pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
+    pyproject_toml = (
+        pyproject_toml_path.read_text()
+        .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
+        .replace("OUTPUT_PATH", get_path(output_file))
+        .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
+        .replace(
+            "EXTRA_TEMPLATE_DATA_PATH",
+            get_path(OPEN_API_DATA_PATH / "empty_data.json"),
         )
-        (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+        .replace("CUSTOM_TEMPLATE_DIR_PATH", get_path(tmp_path))
+    )
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
-        return_code: Exit = main([])
-        assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pyproject.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_pyproject_not_found(tmp_path: Path) -> None:
     with chdir(tmp_path):
-        output_file: Path = tmp_path / "output.py"
-        return_code: Exit = main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "api.yaml"),
-            "--output",
-            str(output_file),
-        ])
-        assert return_code == Exit.OK
-        assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pyproject_not_found.py").read_text()
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+        )
 
 
-@freeze_time("2019-07-26")
-def test_stdin(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_pyproject_not_found(tmp_path: Path) -> None:
+    """Test code generation when pyproject.toml is not found."""
     output_file: Path = tmp_path / "output.py"
-    monkeypatch.setattr("sys.stdin", (OPEN_API_DATA_PATH / "api.yaml").open())
-    return_code: Exit = main([
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "stdin.py").read_text()
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+        )
 
 
-@freeze_time("2019-07-26")
-def test_validation(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
+    """Test OpenAPI code generation from stdin input."""
+    run_main_and_assert(
+        stdin_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        monkeypatch=monkeypatch,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+        transform=lambda s: s.replace("#   filename:  <stdin>", "#   filename:  api.yaml"),
+    )
+
+
+def test_validation(mocker: MockerFixture, output_file: Path) -> None:
+    """Test OpenAPI code generation with validation enabled."""
     mock_prance = mocker.patch("prance.BaseParser")
-
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--validation",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "validation.py").read_text()
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+        extra_args=["--validation"],
+    )
     mock_prance.assert_called_once()
 
 
-@freeze_time("2019-07-26")
-def test_validation_failed(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_validation_failed(mocker: MockerFixture, output_file: Path) -> None:
+    """Test OpenAPI code generation with validation failure."""
     mock_prance = mocker.patch("prance.BaseParser", side_effect=Exception("error"))
-    output_file: Path = tmp_path / "output.py"
-    assert (
-        main([
-            "--input",
-            str(OPEN_API_DATA_PATH / "invalid.yaml"),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "openapi",
-            "--validation",
-        ])
-        == Exit.ERROR
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "invalid.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        expected_exit=Exit.ERROR,
+        extra_args=["--validation"],
     )
     mock_prance.assert_called_once()
 
@@ -486,21 +422,18 @@ def test_validation_failed(mocker: MockerFixture, tmp_path: Path) -> None:
         ),
     ],
 )
-@freeze_time("2019-07-26")
-def test_main_with_field_constraints(output_model: str, expected_output: str, args: list[str], tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_constrained.yaml"),
-        "--output",
-        str(output_file),
-        "--field-constraints",
-        "--output-model-type",
-        output_model,
-        *args,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_main_with_field_constraints(
+    output_model: str, expected_output: str, args: list[str], output_file: Path
+) -> None:
+    """Test OpenAPI generation with field constraints enabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--field-constraints", "--output-model-type", output_model, *args],
+    )
 
 
 @pytest.mark.parametrize(
@@ -516,19 +449,16 @@ def test_main_with_field_constraints(output_model: str, expected_output: str, ar
         ),
     ],
 )
-@freeze_time("2019-07-26")
-def test_main_without_field_constraints(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_constrained.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_main_without_field_constraints(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation without field constraints."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model],
+    )
 
 
 @pytest.mark.parametrize(
@@ -544,125 +474,108 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_with_aliases(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--aliases",
-        str(OPEN_API_DATA_PATH / "aliases.json"),
-        "--target-python",
-        "3.9",
-        "--output-model",
-        output_model,
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_main_with_aliases(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with type aliases."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--aliases",
+            str(OPEN_API_DATA_PATH / "aliases.json"),
+            "--target-python",
+            "3.9",
+            "--output-model",
+            output_model,
+        ],
+    )
 
 
-def test_main_with_bad_aliases(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--aliases",
-        str(OPEN_API_DATA_PATH / "not.json"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.ERROR
+def test_main_with_bad_aliases(output_file: Path) -> None:
+    """Test OpenAPI generation with invalid aliases file."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        extra_args=["--aliases", str(OPEN_API_DATA_PATH / "not.json")],
+    )
 
 
-def test_main_with_more_bad_aliases(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--aliases",
-        str(OPEN_API_DATA_PATH / "list.json"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.ERROR
+def test_main_with_more_bad_aliases(output_file: Path) -> None:
+    """Test OpenAPI generation with malformed aliases file."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        extra_args=["--aliases", str(OPEN_API_DATA_PATH / "list.json")],
+    )
 
 
-def test_main_with_bad_extra_data(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--extra-template-data",
-        str(OPEN_API_DATA_PATH / "not.json"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.ERROR
+def test_main_with_bad_extra_data(output_file: Path) -> None:
+    """Test OpenAPI generation with invalid extra template data file."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        extra_args=["--extra-template-data", str(OPEN_API_DATA_PATH / "not.json")],
+    )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_with_snake_case_field(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--snake-case-field",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "with_snake_case_field.py").read_text()
+def test_main_with_snake_case_field(output_file: Path) -> None:
+    """Test OpenAPI generation with snake case field naming."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--snake-case-field"],
+    )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_with_strip_default_none(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--strip-default-none",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "with_strip_default_none.py").read_text()
+def test_main_with_strip_default_none(output_file: Path) -> None:
+    """Test OpenAPI generation with strip default none option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--strip-default-none"],
+    )
 
 
-def test_disable_timestamp(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--disable-timestamp",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "disable_timestamp.py").read_text()
+def test_disable_timestamp(output_file: Path) -> None:
+    """Test OpenAPI generation with timestamp disabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--disable-timestamp"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_enable_version_header(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--enable-version-header",
-    ])
-    assert return_code == Exit.OK
-    expected = (EXPECTED_OPENAPI_PATH / "enable_version_header.py").read_text()
-    expected = expected.replace("#   version:   0.0.0", f"#   version:   {get_version()}")
-    assert output_file.read_text(encoding="utf-8") == expected
+def test_enable_version_header(output_file: Path) -> None:
+    """Test OpenAPI generation with version header enabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enable_version_header.py",
+        extra_args=["--enable-version-header"],
+        transform=lambda s: s.replace(f"#   version:   {get_version()}", "#   version:   0.0.0"),
+    )
 
 
 @pytest.mark.parametrize(
@@ -678,24 +591,20 @@ def test_enable_version_header(tmp_path: Path) -> None:
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_allow_population_by_field_name(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--allow-population-by-field-name",
-        "--output-model-type",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_allow_population_by_field_name(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with allow population by field name."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--allow-population-by-field-name", "--output-model-type", output_model],
+    )
 
 
 @pytest.mark.parametrize(
@@ -711,24 +620,20 @@ def test_allow_population_by_field_name(output_model: str, expected_output: str,
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_allow_extra_fields(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--allow-extra-fields",
-        "--output-model-type",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_allow_extra_fields(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with allow extra fields option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--allow-extra-fields", "--output-model-type", output_model],
+    )
 
 
 @pytest.mark.parametrize(
@@ -744,159 +649,122 @@ def test_allow_extra_fields(output_model: str, expected_output: str, tmp_path: P
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_enable_faux_immutability(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--enable-faux-immutability",
-        "--output-model-type",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_enable_faux_immutability(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with faux immutability enabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--enable-faux-immutability", "--output-model-type", output_model],
+    )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_use_default(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--use-default",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_default.py").read_text()
+def test_use_default(output_file: Path) -> None:
+    """Test OpenAPI generation with use default option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--use-default"],
+    )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_force_optional(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--force-optional",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "force_optional.py").read_text()
+def test_force_optional(output_file: Path) -> None:
+    """Test OpenAPI generation with force optional enabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--force-optional"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_with_exclusive(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "exclusive.yaml"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "with_exclusive.py").read_text()
+def test_main_with_exclusive(output_file: Path) -> None:
+    """Test OpenAPI generation with exclusive keywords."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "exclusive.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_subclass_enum(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
+def test_main_subclass_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with subclass enum."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "subclass_enum.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
-def test_main_specialized_enum(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        "3.11",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_specialized.py").read_text()
+def test_main_specialized_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with specialized enum."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "subclass_enum.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_specialized.py",
+        extra_args=["--target-python-version", "3.11"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
-def test_main_specialized_enums_disabled(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "subclass_enum.json"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        "3.11",
-        "--no-use-specialized-enum",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "subclass_enum.py").read_text()
+def test_main_specialized_enums_disabled(output_file: Path) -> None:
+    """Test OpenAPI generation with specialized enums disabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "subclass_enum.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="subclass_enum.py",
+        extra_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
+    )
 
 
-def test_main_use_standard_collections(tmp_path: Path) -> None:
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = tmp_path / "model"
-
+def test_main_use_standard_collections(output_dir: Path) -> None:
+    """Test OpenAPI generation with standard collections."""
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--output",
-            str(output_path),
-            "--use-standard-collections",
-        ])
-    main_use_standard_collections_dir = EXPECTED_OPENAPI_PATH / "use_standard_collections"
-    for path in main_use_standard_collections_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_use_standard_collections_dir)).read_text()
-        assert result == path.read_text()
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "modular.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "use_standard_collections",
+            extra_args=["--use-standard-collections"],
+        )
 
 
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
-def test_main_use_generic_container_types(tmp_path: Path) -> None:
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = tmp_path / "model"
-
+def test_main_use_generic_container_types(output_dir: Path) -> None:
+    """Test OpenAPI generation with generic container types."""
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--output",
-            str(output_path),
-            "--use-generic-container-types",
-        ])
-    main_use_generic_container_types_dir = EXPECTED_OPENAPI_PATH / "use_generic_container_types"
-    for path in main_use_generic_container_types_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_use_generic_container_types_dir)).read_text()
-        assert result == path.read_text()
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "modular.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "use_generic_container_types",
+            extra_args=["--use-generic-container-types"],
+        )
 
 
 @pytest.mark.skipif(
@@ -905,45 +773,33 @@ def test_main_use_generic_container_types(tmp_path: Path) -> None:
 )
 @pytest.mark.benchmark
 def test_main_use_generic_container_types_standard_collections(
-    tmp_path: Path,
+    output_dir: Path,
 ) -> None:
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = tmp_path / "model"
-
+    """Test OpenAPI generation with generic container types and standard collections."""
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--output",
-            str(output_path),
-            "--use-generic-container-types",
-            "--use-standard-collections",
-        ])
-    main_use_generic_container_types_standard_collections_dir = (
-        EXPECTED_OPENAPI_PATH / "use_generic_container_types_standard_collections"
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "modular.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "use_generic_container_types_standard_collections",
+            extra_args=["--use-generic-container-types", "--use-standard-collections"],
+        )
+
+
+def test_main_original_field_name_delimiter_without_snake_case_field(
+    capsys: pytest.CaptureFixture, output_file: Path
+) -> None:
+    """Test OpenAPI generation with original field name delimiter error."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        extra_args=["--original-field-name-delimiter", "-"],
+        capsys=capsys,
+        expected_stderr_contains="`--original-field-name-delimiter` can not be used without `--snake-case-field`.",
     )
-    for path in main_use_generic_container_types_standard_collections_dir.rglob("*.py"):
-        result = output_path.joinpath(
-            path.relative_to(main_use_generic_container_types_standard_collections_dir)
-        ).read_text()
-        assert result == path.read_text()
 
 
-def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pytest.CaptureFixture) -> None:
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-
-    return_code: Exit = main([
-        "--input",
-        str(input_filename),
-        "--original-field-name-delimiter",
-        "-",
-    ])
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "`--original-field-name-delimiter` can not be used without `--snake-case-field`.\n"
-
-
-@freeze_time("2019-07-26")
 @pytest.mark.parametrize(
     ("output_model", "expected_output", "date_type"),
     [
@@ -954,25 +810,20 @@ def test_main_original_field_name_delimiter_without_snake_case_field(capsys: pyt
         ("msgspec.Struct", "datetime_msgspec.py", "datetime"),
     ],
 )
-def test_main_openapi_aware_datetime(output_model: str, expected_output: str, date_type: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "datetime.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-datetime-class",
-        date_type,
-        "--output-model",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_main_openapi_aware_datetime(
+    output_model: str, expected_output: str, date_type: str, output_file: Path
+) -> None:
+    """Test OpenAPI generation with aware datetime types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "datetime.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-datetime-class", date_type, "--output-model", output_model],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
@@ -986,85 +837,65 @@ def test_main_openapi_aware_datetime(output_model: str, expected_output: str, da
         ),
     ],
 )
-def test_main_openapi_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "datetime.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_main_openapi_datetime(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with datetime types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "datetime.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model", output_model],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_models_not_found(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "no_components.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "Models not found in the input data\n"
+def test_main_models_not_found(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+    """Test OpenAPI generation with models not found error."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "no_components.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Models not found in the input data",
+    )
 
 
 @pytest.mark.skipif(
     version.parse(pydantic.VERSION) < version.parse("1.9.0"),
     reason="Require Pydantic version 1.9.0 or later ",
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_enum_models_as_literal_one(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "enum_models.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--enum-field-as-literal",
-        "one",
-        "--target-python-version",
-        min_version,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "one.py").read_text()
+def test_main_openapi_enum_models_as_literal_one(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with one enum model as literal."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="enum_models/one.py",
+        extra_args=["--enum-field-as-literal", "one", "--target-python-version", min_version],
+    )
 
 
 @pytest.mark.skipif(
     version.parse(pydantic.VERSION) < version.parse("1.9.0"),
     reason="Require Pydantic version 1.9.0 or later ",
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_use_one_literal_as_default(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "enum_models.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--enum-field-as-literal",
-        "one",
-        "--target-python-version",
-        min_version,
-        "--use-one-literal-as-default",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "enum_models" / "one_literal_as_default.py").read_text()
+def test_main_openapi_use_one_literal_as_default(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with one literal as default."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "enum_models" / "one_literal_as_default.py",
+        extra_args=[
+            "--enum-field-as-literal",
+            "one",
+            "--target-python-version",
+            min_version,
+            "--use-one-literal-as-default",
+        ],
     )
 
 
@@ -1076,23 +907,16 @@ def test_main_openapi_use_one_literal_as_default(min_version: str, tmp_path: Pat
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_enum_models_as_literal_all(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "enum_models.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--enum-field-as-literal",
-        "all",
-        "--target-python-version",
-        min_version,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "all.py").read_text()
+def test_main_openapi_enum_models_as_literal_all(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with all enum models as literal."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="enum_models/all.py",
+        extra_args=["--enum-field-as-literal", "all", "--target-python-version", min_version],
+    )
 
 
 @pytest.mark.skipif(
@@ -1103,75 +927,51 @@ def test_main_openapi_enum_models_as_literal_all(min_version: str, tmp_path: Pat
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_enum_models_as_literal(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "enum_models.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--enum-field-as-literal",
-        "all",
-        "--target-python-version",
-        f"3.{MIN_VERSION}",
-    ])
-
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py").read_text()
+def test_main_openapi_enum_models_as_literal(output_file: Path) -> None:
+    """Test OpenAPI generation with enum models as literal."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "enum_models" / "as_literal.py",
+        extra_args=["--enum-field-as-literal", "all", "--target-python-version", f"3.{MIN_VERSION}"],
     )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_openapi_all_of_required(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "allof_required.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "allof_required.py").read_text()
+def test_main_openapi_all_of_required(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf required fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_required.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_required.py",
+    )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_openapi_nullable(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable.py").read_text()
+def test_main_openapi_nullable(output_file: Path) -> None:
+    """Test OpenAPI generation with nullable types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="nullable.py",
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_nullable_strict_nullable(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--strict-nullable",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable.py").read_text()
+def test_main_openapi_nullable_strict_nullable(output_file: Path) -> None:
+    """Test OpenAPI generation with strict nullable types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="nullable_strict_nullable.py",
+        extra_args=["--strict-nullable"],
     )
 
 
@@ -1192,29 +992,21 @@ def test_main_openapi_nullable_strict_nullable(tmp_path: Path) -> None:
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_pattern(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "pattern.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--target-python",
-        "3.9",
-        "--output-model-type",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (
-        EXPECTED_OPENAPI_PATH / "pattern" / expected_output
-    ).read_text().replace("pattern.json", "pattern.yaml")
+def test_main_openapi_pattern(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with pattern validation."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "pattern.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=f"pattern/{expected_output}",
+        extra_args=["--target-python", "3.9", "--output-model-type", output_model],
+        transform=lambda s: s.replace("pattern.yaml", "pattern.json"),
+    )
 
 
 @pytest.mark.parametrize(
@@ -1227,36 +1019,28 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, tmp_path:
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] < "22",
     reason="Installed black doesn't support Python version 3.10",
 )
 def test_main_openapi_pattern_with_lookaround_pydantic_v2(
-    expected_output: str, args: list[str], tmp_path: Path
+    expected_output: str, args: list[str], output_file: Path
 ) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "pattern_lookaround.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--target-python",
-        "3.9",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        *args,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+    """Test OpenAPI generation with pattern lookaround for Pydantic v2."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "pattern_lookaround.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--target-python", "3.9", "--output-model-type", "pydantic_v2.BaseModel", *args],
+    )
 
 
-@freeze_time("2019-07-26")
 def test_main_generate_custom_class_name_generator_modular(
     tmp_path: Path,
 ) -> None:
+    """Test OpenAPI generation with custom class name generator in modular mode."""
     output_path = tmp_path / "model"
     main_modular_custom_class_name_dir = EXPECTED_OPENAPI_PATH / "modular_custom_class_name"
 
@@ -1273,13 +1057,12 @@ def test_main_generate_custom_class_name_generator_modular(
             custom_class_name_generator=custom_class_name_generator,
         )
 
-        for path in main_modular_custom_class_name_dir.rglob("*.py"):
-            result = output_path.joinpath(path.relative_to(main_modular_custom_class_name_dir)).read_text()
-            assert result == path.read_text()
+        assert_directory_content(output_path, main_modular_custom_class_name_dir)
 
 
-@freeze_time("2019-07-26")
-def test_main_http_openapi(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
+    """Test OpenAPI code generation from HTTP URL."""
+
     def get_mock_response(path: str) -> Mock:
         mock = mocker.Mock()
         mock.text = (OPEN_API_DATA_PATH / path).read_text()
@@ -1293,17 +1076,13 @@ def test_main_http_openapi(mocker: MockerFixture, tmp_path: Path) -> None:
         ],
     )
 
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--url",
-        "https://example.com/refs.yaml",
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "http_refs.py").read_text()
+    run_main_url_and_assert(
+        url="https://example.com/refs.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="http_refs.py",
+    )
     httpx_get_mock.assert_has_calls([
         call(
             "https://example.com/refs.yaml",
@@ -1322,68 +1101,43 @@ def test_main_http_openapi(mocker: MockerFixture, tmp_path: Path) -> None:
     ])
 
 
-@freeze_time("2019-07-26")
-def test_main_disable_appending_item_suffix(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_constrained.yaml"),
-        "--output",
-        str(output_file),
-        "--field-constraints",
-        "--disable-appending-item-suffix",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "disable_appending_item_suffix.py").read_text()
+def test_main_disable_appending_item_suffix(output_file: Path) -> None:
+    """Test OpenAPI generation with item suffix disabled."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--field-constraints", "--disable-appending-item-suffix"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_body_and_parameters(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "body_and_parameters.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--openapi-scopes",
-        "paths",
-        "schemas",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "general.py").read_text()
+def test_main_openapi_body_and_parameters(output_file: Path) -> None:
+    """Test OpenAPI generation with body and parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "general.py",
+        extra_args=["--openapi-scopes", "paths", "schemas"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, output_file: Path) -> None:
+    """Test OpenAPI generation with body and parameters remote reference."""
     input_path = OPEN_API_DATA_PATH / "body_and_parameters_remote_ref.yaml"
     person_response = mocker.Mock()
     person_response.text = input_path.read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
 
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(input_path),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--openapi-scopes",
-        "paths",
-        "schemas",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py").read_text()
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py",
+        extra_args=["--openapi-scopes", "paths", "schemas"],
     )
     httpx_get_mock.assert_has_calls([
         call(
@@ -1396,95 +1150,64 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, tmp_
     ])
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_body_and_parameters_only_paths(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "body_and_parameters.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--openapi-scopes",
-        "paths",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_paths.py").read_text()
+def test_main_openapi_body_and_parameters_only_paths(output_file: Path) -> None:
+    """Test OpenAPI generation with only paths scope."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_paths.py",
+        extra_args=["--openapi-scopes", "paths"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_body_and_parameters_only_schemas(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "body_and_parameters.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--openapi-scopes",
-        "schemas",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_schemas.py").read_text()
+def test_main_openapi_body_and_parameters_only_schemas(output_file: Path) -> None:
+    """Test OpenAPI generation with only schemas scope."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "only_schemas.py",
+        extra_args=["--openapi-scopes", "schemas"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_content_in_parameters(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "content_in_parameters.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "content_in_parameters.py").read_text()
+def test_main_openapi_content_in_parameters(output_file: Path) -> None:
+    """Test OpenAPI generation with content in parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "content_in_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="content_in_parameters.py",
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_oas_response_reference(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "oas_response_reference.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--openapi-scopes",
-        "paths",
-        "schemas",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "oas_response_reference.py").read_text()
+def test_main_openapi_oas_response_reference(output_file: Path) -> None:
+    """Test OpenAPI generation with OAS response reference."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "oas_response_reference.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="oas_response_reference.py",
+        extra_args=["--openapi-scopes", "paths", "schemas"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_json_pointer(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "json_pointer.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "json_pointer.py").read_text()
+def test_main_openapi_json_pointer(output_file: Path) -> None:
+    """Test OpenAPI generation with JSON pointer references."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "json_pointer.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="json_pointer.py",
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
@@ -1500,54 +1223,47 @@ def test_main_openapi_json_pointer(tmp_path: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_use_annotated_with_field_constraints(
-    output_model: str, expected_output: str, min_version: str, tmp_path: Path
+    output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_constrained.yaml"),
-        "--output",
-        str(output_file),
-        "--field-constraints",
-        "--use-annotated",
-        "--target-python-version",
-        min_version,
-        "--output-model",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+    """Test OpenAPI generation with Annotated and field constraints."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--field-constraints",
+            "--use-annotated",
+            "--target-python-version",
+            min_version,
+            "--output-model",
+            output_model,
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_nested_enum(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nested_enum.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nested_enum.py").read_text()
+def test_main_nested_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with nested enum."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nested_enum.json",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+    )
 
 
-@freeze_time("2019-07-26")
-def test_openapi_special_yaml_keywords(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_openapi_special_yaml_keywords(mocker: MockerFixture, output_file: Path) -> None:
+    """Test OpenAPI generation with special YAML keywords."""
     mock_prance = mocker.patch("prance.BaseParser")
-
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "special_yaml_keywords.yaml"),
-        "--output",
-        str(output_file),
-        "--validation",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "special_yaml_keywords.py").read_text()
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "special_yaml_keywords.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="special_yaml_keywords.py",
+        extra_args=["--validation"],
+    )
     mock_prance.assert_called_once()
 
 
@@ -1555,105 +1271,70 @@ def test_openapi_special_yaml_keywords(mocker: MockerFixture, tmp_path: Path) ->
     black.__version__.split(".")[0] < "22",
     reason="Installed black doesn't support Python version 3.10",
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_nullable_use_union_operator(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--use-union-operator",
-        "--strict-nullable",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "nullable_strict_nullable_use_union_operator.py").read_text()
+def test_main_openapi_nullable_use_union_operator(output_file: Path) -> None:
+    """Test OpenAPI generation with nullable using union operator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="nullable_strict_nullable_use_union_operator.py",
+        extra_args=["--use-union-operator", "--strict-nullable"],
     )
 
 
-@freeze_time("2019-07-26")
 def test_external_relative_ref(tmp_path: Path) -> None:
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "external_relative_ref" / "model_b"),
-        "--output",
-        str(tmp_path),
-    ])
-    assert return_code == Exit.OK
-    main_modular_dir = EXPECTED_OPENAPI_PATH / "external_relative_ref"
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == path.read_text()
+    """Test OpenAPI generation with external relative references."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "external_relative_ref" / "model_b",
+        output_path=tmp_path,
+        expected_directory=EXPECTED_OPENAPI_PATH / "external_relative_ref",
+    )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_collapse_root_models(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "not_real_string.json"),
-        "--output",
-        str(output_file),
-        "--collapse-root-models",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "collapse_root_models.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_collapse_root_models_field_constraints(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "not_real_string.json"),
-        "--output",
-        str(output_file),
-        "--collapse-root-models",
-        "--field-constraints",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "collapse_root_models_field_constraints.py").read_text()
+def test_main_collapse_root_models(output_file: Path) -> None:
+    """Test OpenAPI generation with collapsed root models."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "not_real_string.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_collapse_root_models_with_references_to_flat_types(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "flat_type.jsonschema"),
-        "--output",
-        str(output_file),
-        "--collapse-root-models",
-    ])
-
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "collapse_root_models_with_references_to_flat_types.py").read_text()
+def test_main_collapse_root_models_field_constraints(output_file: Path) -> None:
+    """Test OpenAPI generation with collapsed root models and field constraints."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "not_real_string.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--field-constraints"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_max_items_enum(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "max_items_enum.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "max_items_enum.py").read_text()
+def test_main_collapse_root_models_with_references_to_flat_types(output_file: Path) -> None:
+    """Test OpenAPI generation with collapsed root models referencing flat types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "flat_type.jsonschema",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_openapi_max_items_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with max items enum."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "max_items_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="max_items_enum.py",
+    )
 
 
 @pytest.mark.parametrize(
@@ -1669,21 +1350,16 @@ def test_main_openapi_max_items_enum(tmp_path: Path) -> None:
         ),
     ],
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_const(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "const.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model",
-        output_model,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
+def test_main_openapi_const(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with const values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "const.json",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model", output_model],
+    )
 
 
 @pytest.mark.parametrize(
@@ -1711,108 +1387,73 @@ def test_main_openapi_const(output_model: str, expected_output: str, tmp_path: P
         ),
     ],
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_const_field(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "const.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model",
-        output_model,
-        "--collapse-root-models",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / expected_output).read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_complex_reference(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "complex_reference.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "complex_reference.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_reference_to_object_properties(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "reference_to_object_properties.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties.py").read_text()
+def test_main_openapi_const_field(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with const field."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "const.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model", output_model, "--collapse-root-models"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_reference_to_object_properties_collapse_root_models(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "reference_to_object_properties.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--collapse-root-models",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "reference_to_object_properties_collapse_root_models.py").read_text()
+def test_main_openapi_complex_reference(output_file: Path) -> None:
+    """Test OpenAPI generation with complex references."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "complex_reference.json",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="complex_reference.py",
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_override_required_all_of_field(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "override_required_all_of.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--collapse-root-models",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "override_required_all_of.py").read_text()
+def test_main_openapi_reference_to_object_properties(output_file: Path) -> None:
+    """Test OpenAPI generation with reference to object properties."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "reference_to_object_properties.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="reference_to_object_properties.py",
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_use_default_kwarg(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--use-default-kwarg",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_default_kwarg.py").read_text()
+def test_main_openapi_reference_to_object_properties_collapse_root_models(output_file: Path) -> None:
+    """Test OpenAPI generation with reference to object properties and collapsed root models."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "reference_to_object_properties.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="reference_to_object_properties_collapse_root_models.py",
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_openapi_override_required_all_of_field(output_file: Path) -> None:
+    """Test OpenAPI generation with override required allOf field."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "override_required_all_of.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="override_required_all_of.py",
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_use_default_kwarg(output_file: Path) -> None:
+    """Test OpenAPI generation with use default kwarg."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        extra_args=["--use-default-kwarg"],
+    )
 
 
 @pytest.mark.parametrize(
@@ -1828,19 +1469,15 @@ def test_main_use_default_kwarg(tmp_path: Path) -> None:
         ),
     ],
 )
-@freeze_time("2019-07-26")
-def test_main_openapi_discriminator(input_: str, output: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / input_),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "discriminator" / output).read_text()
+def test_main_openapi_discriminator(input_: str, output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / input_,
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / output,
+    )
 
 
 @freeze_time("2023-07-27")
@@ -1861,26 +1498,19 @@ def test_main_openapi_discriminator(input_: str, output: str, tmp_path: Path) ->
         ("oneOf", None, "in_array.py"),
     ],
 )
-def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expected: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
+def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expected: str, output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator in array."""
     input_file = f"discriminator_in_array_{kind.lower()}.yaml"
-    return_code: Exit = main([
-        a
-        for a in [
-            "--input",
-            str(OPEN_API_DATA_PATH / input_file),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "openapi",
-            option,
-        ]
-        if a
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (
-        EXPECTED_OPENAPI_PATH / "discriminator" / expected
-    ).read_text().replace("discriminator_in_array.yaml", input_file)
+    extra_args = [option] if option else []
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / input_file,
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=f"discriminator/{expected}",
+        extra_args=extra_args,
+        transform=lambda s: s.replace(input_file, "discriminator_in_array.yaml"),
+    )
 
 
 @pytest.mark.parametrize(
@@ -1900,644 +1530,445 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
         ),
     ],
 )
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
 def test_main_openapi_default_object(output_model: str, expected_output: str, tmp_path: Path) -> None:
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "default_object.yaml"),
-        "--output",
-        str(tmp_path),
-        "--output-model",
-        output_model,
-        "--input-file-type",
-        "openapi",
-        "--target-python-version",
-        "3.9",
-    ])
-    assert return_code == Exit.OK
-
-    main_modular_dir = EXPECTED_OPENAPI_PATH / expected_output
-    for path in main_modular_dir.rglob("*.py"):
-        result = tmp_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == path.read_text(), path
+    """Test OpenAPI generation with default object values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "default_object.yaml",
+        output_path=tmp_path,
+        expected_directory=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=["--output-model", output_model, "--target-python-version", "3.9"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_dataclass(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "dataclasses.dataclass",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "dataclass.py").read_text()
+def test_main_dataclass(output_file: Path) -> None:
+    """Test OpenAPI generation with dataclass output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_dataclass_base_class(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--base-class",
-        "custom_base.Base",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "dataclass_base_class.py").read_text()
+def test_main_dataclass_base_class(output_file: Path) -> None:
+    """Test OpenAPI generation with dataclass base class."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "dataclasses.dataclass", "--base-class", "custom_base.Base"],
+    )
 
 
-@freeze_time("2019-07-26")
 def test_main_openapi_reference_same_hierarchy_directory(tmp_path: Path) -> None:
+    """Test OpenAPI generation with reference in same hierarchy directory."""
+    output_file: Path = tmp_path / "output.py"
     with chdir(OPEN_API_DATA_PATH / "reference_same_hierarchy_directory"):
-        output_file: Path = tmp_path / "output.py"
-        return_code: Exit = main([
-            "--input",
-            "./public/entities.yaml",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "openapi",
-        ])
-        assert return_code == Exit.OK
-        assert (
-            output_file.read_text(encoding="utf-8")
-            == (EXPECTED_OPENAPI_PATH / "reference_same_hierarchy_directory.py").read_text()
+        run_main_and_assert(
+            input_path=Path("./public/entities.yaml"),
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="reference_same_hierarchy_directory.py",
         )
 
 
-@freeze_time("2019-07-26")
-def test_main_multiple_required_any_of(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "multiple_required_any_of.yaml"),
-        "--output",
-        str(output_file),
-        "--collapse-root-models",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "multiple_required_any_of.py").read_text()
+def test_main_multiple_required_any_of(output_file: Path) -> None:
+    """Test OpenAPI generation with multiple required anyOf."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "multiple_required_any_of.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_max_min(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "max_min_number.yaml"),
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "max_min_number.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_use_operation_id_as_name(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--use-operation-id-as-name",
-        "--openapi-scopes",
-        "paths",
-        "schemas",
-        "parameters",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "use_operation_id_as_name.py").read_text()
+def test_main_openapi_max_min(output_file: Path) -> None:
+    """Test OpenAPI generation with max and min constraints."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "max_min_number.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="max_min_number.py",
     )
 
 
-@freeze_time("2019-07-26")
+def test_main_openapi_use_operation_id_as_name(output_file: Path) -> None:
+    """Test OpenAPI generation with operation ID as name."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="use_operation_id_as_name.py",
+        extra_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
+    )
+
+
 def test_main_openapi_use_operation_id_as_name_not_found_operation_id(
-    capsys: pytest.CaptureFixture, tmp_path: Path
+    capsys: pytest.CaptureFixture, output_file: Path
 ) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "body_and_parameters.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--use-operation-id-as-name",
-        "--openapi-scopes",
-        "paths",
-        "schemas",
-        "parameters",
-    ])
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert (
-        captured.err == "All operations must have an operationId when --use_operation_id_as_name is set."
-        "The following path was missing an operationId: pets\n"
+    """Test OpenAPI generation with operation ID as name when ID not found."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        expected_exit=Exit.ERROR,
+        extra_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
+        capsys=capsys,
+        expected_stderr_contains="All operations must have an operationId when --use_operation_id_as_name is set.",
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_unsorted_optional_fields(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "unsorted_optional_fields.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "dataclasses.dataclass",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "unsorted_optional_fields.py").read_text()
+def test_main_unsorted_optional_fields(output_file: Path) -> None:
+    """Test OpenAPI generation with unsorted optional fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "unsorted_optional_fields.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_typed_dict(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "typing.TypedDict",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict.py").read_text()
+def test_main_typed_dict(output_file: Path) -> None:
+    """Test OpenAPI generation with TypedDict output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_typed_dict_py(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "typing.TypedDict",
-        "--target-python-version",
-        min_version,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_py.py").read_text()
+def test_main_typed_dict_py(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with TypedDict for specific Python version."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict", "--target-python-version", min_version],
+    )
 
 
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
-def test_main_modular_typed_dict(tmp_path: Path) -> None:
+def test_main_modular_typed_dict(output_dir: Path) -> None:
     """Test main function on modular file."""
-
-    input_filename = OPEN_API_DATA_PATH / "modular.yaml"
-    output_path = tmp_path / "model"
-
     with freeze_time(TIMESTAMP):
-        main([
-            "--input",
-            str(input_filename),
-            "--output",
-            str(output_path),
-            "--output-model-type",
-            "typing.TypedDict",
-            "--target-python-version",
-            "3.11",
-        ])
-    main_modular_dir = EXPECTED_OPENAPI_PATH / "modular_typed_dict"
-    for path in main_modular_dir.rglob("*.py"):
-        result = output_path.joinpath(path.relative_to(main_modular_dir)).read_text()
-        assert result == path.read_text()
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "modular.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "modular_typed_dict",
+            extra_args=["--output-model-type", "typing.TypedDict", "--target-python-version", "3.11"],
+        )
 
 
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
-@freeze_time("2019-07-26")
-def test_main_typed_dict_nullable(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "typing.TypedDict",
-        "--target-python-version",
-        "3.11",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable.py").read_text()
+def test_main_typed_dict_nullable(output_file: Path) -> None:
+    """Test OpenAPI generation with nullable TypedDict."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict", "--target-python-version", "3.11"],
+    )
 
 
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
-@freeze_time("2019-07-26")
-def test_main_typed_dict_nullable_strict_nullable(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "typing.TypedDict",
-        "--target-python-version",
-        "3.11",
-        "--strict-nullable",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "typed_dict_nullable_strict_nullable.py").read_text()
+def test_main_typed_dict_nullable_strict_nullable(output_file: Path) -> None:
+    """Test OpenAPI generation with strict nullable TypedDict."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict", "--target-python-version", "3.11", "--strict-nullable"],
     )
 
 
 @pytest.mark.benchmark
-@freeze_time("2019-07-26")
-def test_main_openapi_nullable_31(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "nullable_31.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--strip-default-none",
-        "--use-union-operator",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "nullable_31.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_custom_file_header_path(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--custom-file-header-path",
-        str(DATA_PATH / "custom_file_header.txt"),
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "custom_file_header.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--custom-file-header-path",
-        str(DATA_PATH / "custom_file_header.txt"),
-        "--custom-file-header",
-        "abc",
-    ])
-
-    captured = capsys.readouterr()
-    assert return_code == Exit.ERROR
-    assert captured.err == "`--custom_file_header_path` can not be used with `--custom_file_header`.\n"
-
-
-@freeze_time("2019-07-26")
-def test_main_pydantic_v2(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "pydantic_v2.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_custom_id_pydantic_v2(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "custom_id.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2.py").read_text()
-
-
-@pytest.mark.skipif(
-    not isort.__version__.startswith("4."),
-    reason="isort 5.x don't sort pydantic modules",
-)
-@freeze_time("2019-07-26")
-def test_main_openapi_custom_id_pydantic_v2_custom_base(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "custom_id.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--base-class",
-        "custom_base.Base",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "custom_id_pydantic_v2_custom_base.py").read_text()
+def test_main_openapi_nullable_31(output_file: Path) -> None:
+    """Test OpenAPI 3.1 generation with nullable types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable_31.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="nullable_31.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strip-default-none", "--use-union-operator"],
     )
 
 
-@freeze_time("2019-07-26")
+def test_main_custom_file_header_path(output_file: Path) -> None:
+    """Test OpenAPI generation with custom file header path."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header.txt")],
+    )
+
+
+def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+    """Test OpenAPI generation with duplicate custom file header options."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header.txt"),
+            "--custom-file-header",
+            "abc",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="`--custom_file_header_path` can not be used with `--custom_file_header`.",
+    )
+
+
+def test_main_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI generation with Pydantic v2 output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_custom_id_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI generation with custom ID for Pydantic v2."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "custom_id.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_id_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_all_of_with_relative_ref(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "all_of_with_relative_ref" / "openapi.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--keep-model-order",
-        "--collapse-root-models",
-        "--field-constraints",
-        "--use-title-as-name",
-        "--field-include-all-keys",
-        "--use-field-description",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "all_of_with_relative_ref.py").read_text()
+def test_main_openapi_all_of_with_relative_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf and relative reference."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_of_with_relative_ref" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="all_of_with_relative_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--keep-model-order",
+            "--collapse-root-models",
+            "--field-constraints",
+            "--use-title-as-name",
+            "--field-include-all-keys",
+            "--use-field-description",
+        ],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_msgspec_struct(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api.yaml"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        min_version,
-        "--output-model-type",
-        "msgspec.Struct",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_struct.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_msgspec_struct_snake_case(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_ordered_required_fields.yaml"),
-        "--output",
-        str(output_file),
-        "--target-python-version",
-        min_version,
-        "--snake-case-field",
-        "--output-model-type",
-        "msgspec.Struct",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_struct_snake_case.py").read_text()
+def test_main_openapi_msgspec_struct(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with msgspec Struct output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="msgspec_struct.py",
+        extra_args=["--target-python-version", min_version, "--output-model-type", "msgspec.Struct"],
     )
 
 
-@freeze_time("2019-07-26")
+def test_main_openapi_msgspec_struct_snake_case(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with msgspec Struct and snake case."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_ordered_required_fields.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="msgspec_struct_snake_case.py",
+        extra_args=[
+            "--target-python-version",
+            min_version,
+            "--snake-case-field",
+            "--output-model-type",
+            "msgspec.Struct",
+        ],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_msgspec_use_annotated_with_field_constraints(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "api_constrained.yaml"),
-        "--output",
-        str(output_file),
-        "--field-constraints",
-        "--target-python-version",
-        "3.9",
-        "--output-model-type",
-        "msgspec.Struct",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "msgspec_use_annotated_with_field_constraints.py").read_text()
+def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: Path) -> None:
+    """Test OpenAPI generation with msgspec using Annotated and field constraints."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="msgspec_use_annotated_with_field_constraints.py",
+        extra_args=["--field-constraints", "--target-python-version", "3.9", "--output-model-type", "msgspec.Struct"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_discriminator_one_literal_as_default(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_enum.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-one-literal-as-default",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "discriminator" / "enum_one_literal_as_default.py").read_text()
+def test_main_openapi_discriminator_one_literal_as_default(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator one literal as default."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "enum_one_literal_as_default.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-one-literal-as-default"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_discriminator_one_literal_as_default_dataclass(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_enum.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--use-one-literal-as-default",
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default.py").read_text()
+def test_main_openapi_discriminator_one_literal_as_default_dataclass(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator one literal as default for dataclass."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default.py",
+        extra_args=["--output-model-type", "dataclasses.dataclass", "--use-one-literal-as-default"],
     )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_dataclass(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "inheritance.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--keyword-only",
-        "--target-python-version",
-        "3.10",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "dataclass_keyword_only.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture) -> None:
-    return_code = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "inheritance.yaml"),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--keyword-only",
-        "--target-python-version",
-        "3.9",
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert captured.err == "`--keyword-only` requires `--target-python-version` 3.10 or higher.\n"
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixture) -> None:
-    return_code = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "inheritance.yaml"),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "dataclasses.dataclass",
-        "--output-datetime-class",
-        "NaiveDatetime",
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert not captured.out
-    assert (
-        captured.err
-        == '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass\n'
+def test_main_openapi_keyword_only_dataclass(output_file: Path) -> None:
+    """Test OpenAPI generation with keyword-only dataclass."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="dataclass_keyword_only.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
     )
 
 
-@freeze_time("2019-07-26")
+def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+    """Test OpenAPI generation with keyword-only dataclass for Python 3.9."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        expected_exit=Exit.ERROR,
+        extra_args=["--output-model-type", "dataclasses.dataclass", "--keyword-only", "--target-python-version", "3.9"],
+        capsys=capsys,
+        expected_stderr_contains="`--keyword-only` requires `--target-python-version` 3.10 or higher.",
+    )
+
+
+def test_main_openapi_dataclass_with_naive_datetime(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+    """Test OpenAPI generation with dataclass using naive datetime."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--output-datetime-class",
+            "NaiveDatetime",
+        ],
+        capsys=capsys,
+        expected_stderr_contains=(
+            '`--output-datetime-class` only allows "datetime" for `--output-model-type` dataclasses.dataclass'
+        ),
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_msgspec(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "inheritance.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "msgspec.Struct",
-        "--keyword-only",
-        "--target-python-version",
-        min_version,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only.py").read_text()
+def test_main_openapi_keyword_only_msgspec(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with keyword-only msgspec."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_keyword_only.py",
+        extra_args=["--output-model-type", "msgspec.Struct", "--keyword-only", "--target-python-version", min_version],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str, tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "inheritance.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "msgspec.Struct",
-        "--keyword-only",
-        "--target-python-version",
-        min_version,
-        "--extra-template-data",
-        str(OPEN_API_DATA_PATH / "extra_data_msgspec.json"),
-    ])
-    assert return_code == Exit.OK
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+def test_main_openapi_keyword_only_msgspec_with_extra_data(min_version: str, output_file: Path) -> None:
+    """Test OpenAPI generation with keyword-only msgspec and extra data."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_keyword_only_omit_defaults.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--keyword-only",
+            "--target-python-version",
+            min_version,
+            "--extra-template-data",
+            str(OPEN_API_DATA_PATH / "extra_data_msgspec.json"),
+        ],
     )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
 def test_main_generate_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Path) -> None:
+    """Test OpenAPI generation with keyword-only msgspec using generate function."""
     extra_data = json.loads((OPEN_API_DATA_PATH / "extra_data_msgspec.json").read_text())
     output_file: Path = tmp_path / "output.py"
     generate(
@@ -2554,153 +1985,130 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Pa
         use_annotated=True,
         field_constraints=True,
     )
-    assert (
-        output_file.read_text(encoding="utf-8")
-        == (EXPECTED_OPENAPI_PATH / "msgspec_keyword_only_omit_defaults.py").read_text()
+    assert_file_content(output_file, "msgspec_keyword_only_omit_defaults.py")
+
+
+def test_main_openapi_referenced_default(output_file: Path) -> None:
+    """Test OpenAPI generation with referenced default values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "referenced_default.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="referenced_default.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_referenced_default(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "referenced_default.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "referenced_default.py").read_text()
+def test_duplicate_models(output_file: Path) -> None:
+    """Test OpenAPI generation with duplicate models."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "duplicate_models2.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="duplicate_models2.py",
+        extra_args=[
+            "--use-operation-id-as-name",
+            "--openapi-scopes",
+            "paths",
+            "schemas",
+            "parameters",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--parent-scoped-naming",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_duplicate_models(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "duplicate_models2.yaml"),
-        "--output",
-        str(output_file),
-        "--use-operation-id-as-name",
-        "--openapi-scopes",
-        "paths",
-        "schemas",
-        "parameters",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--parent-scoped-naming",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "duplicate_models2.py").read_text()
+def test_main_openapi_shadowed_imports(output_file: Path) -> None:
+    """Test OpenAPI generation with shadowed imports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "shadowed_imports.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="shadowed_imports.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_shadowed_imports(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "shadowed_imports.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "shadowed_imports.py").read_text()
+def test_main_openapi_extra_fields_forbid(output_file: Path) -> None:
+    """Test OpenAPI generation with extra fields forbidden."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "additional_properties.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="additional_properties.py",
+        extra_args=["--extra-fields", "forbid"],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_extra_fields_forbid(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "additional_properties.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--extra-fields",
-        "forbid",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "additional_properties.py").read_text()
+def test_main_openapi_same_name_objects(output_file: Path) -> None:
+    """Test OpenAPI generation with same name objects."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "same_name_objects.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="same_name_objects.py",
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_same_name_objects(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "same_name_objects.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "same_name_objects.py").read_text()
-
-
-@freeze_time("2019-07-26")
-def test_main_openapi_type_alias(tmp_path: Path) -> None:
+def test_main_openapi_type_alias(output_file: Path) -> None:
     """Test that TypeAliasType is generated for OpenAPI schemas for Python 3.9-3.11."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "type_alias.yaml"),
-        "--output",
-        str(output_file),
-        "--use-type-alias",
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias.py").read_text()
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias.py",
+        extra_args=["--use-type-alias"],
+    )
 
 
-@freeze_time("2019-07-26")
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
 )
-def test_main_openapi_type_alias_py312(tmp_path: Path) -> None:
+def test_main_openapi_type_alias_py312(output_file: Path) -> None:
     """Test that type statement syntax is generated for OpenAPI schemas with Python 3.12+ and Pydantic v2."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "type_alias.yaml"),
-        "--output",
-        str(output_file),
-        "--use-type-alias",
-        "--input-file-type",
-        "openapi",
-        "--target-python-version",
-        "3.12",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "type_alias_py312.py").read_text()
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_py312.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
 
 
-@freeze_time("2019-07-26")
-def test_main_openapi_byte_format(tmp_path: Path) -> None:
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "byte_format.yaml"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "openapi",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_OPENAPI_PATH / "byte_format.py").read_text()
+def test_main_openapi_byte_format(output_file: Path) -> None:
+    """Test OpenAPI generation with byte format."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "byte_format.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="byte_format.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_unquoted_null(output_file: Path) -> None:
+    """Test OpenAPI generation with unquoted null values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "unquoted_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="unquoted_null.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )

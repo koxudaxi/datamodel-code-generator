@@ -1,3 +1,8 @@
+"""Pydantic v2 type manager.
+
+Maps schema types to Pydantic v2 specific types with AwareDatetime, NaiveDatetime, etc.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
@@ -17,6 +22,8 @@ if TYPE_CHECKING:
 
 
 class DataTypeManager(_DataTypeManager):
+    """Type manager for Pydantic v2 with pattern key support."""
+
     PATTERN_KEY: ClassVar[str] = "pattern"
 
     def type_map_factory(
@@ -26,6 +33,7 @@ class DataTypeManager(_DataTypeManager):
         pattern_key: str,
         target_datetime_class: DatetimeClassType | None = None,
     ) -> dict[Types, DataType]:
+        """Create type mapping with Pydantic v2 specific types and datetime classes."""
         result = {
             **super().type_map_factory(
                 data_type,

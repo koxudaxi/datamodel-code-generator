@@ -1,3 +1,9 @@
+"""Import management system for generated code.
+
+Provides Import and Imports classes to track, organize, and render
+Python import statements for generated data models.
+"""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -12,6 +18,8 @@ if TYPE_CHECKING:
 
 
 class Import(BaseModel):
+    """Represents a single Python import statement."""
+
     from_: Optional[str] = None  # noqa: UP045
     import_: str
     alias: Optional[str] = None  # noqa: UP045
@@ -20,15 +28,20 @@ class Import(BaseModel):
     @classmethod
     @lru_cache
     def from_full_path(cls, class_path: str) -> Import:
+        """Create an Import from a fully qualified path (e.g., 'typing.Optional')."""
         split_class_path: list[str] = class_path.split(".")
         return Import(from_=".".join(split_class_path[:-1]) or None, import_=split_class_path[-1])
 
 
 class Imports(defaultdict[Optional[str], set[str]]):
+    """Collection of imports with reference counting and alias support."""
+
     def __str__(self) -> str:
+        """Return formatted import statements."""
         return self.dump()
 
     def __init__(self, use_exact: bool = False) -> None:  # noqa: FBT001, FBT002
+        """Initialize empty import collection."""
         super().__init__(set)
         self.alias: defaultdict[str | None, dict[str, str]] = defaultdict(dict)
         self.counter: dict[tuple[str | None, str], int] = defaultdict(int)
@@ -36,20 +49,24 @@ class Imports(defaultdict[Optional[str], set[str]]):
         self.use_exact: bool = use_exact
 
     def _set_alias(self, from_: str | None, imports: set[str]) -> list[str]:
+        """Apply aliases to imports and return sorted list."""
         return [
             f"{i} as {self.alias[from_][i]}" if i in self.alias[from_] and i != self.alias[from_][i] else i
             for i in sorted(imports)
         ]
 
     def create_line(self, from_: str | None, imports: set[str]) -> str:
+        """Create a single import line from module and names."""
         if from_:
             return f"from {from_} import {', '.join(self._set_alias(from_, imports))}"
         return "\n".join(f"import {i}" for i in self._set_alias(from_, imports))
 
     def dump(self) -> str:
+        """Render all imports as a string."""
         return "\n".join(starmap(self.create_line, self.items()))
 
     def append(self, imports: Import | Iterable[Import] | None) -> None:
+        """Add one or more imports to the collection."""
         if imports:
             if isinstance(imports, Import):
                 imports = [imports]
@@ -66,6 +83,7 @@ class Imports(defaultdict[Optional[str], set[str]]):
                         self.alias[import_.from_][import_.import_] = import_.alias
 
     def remove(self, imports: Import | Iterable[Import]) -> None:
+        """Remove one or more imports from the collection."""
         if isinstance(imports, Import):  # pragma: no cover
             imports = [imports]
         for import_ in imports:
@@ -87,6 +105,7 @@ class Imports(defaultdict[Optional[str], set[str]]):
                             del self.alias[import_.from_]
 
     def remove_referenced_imports(self, reference_path: str) -> None:
+        """Remove imports associated with a reference path."""
         if reference_path in self.reference_paths:
             self.remove(self.reference_paths[reference_path])
 

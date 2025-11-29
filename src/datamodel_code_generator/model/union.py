@@ -1,3 +1,8 @@
+"""Union type model generators.
+
+Provides classes for generating union type aliases for GraphQL union types.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -20,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class _DataTypeUnionBase(DataModel):
-    """Base class for GraphQL union types with shared __init__ logic"""
+    """Base class for GraphQL union types with shared __init__ logic."""
 
     def __init__(  # noqa: PLR0913
         self,
@@ -40,6 +45,7 @@ class _DataTypeUnionBase(DataModel):
         keyword_only: bool = False,
         treat_dot_as_module: bool = False,
     ) -> None:
+        """Initialize GraphQL union type."""
         super().__init__(
             reference=reference,
             fields=fields,
@@ -59,7 +65,7 @@ class _DataTypeUnionBase(DataModel):
 
 
 class DataTypeUnion(_DataTypeUnionBase):
-    """GraphQL union using TypeAlias annotation for Python 3.10+ (Name: TypeAlias = Union[...])"""
+    """GraphQL union using TypeAlias annotation for Python 3.10+ (Name: TypeAlias = Union[...])."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasAnnotation.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -70,7 +76,7 @@ class DataTypeUnion(_DataTypeUnionBase):
 
 
 class DataTypeUnionBackport(_DataTypeUnionBase):
-    """GraphQL union using TypeAlias annotation for Python 3.9 (Name: TypeAlias = Union[...])"""
+    """GraphQL union using TypeAlias annotation for Python 3.9 (Name: TypeAlias = Union[...])."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasAnnotation.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -81,7 +87,7 @@ class DataTypeUnionBackport(_DataTypeUnionBase):
 
 
 class DataTypeUnionTypeBackport(_DataTypeUnionBase):
-    """GraphQL union using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", Union[...]))"""
+    """GraphQL union using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", Union[...]))."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""
@@ -92,7 +98,7 @@ class DataTypeUnionTypeBackport(_DataTypeUnionBase):
 
 
 class DataTypeUnionTypeStatement(_DataTypeUnionBase):
-    """GraphQL union using type statement for Python 3.12+ (type Name = Union[...])"""
+    """GraphQL union using type statement for Python 3.12+ (type Name = Union[...])."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeStatement.jinja2"
     BASE_CLASS: ClassVar[str] = ""

@@ -1,3 +1,8 @@
+"""Import definitions for model modules.
+
+Provides pre-defined Import objects for dataclasses, TypedDict, msgspec, etc.
+"""
+
 from __future__ import annotations
 
 from datamodel_code_generator.imports import Import
