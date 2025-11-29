@@ -96,6 +96,25 @@ def test_main_openapi_discriminator_with_properties(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_discriminator_allof(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf discriminator polymorphism."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_allof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "allof.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+            "--use-annotated",
+            "--use-union-operator",
+            "--collapse-root-models",
+        ],
+    )
+
+
 def test_main_pydantic_basemodel(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic BaseModel output."""
     run_main_and_assert(
