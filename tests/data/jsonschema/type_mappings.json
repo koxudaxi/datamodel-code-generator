@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BlobModel",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "format": "binary",
+      "description": "Binary content that should be mapped to string"
+    },
+    "data": {
+      "type": "string",
+      "format": "byte",
+      "description": "Base64 encoded data"
+    },
+    "name": {
+      "type": "string",
+      "description": "Regular string field"
+    }
+  },
+  "required": ["content", "data", "name"]
+}

@@ -21,12 +21,14 @@ from typing import (
     Final,
     TextIO,
     TypeVar,
+    Union,
     cast,
 )
 from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
+from typing_extensions import TypeAlias, TypeAliasType
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -37,7 +39,7 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.util import SafeLoader
+from datamodel_code_generator.util import PYDANTIC_V2, SafeLoader
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -46,10 +48,21 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
 
+    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
+    YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
+
+if not TYPE_CHECKING:
+    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
+    if PYDANTIC_V2:
+        YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+    else:
+        # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
+        YamlValue: TypeAlias = Union[dict[str, Any], list[Any], YamlScalar]
 
 try:
     import pysnooper
@@ -61,15 +74,24 @@ except ImportError:  # pragma: no cover
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
-def load_yaml(stream: str | TextIO) -> Any:
+def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content from a string or file-like object."""
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
-def load_yaml_from_path(path: Path, encoding: str) -> Any:
-    """Load YAML content from a file path."""
+def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
+    """Load YAML and return as dict. Raises TypeError if result is not a dict."""
+    result = load_yaml(stream)
+    if not isinstance(result, dict):
+        msg = f"Expected dict, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
+    """Load YAML and return as dict from a file path."""
     with path.open(encoding=encoding) as f:
-        return load_yaml(f)
+        return load_yaml_dict(f)
 
 
 def get_version() -> str:
@@ -318,6 +340,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
     disable_future_imports: bool = False,
+    type_mappings: list[str] | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -383,7 +406,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 if isinstance(input_, Path) and input_.is_dir():  # pragma: no cover
                     msg = f"Input must be a file for {input_file_type}"
                     raise Error(msg)  # noqa: TRY301
-                obj: dict[Any, Any]
+                obj: dict[str, Any]
                 if input_file_type == InputFileType.CSV:
                     import csv  # noqa: PLC0415
 
@@ -401,10 +424,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                         obj = get_header_and_first_line(io.StringIO(input_text))
                 elif input_file_type == InputFileType.Yaml:
                     if isinstance(input_, Path):
-                        obj = load_yaml(input_.read_text(encoding=encoding))
-                    else:
+                        obj = load_yaml_dict(input_.read_text(encoding=encoding))
+                    else:  # pragma: no cover
                         assert input_text is not None
-                        obj = load_yaml(input_text)
+                        obj = load_yaml_dict(input_text)
                 elif input_file_type == InputFileType.Json:
                     if isinstance(input_, Path):
                         obj = json.loads(input_.read_text(encoding=encoding))
@@ -418,7 +441,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                     obj = (
                         ast.literal_eval(input_.read_text(encoding=encoding))
                         if isinstance(input_, Path)
-                        else cast("dict[Any, Any]", input_)
+                        else cast("dict[str, Any]", input_)
                     )
                 else:  # pragma: no cover
                     msg = f"Unsupported input file type: {input_file_type}"
@@ -538,6 +561,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
+        type_mappings=type_mappings,
         **kwargs,
     )
 

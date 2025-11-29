@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
-import black
 from pydantic import BaseModel
+from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DataModelType,
@@ -34,6 +34,7 @@ from datamodel_code_generator.format import (
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    _get_black,
     is_supported_in_black,
 )
 from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 # needed for pydantic
@@ -52,6 +53,16 @@ if TYPE_CHECKING:
     from argparse import Namespace
 
     from typing_extensions import Self
+
+# Options that should be excluded from pyproject.toml config generation
+EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
+    "generate_pyproject_config",
+    "version",
+    "help",
+    "debug",
+    "no_color",
+    "disable_warnings",
+})
 
 
 class Exit(IntEnum):
@@ -76,11 +87,11 @@ class Config(BaseModel):
     if PYDANTIC_V2:
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
-        def get(self, item: str) -> Any:
+        def get(self, item: str) -> Any:  # pragma: no cover
             """Get attribute value by name."""
             return getattr(self, item)
 
-        def __getitem__(self, item: str) -> Any:
+        def __getitem__(self, item: str) -> Any:  # pragma: no cover
             """Get item by key."""
             return self.get(item)
 
@@ -117,7 +128,7 @@ class Config(BaseModel):
         if path.is_file():
             return cast("TextIOBase", path.expanduser().resolve().open("rt"))
 
-        msg = f"A file was expected but {value} is not a file."
+        msg = f"A file was expected but {value} is not a file."  # pragma: no cover
         raise Error(msg)  # pragma: no cover
 
     @field_validator(
@@ -140,15 +151,17 @@ class Config(BaseModel):
             return urlparse(value)
         if value is None:  # pragma: no cover
             return None
-        msg = f"This protocol doesn't support only http/https. --input={value}"
+        msg = f"This protocol doesn't support only http/https. --input={value}"  # pragma: no cover
         raise Error(msg)  # pragma: no cover
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly
     @field_validator("http_headers", mode="before")
     def validate_http_headers(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
         """Validate HTTP headers."""
+        if value is None:  # pragma: no cover
+            return None
 
-        def validate_each_item(each_item: Any) -> tuple[str, str]:
+        def validate_each_item(each_item: str | tuple[str, str]) -> tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
                     field_name, field_value = each_item.split(":", maxsplit=1)
@@ -160,13 +173,16 @@ class Config(BaseModel):
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
-        return value  # pragma: no cover
+        msg = f"Invalid http_headers value: {value!r}"  # pragma: no cover
+        raise Error(msg)  # pragma: no cover
 
     @field_validator("http_query_parameters", mode="before")
     def validate_http_query_parameters(cls, value: Any) -> list[tuple[str, str]] | None:  # noqa: N805
         """Validate HTTP query parameters."""
+        if value is None:  # pragma: no cover
+            return None
 
-        def validate_each_item(each_item: Any) -> tuple[str, str]:
+        def validate_each_item(each_item: str | tuple[str, str]) -> tuple[str, str]:
             if isinstance(each_item, str):  # pragma: no cover
                 try:
                     field_name, field_value = each_item.split("=", maxsplit=1)
@@ -178,7 +194,8 @@ class Config(BaseModel):
 
         if isinstance(value, list):
             return [validate_each_item(each_item) for each_item in value]
-        return value  # pragma: no cover
+        msg = f"Invalid http_query_parameters value: {value!r}"  # pragma: no cover
+        raise Error(msg)  # pragma: no cover
 
     @model_validator(mode="before")
     def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
@@ -389,6 +406,7 @@ class Config(BaseModel):
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
+    type_mappings: Optional[list[str]] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -416,7 +434,9 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
                 # Convert options from kebap- to snake-case
                 pyproject_config = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
                 # Replace US-american spelling if present (ignore if british spelling is present)
-                if "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config:
+                if (
+                    "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config
+                ):  # pragma: no cover
                     pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
                 return pyproject_config
 
@@ -426,6 +446,37 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
 
         current_path = current_path.parent
     return {}
+
+
+TomlValue: TypeAlias = Union[str, bool, list["TomlValue"], tuple["TomlValue", ...]]
+
+
+def _format_toml_value(value: TomlValue) -> str:
+    """Format a Python value as a TOML value string."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return f'"{value}"'
+    formatted_items = [_format_toml_value(item) for item in value]
+    return f"[{', '.join(formatted_items)}]"
+
+
+def generate_pyproject_config(args: Namespace) -> str:
+    """Generate pyproject.toml [tool.datamodel-codegen] section from CLI arguments."""
+    lines: list[str] = ["[tool.datamodel-codegen]"]
+
+    args_dict: dict[str, object] = vars(args)
+    for key, value in sorted(args_dict.items()):
+        if value is None:
+            continue
+        if key in EXCLUDED_CONFIG_OPTIONS:
+            continue
+
+        toml_key = key.replace("_", "-")
+        toml_value = _format_toml_value(cast("TomlValue", value))
+        lines.append(f"{toml_key} = {toml_value}")
+
+    return "\n".join(lines) + "\n"
 
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
@@ -443,6 +494,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
         print(get_version())  # noqa: T201
         sys.exit(0)
+
+    if namespace.generate_pyproject_config:
+        config_output = generate_pyproject_config(namespace)
+        print(config_output)  # noqa: T201
+        return Exit.OK
 
     pyproject_config = _get_pyproject_toml_config(Path.cwd())
 
@@ -465,7 +521,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(  # noqa: T201
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
             f"You have to install a newer black.\n"
-            f"Installed black version: {black.__version__}",
+            f"Installed black version: {_get_black().__version__}",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -605,6 +661,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             formatters=config.formatters,
             parent_scoped_naming=config.parent_scoped_naming,
             disable_future_imports=config.disable_future_imports,
+            type_mappings=config.type_mappings,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

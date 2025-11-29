@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Protocol
+import sys
+from typing import TYPE_CHECKING, Any, Protocol
 
 import pytest
 from inline_snapshot import external_file, register_format_alias
@@ -14,6 +15,37 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+if sys.version_info >= (3, 10):
+    from datetime import datetime, timezone
+
+    import time_machine
+
+    def _parse_time_string(time_str: str) -> datetime:
+        """Parse time string to datetime with UTC timezone."""
+        for fmt in (
+            "%Y-%m-%dT%H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S%z",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d",
+        ):
+            try:
+                dt = datetime.strptime(time_str, fmt)  # noqa: DTZ007
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt  # noqa: TRY300
+            except ValueError:  # noqa: PERF203
+                continue
+        return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
+
+    def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # noqa: ARG001
+        """Freeze time using time-machine (100-200x faster than freezegun)."""
+        dt = _parse_time_string(time_to_freeze)
+        return time_machine.travel(dt, tick=False)
+
+else:
+    from freezegun import freeze_time as freeze_time  # noqa: PLC0414
+
 
 def _normalize_line_endings(text: str) -> str:
     """Normalize line endings to LF for cross-platform comparison."""
@@ -22,10 +54,12 @@ def _normalize_line_endings(text: str) -> str:
 
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
+    __tracebackhide__ = True
     expected = external_file(expected_path)
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
-        assert normalized_content == _normalize_line_endings(expected)
+        if normalized_content != _normalize_line_endings(expected):  # pragma: no cover
+            pytest.fail(f"Content mismatch for {expected_path}\nExpected:\n{expected}\n\nActual:\n{content}")
     else:
         expected_value = expected._load_value()  # pragma: no cover
         if _normalize_line_endings(expected_value) == normalized_content:  # pragma: no cover
@@ -78,6 +112,7 @@ def create_assert_file_content(
         transform: Callable[[str], str] | None = None,
     ) -> None:
         """Assert that file content matches expected external file."""
+        __tracebackhide__ = True
         if expected_name is None:
             frame = inspect.currentframe()
             assert frame is not None
@@ -114,6 +149,7 @@ def assert_output(
         assert_output(captured.out, EXPECTED_PATH / "output.py")
         assert_output(parser.parse(), EXPECTED_PATH / "output.py")
     """
+    __tracebackhide__ = True
     _assert_with_external_file(output, expected_path)
 
 
@@ -134,6 +170,7 @@ def assert_directory_content(
     Usage:
         assert_directory_content(tmp_path / "model", EXPECTED_PATH / "main_modular")
     """
+    __tracebackhide__ = True
     for expected_path in expected_dir.rglob(pattern):
         relative_path = expected_path.relative_to(expected_dir)
         output_path = output_dir / relative_path
@@ -157,6 +194,7 @@ def assert_parser_results(
         results = {delimiter.join(p): r for p, r in parser.parse().items()}
         assert_parser_results(results, EXPECTED_PATH / "parser_output")
     """
+    __tracebackhide__ = True
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
         result_obj = results.pop(key)
@@ -177,6 +215,7 @@ def assert_parser_modules(
         modules = parser.parse()
         assert_parser_modules(modules, EXPECTED_PATH / "parser_modular")
     """
+    __tracebackhide__ = True
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(result.body, expected_path)
@@ -193,3 +232,17 @@ def _inline_snapshot_file_formats() -> None:
 def min_version() -> str:
     """Return minimum Python version as string."""
     return f"3.{MIN_VERSION}"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _preload_heavy_modules() -> None:
+    """Pre-import heavy modules once per session to warm up the import cache.
+
+    This reduces per-test overhead when running with pytest-xdist,
+    as each worker only pays the import cost once at session start.
+    """
+    import black  # noqa: PLC0415, F401
+    import inflect  # noqa: PLC0415, F401
+    import isort  # noqa: PLC0415, F401
+
+    import datamodel_code_generator  # noqa: PLC0415, F401

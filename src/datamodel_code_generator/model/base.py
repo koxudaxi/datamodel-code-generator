@@ -12,7 +12,7 @@ from collections import defaultdict
 from copy import deepcopy
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
@@ -69,7 +69,7 @@ class ConstraintsBase(_BaseModel):
         return any(v is not None for v in self.dict().values())
 
     @staticmethod
-    def merge_constraints(a: ConstraintsBaseT, b: ConstraintsBaseT) -> ConstraintsBaseT | None:
+    def merge_constraints(a: ConstraintsBaseT | None, b: ConstraintsBaseT | None) -> ConstraintsBaseT | None:
         """Merge two constraint objects, with b taking precedence over a."""
         constraints_class = None
         if isinstance(a, ConstraintsBase):  # pragma: no cover
@@ -96,6 +96,18 @@ class ConstraintsBase(_BaseModel):
 class DataModelFieldBase(_BaseModel):
     """Base class for model field representation and rendering."""
 
+    if PYDANTIC_V2:
+        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
+            arbitrary_types_allowed=True,
+            defer_build=True,
+        )
+    else:
+
+        class Config:
+            """Pydantic v1 configuration for DataModelFieldBase."""
+
+            arbitrary_types_allowed = True
+
     name: Optional[str] = None  # noqa: UP045
     default: Optional[Any] = None  # noqa: UP045
     required: bool = False
@@ -104,8 +116,8 @@ class DataModelFieldBase(_BaseModel):
     constraints: Any = None
     strip_default_none: bool = False
     nullable: Optional[bool] = None  # noqa: UP045
-    parent: Optional[Any] = None  # noqa: UP045
-    extras: dict[str, Any] = {}  # noqa: RUF012
+    parent: Optional[DataModel] = None  # noqa: UP045
+    extras: dict[str, Any] = Field(default_factory=dict)
     use_annotated: bool = False
     has_default: bool = False
     use_field_description: bool = False
@@ -120,6 +132,17 @@ class DataModelFieldBase(_BaseModel):
     type_has_null: Optional[bool] = None  # noqa: UP045
 
     if not TYPE_CHECKING:
+        if not PYDANTIC_V2:
+
+            @classmethod
+            def model_rebuild(
+                cls,
+                *,
+                _types_namespace: dict[str, type] | None = None,
+            ) -> None:
+                """Update forward references for Pydantic v1."""
+                localns = _types_namespace or {}
+                cls.update_forward_refs(**localns)
 
         def __init__(self, **data: Any) -> None:
             """Initialize the field and set up parent relationships."""
@@ -519,3 +542,15 @@ class DataModel(TemplateBase, Nullable, ABC):
             frozen=self.frozen,
             **self.extra_template_data,
         )
+
+
+if PYDANTIC_V2:
+    _rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}
+    DataType.model_rebuild(_types_namespace=_rebuild_namespace)
+    BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)
+    DataModelFieldBase.model_rebuild(_types_namespace={"DataModel": DataModel})
+else:
+    _rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}
+    DataType.model_rebuild(_types_namespace=_rebuild_namespace)
+    BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)
+    DataModelFieldBase.model_rebuild(_types_namespace={"DataModel": DataModel})

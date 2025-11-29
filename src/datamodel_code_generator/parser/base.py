@@ -12,6 +12,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
+from collections.abc import Hashable
 from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
@@ -46,12 +47,24 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+
+
+@runtime_checkable
+class HashableComparable(Hashable, Protocol):
+    """Protocol for types that are both hashable and support comparison."""
+
+    def __lt__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __le__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __gt__(self, value: Any, /) -> bool: ...  # noqa: D105
+    def __ge__(self, value: Any, /) -> bool: ...  # noqa: D105
+
 
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
 
@@ -73,8 +86,12 @@ escape_characters = str.maketrans({
 })
 
 
-def to_hashable(item: Any) -> Any:
-    """Convert an item to a hashable representation for comparison."""
+def to_hashable(item: Any) -> HashableComparable:
+    """Convert an item to a hashable and comparable representation.
+
+    Returns a value that is both hashable and supports comparison operators.
+    Used for caching and deduplication of models.
+    """
     if isinstance(
         item,
         (
@@ -94,12 +111,12 @@ def to_hashable(item: Any) -> Any:
             )
         )
     if isinstance(item, set):  # pragma: no cover
-        return frozenset(to_hashable(i) for i in item)
+        return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):
         return to_hashable(item.dict())
     if item is None:
         return ""
-    return item
+    return item  # type: ignore[return-value]
 
 
 def dump_templates(templates: list[DataModel]) -> str:
@@ -412,6 +429,7 @@ class Parser(ABC):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
@@ -531,6 +549,38 @@ class Parser(ABC):
         self.treat_dot_as_module = treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
+        self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
+
+    @staticmethod
+    def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
+        """Parse type mappings from CLI format to internal format.
+
+        Supports two formats:
+        - "type+format=target" (e.g., "string+binary=string")
+        - "format=target" (e.g., "binary=string", assumes type="string")
+
+        Returns a dict mapping (type, format) tuples to target type names.
+        """
+        if not type_mappings:
+            return {}
+
+        result: dict[tuple[str, str], str] = {}
+        for mapping in type_mappings:
+            if "=" not in mapping:
+                msg = f"Invalid type mapping format: {mapping!r}. Expected 'type+format=target' or 'format=target'."
+                raise ValueError(msg)
+
+            source, target = mapping.split("=", 1)
+            if "+" in source:
+                type_, format_ = source.split("+", 1)
+            else:
+                # Default to "string" type if only format is specified
+                type_ = "string"
+                format_ = source
+
+            result[type_, format_] = target
+
+        return result
 
     @property
     def iter_source(self) -> Iterator[Source]:
@@ -558,7 +608,7 @@ class Parser(ABC):
             additional_imports = []
 
         for additional_import_string in additional_imports:
-            if additional_import_string is None:
+            if additional_import_string is None:  # pragma: no cover
                 continue
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
@@ -610,7 +660,8 @@ class Parser(ABC):
                 ):
                     # Replace referenced duplicate model to original model
                     for child in model.reference.children[:]:
-                        child.replace_reference(root_data_type.reference)
+                        if isinstance(child, DataType):  # pragma: no branch
+                            child.replace_reference(root_data_type.reference)
                     models.remove(model)
                     for data_type in model.all_data_types:
                         if data_type.reference:
@@ -713,7 +764,7 @@ class Parser(ABC):
                     if imports.use_exact:  # pragma: no cover
                         from_, import_ = exact_import(from_, import_, data_type.reference.short_name)
                     import_ = import_.replace("-", "_")
-                    if (
+                    if (  # pragma: no cover
                         len(model.module_path) > 1
                         and model.module_path[-1].count(".") > 0
                         and not self.treat_dot_as_module
@@ -921,7 +972,7 @@ class Parser(ABC):
     def __reuse_model(self, models: list[DataModel], require_update_action_models: list[str]) -> None:
         if not self.reuse_model:
             return
-        model_cache: dict[tuple[str, ...], Reference] = {}
+        model_cache: dict[tuple[HashableComparable, ...], Reference] = {}
         duplicates = []
         for model in models.copy():
             model_key = tuple(to_hashable(v) for v in (model.render(class_name="M"), model.imports))
@@ -932,7 +983,7 @@ class Parser(ABC):
                         # child is resolved data_type by reference
                         data_model = get_most_of_parent(child)
                         # TODO: replace reference in all modules
-                        if data_model in models:  # pragma: no cover
+                        if data_model in models and isinstance(child, DataType):  # pragma: no cover
                             child.replace_reference(cached_model_reference)
                     duplicates.append(model)
                 else:
@@ -1011,12 +1062,12 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif data_type.parent is not None and data_type.parent.is_list:
+                    elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-                        if (
+                        if (  # pragma: no cover
                             isinstance(
                                 root_type_field,
                                 pydantic_model.DataModelField,
@@ -1067,6 +1118,7 @@ class Parser(ABC):
 
                     data_type.remove_reference()
 
+                    assert isinstance(root_type_model, DataModel)
                     root_type_model.reference.children = [
                         c for c in root_type_model.reference.children if getattr(c, "parent", None)
                     ]
@@ -1156,13 +1208,19 @@ class Parser(ABC):
         models.sort(key=lambda x: x.class_name)
 
         imported = {i for v in imports.values() for i in v}
-        model_class_name_baseclasses: dict[DataModel, tuple[str, set[str]]] = {}
+        model_class_name_refs: dict[DataModel, tuple[str, set[str]]] = {}
         for model in models:
             class_name = model.class_name
-            model_class_name_baseclasses[model] = (
-                class_name,
-                {b.type_hint for b in model.base_classes if b.reference} - {class_name},
-            )
+            base_class_refs = {b.type_hint for b in model.base_classes if b.reference}
+            if base_class_refs:
+                refs = base_class_refs - {class_name}
+            elif isinstance(model, TypeAliasBase):
+                refs = {
+                    t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference
+                } - {class_name}
+            else:
+                refs = set()
+            model_class_name_refs[model] = (class_name, refs)
 
         changed: bool = True
         while changed:
@@ -1170,8 +1228,8 @@ class Parser(ABC):
             resolved = imported.copy()
             for i in range(len(models) - 1):
                 model = models[i]
-                class_name, baseclasses = model_class_name_baseclasses[model]
-                if not baseclasses - resolved:
+                class_name, refs = model_class_name_refs[model]
+                if not refs - resolved:
                     resolved.add(class_name)
                     continue
                 models[i], models[i + 1] = models[i + 1], model

@@ -336,6 +336,16 @@ typing_options.add_argument(
     action="store_true",
     default=None,
 )
+typing_options.add_argument(
+    "--type-mappings",
+    help="Override default type mappings. "
+    'Format: "type+format=target" (e.g., "string+binary=string" to map binary format to string type) '
+    'or "format=target" (e.g., "binary=string"). '
+    "Can be specified multiple times.",
+    nargs="+",
+    type=str,
+    default=None,
+)
 
 # ======================================================================================
 # Customization options for generated model fields
@@ -582,6 +592,12 @@ general_options.add_argument(
     action="store_true",
     default=False,
     help="disable colorized output",
+)
+general_options.add_argument(
+    "--generate-pyproject-config",
+    action="store_true",
+    default=None,
+    help="Generate pyproject.toml configuration from the provided CLI arguments and exit",
 )
 general_options.add_argument(
     "--version",

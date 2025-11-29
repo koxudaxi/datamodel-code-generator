@@ -79,13 +79,11 @@ class Enum(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        if not base_classes and type_:
-            base_class: str | None = SUBCLASS_BASE_CLASSES.get(type_)
-            if base_class:
-                self.base_classes: list[BaseClassDataType] = [
-                    BaseClassDataType(type=base_class),
-                    *self.base_classes,
-                ]
+        if not base_classes and type_ and (base_class := SUBCLASS_BASE_CLASSES.get(type_)):
+            self.base_classes: list[BaseClassDataType] = [
+                BaseClassDataType(type=base_class),
+                *self.base_classes,
+            ]
 
     @classmethod
     def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:

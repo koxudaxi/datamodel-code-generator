@@ -78,7 +78,7 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "freezegun",
+  "freezegun; python_version<'3.10'",
   "inline-snapshot>=0.31.1",
   "pytest>=6.1",
   "pytest>=8.3.4",
@@ -88,7 +88,8 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.10'", # PyCharm debugger needs it
+  "setuptools; python_version<'3.10'",         # PyCharm debugger needs it
+  "time-machine>=3.1; python_version>='3.10'",
   { include-group = "coverage" },
 ]
 type = [
@@ -115,7 +116,7 @@ pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
   "covdefaults>=2.3",
   "coverage[toml]>=7.6.1",
-  "diff-cover>=7.7",
+  "diff-cover>=9.7.2",
 ]
 
 [tool.hatch]
