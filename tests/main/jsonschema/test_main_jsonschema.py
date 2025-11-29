@@ -147,6 +147,29 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> None:
+    """Test JSON Schema code generation with frozen and keyword-only dataclass.
+
+    This tests the 'if existing:' False branch in _create_data_model when
+    no --dataclass-arguments is provided but --frozen and --keyword-only are set.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general_dataclass_frozen_kw_only.py",
+        extra_args=[
+            "--output-model",
+            "dataclasses.dataclass",
+            "--frozen",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     """Test deeply nested JSON Schema generation."""

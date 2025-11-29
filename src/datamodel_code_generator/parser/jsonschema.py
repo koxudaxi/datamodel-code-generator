@@ -838,8 +838,7 @@ class JsonSchemaParser(Parser):
                 "kw_only": self.keyword_only,
             }
             existing = kwargs.pop("dataclass_arguments", None)
-            if existing:
-                dataclass_arguments.update(existing)
+            dataclass_arguments.update(existing or {})
             kwargs["dataclass_arguments"] = dataclass_arguments
             kwargs.pop("frozen", None)
             kwargs.pop("keyword_only", None)
