@@ -7,6 +7,7 @@ template customization, OpenAPI-specific options, and general options.
 
 from __future__ import annotations
 
+import json
 import locale
 from argparse import ArgumentParser, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
@@ -178,6 +179,16 @@ model_options.add_argument(
     help="Generate frozen dataclasses (dataclass(frozen=True)). Only applies to dataclass output.",
     action="store_true",
     default=None,
+)
+model_options.add_argument(
+    "--dataclass-arguments",
+    type=json.loads,
+    default=None,
+    help=(
+        "Custom dataclass arguments as a JSON dictionary, "
+        'e.g. \'{"frozen": true, "kw_only": true}\'. '
+        "Overrides --frozen-dataclasses and similar flags."
+    ),
 )
 model_options.add_argument(
     "--reuse-model",

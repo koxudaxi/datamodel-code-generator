@@ -293,3 +293,75 @@ def test_main_graphql_type_alias_py312(output_file: Path) -> None:
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_dataclass_arguments(output_file: Path) -> None:
+    """Test GraphQL code generation with custom dataclass arguments."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="simple_star_wars_dataclass_arguments.py",
+        extra_args=[
+            "--output-model",
+            "dataclasses.dataclass",
+            "--dataclass-arguments",
+            '{"slots": true, "order": true}',
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_dataclass_arguments_with_pydantic(output_file: Path) -> None:
+    """Test GraphQL code generation with dataclass arguments passed but using Pydantic model.
+
+    This verifies that dataclass_arguments is properly ignored for non-dataclass models.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="simple_star_wars.py",
+        extra_args=[
+            "--output-model",
+            "pydantic.BaseModel",
+            "--dataclass-arguments",
+            '{"slots": true, "order": true}',
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
+    """Test GraphQL code generation with frozen and keyword-only dataclass.
+
+    This tests the 'if existing:' False branch in _create_data_model when
+    no --dataclass-arguments is provided but --frozen and --keyword-only are set.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="simple_star_wars_dataclass_frozen_kw_only.py",
+        extra_args=[
+            "--output-model",
+            "dataclasses.dataclass",
+            "--frozen",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
+    )

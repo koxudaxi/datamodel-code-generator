@@ -429,6 +429,7 @@ class Parser(ABC):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        dataclass_arguments: dict[str, Any] | None = None,
         type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
@@ -487,6 +488,7 @@ class Parser(ABC):
         self.use_title_as_name: bool = use_title_as_name
         self.use_operation_id_as_name: bool = use_operation_id_as_name
         self.use_unique_items_as_set: bool = use_unique_items_as_set
+        self.dataclass_arguments = dataclass_arguments or {}
 
         if base_path:
             self.base_path = base_path

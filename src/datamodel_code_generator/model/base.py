@@ -357,10 +357,12 @@ class DataModel(TemplateBase, Nullable, ABC):
         keyword_only: bool = False,
         frozen: bool = False,
         treat_dot_as_module: bool = False,
+        dataclass_arguments: dict[str, Any] | None = None,
     ) -> None:
         """Initialize a data model with fields, base classes, and configuration."""
         self.keyword_only = keyword_only
         self.frozen = frozen
+        self.dataclass_arguments = dataclass_arguments if dataclass_arguments is not None else {}
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
             raise Exception(msg)  # noqa: TRY002
@@ -538,8 +540,7 @@ class DataModel(TemplateBase, Nullable, ABC):
             base_class=self.base_class,
             methods=self.methods,
             description=self.description,
-            keyword_only=self.keyword_only,
-            frozen=self.frozen,
+            dataclass_arguments=self.dataclass_arguments,
             **self.extra_template_data,
         )
 
