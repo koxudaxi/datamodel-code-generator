@@ -1988,22 +1988,17 @@ def test_main_jsonschema_discriminator_literals(
     reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_prefix_items(
-    output_model: str, expected_output: str, min_version: str, tmp_path: Path
+    output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test prefix items handling."""
-    output_file: Path = tmp_path / "output.py"
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "prefix_items.json"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        output_model,
-        "--target-python",
-        min_version,
-    ])
-    assert return_code == Exit.OK
-    assert output_file.read_text(encoding="utf-8") == (EXPECTED_JSON_SCHEMA_PATH / expected_output).read_text()
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+    )
 
 
 @pytest.mark.skipif(
