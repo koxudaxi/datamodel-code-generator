@@ -16,11 +16,13 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
     InputFileType,
+    PythonVersion,
     PythonVersionMin,
     chdir,
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
@@ -1783,6 +1785,10 @@ def test_main_dataclass_field(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_312),
+    reason="Black does not support Python 3.12",
+)
 def test_main_dataclass_field_py312(output_file: Path) -> None:
     """Test dataclass field generation with Python 3.12 type statement."""
     run_main_and_assert(
