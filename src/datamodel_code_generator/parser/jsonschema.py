@@ -283,6 +283,7 @@ class JsonSchemaObject(BaseModel):
         return value
 
     items: Optional[Union[list[JsonSchemaObject], JsonSchemaObject, bool]] = None  # noqa: UP007, UP045
+    prefixItems: Optional[list[JsonSchemaObject]] = None  # noqa: N815, UP045
     uniqueItems: Optional[bool] = None  # noqa: N815, UP045
     type: Optional[Union[str, list[str]]] = None  # noqa: UP007, UP045
     format: Optional[str] = None  # noqa: UP045
@@ -352,7 +353,7 @@ class JsonSchemaObject(BaseModel):
     @cached_property
     def is_array(self) -> bool:
         """Check if the schema represents an array type."""
-        return self.items is not None or self.type == "array"
+        return self.items is not None or self.prefixItems is not None or self.type == "array"
 
     @cached_property
     def ref_object_name(self) -> str:  # pragma: no cover
@@ -1274,10 +1275,16 @@ class JsonSchemaParser(Parser):
             else:
                 required = not obj.nullable and required
                 nullable = None
+        is_tuple = False
         if isinstance(obj.items, JsonSchemaObject):
             items: list[JsonSchemaObject] = [obj.items]
         elif isinstance(obj.items, list):
             items = obj.items
+        elif obj.prefixItems is not None and obj.minItems == obj.maxItems == len(obj.prefixItems):
+            # Set these to None so that it won't output max item constraints
+            obj.minItems = obj.maxItems = None
+            items = obj.prefixItems
+            is_tuple = True
         else:
             items = []
 
@@ -1290,7 +1297,8 @@ class JsonSchemaParser(Parser):
                     obj,
                     singular_name=singular_name,
                 ),
-                is_list=True,
+                is_tuple=is_tuple,
+                is_list=not is_tuple,
             )
         ]
         # TODO: decide special path word for a combined data model.
@@ -1666,6 +1674,9 @@ class JsonSchemaParser(Parser):
             elif isinstance(obj.items, list):
                 for item in obj.items:
                     self.parse_ref(item, path)
+        if obj.prefixItems:
+            for item in obj.prefixItems:
+                self.parse_ref(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_ref(obj.additionalProperties, path)
         if obj.patternProperties:
@@ -1692,6 +1703,9 @@ class JsonSchemaParser(Parser):
             elif isinstance(obj.items, list):
                 for item in obj.items:
                     self.parse_id(item, path)
+        if obj.prefixItems:
+            for item in obj.prefixItems:
+                self.parse_id(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_id(obj.additionalProperties, path)
         if obj.patternProperties:
