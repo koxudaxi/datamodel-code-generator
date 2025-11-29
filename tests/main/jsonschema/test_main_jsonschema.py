@@ -16,11 +16,13 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
     InputFileType,
+    PythonVersion,
     PythonVersionMin,
     chdir,
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
@@ -1784,6 +1786,26 @@ def test_main_dataclass_field(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_312),
+    reason="Black does not support Python 3.12",
+)
+def test_main_dataclass_field_py312(output_file: Path) -> None:
+    """Test dataclass field generation with Python 3.12 type statement."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "user.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.12",
+        ],
+    )
+
+
 def test_main_jsonschema_enum_root_literal(output_file: Path) -> None:
     """Test enum root with literal type."""
     run_main_and_assert(
@@ -2289,6 +2311,24 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
         field_constraints=True,
     )
     assert_file_content(output_file, "discriminator_literals_msgspec_keyword_only_omit_defaults.py")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_null_field(output_file: Path) -> None:
+    """Test msgspec Struct generation with null type fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_null_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
 
 
 def test_main_invalid_import_name(output_dir: Path) -> None:

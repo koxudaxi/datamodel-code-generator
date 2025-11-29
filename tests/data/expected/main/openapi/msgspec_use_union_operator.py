@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Union
+from typing import Annotated, List
 
 from msgspec import UNSET, Meta, Struct, UnsetType, field
 from typing_extensions import TypeAliasType

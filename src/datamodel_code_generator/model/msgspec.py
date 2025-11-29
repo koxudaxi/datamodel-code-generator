@@ -46,7 +46,6 @@ from datamodel_code_generator.types import (
     Types,
     _remove_none_from_union,
     chain_as_tuple,
-    get_optional_type,
 )
 
 UNSET_TYPE = "UnsetType"
@@ -95,7 +94,9 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
         if self.extras.get("is_classvar"):
             extra_imports.append(IMPORT_CLASSVAR)
         if not self.required and not self.nullable:
-            extra_imports.extend([IMPORT_UNION, IMPORT_MSGSPEC_UNSETTYPE])
+            extra_imports.append(IMPORT_MSGSPEC_UNSETTYPE)
+            if not self.data_type.use_union_operator:
+                extra_imports.append(IMPORT_UNION)
             if not self.default:
                 extra_imports.append(IMPORT_MSGSPEC_UNSET)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
@@ -167,7 +168,7 @@ class Constraints(_Constraints):
 def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
     """Get type hint for fields that are neither required nor nullable, using UnsetType."""
     type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
-    if type_.startswith(OPTIONAL_PREFIX):
+    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
         type_ = type_[len(OPTIONAL_PREFIX) : -1]
 
     if not type_ or type_ == NONE:
@@ -319,8 +320,6 @@ class DataModelField(DataModelFieldBase):
         if not self.required and not self.extras.get("is_classvar"):
             type_hint = self.data_type.type_hint
             annotated_type = f"Annotated[{type_hint}, {meta}]"
-            if self.nullable:
-                return get_optional_type(annotated_type, self.data_type.use_union_operator)
             return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
 
         annotated_type = f"Annotated[{self.type_hint}, {meta}]"
