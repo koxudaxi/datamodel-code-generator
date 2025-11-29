@@ -4,9 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
-
-from typing_extensions import TypeAliasType
+from typing import Literal, TypeAlias, TypedDict
 
 
 class BlobPart(TypedDict):
@@ -14,7 +12,7 @@ class BlobPart(TypedDict):
     data: str
 
 
-FieldPlaceholder = TypeAliasType("FieldPlaceholder", None)
+FieldPlaceholder: TypeAlias = None
 
 
 class TextPart(TypedDict):
@@ -22,4 +20,4 @@ class TextPart(TypedDict):
     content: str
 
 
-SystemInstructions = TypeAliasType("SystemInstructions", list[TextPart | BlobPart])
+SystemInstructions: TypeAlias = list[TextPart | BlobPart]

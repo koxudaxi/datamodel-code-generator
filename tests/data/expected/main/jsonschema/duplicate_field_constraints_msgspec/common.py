@@ -7,11 +7,9 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from msgspec import Meta
-from typing_extensions import TypeAliasType
+from typing_extensions import TypeAlias
 
-Model = TypeAliasType("Model", Any)
+Model: TypeAlias = Any
 
 
-Ulid = TypeAliasType(
-    "Ulid", Annotated[str, Meta(pattern='[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26,26}')]
-)
+Ulid: TypeAlias = Annotated[str, Meta(pattern='[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26,26}')]

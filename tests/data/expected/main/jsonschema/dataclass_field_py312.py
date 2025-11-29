@@ -7,9 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
-from typing_extensions import TypeAlias
-
-Model: TypeAlias = Any
+type Model = Any
 
 
 @dataclass

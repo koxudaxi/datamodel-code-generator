@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
 
-from typing_extensions import TypeAliasType
+from typing_extensions import TypeAlias
 
 
 @dataclass
@@ -17,7 +17,7 @@ class Pet:
     tag: Optional[str] = None
 
 
-Pets = TypeAliasType("Pets", List[Pet])
+Pets: TypeAlias = List[Pet]
 
 
 @dataclass
@@ -27,13 +27,13 @@ class User:
     tag: Optional[str] = None
 
 
-Users = TypeAliasType("Users", List[User])
+Users: TypeAlias = List[User]
 
 
-Id = TypeAliasType("Id", str)
+Id: TypeAlias = str
 
 
-Rules = TypeAliasType("Rules", List[str])
+Rules: TypeAlias = List[str]
 
 
 @dataclass
@@ -50,7 +50,7 @@ class Api:
     apiDocumentationUrl: Optional[str] = None
 
 
-Apis = TypeAliasType("Apis", List[Api])
+Apis: TypeAlias = List[Api]
 
 
 @dataclass

@@ -16,11 +16,13 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
     InputFileType,
+    PythonVersion,
     PythonVersionMin,
     chdir,
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
@@ -1780,6 +1782,26 @@ def test_main_dataclass_field(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         extra_args=["--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+@pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_312),
+    reason="Black does not support Python 3.12",
+)
+def test_main_dataclass_field_py312(output_file: Path) -> None:
+    """Test dataclass field generation with Python 3.12 type statement."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "user.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.12",
+        ],
     )
 
 
