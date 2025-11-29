@@ -1,0 +1,1 @@
+"""GraphQL integration tests package."""

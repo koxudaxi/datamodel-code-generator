@@ -1,3 +1,8 @@
+"""Import definitions for Pydantic v1 types.
+
+Provides pre-defined Import objects for Pydantic v1 types (constr, AnyUrl, etc.).
+"""
+
 from __future__ import annotations
 
 from datamodel_code_generator.imports import Import

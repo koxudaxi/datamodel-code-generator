@@ -1,3 +1,5 @@
+"""Tests for field name resolver functionality."""
+
 from __future__ import annotations
 
 import pytest
@@ -14,5 +16,6 @@ from datamodel_code_generator.reference import FieldNameResolver
     ],
 )
 def test_get_valid_field_name(name: str, expected_resolved: str) -> None:
+    """Test field name resolution to valid Python identifiers."""
     resolver = FieldNameResolver()
     assert expected_resolved == resolver.get_valid_name(name)

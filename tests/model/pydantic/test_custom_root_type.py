@@ -1,3 +1,5 @@
+"""Tests for Pydantic v1 CustomRootType generation."""
+
 from __future__ import annotations
 
 from datamodel_code_generator.model import DataModelFieldBase
@@ -8,6 +10,7 @@ from datamodel_code_generator.types import DataType, Types
 
 
 def test_custom_root_type() -> None:
+    """Test CustomRootType generation with optional field."""
     custom_root_type = CustomRootType(
         fields=[
             DataModelFieldBase(
@@ -35,6 +38,7 @@ def test_custom_root_type() -> None:
 
 
 def test_custom_root_type_required() -> None:
+    """Test CustomRootType generation with required field."""
     custom_root_type = CustomRootType(
         fields=[DataModelFieldBase(data_type=DataType(type="str"), required=True)],
         reference=Reference(name="test_model", path="test_model"),
@@ -49,6 +53,7 @@ def test_custom_root_type_required() -> None:
 
 
 def test_custom_root_type_decorator() -> None:
+    """Test CustomRootType generation with decorators and base classes."""
     custom_root_type = CustomRootType(
         fields=[DataModelFieldBase(data_type=DataType(type="str"), required=True)],
         decorators=["@validate"],
@@ -65,5 +70,6 @@ def test_custom_root_type_decorator() -> None:
 
 
 def test_custom_root_type_get_data_type() -> None:
+    """Test data type retrieval for CustomRootType fields."""
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type="int")

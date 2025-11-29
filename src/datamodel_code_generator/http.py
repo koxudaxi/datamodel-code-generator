@@ -1,3 +1,9 @@
+"""HTTP utilities for fetching remote schema files.
+
+Provides functions to fetch schema content from URLs and join URL references.
+Requires the 'http' extra: `pip install 'datamodel-code-generator[http]'`.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -18,6 +24,7 @@ def get_body(
     ignore_tls: bool = False,  # noqa: FBT001, FBT002
     query_parameters: Sequence[tuple[str, str]] | None = None,
 ) -> str:
+    """Fetch content from a URL with optional headers and query parameters."""
     return httpx.get(
         url,
         headers=headers,
@@ -29,4 +36,5 @@ def get_body(
 
 
 def join_url(url: str, ref: str = ".") -> str:
+    """Join a base URL with a relative reference."""
     return str(httpx.URL(url).join(ref))

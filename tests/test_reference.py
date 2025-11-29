@@ -1,3 +1,5 @@
+"""Tests for reference resolution functionality."""
+
 from __future__ import annotations
 
 from pathlib import PurePosixPath, PureWindowsPath
@@ -22,6 +24,7 @@ from datamodel_code_generator.reference import ModelResolver, get_relative_path
     ],
 )
 def test_get_relative_path_posix(base_path: str, target_path: str, expected: str) -> None:
+    """Test get_relative_path function on POSIX paths."""
     assert PurePosixPath(get_relative_path(PurePosixPath(base_path), PurePosixPath(target_path))) == PurePosixPath(
         expected
     )
@@ -42,24 +45,28 @@ def test_get_relative_path_posix(base_path: str, target_path: str, expected: str
     ],
 )
 def test_get_relative_path_windows(base_path: str, target_path: str, expected: str) -> None:
+    """Test get_relative_path function on Windows paths."""
     assert PureWindowsPath(
         get_relative_path(PureWindowsPath(base_path), PureWindowsPath(target_path))
     ) == PureWindowsPath(expected)
 
 
 def test_model_resolver_add_ref_with_hash() -> None:
+    """Test adding reference with URL fragment."""
     model_resolver = ModelResolver()
     reference = model_resolver.add_ref("https://json-schema.org/draft/2020-12/meta/core#")
     assert reference.original_name == "core"
 
 
 def test_model_resolver_add_ref_without_hash() -> None:
+    """Test adding reference without URL fragment."""
     model_resolver = ModelResolver()
     reference = model_resolver.add_ref("meta/core")
     assert reference.original_name == "core"
 
 
 def test_model_resolver_add_ref_unevaluated() -> None:
+    """Test adding reference for unevaluated schema."""
     model_resolver = ModelResolver()
     reference = model_resolver.add_ref("meta/unevaluated")
     assert reference.original_name == "unevaluated"
