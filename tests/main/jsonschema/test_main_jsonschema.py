@@ -127,6 +127,26 @@ def test_main_jsonschema(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) -> None:
+    """Test JSON Schema code generation with dataclass arguments passed but using Pydantic model.
+
+    This verifies that dataclass_arguments is properly ignored for non-dataclass models.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general.py",
+        extra_args=[
+            "--output-model",
+            "pydantic.BaseModel",
+            "--dataclass-arguments",
+            '{"slots": true, "order": true}',
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_nested_deep(tmp_path: Path) -> None:
     """Test deeply nested JSON Schema generation."""
