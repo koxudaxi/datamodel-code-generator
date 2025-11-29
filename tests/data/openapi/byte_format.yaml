@@ -1,0 +1,14 @@
+openapi: '3.0.2'
+components:
+  schemas:
+    Data:
+      description: The version of this API
+      type: string
+      format: byte
+    Api:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Data"

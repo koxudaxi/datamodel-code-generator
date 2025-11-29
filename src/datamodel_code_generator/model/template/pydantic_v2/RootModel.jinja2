@@ -41,5 +41,8 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields)
     """
     {{ field.docstring | indent(4) }}
     """
+    {%- elif field.inline_field_docstring %}
+    {{ field.inline_field_docstring }}
+
     {%- endif %}
 {%- endif %}

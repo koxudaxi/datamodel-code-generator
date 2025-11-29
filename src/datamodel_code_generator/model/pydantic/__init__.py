@@ -1,3 +1,9 @@
+"""Pydantic v1 model generator.
+
+Provides BaseModel, CustomRootType, and DataModelField for generating
+Pydantic v1 compatible data models.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
@@ -14,10 +20,13 @@ if TYPE_CHECKING:
 
 
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
+    """Generate update_forward_refs() calls for Pydantic v1 models."""
     return "\n".join(f"{class_name}.update_forward_refs()" for class_name in class_names)
 
 
 class Config(_BaseModel):
+    """Pydantic model config options."""
+
     extra: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
     allow_population_by_field_name: Optional[bool] = None  # noqa: UP045

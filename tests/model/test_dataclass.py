@@ -1,3 +1,5 @@
+"""Tests for dataclass model field generation."""
+
 from __future__ import annotations
 
 from datamodel_code_generator.model.dataclass import DataModelField

@@ -8,8 +8,9 @@ from datetime import timedelta
 from typing import Any, Union
 
 from msgspec import UNSET, Struct, UnsetType
+from typing_extensions import TypeAliasType
 
-Model = Any
+Model = TypeAliasType("Model", Any)
 
 
 class Test(Struct):

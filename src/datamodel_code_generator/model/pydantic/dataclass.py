@@ -1,3 +1,8 @@
+"""Pydantic v1 dataclass model.
+
+Generates pydantic.dataclasses.dataclass decorated classes.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
@@ -10,5 +15,7 @@ if TYPE_CHECKING:
 
 
 class DataClass(DataModel):
+    """DataModel for Pydantic v1 dataclasses."""
+
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic/dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)

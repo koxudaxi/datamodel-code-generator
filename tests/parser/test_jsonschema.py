@@ -1,3 +1,5 @@
+"""Tests for JSON Schema parser."""
+
 from __future__ import annotations
 
 import json
@@ -11,13 +13,15 @@ import yaml
 
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
-from datamodel_code_generator.parser.base import dump_templates
+from datamodel_code_generator.parser.base import Parser, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
+    Types,
     get_model_by_path,
 )
 from datamodel_code_generator.types import DataType
+from tests.conftest import assert_output
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -38,10 +42,12 @@ EXPECTED_JSONSCHEMA_PATH = Path(__file__).parents[1] / "data" / "expected" / "pa
     ],
 )
 def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
+    """Test model retrieval by path."""
     assert get_model_by_path(schema, path.split("/") if path else []) == model
 
 
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
+    """Test JSON schema object reference with JSON URL."""
     parser = JsonSchemaParser("")
     obj = JsonSchemaObject.parse_obj({"$ref": "https://example.com/person.schema.json#/definitions/User"})
     mock_get = mocker.patch("httpx.get")
@@ -81,6 +87,7 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
 
 
 def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
+    """Test JSON schema object reference with YAML URL."""
     parser = JsonSchemaParser("")
     obj = JsonSchemaObject.parse_obj({"$ref": "https://example.org/schema.yaml#/definitions/User"})
     mock_get = mocker.patch("httpx.get")
@@ -108,6 +115,7 @@ class Pet(BaseModel):
 
 
 def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
+    """Test JSON schema object cached reference with YAML URL."""
     parser = JsonSchemaParser("")
 
     obj = JsonSchemaObject.parse_obj({
@@ -141,6 +149,7 @@ class User(BaseModel):
 
 
 def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
+    """Test JSON schema reference with JSON URL."""
     parser = JsonSchemaParser("")
     obj = {
         "type": "object",
@@ -238,6 +247,7 @@ class Pet(BaseModel):
     ],
 )
 def test_parse_object(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing JSON schema objects."""
     parser = JsonSchemaParser(
         data_model_field_type=DataModelFieldBase,
         source="",
@@ -263,6 +273,7 @@ def test_parse_object(source_obj: dict[str, Any], generated_classes: str) -> Non
     ],
 )
 def test_parse_any_root_object(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing any root object."""
     parser = JsonSchemaParser("")
     parser.parse_root_type("AnyObject", JsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -278,6 +289,7 @@ def test_parse_any_root_object(source_obj: dict[str, Any], generated_classes: st
     ],
 )
 def test_parse_one_of_object(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing oneOf schema objects."""
     parser = JsonSchemaParser("")
     parser.parse_raw_obj("onOfObject", source_obj, [])
     assert dump_templates(list(parser.results)) == generated_classes
@@ -325,12 +337,14 @@ def test_parse_one_of_object(source_obj: dict[str, Any], generated_classes: str)
     ],
 )
 def test_parse_default(source_obj: dict[str, Any], generated_classes: str) -> None:
+    """Test parsing default values in schemas."""
     parser = JsonSchemaParser("")
     parser.parse_raw_obj("Defaults", source_obj, [])
     assert dump_templates(list(parser.results)) == generated_classes
 
 
 def test_parse_array_schema() -> None:
+    """Test parsing array schemas."""
     parser = JsonSchemaParser("")
     parser.parse_raw_obj("schema", {"type": "object", "properties": {"name": True}}, [])
     assert (
@@ -341,13 +355,14 @@ def test_parse_array_schema() -> None:
 
 
 def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test parsing nested array schemas."""
     monkeypatch.chdir(tmp_path)
     parser = JsonSchemaParser(
         DATA_PATH / "nested_array.json",
         data_model_field_type=DataModelFieldBase,
     )
     parser.parse()
-    assert dump_templates(list(parser.results)) == (DATA_PATH / "nested_array.json.snapshot").read_text()
+    assert_output(dump_templates(list(parser.results)), DATA_PATH / "nested_array.json.snapshot")
 
 
 @pytest.mark.parametrize(
@@ -398,6 +413,7 @@ def test_get_data_type(
     import_: str | None,
     use_pendulum: bool,
 ) -> None:
+    """Test data type resolution from schema type and format."""
     if from_ and import_:
         import_: Import | None = Import(from_=from_, import_=import_)
     else:
@@ -418,6 +434,7 @@ def test_get_data_type(
     ],
 )
 def test_get_data_type_array(schema_types: list[str], result_types: list[str]) -> None:
+    """Test data type resolution for array of types."""
     parser = JsonSchemaParser("")
     assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == parser.data_type(
         data_types=[
@@ -488,10 +505,7 @@ def test_no_additional_imports() -> None:
 )
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="Require Pydantic version 2.0.0 or later ")
 def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_classes: str) -> None:
-    """
-    Contrived example to extend the JsonSchemaParser to support an alt_type, which
-    replaces the type if present.
-    """
+    """Test JSON schema parser extension with alt_type support."""
 
     class AltJsonSchemaObject(JsonSchemaObject):
         properties: Optional[dict[str, Union[AltJsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
@@ -510,3 +524,48 @@ def test_json_schema_parser_extension(source_obj: dict[str, Any], generated_clas
     )
     parser.parse_object("Person", AltJsonSchemaObject.parse_obj(source_obj), [])
     assert dump_templates(list(parser.results)) == generated_classes
+
+
+def test_parse_type_mappings_invalid_format() -> None:
+    """Test _parse_type_mappings raises ValueError for invalid format."""
+    with pytest.raises(ValueError, match="Invalid type mapping format"):
+        Parser._parse_type_mappings(["invalid_without_equals"])
+
+
+def test_parse_type_mappings_valid_formats() -> None:
+    """Test _parse_type_mappings with valid formats."""
+    result = Parser._parse_type_mappings(["binary=string", "string+date=string"])
+    assert result == {
+        ("string", "binary"): "string",
+        ("string", "date"): "string",
+    }
+
+
+def test_get_type_with_mappings_to_format() -> None:
+    """Test _get_type_with_mappings mapping to a format within type_formats."""
+    parser = JsonSchemaParser(
+        source="",
+        type_mappings=["binary=byte"],
+    )
+    result = parser._get_type_with_mappings("string", "binary")
+    assert result == Types.byte
+
+
+def test_get_type_with_mappings_to_type_default() -> None:
+    """Test _get_type_with_mappings mapping to a top-level type's default."""
+    parser = JsonSchemaParser(
+        source="",
+        type_mappings=["binary=boolean"],
+    )
+    result = parser._get_type_with_mappings("string", "binary")
+    assert result == Types.boolean
+
+
+def test_get_type_with_mappings_unknown_target_fallback() -> None:
+    """Test _get_type_with_mappings falls back to _get_type for unknown target."""
+    parser = JsonSchemaParser(
+        source="",
+        type_mappings=["binary=unknown_format"],
+    )
+    result = parser._get_type_with_mappings("string", "binary")
+    assert result == Types.binary

@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Annotated, List, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
+from typing_extensions import TypeAliasType
 
 
 class Pet(Struct):
@@ -15,16 +16,16 @@ class Pet(Struct):
     tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
 
 
-Pets = List[Pet]
+Pets = TypeAliasType("Pets", List[Pet])
 
 
-UID = Annotated[int, Meta(ge=0)]
+UID = TypeAliasType("UID", Annotated[int, Meta(ge=0)])
 
 
-Phone = Annotated[str, Meta(min_length=3)]
+Phone = TypeAliasType("Phone", Annotated[str, Meta(min_length=3)])
 
 
-FaxItem = Annotated[str, Meta(min_length=3)]
+FaxItem = TypeAliasType("FaxItem", Annotated[str, Meta(min_length=3)])
 
 
 class User(Struct):
@@ -44,13 +45,13 @@ class User(Struct):
     rating: Union[Annotated[float, Meta(gt=0.0, le=5.0)], UnsetType] = UNSET
 
 
-Users = List[User]
+Users = TypeAliasType("Users", List[User])
 
 
-Id = str
+Id = TypeAliasType("Id", str)
 
 
-Rules = List[str]
+Rules = TypeAliasType("Rules", List[str])
 
 
 class Error(Struct):
@@ -80,7 +81,7 @@ class Api(Struct):
     ] = UNSET
 
 
-Apis = List[Api]
+Apis = TypeAliasType("Apis", List[Api])
 
 
 class Event(Struct):

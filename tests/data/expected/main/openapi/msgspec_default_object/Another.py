@@ -7,11 +7,12 @@ from __future__ import annotations
 from typing import List, Union
 
 from msgspec import Struct, UnsetType, convert, field
+from typing_extensions import TypeAliasType
 
 from . import Foo as Foo_1
 from . import Nested
 
-Foo = str
+Foo = TypeAliasType("Foo", str)
 
 
 class Bar(Struct):

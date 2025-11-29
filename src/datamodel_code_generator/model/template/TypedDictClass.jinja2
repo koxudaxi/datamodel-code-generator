@@ -13,5 +13,13 @@ class {{ class_name }}({{ base_class }}):
     """
     {{ field.docstring | indent(4) }}
     """
+{%- if field.use_inline_field_description and not loop.last %}
+
+{% endif %}
+    {%- elif field.inline_field_docstring %}
+    {{ field.inline_field_docstring }}
+{%- if not loop.last %}
+
+{% endif %}
     {%- endif %}
 {%- endfor -%}
