@@ -1783,6 +1783,22 @@ def test_main_dataclass_field(output_file: Path) -> None:
     )
 
 
+def test_main_dataclass_field_py312(output_file: Path) -> None:
+    """Test dataclass field generation with Python 3.12 type statement."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "user.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.12",
+        ],
+    )
+
+
 def test_main_jsonschema_enum_root_literal(output_file: Path) -> None:
     """Test enum root with literal type."""
     run_main_and_assert(
