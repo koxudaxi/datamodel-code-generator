@@ -5,27 +5,29 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Literal, Optional, TypeAlias
+from typing import List, Literal, Optional
 
-Boolean: TypeAlias = bool
+from typing_extensions import TypeAliasType
+
+Boolean = TypeAliasType("Boolean", bool)
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-ID: TypeAlias = str
+ID = TypeAliasType("ID", str)
 """
 The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
 """
 
 
-Int: TypeAlias = int
+Int = TypeAliasType("Int", int)
 """
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 """
 
 
-String: TypeAlias = str
+String = TypeAliasType("String", str)
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """

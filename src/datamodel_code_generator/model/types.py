@@ -1,3 +1,8 @@
+"""Base type manager for model modules.
+
+Provides DataTypeManager implementation with type mapping factory.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -16,6 +21,7 @@ if TYPE_CHECKING:
 
 
 def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
+    """Create type mapping for common schema types to Python types."""
     data_type_int = data_type(type="int")
     data_type_float = data_type(type="float")
     data_type_str = data_type(type="str")
@@ -58,6 +64,8 @@ def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
 
 
 class DataTypeManager(_DataTypeManager):
+    """Base type manager for model modules."""
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         python_version: PythonVersion = PythonVersionMin,
@@ -70,6 +78,7 @@ class DataTypeManager(_DataTypeManager):
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
+        """Initialize type manager with basic type mapping."""
         super().__init__(
             python_version,
             use_standard_collections,
@@ -89,4 +98,5 @@ class DataTypeManager(_DataTypeManager):
         types: Types,
         **_: Any,
     ) -> DataType:
+        """Get data type for schema type."""
         return self.type_map[types]

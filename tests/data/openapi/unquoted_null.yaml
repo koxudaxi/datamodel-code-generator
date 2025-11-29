@@ -1,0 +1,16 @@
+# Test behavior with `tupe: null` when `null` is unquoted
+
+openapi: "3.1.1"
+components:
+  schemas:
+    Thing:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type:
+            - string
+            - null
+    NullThing:
+      type: null

@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Optional
 
 from pydantic import BaseModel
 
 
-class IntEnum(int, Enum):
+class IntEnumModel(IntEnum):
     integer_1 = 1
     integer_2 = 2
     integer_3 = 3
@@ -45,7 +45,7 @@ class UnknownEnum(Enum):
 
 
 class Model(BaseModel):
-    IntEnum: Optional[IntEnum] = None
+    IntEnum: Optional[IntEnumModel] = None
     FloatEnum: Optional[FloatEnum] = None
     StrEnum: Optional[StrEnum] = None
     NonTypedEnum: Optional[NonTypedEnum] = None

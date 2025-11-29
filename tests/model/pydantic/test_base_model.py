@@ -1,3 +1,5 @@
+"""Tests for Pydantic v1 BaseModel generation."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -11,6 +13,7 @@ from datamodel_code_generator.types import DataType, Types
 
 
 def test_base_model() -> None:
+    """Test basic BaseModel generation with required field."""
     field = DataModelField(name="a", data_type=DataType(type="str"), required=True)
 
     base_model = BaseModel(
@@ -25,6 +28,7 @@ def test_base_model() -> None:
 
 
 def test_base_model_optional() -> None:
+    """Test BaseModel generation with optional field and default value."""
     field = DataModelField(name="a", data_type=DataType(type="str"), default="abc", required=False)
 
     base_model = BaseModel(
@@ -39,6 +43,7 @@ def test_base_model_optional() -> None:
 
 
 def test_base_model_nullable_required() -> None:
+    """Test BaseModel generation with nullable required field."""
     field = DataModelField(
         name="a",
         data_type=DataType(type="str"),
@@ -59,6 +64,7 @@ def test_base_model_nullable_required() -> None:
 
 
 def test_base_model_strict_non_nullable_required() -> None:
+    """Test BaseModel generation with strict non-nullable required field."""
     field = DataModelField(
         name="a",
         data_type=DataType(type="str"),
@@ -79,6 +85,7 @@ def test_base_model_strict_non_nullable_required() -> None:
 
 
 def test_base_model_decorator() -> None:
+    """Test BaseModel generation with decorators and base classes."""
     field = DataModelField(name="a", data_type=DataType(type="str"), default="abc", required=False)
 
     base_model = BaseModel(
@@ -96,6 +103,7 @@ def test_base_model_decorator() -> None:
 
 
 def test_base_model_get_data_type() -> None:
+    """Test data type retrieval for BaseModel fields."""
     data_type_manager = DataTypeManager()
     assert data_type_manager.get_data_type(Types.integer) == data_type_manager.data_type(type="int")
 
@@ -138,4 +146,5 @@ def test_base_model_get_data_type() -> None:
     ],
 )
 def test_data_model_field(kwargs: dict[str, Any], expected: str | None) -> None:
+    """Test DataModelField generation with various field attributes."""
     assert DataModelField(**kwargs, data_type=DataType()).field == expected

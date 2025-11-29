@@ -1,0 +1,5 @@
+[tool.datamodel-codegen]
+collapse-root-models = true
+snake-case-field = true
+use-annotated = true
+

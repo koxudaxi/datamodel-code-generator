@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "_Placeholder",
+  "type": "null",
+  "$defs": {
+    "TextPart": {
+      "properties": {
+        "type": {
+          "const": "text",
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "content"],
+      "title": "TextPart",
+      "type": "object"
+    },
+    "BlobPart": {
+      "properties": {
+        "type": {
+          "const": "blob",
+          "type": "string"
+        },
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "data"],
+      "title": "BlobPart",
+      "type": "object"
+    },
+    "SystemInstructions": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {"$ref": "#/$defs/TextPart"},
+          {"$ref": "#/$defs/BlobPart"}
+        ]
+      },
+      "title": "SystemInstructions"
+    }
+  }
+}

@@ -1,3 +1,5 @@
+"""Tests for type manipulation utilities."""
+
 from __future__ import annotations
 
 import pytest
@@ -40,6 +42,7 @@ from datamodel_code_generator.types import _remove_none_from_union, get_optional
     ],
 )
 def test_get_optional_type(input_: str, use_union_operator: bool, expected: str) -> None:
+    """Test get_optional_type function with various type strings."""
     assert get_optional_type(input_, use_union_operator) == expected
 
 
@@ -128,4 +131,5 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
     ],
 )
 def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
+    """Test _remove_none_from_union function with various type strings."""
     assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
