@@ -4,15 +4,17 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Optional
+from typing import Annotated, ClassVar, Literal, Union
 
-from msgspec import Meta, Struct
+from msgspec import UNSET, Meta, Struct, UnsetType
 
 from .artificial_folder import type_1
 
 
 class Type2(Struct, tag_field='type_', tag='b'):
-    type_: ClassVar[Annotated[Literal['b'], Meta(title='Type ')]] = 'b'
-    ref_type: Optional[
-        Annotated[type_1.Type1, Meta(description='A referenced type.')]
-    ] = None
+    type_: ClassVar[Annotated[Union[Literal['b'], UnsetType], Meta(title='Type ')]] = (
+        'b'
+    )
+    ref_type: Union[
+        Annotated[type_1.Type1, Meta(description='A referenced type.')], UnsetType
+    ] = UNSET

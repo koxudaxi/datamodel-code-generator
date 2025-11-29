@@ -4,18 +4,26 @@ from __future__ import annotations
 
 import inspect
 import shutil
+import sys
 from argparse import Namespace
 from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from typing import Literal
 
+import black
 import pytest
+from packaging import version
 
 from datamodel_code_generator.__main__ import Exit, main
 from tests.conftest import AssertFileContent, assert_directory_content, assert_output, freeze_time
 
 InputFileTypeLiteral = Literal["auto", "openapi", "jsonschema", "json", "yaml", "dict", "csv", "graphql"]
 CopyFilesMapping = Sequence[tuple[Path, Path]]
+
+MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
+    sys.version_info[:2] == (3, 12) and version.parse(black.__version__) < version.parse("24.0.0"),
+    reason="msgspec.Struct formatting differs with python3.12 + black < 24",
+)
 
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
 EXPECTED_MAIN_PATH: Path = DATA_PATH / "expected" / "main"
