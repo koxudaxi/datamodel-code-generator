@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Annotated, List, Optional
 
 from msgspec import Meta, Struct, field
-from typing_extensions import TypeAliasType
+from typing_extensions import TypeAlias
 
 
 class Pet(Struct):
@@ -17,7 +17,7 @@ class Pet(Struct):
     tag: Optional[str] = None
 
 
-Pets = TypeAliasType("Pets", List[Pet])
+Pets: TypeAlias = List[Pet]
 
 
 class User(Struct):
@@ -26,13 +26,13 @@ class User(Struct):
     tag: Optional[str] = None
 
 
-Users = TypeAliasType("Users", List[User])
+Users: TypeAlias = List[User]
 
 
-Id = TypeAliasType("Id", str)
+Id: TypeAlias = str
 
 
-Rules = TypeAliasType("Rules", List[str])
+Rules: TypeAlias = List[str]
 
 
 class Error(Struct):
@@ -55,7 +55,7 @@ class Api(Struct):
     ] = field(name='apiDocumentationUrl', default=None)
 
 
-Apis = TypeAliasType("Apis", List[Api])
+Apis: TypeAlias = List[Api]
 
 
 class Event(Struct):
