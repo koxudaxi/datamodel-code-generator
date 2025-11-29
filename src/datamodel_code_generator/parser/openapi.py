@@ -361,17 +361,19 @@ class OpenAPIParser(JsonSchemaParser):
 
         return super().get_data_type(obj)
 
+    def _get_discriminator_union_type(self, ref: str) -> DataType | None:
+        """Create a union type for discriminator subtypes if available."""
+        subtypes = self._discriminator_subtypes.get(ref, [])
+        if not subtypes:
+            return None
+        refs = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
+        return self.data_type(data_types=[self.data_type(reference=r) for r in refs])
+
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get data type for a reference, handling discriminator polymorphism."""
-        data_type = super().get_ref_data_type(ref)
-
-        if ref in self._discriminator_schemas and ref in self._discriminator_subtypes:
-            subtypes = self._discriminator_subtypes[ref]
-            if subtypes:
-                data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
-                return self.data_type(data_types=[self.data_type(reference=r) for r in data_types])
-
-        return data_type
+        if ref in self._discriminator_schemas and (union_type := self._get_discriminator_union_type(ref)):
+            return union_type
+        return super().get_ref_data_type(ref)
 
     def parse_object_fields(
         self,
@@ -381,58 +383,24 @@ class OpenAPIParser(JsonSchemaParser):
     ) -> list[DataModelFieldBase]:
         """Parse object fields, adding discriminator info for allOf polymorphism."""
         fields = super().parse_object_fields(obj, path, module_name)
-
-        properties: dict[str, JsonSchemaObject | bool] = {} if obj.properties is None else obj.properties
+        properties = obj.properties or {}
 
         result_fields: list[DataModelFieldBase] = []
         for field_obj in fields:
-            original_field_name = field_obj.original_name
-            field = properties.get(original_field_name)
+            field = properties.get(field_obj.original_name)
 
-            if isinstance(field, bool):
-                result_fields.append(field_obj)
-                continue
-
-            if not isinstance(field, JsonSchemaObject):
-                result_fields.append(field_obj)
-                continue
-
-            if field.ref and field.ref in self._discriminator_schemas:
-                discriminator_info = self._discriminator_schemas[field.ref]
-                subtypes = self._discriminator_subtypes.get(field.ref, [])
-
-                if discriminator_info and subtypes:
-                    subtype_data_types = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
-                    new_field_type = self.data_type(
-                        data_types=[self.data_type(reference=r) for r in subtype_data_types]
-                    )
-                else:
-                    new_field_type = field_obj.data_type
-
-                new_extras = {**field_obj.extras}
-                if discriminator_info:
-                    new_extras["discriminator"] = discriminator_info
-
-                new_field = self.data_model_field_type(
-                    name=field_obj.name,
-                    default=field_obj.default,
-                    data_type=new_field_type,
-                    required=field_obj.required,
-                    alias=field_obj.alias,
-                    constraints=field_obj.constraints,
-                    nullable=field_obj.nullable,
-                    strip_default_none=field_obj.strip_default_none,
-                    extras=new_extras,
-                    use_annotated=field_obj.use_annotated,
-                    use_field_description=field_obj.use_field_description,
-                    use_default_kwarg=field_obj.use_default_kwarg,
-                    original_name=field_obj.original_name,
-                    has_default=field_obj.has_default,
-                    type_has_null=field_obj.type_has_null,
-                )
-                result_fields.append(new_field)
-            else:
-                result_fields.append(field_obj)
+            if (
+                isinstance(field, JsonSchemaObject)
+                and field.ref
+                and (discriminator := self._discriminator_schemas.get(field.ref))
+            ):
+                new_field_type = self._get_discriminator_union_type(field.ref) or field_obj.data_type
+                field_obj = self.data_model_field_type(**{  # noqa: PLW2901
+                    **field_obj.__dict__,
+                    "data_type": new_field_type,
+                    "extras": {**field_obj.extras, "discriminator": discriminator},
+                })
+            result_fields.append(field_obj)
 
         return result_fields
 
