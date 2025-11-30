@@ -1,0 +1,18 @@
+{
+  "$id": "http://example.com/root.json",
+  "type": "object",
+  "definitions": {
+    "Address": {
+      "$id": "#address",
+      "type": "object",
+      "properties": {
+        "street": { "type": "string" }
+      },
+      "required": ["street"]
+    }
+  },
+  "properties": {
+    "billing_address": { "$ref": "#address" }
+  },
+  "required": ["billing_address"]
+}
