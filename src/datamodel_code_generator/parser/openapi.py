@@ -16,6 +16,7 @@ from warnings import warn
 from pydantic import Field
 
 from datamodel_code_generator import (
+    DataclassArguments,
     Error,
     LiteralType,
     OpenAPIScope,
@@ -254,7 +255,7 @@ class OpenAPIParser(JsonSchemaParser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None,
+        dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""

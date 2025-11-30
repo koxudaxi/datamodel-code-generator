@@ -39,6 +39,8 @@ from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from datamodel_code_generator import DataclassArguments
+
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
 ALL_MODEL: str = "#all#"
@@ -357,12 +359,12 @@ class DataModel(TemplateBase, Nullable, ABC):
         keyword_only: bool = False,
         frozen: bool = False,
         treat_dot_as_module: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None,
+        dataclass_arguments: DataclassArguments | None = None,
     ) -> None:
         """Initialize a data model with fields, base classes, and configuration."""
         self.keyword_only = keyword_only
         self.frozen = frozen
-        self.dataclass_arguments = dataclass_arguments if dataclass_arguments is not None else {}
+        self.dataclass_arguments: DataclassArguments = dataclass_arguments if dataclass_arguments is not None else {}
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
             raise Exception(msg)  # noqa: TRY002

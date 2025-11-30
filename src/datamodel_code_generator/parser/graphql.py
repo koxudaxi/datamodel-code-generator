@@ -15,6 +15,7 @@ from typing import (
 from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
+    DataclassArguments,
     DefaultPutDict,
     LiteralType,
     PythonVersion,
@@ -173,7 +174,7 @@ class GraphQLParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None,
+        dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""

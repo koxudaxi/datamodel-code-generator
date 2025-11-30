@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator import DataclassArguments, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_DATE,
     IMPORT_DATETIME,
@@ -61,7 +61,7 @@ class DataClass(DataModel):
         keyword_only: bool = False,
         frozen: bool = False,
         treat_dot_as_module: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None,
+        dataclass_arguments: DataclassArguments | None = None,
     ) -> None:
         """Initialize dataclass with fields sorted by field assignment requirement."""
         super().__init__(

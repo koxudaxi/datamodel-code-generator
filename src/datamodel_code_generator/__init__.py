@@ -28,7 +28,7 @@ from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
-from typing_extensions import TypeAlias, TypeAliasType
+from typing_extensions import TypeAlias, TypeAliasType, TypedDict
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -55,6 +55,22 @@ MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
+
+
+class DataclassArguments(TypedDict, total=False):
+    """Arguments for @dataclass decorator."""
+
+    init: bool
+    repr: bool
+    eq: bool
+    order: bool
+    unsafe_hash: bool
+    frozen: bool
+    match_args: bool
+    kw_only: bool
+    slots: bool
+    weakref_slot: bool
+
 
 if not TYPE_CHECKING:
     YamlScalar: TypeAlias = Union[str, int, float, bool, None]
@@ -339,7 +355,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
-    dataclass_arguments: dict[str, Any] | None = None,
+    dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
 ) -> None:

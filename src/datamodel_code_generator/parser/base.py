@@ -55,6 +55,8 @@ from datamodel_code_generator.types import DataType, DataTypeManager, StrictType
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+    from datamodel_code_generator import DataclassArguments
+
 
 @runtime_checkable
 class HashableComparable(Hashable, Protocol):
@@ -429,7 +431,7 @@ class Parser(ABC):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
-        dataclass_arguments: dict[str, Any] | None = None,
+        dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
