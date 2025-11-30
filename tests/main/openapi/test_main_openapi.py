@@ -2130,7 +2130,11 @@ def test_main_openapi_type_alias_py312(output_file: Path) -> None:
     )
 
 
-def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> None:
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the target python version",
+)
+def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> None:  # pragma: no cover
     """Test mutual recursive type aliases render with quoted forward refs on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_mutual_recursive.yaml",
@@ -2148,7 +2152,11 @@ def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> No
     )
 
 
-def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_file: Path) -> None:
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the target python version",
+)
+def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_file: Path) -> None:  # pragma: no cover
     """Test mutual recursive type aliases render with quoted forward refs for TypeAliasType on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_mutual_recursive.yaml",
@@ -2166,7 +2174,11 @@ def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_fil
     )
 
 
-def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the target python version",
+)
+def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:  # pragma: no cover
     """Test recursive type aliases render with quoted self references on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",
