@@ -369,7 +369,7 @@ class OpenAPIParser(JsonSchemaParser):
         subtypes = self._discriminator_subtypes.get(ref, [])
         if not subtypes:
             return None
-        refs = [self.model_resolver.add_ref(subtype_ref) for subtype_ref in subtypes]
+        refs = map(self.model_resolver.add_ref, subtypes)
         return self.data_type(data_types=[self.data_type(reference=r) for r in refs])
 
     def get_ref_data_type(self, ref: str) -> DataType:
