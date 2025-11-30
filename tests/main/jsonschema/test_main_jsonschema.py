@@ -2331,6 +2331,24 @@ def test_main_msgspec_null_field(output_file: Path) -> None:
     )
 
 
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_falsy_defaults(output_file: Path) -> None:
+    """Test msgspec Struct generation preserves falsy default values (0, '', False)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_falsy_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 def test_main_invalid_import_name(output_dir: Path) -> None:
     """Test invalid import name handling."""
     run_main_and_assert(

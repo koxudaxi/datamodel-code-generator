@@ -97,7 +97,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_UNSETTYPE)
             if not self.data_type.use_union_operator:
                 extra_imports.append(IMPORT_UNION)
-            if not self.default:
+            if self.default is None or self.default is UNDEFINED:
                 extra_imports.append(IMPORT_MSGSPEC_UNSET)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
 
@@ -247,10 +247,10 @@ class DataModelField(DataModelFieldBase):
         if self.alias:
             data["name"] = self.alias
 
-        if self.default != UNDEFINED and self.default is not None:
+        if self.default is not UNDEFINED and self.default is not None:
             data["default"] = self.default
         elif self._not_required and "default_factory" not in data:
-            data["default"] = self.default or (None if self.nullable else UNSET)
+            data["default"] = None if self.nullable else UNSET
 
         if self.required:
             data = {
