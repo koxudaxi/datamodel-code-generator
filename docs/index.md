@@ -442,6 +442,10 @@ Model customization:
   --collapse-root-models
                         Models generated with a root-type field will be merged into the
                         models using that root-type model
+  --dataclass-arguments DATACLASS_ARGUMENTS
+                        Custom dataclass arguments as a JSON dictionary, e.g. ''{"frozen":
+                        true, "kw_only": true}''. Overrides --frozen-dataclasses and similar
+                        flags.
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an array
   --disable-timestamp   Disable timestamp on file headers
