@@ -686,10 +686,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v1-vs-v2" class="md-nav__link">
+  <a href="#type-alias-behavior-by-output-type-and-python-version" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1 vs v2
+        Type Alias Behavior by Output Type and Python Version
       
     </span>
   </a>
@@ -911,10 +911,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v1-vs-v2" class="md-nav__link">
+  <a href="#type-alias-behavior-by-output-type-and-python-version" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1 vs v2
+        Type Alias Behavior by Output Type and Python Version
       
     </span>
   </a>
@@ -1055,11 +1055,55 @@
 - Type aliases do not support some RootModel features (e.g. <code>model_config</code>)
 - A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. <code>model.json</code> containing <code>{"title": "MyString", "type": "string"}</code>)
 - Type aliases cannot be combined with <code>Annotated</code> for Pydantic v1</p>
-<h2 id="pydantic-v1-vs-v2">Pydantic v1 vs v2</h2>
-<p>The type of type alias generated depends on the Pydantic version:</p>
+<h2 id="type-alias-behavior-by-output-type-and-python-version">Type Alias Behavior by Output Type and Python Version</h2>
+<p>The type of type alias generated depends on the output model type and target Python version:</p>
+<table>
+<thead>
+<tr>
+<th>Output Type</th>
+<th>Python 3.12+</th>
+<th>Python 3.10-3.11</th>
+<th>Python 3.9</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pydantic v2</strong></td>
+<td><code>type</code> statement</td>
+<td><code>TypeAliasType</code> (typing_extensions)</td>
+<td><code>TypeAliasType</code> (typing_extensions)</td>
+</tr>
+<tr>
+<td><strong>Pydantic v1</strong></td>
+<td><code>TypeAlias</code></td>
+<td><code>TypeAlias</code></td>
+<td><code>TypeAlias</code> (typing_extensions)</td>
+</tr>
+<tr>
+<td><strong>TypedDict</strong></td>
+<td><code>type</code> statement</td>
+<td><code>TypeAlias</code></td>
+<td><code>TypeAlias</code> (typing_extensions)</td>
+</tr>
+<tr>
+<td><strong>dataclasses</strong></td>
+<td><code>type</code> statement</td>
+<td><code>TypeAlias</code></td>
+<td><code>TypeAlias</code> (typing_extensions)</td>
+</tr>
+<tr>
+<td><strong>msgspec</strong></td>
+<td><code>type</code> statement</td>
+<td><code>TypeAlias</code></td>
+<td><code>TypeAlias</code> (typing_extensions)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why the difference?</strong></p>
 <ul>
-<li><strong>Pydantic v2</strong>: Uses <code>TypeAliasType</code> (Python 3.9-3.11) or <code>type</code> statement (Python 3.12+)</li>
-<li><strong>Pydantic v1</strong>: Uses <code>TypeAlias</code> because Pydantic v1 cannot handle <code>TypeAliasType</code> objects</li>
+<li><strong>Pydantic v2</strong> requires <code>TypeAliasType</code> because it cannot properly handle <code>TypeAlias</code> annotations</li>
+<li><strong>Other output types</strong> (TypedDict, dataclasses, msgspec) use <code>TypeAlias</code> for better compatibility with libraries that may not expect <code>TypeAliasType</code> objects</li>
+<li><strong>Python 3.12+</strong> uses the native <code>type</code> statement for all output types</li>
 </ul>
 <h2 id="example">Example</h2>
 <p>Input JSON Schema</p>
