@@ -727,99 +727,6 @@ def test_create_data_model_non_dataclass_with_dataclass_arguments() -> None:
     assert result.name == "TestModel"
 
 
-def test_create_data_model_library_api_frozen_dataclasses() -> None:
-    """Test _create_data_model with library API using frozen_dataclasses flag.
-
-    When using parser directly without dataclass_arguments, frozen_dataclasses
-    and keyword_only flags should be used to construct dataclass_arguments.
-    """
-    parser = JsonSchemaParser(
-        "",
-        data_model_type=DataClass,
-        data_model_root_type=DataClass,
-        frozen_dataclasses=True,
-        keyword_only=True,
-    )
-    # Ensure dataclass_arguments is None (library API use case)
-    parser.dataclass_arguments = None
-
-    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-
-    result = parser._create_data_model(
-        reference=Reference(name="TestModel", path="test_model"),
-        fields=[field],
-    )
-
-    assert isinstance(result, DataClass)
-    assert result.name == "TestModel"
-    # Verify dataclass_arguments was constructed from frozen_dataclasses/keyword_only
-    assert result.dataclass_arguments == {"frozen": True, "kw_only": True}
-
-
-def test_create_data_model_library_api_frozen_only() -> None:
-    """Test _create_data_model with library API using only frozen_dataclasses flag."""
-    parser = JsonSchemaParser(
-        "",
-        data_model_type=DataClass,
-        data_model_root_type=DataClass,
-        frozen_dataclasses=True,
-        keyword_only=False,
-    )
-    parser.dataclass_arguments = None
-
-    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-
-    result = parser._create_data_model(
-        reference=Reference(name="TestModel", path="test_model"),
-        fields=[field],
-    )
-
-    assert isinstance(result, DataClass)
-    assert result.dataclass_arguments == {"frozen": True}
-
-
-def test_create_data_model_library_api_no_flags() -> None:
-    """Test _create_data_model with library API with no frozen/keyword_only flags."""
-    parser = JsonSchemaParser(
-        "",
-        data_model_type=DataClass,
-        data_model_root_type=DataClass,
-        frozen_dataclasses=False,
-        keyword_only=False,
-    )
-    parser.dataclass_arguments = None
-
-    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-
-    result = parser._create_data_model(
-        reference=Reference(name="TestModel", path="test_model"),
-        fields=[field],
-    )
-
-    assert isinstance(result, DataClass)
-    assert result.dataclass_arguments == {}
-
-
-def test_create_data_model_with_self_dataclass_arguments() -> None:
-    """Test _create_data_model when self.dataclass_arguments is set (not None)."""
-    parser = JsonSchemaParser(
-        "",
-        data_model_type=DataClass,
-        data_model_root_type=DataClass,
-        dataclass_arguments={"slots": True},
-    )
-
-    field = DataModelFieldBase(name="test_field", data_type=DataType(type="str"), required=True)
-
-    result = parser._create_data_model(
-        reference=Reference(name="TestModel", path="test_model"),
-        fields=[field],
-    )
-
-    assert isinstance(result, DataClass)
-    assert result.dataclass_arguments == {"slots": True}
-
-
 def test_parse_type_mappings_invalid_format() -> None:
     """Test _parse_type_mappings raises ValueError for invalid format."""
     with pytest.raises(ValueError, match="Invalid type mapping format"):
@@ -863,3 +770,40 @@ def test_get_type_with_mappings_unknown_target_fallback() -> None:
     )
     result = parser._get_type_with_mappings("string", "binary")
     assert result == Types.binary
+
+
+@pytest.mark.parametrize(
+    ("frozen_dataclasses", "keyword_only", "parser_dataclass_args", "kwargs_dataclass_args", "expected"),
+    [
+        (False, False, None, None, {}),
+        (True, False, None, None, {"frozen": True}),
+        (False, True, None, None, {"kw_only": True}),
+        (True, True, None, None, {"frozen": True, "kw_only": True}),
+        (False, False, {"slots": True}, None, {"slots": True}),
+        (True, True, {"slots": True}, None, {"slots": True}),
+        (True, True, {"slots": True}, {"order": True}, {"order": True}),
+    ],
+)
+def test_create_data_model_dataclass_arguments(
+    frozen_dataclasses: bool,
+    keyword_only: bool,
+    parser_dataclass_args: dict | None,
+    kwargs_dataclass_args: dict | None,
+    expected: dict,
+) -> None:
+    """Test _create_data_model handles dataclass_arguments correctly."""
+    parser = JsonSchemaParser(
+        source="",
+        data_model_type=DataClass,
+        frozen_dataclasses=frozen_dataclasses,
+        keyword_only=keyword_only,
+    )
+    parser.dataclass_arguments = parser_dataclass_args
+
+    reference = Reference(path="test", original_name="Test", name="Test")
+    kwargs: dict[str, Any] = {"reference": reference, "fields": []}
+    if kwargs_dataclass_args is not None:
+        kwargs["dataclass_arguments"] = kwargs_dataclass_args
+    result = parser._create_data_model(**kwargs)
+    assert isinstance(result, DataClass)
+    assert result.dataclass_arguments == expected
