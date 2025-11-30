@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import inspect
 import sys
 from typing import TYPE_CHECKING, Any, Protocol
@@ -52,18 +53,116 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
+def _get_tox_env() -> str:  # pragma: no cover
+    """Get the current tox environment name from TOX_ENV_NAME or fallback.
+
+    Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
+    """
+    import os  # noqa: PLC0415
+
+    env = os.environ.get("TOX_ENV_NAME", "<version>")
+    # Remove -parallel suffix since inline-snapshot needs single process mode
+    return env.removesuffix("-parallel")
+
+
+def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
+    """Format a hint message for inline-snapshot commands with rich formatting."""
+    from io import StringIO  # noqa: PLC0415
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.text import Text  # noqa: PLC0415
+
+    tox_env = _get_tox_env()
+    command = f"  tox run -e {tox_env} -- --inline-snapshot={action}"
+
+    description = "To update the expected file, run:" if action == "fix" else "To create the expected file, run:"
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
+
+    console.print(Text(description, style="default"))
+    console.print(Text(command, style="bold cyan"))
+
+    return output.getvalue()
+
+
+def _format_new_content(content: str) -> str:  # pragma: no cover
+    """Format new content (for create mode) with green color."""
+    from io import StringIO  # noqa: PLC0415
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.text import Text  # noqa: PLC0415
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
+
+    for line in content.splitlines():
+        console.print(Text(f"+{line}", style="green"))
+
+    return output.getvalue()
+
+
+def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
+    """Format a unified diff between expected and actual content with colors."""
+    from io import StringIO  # noqa: PLC0415
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.text import Text  # noqa: PLC0415
+
+    expected_lines = expected.splitlines(keepends=True)
+    actual_lines = actual.splitlines(keepends=True)
+    diff_lines = list(
+        difflib.unified_diff(
+            expected_lines,
+            actual_lines,
+            fromfile=str(expected_path),
+            tofile="actual",
+        )
+    )
+
+    if not diff_lines:
+        return ""
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
+
+    for line in diff_lines:
+        line_stripped = line.rstrip("\n")
+        # Skip header lines since file path is already in the error message
+        if line.startswith(("---", "+++")):
+            continue
+        if line.startswith("@@"):
+            console.print(Text(line_stripped, style="cyan"))
+        elif line.startswith("-"):
+            console.print(Text(line_stripped, style="red"))
+        elif line.startswith("+"):
+            console.print(Text(line_stripped, style="green"))
+        else:
+            # Use default to override pytest's red color for E lines
+            console.print(Text(line_stripped, style="default"))
+
+    return output.getvalue()
+
+
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
     __tracebackhide__ = True
-    expected = external_file(expected_path)
+    try:
+        expected = external_file(expected_path)
+    except FileNotFoundError:  # pragma: no cover
+        hint = _format_snapshot_hint("create")
+        formatted_content = _format_new_content(content)
+        msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
+        raise AssertionError(msg) from None  # pragma: no cover
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
-        if normalized_content != _normalize_line_endings(expected):  # pragma: no cover
-            pytest.fail(f"Content mismatch for {expected_path}\nExpected:\n{expected}\n\nActual:\n{content}")
+        normalized_expected = _normalize_line_endings(expected)
+        if normalized_content != normalized_expected:  # pragma: no cover
+            hint = _format_snapshot_hint("fix")
+            diff = _format_diff(normalized_expected, normalized_content, expected_path)
+            msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
+            raise AssertionError(msg) from None
     else:
-        expected_value = expected._load_value()  # pragma: no cover
-        if _normalize_line_endings(expected_value) == normalized_content:  # pragma: no cover
-            return  # pragma: no cover
         assert expected == normalized_content  # pragma: no cover
 
 
@@ -171,9 +270,17 @@ def assert_directory_content(
         assert_directory_content(tmp_path / "model", EXPECTED_PATH / "main_modular")
     """
     __tracebackhide__ = True
-    for expected_path in expected_dir.rglob(pattern):
-        relative_path = expected_path.relative_to(expected_dir)
-        output_path = output_dir / relative_path
+    output_files = {p.relative_to(output_dir) for p in output_dir.rglob(pattern)}
+    expected_files = {p.relative_to(expected_dir) for p in expected_dir.rglob(pattern)}
+
+    # Check for extra expected files (output missing files that are expected)
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in output: {extra}"
+
+    # Compare all output files (including new ones not yet in expected)
+    for output_path in output_dir.rglob(pattern):
+        relative_path = output_path.relative_to(output_dir)
+        expected_path = expected_dir / relative_path
         result = output_path.read_text(encoding=encoding)
         _assert_with_external_file(result, expected_path)
 
