@@ -22,6 +22,8 @@ from datamodel_code_generator.types import chain_as_tuple
 class TypeAliasBase(DataModel):
     """Base class for all type alias implementations."""
 
+    IS_ALIAS: bool = True
+
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get imports including Annotated if needed."""
