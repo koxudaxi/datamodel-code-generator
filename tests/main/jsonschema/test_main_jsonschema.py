@@ -374,6 +374,40 @@ def test_main_invalid_model_name(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
+    """Test reserved names are safely suffixed and aliased."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_property.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_property.py",
+    )
+
+
+def test_main_jsonschema_with_local_anchor(output_file: Path) -> None:
+    """Test $id anchor lookup resolves without error and reuses definitions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "with_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="with_anchor.py",
+    )
+
+
+def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
+    """Test missing $id anchor produces a clear error instead of KeyError trace."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "missing_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unresolved $id reference '#address'",
+    )
+
+
 def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
     root_id_response = mocker.Mock()
