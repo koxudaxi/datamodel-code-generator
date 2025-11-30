@@ -1341,6 +1341,39 @@ class Parser(ABC):
                             reference_path=model_field.data_type.import_.reference_path,
                         )
 
+    @classmethod
+    def _collect_used_names_from_models(cls, models: list[DataModel]) -> set[str]:
+        """Collect identifiers referenced by models before rendering."""
+        names: set[str] = set()
+
+        def add(name: str | None) -> None:
+            if not name:
+                return
+            # first segment is sufficient to match import target or alias
+            names.add(name.split(".")[0])
+
+        def walk_data_type(data_type: DataType) -> None:
+            add(data_type.alias or data_type.type)
+            if data_type.reference:
+                add(data_type.reference.short_name)
+            for child in data_type.data_types:
+                walk_data_type(child)
+            if data_type.dict_key:
+                walk_data_type(data_type.dict_key)
+
+        for model in models:
+            add(model.class_name)
+            add(model.duplicate_class_name)
+            for base in model.base_classes:
+                add(base.type_hint)
+            for import_ in model.imports:
+                add(import_.alias or import_.import_.split(".")[-1])
+            for field in model.fields:
+                add(field.name)
+                add(field.alias)
+                walk_data_type(field.data_type)
+        return names
+
     def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
@@ -1466,12 +1499,14 @@ class Parser(ABC):
 
         for processed_model in processed_models:
             # postprocess imports to remove unused imports.
-            model_code = str("\n".join([str(m) for m in processed_model.models]))
+            used_names = self._collect_used_names_from_models(processed_model.models)
             unused_imports = [
                 (from_, import_)
                 for from_, imports_ in processed_model.imports.items()
                 for import_ in imports_
-                if import_ not in model_code
+                if not {processed_model.imports.alias.get(from_, {}).get(import_, import_), import_}.intersection(
+                    used_names
+                )
             ]
             for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))
