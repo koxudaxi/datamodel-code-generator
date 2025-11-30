@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import inspect
 import sys
 from typing import TYPE_CHECKING, Any, Protocol
@@ -52,6 +53,20 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
+def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
+    """Format a unified diff between expected and actual content."""
+    expected_lines = expected.splitlines(keepends=True)
+    actual_lines = actual.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        expected_lines,
+        actual_lines,
+        fromfile=str(expected_path),
+        tofile="actual",
+        lineterm="",
+    )
+    return "".join(diff)
+
+
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
     __tracebackhide__ = True
@@ -60,7 +75,7 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     except FileNotFoundError:  # pragma: no cover
         msg = (
             f"Expected file not found: {expected_path}\n"
-            f"Run with 'tox run -e <version> -- --inline-snapshot=create <test>' to create it.\n"
+            f"Run with 'tox run -e <version> -- --inline-snapshot=create' to create it.\n"
             f"\nActual content:\n{content}"
         )
         raise AssertionError(msg) from None  # pragma: no cover
@@ -68,9 +83,11 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     if isinstance(expected, str):  # pragma: no branch
         normalized_expected = _normalize_line_endings(expected)
         if normalized_content != normalized_expected:  # pragma: no cover
+            diff = _format_diff(normalized_expected, normalized_content, expected_path)
             msg = (
                 f"Content mismatch for {expected_path}\n"
-                f"Run with 'tox run -e <version> -- --inline-snapshot=fix <test>' to update it."
+                f"Run with 'tox run -e <version> -- --inline-snapshot=fix' to update it.\n"
+                f"\n{diff}"
             )
             raise AssertionError(msg) from None
     else:
