@@ -12,7 +12,7 @@ import locale
 from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from datamodel_code_generator import DataclassArguments, DataModelType, InputFileType, OpenAPIScope
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
@@ -48,7 +48,7 @@ def _dataclass_arguments(value: str) -> DataclassArguments:
         if not isinstance(val, bool):
             msg = f"Expected bool for '{key}', got {type(val).__name__}"
             raise ArgumentTypeError(msg)
-    return result
+    return cast("DataclassArguments", result)
 
 
 class SortingHelpFormatter(HelpFormatter):
