@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Annotated, Dict, List, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
-from typing_extensions import TypeAliasType
+from typing_extensions import TypeAlias
 
 
 class Pet(Struct):
@@ -26,17 +26,17 @@ class AnyOfItem1(Struct):
     name: Union[str, UnsetType] = UNSET
 
 
-AnyOfItem2 = TypeAliasType("AnyOfItem2", Annotated[str, Meta(max_length=5000)])
+AnyOfItem2: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
-AnyOfItem = TypeAliasType("AnyOfItem", Union[Pet, Car, AnyOfItem1, AnyOfItem2])
+AnyOfItem: TypeAlias = Union[Pet, Car, AnyOfItem1, AnyOfItem2]
 
 
 class Item(Struct):
     name: Union[str, UnsetType] = UNSET
 
 
-Item1 = TypeAliasType("Item1", Annotated[str, Meta(max_length=5000)])
+Item1: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
 class AnyOfobj(Struct):
@@ -48,12 +48,10 @@ class AnyOfArray1(Struct):
     birthday: Union[str, UnsetType] = UNSET
 
 
-AnyOfArray2 = TypeAliasType("AnyOfArray2", Annotated[str, Meta(max_length=5000)])
+AnyOfArray2: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
-AnyOfArray = TypeAliasType(
-    "AnyOfArray", List[Union[Pet, Car, AnyOfArray1, AnyOfArray2]]
-)
+AnyOfArray: TypeAlias = List[Union[Pet, Car, AnyOfArray1, AnyOfArray2]]
 
 
 class Error(Struct):
