@@ -29,7 +29,7 @@ class AnyOfItem1(Struct):
 AnyOfItem2 = TypeAliasType("AnyOfItem2", Annotated[str, Meta(max_length=5000)])
 
 
-AnyOfItem = TypeAliasType("AnyOfItem", Union[Pet, Car, AnyOfItem1, AnyOfItem2])
+AnyOfItem = TypeAliasType("AnyOfItem", Union[Pet, Car, AnyOfItem1, "AnyOfItem2"])
 
 
 class Item(Struct):
@@ -52,7 +52,7 @@ AnyOfArray2 = TypeAliasType("AnyOfArray2", Annotated[str, Meta(max_length=5000)]
 
 
 AnyOfArray = TypeAliasType(
-    "AnyOfArray", List[Union[Pet, Car, AnyOfArray1, AnyOfArray2]]
+    "AnyOfArray", List[Union[Pet, Car, AnyOfArray1, "AnyOfArray2"]]
 )
 
 

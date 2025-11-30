@@ -312,6 +312,14 @@ def test_no_additional_imports() -> None:
     assert len(new_parser.imports) == 0
 
 
+def test_type_alias_quote_names_with_no_fields() -> None:
+    """TypeAlias should not try to quote when it has no fields."""
+    reference = Reference(path="AliasEmpty", original_name="AliasEmpty", name="AliasEmpty")
+    alias = TypeAlias(fields=[], reference=reference)
+
+    assert alias.type_alias_quote_names == set()
+
+
 @pytest.mark.parametrize(
     ("input_data", "expected"),
     [

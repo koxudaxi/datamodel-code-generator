@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, TypeAlias, Union
 
 from pydantic import BaseModel
-from typing_extensions import TypeAlias
 
 
 class File(BaseModel):
@@ -23,7 +22,7 @@ class Folder(BaseModel):
 ElementaryType: TypeAlias = Optional[Union[bool, str, int, float]]
 
 
-JsonType: TypeAlias = Union[ElementaryType, List["JsonType"], Dict[str, "JsonType"]]
+JsonType: TypeAlias = Union["ElementaryType", List["JsonType"], Dict[str, "JsonType"]]
 
 
 class Space(BaseModel):
