@@ -1314,7 +1314,7 @@ class Parser(ABC):
                     source = data_type.reference.source
                     if not isinstance(source, TypeAliasBase):
                         continue
-                    if isinstance(source, TypeStatement):
+                    if isinstance(source, TypeStatement):  # pragma: no cover
                         continue
                     name = data_type.reference.short_name
                     if name not in rendered_aliases:
