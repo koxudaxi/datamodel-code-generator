@@ -231,6 +231,7 @@ class OpenAPIScope(Enum):
     Paths = "paths"
     Tags = "tags"
     Parameters = "parameters"
+    Webhooks = "webhooks"
 
 
 class GraphQLScope(Enum):
