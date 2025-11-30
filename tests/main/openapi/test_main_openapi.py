@@ -29,6 +29,7 @@ from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
+    MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
     run_main_and_assert,
@@ -1715,6 +1716,22 @@ def test_main_typed_dict_nullable(output_file: Path) -> None:
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
 )
+def test_main_msgspec_nullable(output_file: Path) -> None:
+    """Test OpenAPI generation with nullable msgspec.Struct."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="msgspec_nullable.py",
+        extra_args=["--output-model-type", "msgspec.Struct", "--target-python-version", "3.11"],
+    )
+
+
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse("23.3.0"),
+    reason="Require Black version 23.3.0 or later ",
+)
 def test_main_typed_dict_nullable_strict_nullable(output_file: Path) -> None:
     """Test OpenAPI generation with strict nullable TypedDict."""
     run_main_and_assert(
@@ -1851,6 +1868,7 @@ def test_main_openapi_msgspec_struct_snake_case(min_version: str, output_file: P
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: Path) -> None:
     """Test OpenAPI generation with msgspec using Annotated and field constraints."""
     run_main_and_assert(
@@ -2005,6 +2023,47 @@ def test_main_generate_openapi_keyword_only_msgspec_with_extra_data(tmp_path: Pa
         field_constraints=True,
     )
     assert_file_content(output_file, "msgspec_keyword_only_omit_defaults.py")
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] < "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_use_union_operator(output_file: Path) -> None:
+    """Test msgspec Struct generation with union operator (Python 3.10+)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_use_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_anyof(min_version: str, output_file: Path) -> None:
+    """Test msgspec Struct generation with anyOf fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "anyof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_anyof.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            min_version,
+        ],
+    )
 
 
 def test_main_openapi_referenced_default(output_file: Path) -> None:
