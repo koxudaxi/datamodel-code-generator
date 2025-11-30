@@ -340,6 +340,7 @@ class DataModel(TemplateBase, Nullable, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
+    IS_ALIAS: bool = False
 
     def __init__(  # noqa: PLR0913
         self,
@@ -522,6 +523,11 @@ class DataModel(TemplateBase, Nullable, ABC):
         for field in self.fields:
             yield from field.data_type.all_data_types
         yield from self.base_classes
+
+    @property
+    def is_alias(self) -> bool:
+        """Whether is a type alias (i.e. not an instance of BaseModel/RootModel)."""
+        return self.IS_ALIAS
 
     @property
     def nullable(self) -> bool:

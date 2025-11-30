@@ -9,8 +9,10 @@ import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
+from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasBackport, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
     Parser,
+    add_model_path_to_list,
     escape_characters,
     exact_import,
     relative,
@@ -52,6 +54,45 @@ def test_parser() -> None:
     assert c.data_model_root_type == B
     assert c.data_model_field_type == DataModelFieldBase
     assert c.base_class == "Base"
+
+
+def test_add_model_path_to_list() -> None:
+    """Test method which adds model paths to "update" list."""
+    reference_1 = Reference(path="Base1", original_name="A", name="A")
+    reference_2 = Reference(path="Alias2", original_name="B", name="B")
+    reference_3 = Reference(path="Alias3", original_name="B", name="B")
+    reference_4 = Reference(path="Alias4", original_name="B", name="B")
+    reference_5 = Reference(path="Alias5", original_name="B", name="B")
+    model1 = BaseModel(fields=[], reference=reference_1)
+    model2 = TypeAlias(fields=[], reference=reference_2)
+    model3 = TypeAliasBackport(fields=[], reference=reference_3)
+    model4 = TypeAliasTypeBackport(fields=[], reference=reference_4)
+    model5 = TypeStatement(fields=[], reference=reference_5)
+
+    paths = add_model_path_to_list(None, model1)
+    assert "Base1" in paths
+    assert len(paths) == 1
+
+    paths = list[str]()
+    add_model_path_to_list(paths, model1)
+    assert "Base1" in paths
+    assert len(paths) == 1
+
+    add_model_path_to_list(paths, model1)
+    assert len(paths) != 2
+    assert len(paths) == 1
+
+    add_model_path_to_list(paths, model2)
+    assert "Alias2" not in paths
+
+    add_model_path_to_list(paths, model3)
+    assert "Alias3" not in paths
+
+    add_model_path_to_list(paths, model4)
+    assert "Alias4" not in paths
+
+    add_model_path_to_list(paths, model5)
+    assert "Alias5" not in paths
 
 
 def test_sort_data_models() -> None:
