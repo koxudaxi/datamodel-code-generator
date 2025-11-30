@@ -70,8 +70,12 @@ def test_add_model_path_to_list() -> None:
     model3 = TypeAliasBackport(fields=[], reference=reference_3)
     model4 = TypeAliasTypeBackport(fields=[], reference=reference_4)
     model5 = TypeStatement(fields=[], reference=reference_5)
-    paths = list[str]()
 
+    paths = add_model_path_to_list(None, model1)
+    assert "Base1" in paths
+    assert len(paths) == 1
+
+    paths = list[str]()
     add_model_path_to_list(paths, model1)
     assert "Base1" in paths
     assert len(paths) == 1
