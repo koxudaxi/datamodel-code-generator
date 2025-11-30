@@ -16,7 +16,7 @@ concurrency:
 jobs:
   test:
     name: >-
-      ${{ matrix.py || matrix.tox_env }} on
+      ${{ matrix.py || matrix.name }} on
       ${{ matrix.os == 'windows-latest' && 'Windows' || (matrix.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
     strategy:
       fail-fast: false
@@ -26,12 +26,19 @@ jobs:
         tox_env: ['']
         include:
           - tox_env: py3.12-black24-parallel
+            name: py3.12-black24
           - tox_env: py3.12-black23-parallel
+            name: py3.12-black23
           - tox_env: py3.12-black22-parallel
+            name: py3.12-black22
           - tox_env: py3.12-isort7-parallel
+            name: py3.12-isort7
           - tox_env: py3.12-isort6-parallel
+            name: py3.12-isort6
           - tox_env: py3.12-isort5-parallel
+            name: py3.12-isort5
           - tox_env: py3.12-pydantic1-parallel
+            name: py3.12-pydantic1
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
