@@ -144,7 +144,7 @@ def add_model_path_to_list(
     - path is not already in the list
     """
     if paths is None:
-        paths: list[str] = []
+        paths = []
     if model.is_alias:
         return paths
     if (path := model.path) in paths:
