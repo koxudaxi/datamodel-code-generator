@@ -132,6 +132,28 @@ SortedDataModels = dict[str, DataModel]
 MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
 
+def add_model_path_to_list(
+    paths: list[str] | None,
+    model: DataModel,
+    /,
+) -> list[str]:
+    """
+    Auxiliary method which adds model path to list, provided the following hold.
+
+    - model is not a type alias
+    - path is not already in the list.
+
+    """
+    if paths is None:
+        paths = []
+    if model.is_alias:
+        return paths
+    if (path := model.path) in paths:
+        return paths
+    paths.append(path)
+    return paths
+
+
 def sort_data_models(  # noqa: PLR0912, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
@@ -151,13 +173,13 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             sorted_data_models[model.path] = model
         elif model.path in model.reference_classes and len(model.reference_classes) == 1:  # only self-referencing
             sorted_data_models[model.path] = model
-            require_update_action_models.append(model.path)
+            add_model_path_to_list(require_update_action_models, model)
         elif (
             not model.reference_classes - {model.path} - set(sorted_data_models)
         ):  # reference classes have been resolved
             sorted_data_models[model.path] = model
             if model.path in model.reference_classes:
-                require_update_action_models.append(model.path)
+                add_model_path_to_list(require_update_action_models, model)
         else:
             unresolved_references.append(model)
     if unresolved_references:
@@ -206,11 +228,11 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             if not unresolved_model:
                 sorted_data_models[model.path] = model
                 if update_action_parent:
-                    require_update_action_models.append(model.path)
+                    add_model_path_to_list(require_update_action_models, model)
                 continue
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
-                require_update_action_models.append(model.path)
+                add_model_path_to_list(require_update_action_models, model)
                 continue
             # unresolved
             unresolved_classes = ", ".join(
@@ -1003,7 +1025,7 @@ class Parser(ABC):
                         custom_template_dir=model._custom_template_dir,  # noqa: SLF001
                     )
                     if cached_model_reference.path in require_update_action_models:
-                        require_update_action_models.append(inherited_model.path)
+                        add_model_path_to_list(require_update_action_models, inherited_model)
                     models.insert(index, inherited_model)
                     models.remove(model)
 
@@ -1341,6 +1363,39 @@ class Parser(ABC):
                             reference_path=model_field.data_type.import_.reference_path,
                         )
 
+    @classmethod
+    def _collect_used_names_from_models(cls, models: list[DataModel]) -> set[str]:
+        """Collect identifiers referenced by models before rendering."""
+        names: set[str] = set()
+
+        def add(name: str | None) -> None:
+            if not name:
+                return
+            # first segment is sufficient to match import target or alias
+            names.add(name.split(".")[0])
+
+        def walk_data_type(data_type: DataType) -> None:
+            add(data_type.alias or data_type.type)
+            if data_type.reference:
+                add(data_type.reference.short_name)
+            for child in data_type.data_types:
+                walk_data_type(child)
+            if data_type.dict_key:
+                walk_data_type(data_type.dict_key)
+
+        for model in models:
+            add(model.class_name)
+            add(model.duplicate_class_name)
+            for base in model.base_classes:
+                add(base.type_hint)
+            for import_ in model.imports:
+                add(import_.alias or import_.import_.split(".")[-1])
+            for field in model.fields:
+                add(field.name)
+                add(field.alias)
+                walk_data_type(field.data_type)
+        return names
+
     def parse(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
@@ -1466,12 +1521,14 @@ class Parser(ABC):
 
         for processed_model in processed_models:
             # postprocess imports to remove unused imports.
-            model_code = str("\n".join([str(m) for m in processed_model.models]))
+            used_names = self._collect_used_names_from_models(processed_model.models)
             unused_imports = [
                 (from_, import_)
                 for from_, imports_ in processed_model.imports.items()
                 for import_ in imports_
-                if import_ not in model_code
+                if not {processed_model.imports.alias.get(from_, {}).get(import_, import_), import_}.intersection(
+                    used_names
+                )
             ]
             for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))

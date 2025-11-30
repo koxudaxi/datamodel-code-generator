@@ -2168,6 +2168,34 @@ def test_main_openapi_type_alias_py312(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_openapi_type_alias_recursive_py312(output_file: Path) -> None:
+    """
+    Test that handling of type aliases work as expected for recursive types.
+
+    NOTE: applied to python 3.12--14
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_recursive_py312.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_openapi_byte_format(output_file: Path) -> None:
     """Test OpenAPI generation with byte format."""
     run_main_and_assert(
