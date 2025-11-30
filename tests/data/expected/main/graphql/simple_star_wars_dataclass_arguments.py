@@ -33,7 +33,7 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 """
 
 
-@dataclass(slots=True, order=True)
+@dataclass(order=True, slots=True)
 class Film:
     characters: List[Person]
     characters_ids: List[ID]
@@ -55,7 +55,7 @@ class Film:
     typename__: Optional[Literal['Film']] = 'Film'
 
 
-@dataclass(slots=True, order=True)
+@dataclass(order=True, slots=True)
 class Person:
     films: List[Film]
     films_ids: List[ID]
@@ -79,7 +79,7 @@ class Person:
     typename__: Optional[Literal['Person']] = 'Person'
 
 
-@dataclass(slots=True, order=True)
+@dataclass(order=True, slots=True)
 class Planet:
     films: List[Film]
     films_ids: List[ID]
@@ -98,7 +98,7 @@ class Planet:
     typename__: Optional[Literal['Planet']] = 'Planet'
 
 
-@dataclass(slots=True, order=True)
+@dataclass(order=True, slots=True)
 class Species:
     films: List[Film]
     films_ids: List[ID]
@@ -117,7 +117,7 @@ class Species:
     typename__: Optional[Literal['Species']] = 'Species'
 
 
-@dataclass(slots=True, order=True)
+@dataclass(order=True, slots=True)
 class Starship:
     films: List[Film]
     films_ids: List[ID]
@@ -140,7 +140,7 @@ class Starship:
     typename__: Optional[Literal['Starship']] = 'Starship'
 
 
-@dataclass(slots=True, order=True)
+@dataclass(order=True, slots=True)
 class Vehicle:
     films: List[Film]
     films_ids: List[ID]

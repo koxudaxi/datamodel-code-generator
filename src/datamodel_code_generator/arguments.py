@@ -14,7 +14,7 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
+from datamodel_code_generator import DataclassArguments, DataModelType, InputFileType, OpenAPIScope
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
@@ -29,18 +29,8 @@ DEFAULT_ENCODING = locale.getpreferredencoding()
 namespace = Namespace(no_color=False)
 
 
-def _json_dict(value: str) -> dict:
-    """Parse JSON string and validate it is a dictionary.
-
-    Args:
-        value: JSON string to parse
-
-    Returns:
-        Parsed dictionary
-
-    Raises:
-        ArgumentTypeError: If JSON is invalid or not a dictionary
-    """
+def _dataclass_arguments(value: str) -> DataclassArguments:
+    """Parse JSON string and validate it as DataclassArguments."""
     try:
         result = json.loads(value)
     except json.JSONDecodeError as e:
@@ -49,6 +39,15 @@ def _json_dict(value: str) -> dict:
     if not isinstance(result, dict):
         msg = f"Expected a JSON dictionary, got {type(result).__name__}"
         raise ArgumentTypeError(msg)
+    valid_keys = set(DataclassArguments.__annotations__.keys())
+    invalid_keys = set(result.keys()) - valid_keys
+    if invalid_keys:
+        msg = f"Invalid keys: {invalid_keys}. Valid keys are: {valid_keys}"
+        raise ArgumentTypeError(msg)
+    for key, val in result.items():
+        if not isinstance(val, bool):
+            msg = f"Expected bool for '{key}', got {type(val).__name__}"
+            raise ArgumentTypeError(msg)
     return result
 
 
@@ -205,7 +204,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--dataclass-arguments",
-    type=_json_dict,
+    type=_dataclass_arguments,
     default=None,
     help=(
         "Custom dataclass arguments as a JSON dictionary, "

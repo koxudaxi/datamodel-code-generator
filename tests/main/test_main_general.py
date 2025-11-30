@@ -15,7 +15,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Config, Exit
-from datamodel_code_generator.arguments import _json_dict
+from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.format import PythonVersion
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
@@ -277,9 +277,9 @@ def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
         ("{}", {}),
     ],
 )
-def test_json_dict_valid(json_str: str, expected: dict) -> None:
-    """Test that valid JSON dictionary is parsed correctly."""
-    assert _json_dict(json_str) == expected
+def test_dataclass_arguments_valid(json_str: str, expected: dict) -> None:
+    """Test that valid JSON is parsed correctly."""
+    assert _dataclass_arguments(json_str) == expected
 
 
 @pytest.mark.parametrize(
@@ -289,9 +289,11 @@ def test_json_dict_valid(json_str: str, expected: dict) -> None:
         ("[1, 2, 3]", "Expected a JSON dictionary, got list"),
         ('"just a string"', "Expected a JSON dictionary, got str"),
         ("42", "Expected a JSON dictionary, got int"),
+        ('{"invalid_key": true}', "Invalid keys:"),
+        ('{"frozen": "not_bool"}', "Expected bool for 'frozen', got str"),
     ],
 )
-def test_json_dict_invalid(json_str: str, match: str) -> None:
-    """Test that invalid JSON raises ArgumentTypeError."""
+def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
+    """Test that invalid input raises ArgumentTypeError."""
     with pytest.raises(ArgumentTypeError, match=match):
-        _json_dict(json_str)
+        _dataclass_arguments(json_str)
