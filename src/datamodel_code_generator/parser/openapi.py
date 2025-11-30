@@ -34,7 +34,7 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaParser,
     get_model_by_path,
 )
-from datamodel_code_generator.reference import snake_to_upper_camel
+from datamodel_code_generator.reference import FieldNameResolver, snake_to_upper_camel
 from datamodel_code_generator.types import (
     DataType,
     DataTypeManager,
@@ -457,9 +457,12 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse operation tags."""
         return tags
 
+    _field_name_resolver: FieldNameResolver = FieldNameResolver()
+
     @classmethod
     def _get_model_name(cls, path_name: str, method: str, suffix: str) -> str:
-        camel_path_name = snake_to_upper_camel(path_name.replace("/", "_"))
+        normalized = cls._field_name_resolver.get_valid_name(path_name, ignore_snake_case_field=True)
+        camel_path_name = snake_to_upper_camel(normalized)
         return f"{camel_path_name}{method.capitalize()}{suffix}"
 
     def parse_all_parameters(
@@ -615,7 +618,7 @@ class OpenAPIParser(JsonSchemaParser):
                 path=[*path, "tags"],
             )
 
-    def parse_raw(self) -> None:  # noqa: PLR0912
+    def parse_raw(self) -> None:  # noqa: PLR0912, PLR0915
         """Parse OpenAPI specification including schemas, paths, and operations."""
         for source, path_parts in self._get_context_source_path_parts():  # noqa: PLR1702
             if self.validation:
@@ -680,6 +683,38 @@ class OpenAPIParser(JsonSchemaParser):
                                 raw_operation["parameters"].extend(paths_parameters)
                             else:
                                 raw_operation["parameters"] = paths_parameters
+                        if security is not None and "security" not in raw_operation:
+                            raw_operation["security"] = security
+                        self.parse_operation(
+                            raw_operation,
+                            [*path, operation_name],
+                        )
+
+            if OpenAPIScope.Webhooks in self.open_api_scopes:
+                webhooks: dict[str, dict[str, Any]] = specification.get("webhooks", {})
+                webhooks_path = [*path_parts, "#/webhooks"]
+                for webhook_name, methods_ in webhooks.items():
+                    methods = self.get_ref_model(methods_["$ref"]) if "$ref" in methods_ else methods_
+                    webhook_parameters: list[dict[str, Any]] = []
+                    if "parameters" in methods:
+                        webhook_parameters = [
+                            self._get_ref_body(p["$ref"]) if "$ref" in p else p
+                            for p in methods["parameters"]
+                            if isinstance(p, dict)
+                        ]
+                    relative_webhook_name = webhook_name.removeprefix("/")
+                    if relative_webhook_name:
+                        path = [*webhooks_path, relative_webhook_name]
+                    else:  # pragma: no cover
+                        path = get_special_path("root", webhooks_path)
+                    for operation_name, raw_operation in methods.items():
+                        if operation_name not in OPERATION_NAMES:
+                            continue
+                        if webhook_parameters:
+                            if "parameters" in raw_operation:
+                                raw_operation["parameters"].extend(webhook_parameters)
+                            else:
+                                raw_operation["parameters"] = webhook_parameters.copy()
                         if security is not None and "security" not in raw_operation:
                             raw_operation["security"] = security
                         self.parse_operation(
