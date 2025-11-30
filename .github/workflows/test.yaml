@@ -47,17 +47,19 @@ jobs:
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup Python test environment
-      run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py || matrix.tox_env }}
+      run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py && format('{0}-parallel', matrix.py) || matrix.tox_env }}
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run test suite
-      run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.py || matrix.tox_env }}
+      run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.py && format('{0}-parallel', matrix.py) || matrix.tox_env }}
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
       run: |
         import os; import sys
-        os.rename(f".tox/.coverage.${{ matrix.py || matrix.tox_env }}", f".tox/.coverage.${{ matrix.py || matrix.tox_env}}-${{ matrix.os }}")
+        env_name = "${{ matrix.py && format('{0}-parallel', matrix.py) || matrix.tox_env }}"
+        base_name = "${{ matrix.py || matrix.tox_env }}"
+        os.rename(f".tox/.coverage.{env_name}", f".tox/.coverage.{base_name}-${{ matrix.os }}")
       shell: python
     - name: Upload coverage data
       uses: actions/upload-artifact@v4
