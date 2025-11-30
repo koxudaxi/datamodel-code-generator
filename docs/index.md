@@ -423,6 +423,8 @@ Field customization:
   --strip-default-none  Strip default None on fields
   --union-mode {smart,left_to_right}
                         Union mode for only pydantic v2 field
+  --use-attribute-docstrings
+                        Set use_attribute_docstrings=True in Pydantic v2 ConfigDict
   --use-default         Use default value even if a field is required
   --use-default-kwarg   Use `default=` instead of a positional argument for Fields that have
                         default values.
