@@ -352,6 +352,7 @@ class Config(BaseModel):
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
+    use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
@@ -608,6 +609,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
             use_field_description=config.use_field_description,
+            use_attribute_docstrings=config.use_attribute_docstrings,
             use_inline_field_description=config.use_inline_field_description,
             use_default_kwarg=config.use_default_kwarg,
             reuse_model=config.reuse_model,

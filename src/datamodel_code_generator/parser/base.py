@@ -377,6 +377,7 @@ class Parser(ABC):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_attribute_docstrings: bool = False,
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
@@ -510,6 +511,9 @@ class Parser(ABC):
 
         if enable_faux_immutability:
             self.extra_template_data[ALL_MODEL]["allow_mutation"] = False
+
+        if use_attribute_docstrings:
+            self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,

@@ -181,6 +181,7 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
+        ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False)  # noqa: FBT003
     ]
 
     def __init__(  # noqa: PLR0913
@@ -241,10 +242,6 @@ class BaseModel(BaseModelBase):
             if pattern and re.search(r"\(\?<?[=!]", pattern):
                 config_parameters["regex_engine"] = '"python-re"'
                 break
-
-        if any(field.use_field_description and field.docstring for field in self.fields):
-            # Configure Pydantic to use docstrings as description when generating docstrings
-            config_parameters["use_attribute_docstrings"] = True
 
         if isinstance(self.extra_template_data.get("config"), dict):
             for key, value in self.extra_template_data["config"].items():
