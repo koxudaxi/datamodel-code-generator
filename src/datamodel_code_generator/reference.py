@@ -34,6 +34,7 @@ import pydantic
 from packaging import version
 from pydantic import BaseModel, Field
 
+from datamodel_code_generator import Error
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
 
 if TYPE_CHECKING:
@@ -270,9 +271,10 @@ class FieldNameResolver:
         else:
             new_name = name
         while (
-            not (new_name.isidentifier() or not self._validate_field_name(new_name))
+            not new_name.isidentifier()
             or iskeyword(new_name)
             or (excludes and new_name in excludes)
+            or not self._validate_field_name(new_name)
         ):
             new_name = f"{name}{count}" if upper_camel else f"{name}_{count}"
             count += 1
@@ -460,8 +462,6 @@ class ModelResolver:  # noqa: PLR0904
     @property
     def current_root(self) -> Sequence[str]:
         """Return the current root path components."""
-        if len(self._current_root) > 1:
-            return self._current_root
         return self._current_root
 
     def set_current_root(self, current_root: Sequence[str]) -> None:
@@ -504,22 +504,29 @@ class ModelResolver:  # noqa: PLR0904
             return f"{'/'.join(self.current_root)}#"
         if self.current_base_path and not self.base_url and joined_path[0] != "#" and not is_url(joined_path):
             # resolve local file path
-            file_path, *object_part = joined_path.split("#", 1)
+            file_path, fragment = joined_path.split("#", 1) if "#" in joined_path else (joined_path, "")
             resolved_file_path = Path(self.current_base_path, file_path).resolve()
             joined_path = get_relative_path(self._base_path, resolved_file_path).as_posix()
-            if object_part:
-                joined_path += f"#{object_part[0]}"
+            if fragment:
+                joined_path += f"#{fragment}"
         if ID_PATTERN.match(joined_path):
-            ref: str = self.ids["/".join(self.current_root)][joined_path]
+            id_scope = "/".join(self.current_root)
+            scoped_ids = self.ids[id_scope]
+            ref: str | None = scoped_ids.get(joined_path)
+            if ref is None:
+                msg = (
+                    f"Unresolved $id reference '{joined_path}' in scope '{id_scope or '<root>'}'. "
+                    f"Known $id values: {', '.join(sorted(scoped_ids)) or '<none>'}"
+                )
+                raise Error(msg)
         else:
             if "#" not in joined_path:
                 joined_path += "#"
             elif joined_path[0] == "#":
                 joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
-            delimiter = joined_path.index("#")
-            file_path = "".join(joined_path[:delimiter])
-            ref = f"{''.join(joined_path[:delimiter])}#{''.join(joined_path[delimiter + 1 :])}"
+            file_path, fragment = joined_path.split("#", 1)
+            ref = f"{file_path}#{fragment}"
             if self.root_id_base_path and not (is_url(joined_path) or Path(self._base_path, file_path).is_file()):
                 ref = f"{self.root_id_base_path}/{ref}"
 
@@ -544,8 +551,11 @@ class ModelResolver:  # noqa: PLR0904
                 root_id_url.netloc,
             ):  # pragma: no cover
                 target_url_path = Path(target_url.path)
-                relative_target_base = get_relative_path(Path(root_id_url.path).parent, target_url_path.parent)
-                target_path = self.current_base_path / relative_target_base / target_url_path.name
+                target_path = (
+                    self.current_base_path
+                    / get_relative_path(Path(root_id_url.path).parent, target_url_path.parent)
+                    / target_url_path.name
+                )
                 if target_path.exists():
                     return f"{target_path.resolve().relative_to(self._base_path)}#{path_part}"
 

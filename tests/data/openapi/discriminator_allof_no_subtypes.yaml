@@ -1,0 +1,50 @@
+# Tests discriminator without any allOf subtypes
+# This tests the edge case where a schema has a discriminator but nothing inherits from it
+
+openapi: 3.1.0
+info:
+  title: Test
+  description: "Test API"
+  version: 0.0.0
+paths:
+  /item:
+    get:
+      responses:
+        '200':
+          description: "Item"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemContainer"
+components:
+  schemas:
+    ItemContainer:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          $ref: "#/components/schemas/BaseItem"
+    BaseItem:
+      type: object
+      required:
+        - itemType
+      properties:
+        itemType:
+          type: string
+      discriminator:
+        propertyName: itemType
+        mapping:
+          foo: "#/components/schemas/FooItem"
+          bar: "#/components/schemas/BarItem"
+    # These schemas exist but don't use allOf to inherit from BaseItem
+    FooItem:
+      type: object
+      properties:
+        fooValue:
+          type: string
+    BarItem:
+      type: object
+      properties:
+        barValue:
+          type: integer
