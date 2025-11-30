@@ -16,7 +16,7 @@ The type of type alias generated depends on the output model type and target Pyt
 
 | Output Type | Python 3.12+ | Python 3.10-3.11 | Python 3.9 |
 |-------------|--------------|------------------|------------|
-| **Pydantic v2** | `type` statement | `TypeAliasType` | `TypeAliasType` |
+| **Pydantic v2** | `type` statement | `TypeAliasType` (typing_extensions) | `TypeAliasType` (typing_extensions) |
 | **Pydantic v1** | `TypeAlias` | `TypeAlias` | `TypeAlias` (typing_extensions) |
 | **TypedDict** | `type` statement | `TypeAlias` | `TypeAlias` (typing_extensions) |
 | **dataclasses** | `type` statement | `TypeAlias` | `TypeAlias` (typing_extensions) |
