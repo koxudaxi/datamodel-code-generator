@@ -4,9 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, NotRequired, Optional, TypedDict, Union
-
-from typing_extensions import TypeAliasType
+from typing import List, NotRequired, Optional, TypeAlias, TypedDict, Union
 
 
 class Cursors(TypedDict):
@@ -35,7 +33,7 @@ class Api(TypedDict):
     apiDocumentationUrl: NotRequired[Optional[str]]
 
 
-Apis = TypeAliasType("Apis", Optional[List[Api]])
+Apis: TypeAlias = Optional[List[Api]]
 
 
 class EmailItem(TypedDict):
@@ -45,19 +43,19 @@ class EmailItem(TypedDict):
     tag: NotRequired[str]
 
 
-Email = TypeAliasType("Email", List[EmailItem])
+Email: TypeAlias = List[EmailItem]
 
 
-Id = TypeAliasType("Id", int)
+Id: TypeAlias = int
 
 
-Description = TypeAliasType("Description", Optional[str])
+Description: TypeAlias = Optional[str]
 
 
-Name = TypeAliasType("Name", Optional[str])
+Name: TypeAlias = Optional[str]
 
 
-Tag = TypeAliasType("Tag", str)
+Tag: TypeAlias = str
 
 
 class Notes(TypedDict):

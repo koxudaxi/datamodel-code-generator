@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, List, Optional, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType, field
-from typing_extensions import TypeAliasType
 
 
 class Cursors(Struct):
@@ -48,7 +47,7 @@ class Api(Struct):
     ] = UNSET
 
 
-Apis = TypeAliasType("Apis", Optional[List[Api]])
+Apis: TypeAlias = Optional[List[Api]]
 
 
 class EmailItem(Struct):
@@ -58,19 +57,19 @@ class EmailItem(Struct):
     tag: Union[str, UnsetType] = UNSET
 
 
-Email = TypeAliasType("Email", List[EmailItem])
+Email: TypeAlias = List[EmailItem]
 
 
-Id = TypeAliasType("Id", int)
+Id: TypeAlias = int
 
 
-Description = TypeAliasType("Description", Annotated[Optional[str], 'example'])
+Description: TypeAlias = Annotated[Optional[str], 'example']
 
 
-Name = TypeAliasType("Name", Optional[str])
+Name: TypeAlias = Optional[str]
 
 
-Tag = TypeAliasType("Tag", str)
+Tag: TypeAlias = str
 
 
 class Notes(Struct):
