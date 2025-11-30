@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
+from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -15,6 +15,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Config, Exit
+from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.format import PythonVersion
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
@@ -112,7 +113,19 @@ def test_direct_input_dict(tmp_path: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("keyword_only", "target_python_version", "expected_file"),
+    [
+        (False, PythonVersion.PY_39, "frozen_dataclasses.py"),
+        (True, PythonVersion.PY_310, "frozen_dataclasses_keyword_only.py"),
+    ],
+)
+def test_frozen_dataclasses(
+    tmp_path: Path,
+    keyword_only: bool,
+    target_python_version: PythonVersion,
+    expected_file: str,
+) -> None:
     """Test --frozen-dataclasses flag functionality."""
     output_file = tmp_path / "output.py"
     generate(
@@ -121,56 +134,39 @@ def test_frozen_dataclasses(tmp_path: Path) -> None:
         output=output_file,
         output_model_type=DataModelType.DataclassesDataclass,
         frozen_dataclasses=True,
+        keyword_only=keyword_only,
+        target_python_version=target_python_version,
     )
-    assert_file_content(output_file)
+    assert_file_content(output_file, expected_file)
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only(tmp_path: Path) -> None:
-    """Test --frozen-dataclasses with --keyword-only flag combination."""
-    output_file = tmp_path / "output.py"
-    generate(
-        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
-        input_file_type=InputFileType.JsonSchema,
-        output=output_file,
-        output_model_type=DataModelType.DataclassesDataclass,
-        frozen_dataclasses=True,
-        keyword_only=True,
-        target_python_version=PythonVersion.PY_310,
-    )
-    assert_file_content(output_file, "frozen_dataclasses_keyword_only.py")
-
-
-@freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_command_line(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        (["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"], "frozen_dataclasses.py"),
+        (
+            [
+                "--output-model-type",
+                "dataclasses.dataclass",
+                "--frozen-dataclasses",
+                "--keyword-only",
+                "--target-python-version",
+                "3.10",
+            ],
+            "frozen_dataclasses_keyword_only.py",
+        ),
+    ],
+)
+def test_frozen_dataclasses_command_line(output_file: Path, extra_args: list[str], expected_file: str) -> None:
     """Test --frozen-dataclasses flag via command line."""
     run_main_and_assert(
         input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="frozen_dataclasses.py",
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"],
-    )
-
-
-@freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only_command_line(output_file: Path) -> None:
-    """Test --frozen-dataclasses with --keyword-only flag via command line."""
-    run_main_and_assert(
-        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="frozen_dataclasses_keyword_only.py",
-        extra_args=[
-            "--output-model-type",
-            "dataclasses.dataclass",
-            "--frozen-dataclasses",
-            "--keyword-only",
-            "--target-python-version",
-            "3.10",
-        ],
+        expected_file=expected_file,
+        extra_args=extra_args,
     )
 
 
@@ -272,3 +268,32 @@ def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
             input_=invalid_file,
             output=output_file,
         )
+
+
+@pytest.mark.parametrize(
+    ("json_str", "expected"),
+    [
+        ('{"frozen": true, "slots": true}', {"frozen": True, "slots": True}),
+        ("{}", {}),
+    ],
+)
+def test_dataclass_arguments_valid(json_str: str, expected: dict) -> None:
+    """Test that valid JSON is parsed correctly."""
+    assert _dataclass_arguments(json_str) == expected
+
+
+@pytest.mark.parametrize(
+    ("json_str", "match"),
+    [
+        ("not-valid-json", "Invalid JSON:"),
+        ("[1, 2, 3]", "Expected a JSON dictionary, got list"),
+        ('"just a string"', "Expected a JSON dictionary, got str"),
+        ("42", "Expected a JSON dictionary, got int"),
+        ('{"invalid_key": true}', "Invalid keys:"),
+        ('{"frozen": "not_bool"}', "Expected bool for 'frozen', got str"),
+    ],
+)
+def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
+    """Test that invalid input raises ArgumentTypeError."""
+    with pytest.raises(ArgumentTypeError, match=match):
+        _dataclass_arguments(json_str)
