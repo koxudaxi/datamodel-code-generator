@@ -24,6 +24,13 @@ class TypeAliasBase(DataModel):
     """Base class for all type alias implementations."""
 
     IS_ALIAS: bool = True
+    _render_counter: ClassVar[int] = 0
+
+    def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        """Track render order so later aliases can be detected as forward refs."""
+        super().__init__(*args, **kwargs)
+        TypeAliasBase._render_counter += 1
+        self.render_index: int = TypeAliasBase._render_counter
 
     @cached_property
     def type_alias_quote_names(self) -> set[str]:
@@ -42,7 +49,11 @@ class TypeAliasBase(DataModel):
                 continue
 
             source = data_type.reference.source
-            if isinstance(source, TypeAliasBase) and not isinstance(source, TypeStatement):
+            if (
+                isinstance(source, TypeAliasBase)
+                and not isinstance(source, TypeStatement)
+                and source.render_index >= self.render_index
+            ):
                 names.add(data_type.reference.short_name)
                 names.add(data_type.reference.name)
         return names

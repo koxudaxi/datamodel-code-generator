@@ -11,4 +11,4 @@ from typing_extensions import TypeAliasType
 NodeA = TypeAliasType("NodeA", Union[int, "NodeB"])
 
 
-NodeB = TypeAliasType("NodeB", Union[str, "NodeA"])
+NodeB = TypeAliasType("NodeB", Union[str, NodeA])

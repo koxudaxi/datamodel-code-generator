@@ -22,7 +22,7 @@ class Folder(BaseModel):
 ElementaryType: TypeAlias = Optional[Union[bool, str, int, float]]
 
 
-JsonType: TypeAlias = Union["ElementaryType", List["JsonType"], Dict[str, "JsonType"]]
+JsonType: TypeAlias = Union[ElementaryType, List["JsonType"], Dict[str, "JsonType"]]
 
 
 class Space(BaseModel):
