@@ -2405,6 +2405,15 @@ def test_main_invalid_import_name(output_dir: Path) -> None:
     )
 
 
+def test_main_alias_import_alias(output_dir: Path) -> None:
+    """Ensure imports with aliases are retained after cleanup."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "alias_import_alias",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "alias_import_alias",
+    )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
