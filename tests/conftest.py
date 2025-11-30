@@ -55,7 +55,17 @@ def _normalize_line_endings(text: str) -> str:
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
     """Assert content matches external file, handling line endings."""
     __tracebackhide__ = True
-    expected = external_file(expected_path)
+    try:
+        expected = external_file(expected_path)
+    except FileNotFoundError:  # pragma: no cover
+        msg = (
+            f"Expected file not found: {expected_path}\n"
+            f"Run with 'tox run -e <version> -- --inline-snapshot=create <test>' to create it.\n"
+            f"\nActual content:\n{content}"
+        )
+        raise AssertionError(  # pragma: no cover
+            msg
+        ) from None
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
         normalized_expected = _normalize_line_endings(expected)
