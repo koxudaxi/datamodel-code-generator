@@ -1,0 +1,62 @@
+# Example from https://spec.openapis.org/oas/v3.1.1.html#examples-1
+# This tests discriminator without oneOf/anyOf, where subtypes use allOf
+
+openapi: 3.1.0
+info:
+  title: Test
+  description: "Test API"
+  version: 0.0.0
+paths:
+  /pet:
+    get:
+      responses:
+        '200':
+          description: "Pet"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetContainer"
+components:
+  schemas:
+    PetContainer:
+      type: object
+      required:
+        - pet
+      properties:
+        pet:
+          $ref: "#/components/schemas/Pet"
+    Pet:
+      type: object
+      required:
+        - petType
+      properties:
+        petType:
+          type: string
+      discriminator:
+        propertyName: petType
+        mapping:
+          cat: "#/components/schemas/Cat"
+          dog: "#/components/schemas/Dog"
+          lizard: "#/components/schemas/Lizard"
+    Cat:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - type: object
+          properties:
+            name:
+              type: string
+    Dog:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - type: object
+          properties:
+            bark:
+              type: string
+    Lizard:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - type: object
+          properties:
+            lovesRocks:
+              type: boolean
+
