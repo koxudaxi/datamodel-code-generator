@@ -73,26 +73,41 @@ def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
     from rich.text import Text  # noqa: PLC0415
 
     tox_env = _get_tox_env()
-    command = f"tox run -e {tox_env} -- --inline-snapshot={action}"
+    command = f"  tox run -e {tox_env} -- --inline-snapshot={action}"
+
+    description = "To update the expected file, run:" if action == "fix" else "To create the expected file, run:"
 
     output = StringIO()
-    console = Console(file=output, force_terminal=True, width=80)
+    console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
 
-    text = Text()
-    text.append("Run: ", style="bold white")
-    text.append(command, style="bold cyan")
-    console.print(text)
+    console.print(Text(description, style="default"))
+    console.print(Text(command, style="bold cyan"))
+
+    return output.getvalue()
+
+
+def _format_new_content(content: str) -> str:  # pragma: no cover
+    """Format new content (for create mode) with green color."""
+    from io import StringIO  # noqa: PLC0415
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.text import Text  # noqa: PLC0415
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
+
+    for line in content.splitlines():
+        console.print(Text(f"+{line}", style="green"))
 
     return output.getvalue()
 
 
 def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
-    """Format a unified diff between expected and actual content with rich formatting."""
+    """Format a unified diff between expected and actual content with colors."""
     from io import StringIO  # noqa: PLC0415
 
     from rich.console import Console  # noqa: PLC0415
-    from rich.panel import Panel  # noqa: PLC0415
-    from rich.syntax import Syntax  # noqa: PLC0415
+    from rich.text import Text  # noqa: PLC0415
 
     expected_lines = expected.splitlines(keepends=True)
     actual_lines = actual.splitlines(keepends=True)
@@ -102,24 +117,29 @@ def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pra
             actual_lines,
             fromfile=str(expected_path),
             tofile="actual",
-            lineterm="",
         )
     )
 
     if not diff_lines:
         return ""
 
-    # Skip the header lines (---, +++), keep @@ and content
-    diff_content = "".join(diff_lines[2:])
-
     output = StringIO()
-    # Use width=80 to account for pytest's "E       " prefix (8 chars)
-    console = Console(file=output, force_terminal=True, width=80)
-    # Shorten the path for title to avoid overflow
-    short_path = expected_path.name
-    syntax = Syntax(diff_content, "diff", theme="monokai", line_numbers=False, word_wrap=True)
-    panel = Panel(syntax, title=short_path, border_style="blue")
-    console.print(panel)
+    console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
+
+    for line in diff_lines:
+        line_stripped = line.rstrip("\n")
+        # Skip header lines since file path is already in the error message
+        if line.startswith(("---", "+++")):
+            continue
+        if line.startswith("@@"):
+            console.print(Text(line_stripped, style="cyan"))
+        elif line.startswith("-"):
+            console.print(Text(line_stripped, style="red"))
+        elif line.startswith("+"):
+            console.print(Text(line_stripped, style="green"))
+        else:
+            # Use default to override pytest's red color for E lines
+            console.print(Text(line_stripped, style="default"))
 
     return output.getvalue()
 
@@ -131,7 +151,8 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
         expected = external_file(expected_path)
     except FileNotFoundError:  # pragma: no cover
         hint = _format_snapshot_hint("create")
-        msg = f"Expected file not found: {expected_path}\n{hint}\nActual content:\n{content}"
+        formatted_content = _format_new_content(content)
+        msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
         raise AssertionError(msg) from None  # pragma: no cover
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
