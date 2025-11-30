@@ -17,3 +17,7 @@ class Pet(BaseModel):
 class PetNewPostParametersQuery(BaseModel):
     X_Request_Id: Optional[str] = Field(None, alias='X-Request-Id')
     X_Webhook_Id: str = Field(..., alias='X-Webhook-Id')
+
+
+class PetUpdatedPostParametersQuery(BaseModel):
+    X_Correlation_Id: str = Field(..., alias='X-Correlation-Id')

@@ -25,6 +25,22 @@ webhooks:
       responses:
         '200':
           description: OK
+  pet.updated:
+    parameters:
+      - name: X-Correlation-Id
+        in: query
+        required: true
+        schema:
+          type: string
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pet"
+      responses:
+        '200':
+          description: OK
 components:
   schemas:
     Pet:
