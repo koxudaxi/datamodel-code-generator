@@ -2158,6 +2158,66 @@ def test_main_openapi_type_alias_recursive_py312(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_type_alias_recursive(output_file: Path) -> None:
+    """Test recursive type aliases with proper forward reference quoting."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_recursive.py",
+        extra_args=["--use-type-alias"],
+    )
+
+
+def test_main_openapi_type_alias_cross_module_collision_a(output_file: Path) -> None:
+    """Test TypeAlias generation for module A in cross-module collision scenario."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_cross_module_collision" / "a.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_cross_module_collision_a.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+def test_main_openapi_type_alias_cross_module_collision_b(output_file: Path) -> None:
+    """Test TypeAlias generation for module B with self-referential forward reference."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_cross_module_collision" / "b.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_cross_module_collision_b.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+def test_main_openapi_type_alias_forward_ref_multiple(output_file: Path) -> None:
+    """Test TypeAlias with multiple forward references that require quoting."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_forward_ref_multiple.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_forward_ref_multiple.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 def test_main_openapi_byte_format(output_file: Path) -> None:
     """Test OpenAPI generation with byte format."""
     run_main_and_assert(

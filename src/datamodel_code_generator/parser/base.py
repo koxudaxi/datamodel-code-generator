@@ -1295,6 +1295,34 @@ class Parser(ABC):
                     model_field.nullable = False
 
     @classmethod
+    def __quote_type_alias_forward_refs(cls, models: list[DataModel]) -> None:
+        """Quote forward references in TypeAlias definitions per PEP 484."""
+        rendered_aliases: set[str] = set()
+
+        for model in models:
+            if not isinstance(model, TypeAliasBase):
+                continue
+
+            if not getattr(model, "QUOTE_FORWARD_REFS", True):
+                rendered_aliases.add(model.class_name)
+                continue
+
+            for field in model.fields:
+                for data_type in field.data_type.all_data_types:
+                    if not data_type.reference:
+                        continue
+                    source = data_type.reference.source
+                    if not isinstance(source, TypeAliasBase):
+                        continue
+                    if not getattr(source, "QUOTE_FORWARD_REFS", True):
+                        continue
+                    name = data_type.reference.short_name
+                    if name not in rendered_aliases:
+                        data_type.alias = f'"{name}"'
+
+            rendered_aliases.add(model.class_name)
+
+    @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
         def process(input_tuple: tuple[str, ...]) -> tuple[str, ...]:
             r = []
@@ -1543,6 +1571,7 @@ class Parser(ABC):
                 if with_import:
                     result += [str(self.imports), str(imports), "\n"]
 
+                self.__quote_type_alias_forward_refs(models)
                 code = dump_templates(models)
                 result += [code]
 
