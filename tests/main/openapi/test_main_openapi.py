@@ -2115,3 +2115,14 @@ def test_main_openapi_non_operations_and_security(output_file: Path) -> None:
         assert_func=assert_file_content,
         extra_args=["--openapi-scopes", "schemas", "paths", "webhooks"],
     )
+
+
+def test_main_openapi_webhooks_with_parameters(output_file: Path) -> None:
+    """Test OpenAPI generation with webhook-level and operation-level parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "webhooks_with_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        extra_args=["--openapi-scopes", "schemas", "webhooks", "parameters"],
+    )
