@@ -526,9 +526,7 @@ class DataModel(TemplateBase, Nullable, ABC):
 
     @property
     def is_alias(self) -> bool:
-        """
-        Whether is a type alias (i.e. not an instance of BaseModel/RootModel).
-        """
+        """Whether is a type alias (i.e. not an instance of BaseModel/RootModel)."""
         return self.IS_ALIAS
 
     @property

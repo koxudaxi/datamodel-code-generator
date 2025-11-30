@@ -57,9 +57,7 @@ def test_parser() -> None:
 
 
 def test_add_model_path_to_list() -> None:
-    """
-    Test method which adds model paths to "update" list
-    """
+    """Test method which adds model paths to "update" list."""
     reference_1 = Reference(path="Base1", original_name="A", name="A")
     reference_2 = Reference(path="Alias2", original_name="B", name="B")
     reference_3 = Reference(path="Alias3", original_name="B", name="B")
