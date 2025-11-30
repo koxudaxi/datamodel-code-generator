@@ -248,17 +248,11 @@ class Apis(BaseModel):
 <table>
   <tr>
     <td valign="top" align="center">
-    <a href="https://github.com/JetBrainsOfficial">
-      <img src="https://avatars.githubusercontent.com/u/60931315?s=100&v=4" alt="JetBrains Logo" style="width: 100px;">
-      <p>JetBrains</p>
-    </a>
+      <a href="https://github.com/astral-sh">
+        <img src="https://avatars.githubusercontent.com/u/115962839?s=200&v=4" alt="Astral Logo" style="width: 100px;">
+        <p>Astral</p>
+      </a>
     </td>
-  <td valign="top" align="center">
-    <a href="https://github.com/astral-sh">
-      <img src="https://avatars.githubusercontent.com/u/115962839?s=200&v=4" alt="Astral Logo" style="width: 100px;">
-      <p>Astral</p>
-    </a>
-  </td>
   </tr>
 </table>
 ## Projects that use datamodel-code-generator
@@ -448,6 +442,10 @@ Model customization:
   --collapse-root-models
                         Models generated with a root-type field will be merged into the
                         models using that root-type model
+  --dataclass-arguments DATACLASS_ARGUMENTS
+                        Custom dataclass arguments as a JSON dictionary, e.g. ''{"frozen":
+                        true, "kw_only": true}''. Overrides --frozen-dataclasses and similar
+                        flags.
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an array
   --disable-timestamp   Disable timestamp on file headers
@@ -510,7 +508,7 @@ OpenAPI-only options:
   --include-path-parameters
                         Include path parameters in generated parameter models in addition to
                         query parameters (Only OpenAPI)
-  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
+  --openapi-scopes {schemas,paths,tags,parameters,webhooks} [{schemas,paths,tags,parameters,webhooks} ...]
                         Scopes of OpenAPI model generation (default: schemas)
   --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
   --use-operation-id-as-name

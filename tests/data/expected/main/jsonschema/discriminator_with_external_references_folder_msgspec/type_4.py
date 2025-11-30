@@ -4,10 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, ClassVar, Literal, Union
 
-from msgspec import Meta, Struct
+from msgspec import Meta, Struct, UnsetType
 
 
 class Type4(Struct, tag_field='type_', tag='d'):
-    type_: ClassVar[Annotated[Literal['d'], Meta(title='Type ')]] = 'd'
+    type_: ClassVar[Annotated[Union[Literal['d'], UnsetType], Meta(title='Type ')]] = (
+        'd'
+    )

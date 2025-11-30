@@ -4,16 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Union
 
-from msgspec import Meta, Struct, field
+from msgspec import UNSET, Meta, Struct, UnsetType, field
 from typing_extensions import TypeAlias
 
 
 class Pet(Struct):
     id_: int = field(name='id')
     name_: str = field(name='name')
-    tag: Optional[str] = None
+    tag: Union[str, UnsetType] = UNSET
 
 
 Pets: TypeAlias = List[Pet]
@@ -22,7 +22,7 @@ Pets: TypeAlias = List[Pet]
 class User(Struct):
     id_: int = field(name='id')
     name_: str = field(name='name')
-    tag: Optional[str] = None
+    tag: Union[str, UnsetType] = UNSET
 
 
 Users: TypeAlias = List[User]
@@ -40,26 +40,30 @@ class Error(Struct):
 
 
 class Api(Struct):
-    apiKey: Optional[
-        Annotated[str, Meta(description='To be used as a dataset parameter value')]
-    ] = None
-    apiVersionNumber: Optional[
-        Annotated[str, Meta(description='To be used as a version parameter value')]
-    ] = None
-    apiUrl: Optional[
-        Annotated[str, Meta(description="The URL describing the dataset's fields")]
-    ] = None
-    apiDocumentationUrl: Optional[
-        Annotated[str, Meta(description='A URL to the API console for each API')]
-    ] = None
+    apiKey: Union[
+        Annotated[str, Meta(description='To be used as a dataset parameter value')],
+        UnsetType,
+    ] = UNSET
+    apiVersionNumber: Union[
+        Annotated[str, Meta(description='To be used as a version parameter value')],
+        UnsetType,
+    ] = UNSET
+    apiUrl: Union[
+        Annotated[str, Meta(description="The URL describing the dataset's fields")],
+        UnsetType,
+    ] = UNSET
+    apiDocumentationUrl: Union[
+        Annotated[str, Meta(description='A URL to the API console for each API')],
+        UnsetType,
+    ] = UNSET
 
 
 Apis: TypeAlias = List[Api]
 
 
 class Event(Struct):
-    name_: Optional[str] = field(name='name', default=None)
+    name_: Union[str, UnsetType] = field(name='name', default=UNSET)
 
 
 class Result(Struct):
-    event: Optional[Event] = None
+    event: Union[Event, UnsetType] = UNSET
