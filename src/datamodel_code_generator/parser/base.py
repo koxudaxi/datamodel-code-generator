@@ -132,6 +132,28 @@ SortedDataModels = dict[str, DataModel]
 MAX_RECURSION_COUNT: int = sys.getrecursionlimit()
 
 
+def add_model_path_to_list(
+    paths: list[str] | None,
+    model: DataModel,
+    /,
+) -> list[str]:
+    """
+    Auxiliary method which adds model path to list, provided the following hold.
+
+    - model is not a type alias
+    - path is not already in the list.
+
+    """
+    if paths is None:
+        paths = []
+    if model.is_alias:
+        return paths
+    if (path := model.path) in paths:
+        return paths
+    paths.append(path)
+    return paths
+
+
 def sort_data_models(  # noqa: PLR0912, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
@@ -151,13 +173,13 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             sorted_data_models[model.path] = model
         elif model.path in model.reference_classes and len(model.reference_classes) == 1:  # only self-referencing
             sorted_data_models[model.path] = model
-            require_update_action_models.append(model.path)
+            add_model_path_to_list(require_update_action_models, model)
         elif (
             not model.reference_classes - {model.path} - set(sorted_data_models)
         ):  # reference classes have been resolved
             sorted_data_models[model.path] = model
             if model.path in model.reference_classes:
-                require_update_action_models.append(model.path)
+                add_model_path_to_list(require_update_action_models, model)
         else:
             unresolved_references.append(model)
     if unresolved_references:
@@ -206,11 +228,11 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             if not unresolved_model:
                 sorted_data_models[model.path] = model
                 if update_action_parent:
-                    require_update_action_models.append(model.path)
+                    add_model_path_to_list(require_update_action_models, model)
                 continue
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
-                require_update_action_models.append(model.path)
+                add_model_path_to_list(require_update_action_models, model)
                 continue
             # unresolved
             unresolved_classes = ", ".join(
@@ -1003,7 +1025,7 @@ class Parser(ABC):
                         custom_template_dir=model._custom_template_dir,  # noqa: SLF001
                     )
                     if cached_model_reference.path in require_update_action_models:
-                        require_update_action_models.append(inherited_model.path)
+                        add_model_path_to_list(require_update_action_models, inherited_model)
                     models.insert(index, inherited_model)
                     models.remove(model)
 
