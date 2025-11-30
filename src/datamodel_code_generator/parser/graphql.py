@@ -15,6 +15,7 @@ from typing import (
 from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
+    DataclassArguments,
     DefaultPutDict,
     LiteralType,
     PythonVersion,
@@ -173,6 +174,7 @@ class GraphQLParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
@@ -255,6 +257,7 @@ class GraphQLParser(Parser):
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
+            dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
         )
 
@@ -310,10 +313,26 @@ class GraphQLParser(Parser):
                 self.support_graphql_types[resolved_type].append(type_)
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
-        """Create data model instance with conditional frozen parameter for DataClass."""
+        """Create data model instance with dataclass_arguments support for DataClass."""
         data_model_class = model_type or self.data_model_type
         if issubclass(data_model_class, DataClass):
-            kwargs["frozen"] = self.frozen_dataclasses
+            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
+            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
+            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
+            if dataclass_arguments is None:
+                dataclass_arguments = self.dataclass_arguments
+            if dataclass_arguments is None:
+                # Construct from legacy flags for library API compatibility
+                dataclass_arguments = {}
+                if self.frozen_dataclasses:
+                    dataclass_arguments["frozen"] = True
+                if self.keyword_only:
+                    dataclass_arguments["kw_only"] = True
+            kwargs["dataclass_arguments"] = dataclass_arguments
+            kwargs.pop("frozen", None)
+            kwargs.pop("keyword_only", None)
+        else:
+            kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
     def _typename_field(self, name: str) -> DataModelFieldBase:
@@ -505,6 +524,7 @@ class GraphQLParser(Parser):
             description=obj.description,
             keyword_only=self.keyword_only,
             treat_dot_as_module=self.treat_dot_as_module,
+            dataclass_arguments=self.dataclass_arguments,
         )
         self.results.append(data_model_type)
 

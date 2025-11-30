@@ -28,7 +28,7 @@ from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
-from typing_extensions import TypeAlias, TypeAliasType
+from typing_extensions import TypeAlias, TypeAliasType, TypedDict
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -55,6 +55,22 @@ MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
 
 T = TypeVar("T")
+
+
+class DataclassArguments(TypedDict, total=False):
+    """Arguments for @dataclass decorator."""
+
+    init: bool
+    repr: bool
+    eq: bool
+    order: bool
+    unsafe_hash: bool
+    frozen: bool
+    match_args: bool
+    kw_only: bool
+    slots: bool
+    weakref_slot: bool
+
 
 if not TYPE_CHECKING:
     YamlScalar: TypeAlias = Union[str, int, float, bool, None]
@@ -215,6 +231,7 @@ class OpenAPIScope(Enum):
     Paths = "paths"
     Tags = "tags"
     Parameters = "parameters"
+    Webhooks = "webhooks"
 
 
 class GraphQLScope(Enum):
@@ -339,6 +356,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
+    dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
 ) -> None:
@@ -359,6 +377,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         )
     else:
         input_text = None
+
+    if dataclass_arguments is None:
+        dataclass_arguments = {}
+        if frozen_dataclasses:
+            dataclass_arguments["frozen"] = True
+        if keyword_only:
+            dataclass_arguments["kw_only"] = True
 
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
@@ -561,6 +586,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
+        dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
         **kwargs,
     )
