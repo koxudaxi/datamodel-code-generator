@@ -63,13 +63,16 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
             f"Run with 'tox run -e <version> -- --inline-snapshot=create <test>' to create it.\n"
             f"\nActual content:\n{content}"
         )
-        raise AssertionError(  # pragma: no cover
-            msg
-        ) from None
+        raise AssertionError(msg) from None  # pragma: no cover
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
         normalized_expected = _normalize_line_endings(expected)
-        assert normalized_content == normalized_expected
+        if normalized_content != normalized_expected:  # pragma: no cover
+            msg = (
+                f"Content mismatch for {expected_path}\n"
+                f"Run with 'tox run -e <version> -- --inline-snapshot=fix <test>' to update it."
+            )
+            raise AssertionError(msg) from None
     else:
         assert expected == normalized_content  # pragma: no cover
 
