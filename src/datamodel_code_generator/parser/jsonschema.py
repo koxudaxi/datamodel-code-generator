@@ -831,14 +831,21 @@ class JsonSchemaParser(Parser):
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
+        """Create data model instance with dataclass_arguments support for DataClass."""
         data_model_class = model_type or self.data_model_type
         if issubclass(data_model_class, DataClass):
-            dataclass_arguments = {
-                "frozen": self.frozen_dataclasses,
-                "kw_only": self.keyword_only,
-            }
-            existing = kwargs.pop("dataclass_arguments", None)
-            dataclass_arguments.update(existing or {})
+            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
+            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
+            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
+            if dataclass_arguments is None:
+                dataclass_arguments = self.dataclass_arguments
+            if dataclass_arguments is None:
+                # Construct from legacy flags for library API compatibility
+                dataclass_arguments = {}
+                if self.frozen_dataclasses:
+                    dataclass_arguments["frozen"] = True
+                if self.keyword_only:
+                    dataclass_arguments["kw_only"] = True
             kwargs["dataclass_arguments"] = dataclass_arguments
             kwargs.pop("frozen", None)
             kwargs.pop("keyword_only", None)

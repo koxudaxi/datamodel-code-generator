@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import locale
-from argparse import ArgumentParser, BooleanOptionalAction, HelpFormatter, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -27,6 +27,29 @@ if TYPE_CHECKING:
 DEFAULT_ENCODING = locale.getpreferredencoding()
 
 namespace = Namespace(no_color=False)
+
+
+def _json_dict(value: str) -> dict:
+    """Parse JSON string and validate it is a dictionary.
+
+    Args:
+        value: JSON string to parse
+
+    Returns:
+        Parsed dictionary
+
+    Raises:
+        ArgumentTypeError: If JSON is invalid or not a dictionary
+    """
+    try:
+        result = json.loads(value)
+    except json.JSONDecodeError as e:
+        msg = f"Invalid JSON: {e}"
+        raise ArgumentTypeError(msg) from e
+    if not isinstance(result, dict):
+        msg = f"Expected a JSON dictionary, got {type(result).__name__}"
+        raise ArgumentTypeError(msg)
+    return result
 
 
 class SortingHelpFormatter(HelpFormatter):
@@ -182,7 +205,7 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--dataclass-arguments",
-    type=json.loads,
+    type=_json_dict,
     default=None,
     help=(
         "Custom dataclass arguments as a JSON dictionary, "

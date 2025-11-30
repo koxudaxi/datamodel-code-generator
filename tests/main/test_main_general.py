@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
+from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -15,6 +15,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Config, Exit
+from datamodel_code_generator.arguments import _json_dict
 from datamodel_code_generator.format import PythonVersion
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
@@ -272,3 +273,39 @@ def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
             input_=invalid_file,
             output=output_file,
         )
+
+
+def test_json_dict_valid_dict() -> None:
+    """Test that valid JSON dictionary is parsed correctly."""
+    result = _json_dict('{"frozen": true, "slots": true}')
+    assert result == {"frozen": True, "slots": True}
+
+
+def test_json_dict_empty_dict() -> None:
+    """Test that empty JSON dictionary is parsed correctly."""
+    result = _json_dict("{}")
+    assert result == {}
+
+
+def test_json_dict_invalid_json_syntax() -> None:
+    """Test that invalid JSON syntax raises error at argparse level."""
+    with pytest.raises(ArgumentTypeError, match="Invalid JSON:"):
+        _json_dict("not-valid-json")
+
+
+def test_json_dict_non_dict_json_list() -> None:
+    """Test that JSON list raises ArgumentTypeError."""
+    with pytest.raises(ArgumentTypeError, match="Expected a JSON dictionary, got list"):
+        _json_dict("[1, 2, 3]")
+
+
+def test_json_dict_non_dict_json_string() -> None:
+    """Test that JSON string raises ArgumentTypeError."""
+    with pytest.raises(ArgumentTypeError, match="Expected a JSON dictionary, got str"):
+        _json_dict('"just a string"')
+
+
+def test_json_dict_non_dict_json_number() -> None:
+    """Test that JSON number raises ArgumentTypeError."""
+    with pytest.raises(ArgumentTypeError, match="Expected a JSON dictionary, got int"):
+        _json_dict("42")

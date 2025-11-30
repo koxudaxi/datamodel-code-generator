@@ -361,9 +361,12 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     else:
         input_text = None
 
-    dataclass_arguments = dict(dataclass_arguments or {})
-    dataclass_arguments.setdefault("frozen", frozen_dataclasses)
-    dataclass_arguments.setdefault("kw_only", keyword_only)
+    if dataclass_arguments is None:
+        dataclass_arguments = {}
+        if frozen_dataclasses:
+            dataclass_arguments["frozen"] = True
+        if keyword_only:
+            dataclass_arguments["kw_only"] = True
 
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()

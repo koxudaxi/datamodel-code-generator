@@ -488,7 +488,7 @@ class Parser(ABC):
         self.use_title_as_name: bool = use_title_as_name
         self.use_operation_id_as_name: bool = use_operation_id_as_name
         self.use_unique_items_as_set: bool = use_unique_items_as_set
-        self.dataclass_arguments = dataclass_arguments or {}
+        self.dataclass_arguments = dataclass_arguments
 
         if base_path:
             self.base_path = base_path
