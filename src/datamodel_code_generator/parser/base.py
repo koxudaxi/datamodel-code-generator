@@ -138,10 +138,11 @@ def add_model_path_to_list(
     /,
 ) -> list[str]:
     """
-    Auxiliary method which adds model path to list, provided:
+    Auxiliary method which adds model path to list, provided the following hold.
 
     - model is not a type alias
-    - path is not already in the list
+    - path is not already in the list.
+
     """
     if paths is None:
         paths = []
