@@ -144,7 +144,7 @@ def add_model_path_to_list(
     - path is not already in the list
     """
     if paths is None:
-        paths = list[str]()
+        paths: list[str] = []
     if model.is_alias:
         return paths
     if (path := model.path) in paths:
@@ -1024,7 +1024,7 @@ class Parser(ABC):
                         custom_template_dir=model._custom_template_dir,  # noqa: SLF001
                     )
                     if cached_model_reference.path in require_update_action_models:
-                        require_update_action_models.append(inherited_model.path)
+                        add_model_path_to_list(require_update_action_models, inherited_model)
                     models.insert(index, inherited_model)
                     models.remove(model)
 
