@@ -7,13 +7,14 @@ template customization, OpenAPI-specific options, and general options.
 
 from __future__ import annotations
 
+import json
 import locale
-from argparse import ArgumentParser, BooleanOptionalAction, HelpFormatter, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
+from datamodel_code_generator import DataclassArguments, DataModelType, InputFileType, OpenAPIScope
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
@@ -26,6 +27,28 @@ if TYPE_CHECKING:
 DEFAULT_ENCODING = locale.getpreferredencoding()
 
 namespace = Namespace(no_color=False)
+
+
+def _dataclass_arguments(value: str) -> DataclassArguments:
+    """Parse JSON string and validate it as DataclassArguments."""
+    try:
+        result = json.loads(value)
+    except json.JSONDecodeError as e:
+        msg = f"Invalid JSON: {e}"
+        raise ArgumentTypeError(msg) from e
+    if not isinstance(result, dict):
+        msg = f"Expected a JSON dictionary, got {type(result).__name__}"
+        raise ArgumentTypeError(msg)
+    valid_keys = set(DataclassArguments.__annotations__.keys())
+    invalid_keys = set(result.keys()) - valid_keys
+    if invalid_keys:
+        msg = f"Invalid keys: {invalid_keys}. Valid keys are: {valid_keys}"
+        raise ArgumentTypeError(msg)
+    for key, val in result.items():
+        if not isinstance(val, bool):
+            msg = f"Expected bool for '{key}', got {type(val).__name__}"
+            raise ArgumentTypeError(msg)
+    return cast("DataclassArguments", result)
 
 
 class SortingHelpFormatter(HelpFormatter):
@@ -178,6 +201,16 @@ model_options.add_argument(
     help="Generate frozen dataclasses (dataclass(frozen=True)). Only applies to dataclass output.",
     action="store_true",
     default=None,
+)
+model_options.add_argument(
+    "--dataclass-arguments",
+    type=_dataclass_arguments,
+    default=None,
+    help=(
+        "Custom dataclass arguments as a JSON dictionary, "
+        'e.g. \'{"frozen": true, "kw_only": true}\'. '
+        "Overrides --frozen-dataclasses and similar flags."
+    ),
 )
 model_options.add_argument(
     "--reuse-model",
