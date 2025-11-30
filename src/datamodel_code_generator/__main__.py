@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
+    DataclassArguments,
     DataModelType,
     Error,
     InputFileType,
@@ -402,6 +403,7 @@ class Config(BaseModel):
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     keyword_only: bool = False
     frozen_dataclasses: bool = False
+    dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
@@ -660,6 +662,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             no_alias=config.no_alias,
             formatters=config.formatters,
             parent_scoped_naming=config.parent_scoped_naming,
+            dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
         )
