@@ -8,10 +8,9 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-# Bad lines
 
 class JobRun(BaseModel):
-    enabled: Optional[bool] = Field(False, description='If Live Execution is enabled')
+    # Bad lines
     resources: Optional[List[str]] = Field(
         None, description='Resource full classname to register to extend any endpoints.'
     )

@@ -53,18 +53,75 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
+def _get_tox_env() -> str:  # pragma: no cover
+    """Get the current tox environment name from TOX_ENV_NAME or fallback.
+
+    Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
+    """
+    import os  # noqa: PLC0415
+
+    env = os.environ.get("TOX_ENV_NAME", "<version>")
+    # Remove -parallel suffix since inline-snapshot needs single process mode
+    return env.removesuffix("-parallel")
+
+
+def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
+    """Format a hint message for inline-snapshot commands with rich formatting."""
+    from io import StringIO  # noqa: PLC0415
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.text import Text  # noqa: PLC0415
+
+    tox_env = _get_tox_env()
+    command = f"tox run -e {tox_env} -- --inline-snapshot={action}"
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=True, width=80)
+
+    text = Text()
+    text.append("Run: ", style="bold white")
+    text.append(command, style="bold cyan")
+    console.print(text)
+
+    return output.getvalue()
+
+
 def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
-    """Format a unified diff between expected and actual content."""
+    """Format a unified diff between expected and actual content with rich formatting."""
+    from io import StringIO  # noqa: PLC0415
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.panel import Panel  # noqa: PLC0415
+    from rich.syntax import Syntax  # noqa: PLC0415
+
     expected_lines = expected.splitlines(keepends=True)
     actual_lines = actual.splitlines(keepends=True)
-    diff = difflib.unified_diff(
-        expected_lines,
-        actual_lines,
-        fromfile=str(expected_path),
-        tofile="actual",
-        lineterm="",
+    diff_lines = list(
+        difflib.unified_diff(
+            expected_lines,
+            actual_lines,
+            fromfile=str(expected_path),
+            tofile="actual",
+            lineterm="",
+        )
     )
-    return "".join(diff)
+
+    if not diff_lines:
+        return ""
+
+    # Skip the header lines (---, +++), keep @@ and content
+    diff_content = "".join(diff_lines[2:])
+
+    output = StringIO()
+    # Use width=80 to account for pytest's "E       " prefix (8 chars)
+    console = Console(file=output, force_terminal=True, width=80)
+    # Shorten the path for title to avoid overflow
+    short_path = expected_path.name
+    syntax = Syntax(diff_content, "diff", theme="monokai", line_numbers=False, word_wrap=True)
+    panel = Panel(syntax, title=short_path, border_style="blue")
+    console.print(panel)
+
+    return output.getvalue()
 
 
 def _assert_with_external_file(content: str, expected_path: Path) -> None:
@@ -73,22 +130,16 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     try:
         expected = external_file(expected_path)
     except FileNotFoundError:  # pragma: no cover
-        msg = (
-            f"Expected file not found: {expected_path}\n"
-            f"Run with 'tox run -e <version> -- --inline-snapshot=create' to create it.\n"
-            f"\nActual content:\n{content}"
-        )
+        hint = _format_snapshot_hint("create")
+        msg = f"Expected file not found: {expected_path}\n{hint}\nActual content:\n{content}"
         raise AssertionError(msg) from None  # pragma: no cover
     normalized_content = _normalize_line_endings(content)
     if isinstance(expected, str):  # pragma: no branch
         normalized_expected = _normalize_line_endings(expected)
         if normalized_content != normalized_expected:  # pragma: no cover
+            hint = _format_snapshot_hint("fix")
             diff = _format_diff(normalized_expected, normalized_content, expected_path)
-            msg = (
-                f"Content mismatch for {expected_path}\n"
-                f"Run with 'tox run -e <version> -- --inline-snapshot=fix' to update it.\n"
-                f"\n{diff}"
-            )
+            msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
             raise AssertionError(msg) from None
     else:
         assert expected == normalized_content  # pragma: no cover
