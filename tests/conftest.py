@@ -61,9 +61,6 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
         normalized_expected = _normalize_line_endings(expected)
         assert normalized_content == normalized_expected
     else:
-        expected_value = expected._load_value()  # pragma: no cover
-        if _normalize_line_endings(expected_value) == normalized_content:  # pragma: no cover
-            return  # pragma: no cover
         assert expected == normalized_content  # pragma: no cover
 
 
@@ -171,9 +168,17 @@ def assert_directory_content(
         assert_directory_content(tmp_path / "model", EXPECTED_PATH / "main_modular")
     """
     __tracebackhide__ = True
-    for expected_path in expected_dir.rglob(pattern):
-        relative_path = expected_path.relative_to(expected_dir)
-        output_path = output_dir / relative_path
+    output_files = {p.relative_to(output_dir) for p in output_dir.rglob(pattern)}
+    expected_files = {p.relative_to(expected_dir) for p in expected_dir.rglob(pattern)}
+
+    # Check for extra expected files (output missing files that are expected)
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in output: {extra}"
+
+    # Compare all output files (including new ones not yet in expected)
+    for output_path in output_dir.rglob(pattern):
+        relative_path = output_path.relative_to(output_dir)
+        expected_path = expected_dir / relative_path
         result = output_path.read_text(encoding=encoding)
         _assert_with_external_file(result, expected_path)
 
