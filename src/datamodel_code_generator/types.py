@@ -478,21 +478,14 @@ class DataType(_BaseModel):
             self.reference.children.append(self)
 
     @property
-    def type_hint(self) -> str:
+    def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
         """Generate the Python type hint string for this DataType."""
-        return self._build_type_hint()
-
-    def render_type_hint(self, quote_reference_names: set[str] | None = None) -> str:
-        """Generate a type hint, optionally quoting specific reference names (for forward refs)."""
-        return self._build_type_hint(quote_reference_names=quote_reference_names)
-
-    def _build_type_hint(self, quote_reference_names: set[str] | None = None) -> str:  # noqa: PLR0912, PLR0915
         type_: str | None = self.alias or self.type
         if not type_:
             if self.is_union:
                 data_types: list[str] = []
                 for data_type in self.data_types:
-                    data_type_type = data_type.render_type_hint(quote_reference_names)
+                    data_type_type = data_type.type_hint
                     if data_type_type in data_types:  # pragma: no cover
                         continue
 
@@ -515,16 +508,11 @@ class DataType(_BaseModel):
                 else:
                     type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
             elif len(self.data_types) == 1:
-                type_ = self.data_types[0].render_type_hint(quote_reference_names)
+                type_ = self.data_types[0].type_hint
             elif self.literals:
                 type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
             elif self.reference:
-                ref_name = self.reference.short_name
-                if quote_reference_names and (
-                    ref_name in quote_reference_names or self.reference.name in quote_reference_names
-                ):
-                    ref_name = f'"{ref_name}"'
-                type_ = ref_name
+                type_ = self.reference.short_name
             else:
                 # TODO support strict Any
                 type_ = ""
@@ -556,7 +544,7 @@ class DataType(_BaseModel):
             else:
                 dict_ = DICT
             if self.dict_key or type_:
-                key = self.dict_key.render_type_hint(quote_reference_names) if self.dict_key else STR
+                key = self.dict_key.type_hint if self.dict_key else STR
                 type_ = f"{dict_}[{key}, {type_ or ANY}]"
             else:  # pragma: no cover
                 type_ = dict_

@@ -47,7 +47,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
-from datamodel_code_generator.model.type_alias import TypeAliasBase
+from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
@@ -1303,7 +1303,7 @@ class Parser(ABC):
             if not isinstance(model, TypeAliasBase):
                 continue
 
-            if not getattr(model, "QUOTE_FORWARD_REFS", True):
+            if isinstance(model, TypeStatement):
                 rendered_aliases.add(model.class_name)
                 continue
 
@@ -1314,7 +1314,7 @@ class Parser(ABC):
                     source = data_type.reference.source
                     if not isinstance(source, TypeAliasBase):
                         continue
-                    if not getattr(source, "QUOTE_FORWARD_REFS", True):
+                    if isinstance(source, TypeStatement):
                         continue
                     name = data_type.reference.short_name
                     if name not in rendered_aliases:

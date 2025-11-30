@@ -23,7 +23,6 @@ class TypeAliasBase(DataModel):
     """Base class for all type alias implementations."""
 
     IS_ALIAS: bool = True
-    QUOTE_FORWARD_REFS: ClassVar[bool] = True
 
     @property
     def imports(self) -> tuple[Import, ...]:
@@ -69,4 +68,3 @@ class TypeStatement(TypeAliasBase):
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypeStatement.jinja2"
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
-    QUOTE_FORWARD_REFS: ClassVar[bool] = False

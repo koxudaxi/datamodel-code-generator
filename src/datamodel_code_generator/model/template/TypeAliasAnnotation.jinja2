@@ -1,11 +1,10 @@
 {%- macro get_type_annotation(_field) -%}
-{%- set quote_names = type_alias_quote_names if type_alias_quote_names is defined else None -%}
 {%- if _field.annotated -%}
 {{ _field.annotated }}
 {%- elif _field.field -%}
 Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 {%- else -%}
-{{ _field.data_type.render_type_hint(quote_names) if quote_names else _field.type_hint }}
+{{ _field.type_hint }}
 {%- endif -%}
 {%- endmacro -%}
 

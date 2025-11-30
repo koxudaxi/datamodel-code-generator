@@ -2185,7 +2185,7 @@ def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:  # 
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file="type_alias_recursive.py",
+        expected_file="type_alias_recursive_py311.py",
         extra_args=[
             "--use-type-alias",
             "--target-python-version",
