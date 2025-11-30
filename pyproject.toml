@@ -160,10 +160,8 @@ lint.ignore = [
   "C901",   # complex structure
   "COM812", # Conflict with formatter
   "CPY",    # No copyright statements
-  "D200",   # prevent docstrings from being forced to fit one-line
   "D203",   # one-blank-line-before-class (conflicts with D211)
-  "D212",   # prevent first newline from being removed in docstrings
-  "D400",   # allow docstrings to contain lines that do not end with a full stop
+  "D212",   # multi-line-summary-first-line (conflicts with D213)
   "DOC",    # limited documentation
   "FIX002", # line contains to do
   "ISC001", # Conflict with formatter
