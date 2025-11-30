@@ -115,6 +115,25 @@ def test_main_openapi_discriminator_allof(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_discriminator_allof_no_subtypes(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator but no allOf subtypes.
+
+    This tests the edge case where a schema has a discriminator but nothing
+    inherits from it using allOf.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_allof_no_subtypes.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "allof_no_subtypes.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_pydantic_basemodel(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic BaseModel output."""
     run_main_and_assert(
