@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Feedback API
+  version: 1.0.0
+paths:
+  /feedback:
+    get:
+      summary: Get all feedback items
+      responses:
+        '200':
+          description: List of feedback items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './schemas/feedback.yaml#/FeedbackItem'
+    post:
+      summary: Create a feedback item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/feedback.yaml#/FeedbackItemCreate'
+      responses:
+        '201':
+          description: Created feedback item
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/feedback.yaml#/FeedbackItem'
+components:
+  schemas:
+    FeedbackItem:
+      $ref: './schemas/feedback.yaml#/FeedbackItem'
+    FeedbackItemCreate:
+      $ref: './schemas/feedback.yaml#/FeedbackItemCreate'

@@ -2377,3 +2377,15 @@ def test_main_openapi_webhooks_with_parameters(output_file: Path) -> None:
         assert_func=assert_file_content,
         extra_args=["--openapi-scopes", "schemas", "webhooks", "parameters"],
     )
+
+
+def test_main_openapi_external_ref_with_transitive_local_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with external ref that has transitive local refs."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "external_ref_with_transitive_local_ref" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="external_ref_with_transitive_local_ref/output.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
