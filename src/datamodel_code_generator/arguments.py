@@ -14,7 +14,14 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from datamodel_code_generator import DataclassArguments, DataModelType, InputFileType, OpenAPIScope, ReuseScope
+from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    DataclassArguments,
+    DataModelType,
+    InputFileType,
+    OpenAPIScope,
+    ReuseScope,
+)
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
@@ -227,8 +234,8 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--shared-module-name",
-    help="Name of the shared module for --reuse-scope=tree (default: 'shared'). "
-    "Use this option if your schema has a file named 'shared'.",
+    help=f'Name of the shared module for --reuse-scope=tree (default: "{DEFAULT_SHARED_MODULE_NAME}"). '
+    f'Use this option if your schema has a file named "{DEFAULT_SHARED_MODULE_NAME}".',
     default=None,
 )
 model_options.add_argument(

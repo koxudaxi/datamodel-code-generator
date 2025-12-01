@@ -484,7 +484,7 @@ Model customization:
                         model is set.
   --shared-module-name SHARED_MODULE_NAME
                         Name of the shared module for --reuse-scope=tree (default:
-                        ''shared''). Use this option if your schema has a file named ''shared''.
+                        "shared"). Use this option if your schema has a file named "shared".
   --target-python-version {3.9,3.10,3.11,3.12,3.13,3.14}
                         target python version
   --treat-dot-as-module
