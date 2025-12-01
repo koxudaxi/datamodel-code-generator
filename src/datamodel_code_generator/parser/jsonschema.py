@@ -1938,8 +1938,8 @@ class JsonSchemaParser(Parser):
                 root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: dict[str, YamlValue] = {}
-                _schema_path = ""
-                for _schema_path, split_schema_path in self.schema_paths:
+                schema_path = ""
+                for schema_path, split_schema_path in self.schema_paths:
                     try:
                         if definitions := get_model_by_path(raw, split_schema_path):
                             break
@@ -1948,7 +1948,7 @@ class JsonSchemaParser(Parser):
 
                 for key, model in definitions.items():
                     obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)
-                    self.parse_id(obj, [*path_parts, _schema_path, key])
+                    self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
@@ -1957,7 +1957,7 @@ class JsonSchemaParser(Parser):
                 elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model in definitions.items():
-                    path = [*path_parts, _schema_path, key]
+                    path = [*path_parts, schema_path, key]
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)
