@@ -585,3 +585,20 @@ http-headers = ["Authorization: Bearer token", "X-Custom: value"]
             capsys=capsys,
             expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "spaces_in_values.txt",
         )
+
+
+def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+snake-case-field = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "false_boolean.txt",
+        )
