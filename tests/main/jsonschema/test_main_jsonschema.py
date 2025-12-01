@@ -2801,3 +2801,50 @@ def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree"],
     )
+
+
+def test_main_jsonschema_reuse_scope_tree_enum(output_dir: Path) -> None:
+    """Test --reuse-scope=tree to deduplicate enum models across multiple files."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_enum",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_enum",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_warning(
+    capsys: pytest.CaptureFixture[str], output_dir: Path
+) -> None:
+    """Test warning when --reuse-scope=tree is used without --reuse-model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-scope", "tree"],
+        capsys=capsys,
+        expected_stderr_contains="Warning: --reuse-scope=tree has no effect without --reuse-model",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_no_dup(output_dir: Path) -> None:
+    """Test --reuse-scope=tree when there are no duplicate models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_no_dup",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_no_dup",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with self-referencing models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_self_ref",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_self_ref",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
