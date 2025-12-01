@@ -63,11 +63,16 @@ if TYPE_CHECKING:
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "check",
     "generate_pyproject_config",
+    "generate_cli_command",
     "version",
     "help",
     "debug",
     "no_color",
     "disable_warnings",
+})
+
+BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
+    "use_specialized_enum",
 })
 
 
@@ -587,6 +592,37 @@ def _compare_directories(
 
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
+def _format_cli_value(value: str | list[str]) -> str:
+    """Format a value for CLI argument."""
+    if isinstance(value, list):
+        return " ".join(f'"{v}"' if " " in v else v for v in value)
+    return f'"{value}"' if " " in value else value
+
+
+def generate_cli_command(config: dict[str, TomlValue]) -> str:
+    """Generate CLI command from pyproject.toml configuration."""
+    parts: list[str] = ["datamodel-codegen"]
+
+    for key, value in sorted(config.items()):
+        if key in EXCLUDED_CONFIG_OPTIONS:
+            continue
+
+        cli_key = key.replace("_", "-")
+
+        if isinstance(value, bool):
+            if value:
+                parts.append(f"--{cli_key}")
+            elif key in BOOLEAN_OPTIONAL_OPTIONS:
+                parts.append(f"--no-{cli_key}")
+        elif isinstance(value, list):
+            parts.extend((f"--{cli_key}", _format_cli_value(cast("list[str]", value))))
+        else:
+            parts.extend((f"--{cli_key}", _format_cli_value(str(value))))
+
+    return " ".join(parts) + "\n"
+
+
+def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
     """Execute datamodel code generation from command-line arguments."""
     # add cli completion support
     argcomplete.autocomplete(arg_parser)
@@ -608,6 +644,17 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.OK
 
     pyproject_config = _get_pyproject_toml_config(Path.cwd())
+
+    if namespace.generate_cli_command:
+        if not pyproject_config:
+            print(  # noqa: T201
+                "No [tool.datamodel-codegen] section found in pyproject.toml",
+                file=sys.stderr,
+            )
+            return Exit.ERROR
+        command_output = generate_cli_command(pyproject_config)
+        print(command_output)  # noqa: T201
+        return Exit.OK
 
     try:
         config = Config.parse_obj(pyproject_config)

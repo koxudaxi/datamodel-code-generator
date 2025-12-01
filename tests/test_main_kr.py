@@ -466,3 +466,159 @@ def test_generate_pyproject_config_excludes_meta_options(capsys: pytest.CaptureF
         capsys=capsys,
         expected_stdout_path=EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "excludes_meta_options.txt",
     )
+
+
+EXPECTED_GENERATE_CLI_COMMAND_PATH = EXPECTED_MAIN_KR_PATH / "generate_cli_command"
+
+
+def test_generate_cli_command_basic(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with basic options."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+output = "model.py"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "basic.txt",
+        )
+
+
+def test_generate_cli_command_with_boolean_options(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with boolean options."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+snake-case-field = true
+use-annotated = true
+collapse-root-models = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "boolean_options.txt",
+        )
+
+
+def test_generate_cli_command_with_list_options(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with list options."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+strict-types = ["str", "int"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "list_options.txt",
+        )
+
+
+def test_generate_cli_command_with_multiple_options(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with various option types."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+output = "model.py"
+output-model-type = "pydantic_v2.BaseModel"
+target-python-version = "3.11"
+snake-case-field = true
+strict-types = ["str", "bytes"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "multiple_options.txt",
+        )
+
+
+def test_generate_cli_command_no_config(tmp_path: Path) -> None:
+    """Test --generate-cli-command when no config found."""
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            expected_exit=Exit.ERROR,
+        )
+
+
+def test_generate_cli_command_with_no_use_specialized_enum(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with use-specialized-enum = false."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+use-specialized-enum = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "no_use_specialized_enum.txt",
+        )
+
+
+def test_generate_cli_command_with_spaces_in_values(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with spaces in values."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "my schema.yaml"
+output = "my model.py"
+http-headers = ["Authorization: Bearer token", "X-Custom: value"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "spaces_in_values.txt",
+        )
+
+
+def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+snake-case-field = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "false_boolean.txt",
+        )
+
+
+def test_generate_cli_command_excludes_excluded_options(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command excludes options like debug, version, etc."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+debug = true
+version = true
+no-color = true
+disable-warnings = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "excluded_options.txt",
+        )

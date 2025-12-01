@@ -541,6 +541,8 @@ General options:
   --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
                         generator[debug]''`)
   --disable-warnings    disable warnings
+  --generate-cli-command
+                        Generate CLI command from pyproject.toml configuration and exit
   --generate-pyproject-config
                         Generate pyproject.toml configuration from the provided CLI
                         arguments and exit
