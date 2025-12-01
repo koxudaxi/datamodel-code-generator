@@ -1131,12 +1131,18 @@ class Parser(ABC):
                     models.insert(index, inherited_model)
                     models.remove(duplicate_model)
                 break
+            else:  # pragma: no cover
+                msg = f"Duplicate model {duplicate_model.name} not found in module {duplicate_module}"
+                raise RuntimeError(msg)
 
         for canonical in canonical_models_seen:
             for _module, models in module_models:
                 if canonical in models:
                     models.remove(canonical)
                     break
+            else:  # pragma: no cover
+                msg = f"Canonical model {canonical.name} not found in any module"
+                raise RuntimeError(msg)
 
         return (shared_module,), shared_models
 

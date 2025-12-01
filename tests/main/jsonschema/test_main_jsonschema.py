@@ -2894,3 +2894,14 @@ def test_main_jsonschema_reuse_scope_tree_multi(output_dir: Path) -> None:
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree"],
     )
+
+
+def test_main_jsonschema_reuse_scope_tree_branch(output_dir: Path) -> None:
+    """Test --reuse-scope=tree branch coverage with duplicate in later modules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_branch",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_branch",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )

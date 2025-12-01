@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "data": { "$ref": "#/$defs/UniqueModelA" }
+  },
+  "$defs": {
+    "UniqueModelA": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
+    }
+  }
+}
