@@ -1939,9 +1939,10 @@ class JsonSchemaParser(Parser):
                 self.parse_id(root_obj, path_parts)
                 definitions: dict[str, YamlValue] = {}
                 schema_path = ""
-                for schema_path, split_schema_path in self.schema_paths:
+                for path, split_schema_path in self.schema_paths:
                     try:
                         if definitions := get_model_by_path(raw, split_schema_path):
+                            schema_path = path
                             break
                     except KeyError:  # pragma: no cover
                         continue
