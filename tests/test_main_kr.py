@@ -567,3 +567,21 @@ use-specialized-enum = false
             capsys=capsys,
             expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "no_use_specialized_enum.txt",
         )
+
+
+def test_generate_cli_command_with_spaces_in_values(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with spaces in values."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "my schema.yaml"
+output = "my model.py"
+http-headers = ["Authorization: Bearer token", "X-Custom: value"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "spaces_in_values.txt",
+        )
