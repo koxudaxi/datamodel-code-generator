@@ -20,7 +20,7 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator import ReuseScope
+from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, ReuseScope
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
     CodeFormatter,
@@ -407,6 +407,7 @@ class Parser(ABC):
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
         reuse_scope: ReuseScope | None = None,
+        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
@@ -497,6 +498,7 @@ class Parser(ABC):
         self.use_default_kwarg: bool = use_default_kwarg
         self.reuse_model: bool = reuse_model
         self.reuse_scope: ReuseScope | None = reuse_scope
+        self.shared_module_name: str = shared_module_name
         self.encoding: str = encoding
         self.enum_field_as_literal: LiteralType | None = enum_field_as_literal
         self.set_default_enum_member: bool = set_default_enum_member
@@ -1047,9 +1049,18 @@ class Parser(ABC):
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
         require_update_action_models: list[str],
     ) -> tuple[tuple[str, ...], list[DataModel]] | None:
-        """Deduplicate models across all modules, placing shared models in _shared.py."""
+        """Deduplicate models across all modules, placing shared models in shared.py."""
         if not self.reuse_model or self.reuse_scope != ReuseScope.Tree:
             return None
+
+        shared_module = self.shared_module_name
+        existing_module_names = {module[0] for module, _ in module_models if len(module) == 1}
+        if shared_module in existing_module_names:
+            msg = (
+                f"Schema file '{shared_module}' conflicts with the shared module name. "
+                f"Use --shared-module-name to specify a different name."
+            )
+            raise Exception(msg)  # noqa: TRY002
 
         all_models: list[tuple[tuple[str, ...], DataModel]] = []
         for module, models in module_models:
@@ -1076,7 +1087,7 @@ class Parser(ABC):
         canonical_models_with_duplicates.update(canonical for _, _, _, canonical in duplicates)
 
         for canonical in canonical_models_with_duplicates:
-            canonical.file_path = Path("_shared.py")
+            canonical.file_path = Path(f"{shared_module}.py")
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
@@ -1115,7 +1126,7 @@ class Parser(ABC):
                     models.remove(canonical)
                     break
 
-        return ("_shared",), shared_models
+        return (shared_module,), shared_models
 
     def __collapse_root_models(  # noqa: PLR0912
         self,

@@ -8,8 +8,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from . import _shared as field_shared
+from . import shared
 
 
 class Model(BaseModel):
-    info: Optional[field_shared.SharedModel] = None
+    info: Optional[shared.SharedModel] = None

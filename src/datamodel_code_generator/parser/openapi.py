@@ -16,6 +16,7 @@ from warnings import warn
 from pydantic import Field
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
     DataclassArguments,
     Error,
     LiteralType,
@@ -207,6 +208,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
         reuse_scope: ReuseScope | None = None,
+        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         use_one_literal_as_default: bool = False,
@@ -295,6 +297,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
             reuse_scope=reuse_scope,
+            shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,

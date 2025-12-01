@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from ._shared import SharedModel as SharedModel_1
+from .shared import SharedModel as SharedModel_1
 
 
 class SharedModel(SharedModel_1):

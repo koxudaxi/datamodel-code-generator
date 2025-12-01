@@ -226,6 +226,12 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--shared-module-name",
+    help="Name of the shared module for --reuse-scope=tree (default: 'shared'). "
+    "Use this option if your schema has a file named 'shared'.",
+    default=None,
+)
+model_options.add_argument(
     "--target-python-version",
     help="target python version",
     choices=[v.value for v in PythonVersion],

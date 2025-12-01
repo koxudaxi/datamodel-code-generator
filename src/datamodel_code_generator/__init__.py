@@ -53,6 +53,7 @@ if TYPE_CHECKING:
 
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
+DEFAULT_SHARED_MODULE_NAME: Final[str] = "shared"
 
 T = TypeVar("T")
 
@@ -318,6 +319,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_default_kwarg: bool = False,
     reuse_model: bool = False,
     reuse_scope: ReuseScope = ReuseScope.Module,
+    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
     use_one_literal_as_default: bool = False,
@@ -549,6 +551,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_default_kwarg=use_default_kwarg,
         reuse_model=reuse_model,
         reuse_scope=reuse_scope,
+        shared_module_name=shared_module_name,
         enum_field_as_literal=LiteralType.All
         if output_model_type == DataModelType.TypingTypedDict
         else enum_field_as_literal,

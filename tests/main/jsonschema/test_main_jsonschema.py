@@ -2848,3 +2848,18 @@ def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree"],
     )
+
+
+def test_main_jsonschema_reuse_scope_tree_conflict(
+    capsys: pytest.CaptureFixture[str], output_dir: Path
+) -> None:
+    """Test --reuse-scope=tree error when schema name conflicts with shared module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Schema file 'shared' conflicts with the shared module name",
+    )

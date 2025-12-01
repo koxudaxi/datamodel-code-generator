@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from ._shared import Node as Node_1
+from .shared import Node as Node_1
 
 
 class Node(Node_1):
