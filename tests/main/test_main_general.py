@@ -170,6 +170,39 @@ def test_frozen_dataclasses_command_line(output_file: Path, extra_args: list[str
     )
 
 
+@freeze_time(TIMESTAMP)
+def test_use_attribute_docstrings(tmp_path: Path) -> None:
+    """Test --use-attribute-docstrings flag functionality."""
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "use_attribute_docstrings_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        use_field_description=True,
+        use_attribute_docstrings=True,
+    )
+    assert_file_content(output_file)
+
+
+@freeze_time(TIMESTAMP)
+def test_use_attribute_docstrings_command_line(output_file: Path) -> None:
+    """Test --use-attribute-docstrings flag via command line."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "use_attribute_docstrings_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_attribute_docstrings.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-field-description",
+            "--use-attribute-docstrings",
+        ],
+    )
+
+
 def test_filename_with_newline_injection(tmp_path: Path) -> None:
     """Test that filenames with newlines cannot inject code into generated files."""
     schema_content = """{"type": "object", "properties": {"name": {"type": "string"}}}"""

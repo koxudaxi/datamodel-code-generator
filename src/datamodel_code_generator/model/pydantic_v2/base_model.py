@@ -181,6 +181,7 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
+        ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
 
     def __init__(  # noqa: PLR0913

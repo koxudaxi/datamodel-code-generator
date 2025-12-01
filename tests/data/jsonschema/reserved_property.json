@@ -1,0 +1,10 @@
+{
+  "title": "ReservedNames",
+  "type": "object",
+  "properties": {
+    "json": {"type": "string"},
+    "schema": {"type": "string"},
+    "dict": {"type": "integer"}
+  },
+  "required": ["json", "schema", "dict"]
+}

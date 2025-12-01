@@ -466,6 +466,12 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-attribute-docstrings",
+    help="Set use_attribute_docstrings=True in Pydantic v2 ConfigDict",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--use-inline-field-description",
     help="Use schema description to populate field docstring as inline docstring",
     action="store_true",
