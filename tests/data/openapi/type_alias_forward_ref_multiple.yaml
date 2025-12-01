@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: TypeAlias Forward Ref Multiple
+components:
+  schemas:
+    RegularModel:
+      type: object
+      properties:
+        name:
+          type: string
+    Third:
+      type: string
+    Second:
+      oneOf:
+        - $ref: "#/components/schemas/First"
+        - $ref: "#/components/schemas/Third"
+        - $ref: "#/components/schemas/RegularModel"
+    First:
+      oneOf:
+        - $ref: "#/components/schemas/Second"
