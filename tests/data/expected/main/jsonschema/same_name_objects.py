@@ -21,7 +21,7 @@ class Friends(BaseModel):
 
 
 class FriendsModel(BaseModel):
-    __root__: List
+    __root__: List[Any]
 
 
 class Tst2(BaseModel):
