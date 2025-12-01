@@ -1,0 +1,2 @@
+datamodel-codegen --collapse-root-models --snake-case-field --use-annotated
+

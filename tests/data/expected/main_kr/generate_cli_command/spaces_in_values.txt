@@ -1,0 +1,2 @@
+datamodel-codegen --http-headers "Authorization: Bearer token" "X-Custom: value" --input "my schema.yaml" --output "my model.py"
+
