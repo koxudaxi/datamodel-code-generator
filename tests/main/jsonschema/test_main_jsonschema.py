@@ -2848,9 +2848,7 @@ def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
     )
 
 
-def test_main_jsonschema_reuse_scope_tree_conflict(
-    capsys: pytest.CaptureFixture[str], output_dir: Path
-) -> None:
+def test_main_jsonschema_reuse_scope_tree_conflict(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
     """Test --reuse-scope=tree error when schema name conflicts with shared module."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict",
