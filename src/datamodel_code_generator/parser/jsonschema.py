@@ -7,6 +7,7 @@ Python data models. Supports draft-04 through draft-2020-12 schemas.
 from __future__ import annotations
 
 import enum as _enum
+import json
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import cached_property, lru_cache
@@ -784,6 +785,53 @@ class JsonSchemaParser(Parser):
             result[key] = value
         return result
 
+    def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
+        """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        file_part, fragment = ([*resolved_ref.split("#", 1), ""])[:2]
+        raw_doc = self._get_ref_body(file_part) if file_part else self.raw_obj
+
+        target_schema: dict[str, YamlValue] | YamlValue = raw_doc
+        if fragment:
+            pointer = [p for p in fragment.split("/") if p]
+            target_schema = get_model_by_path(raw_doc, pointer)
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
+
+    def _schema_signature(self, prop_schema: JsonSchemaObject | bool) -> str | bool:  # noqa: FBT001, PLR6301
+        """Normalize property schema for comparison across allOf items."""
+        if isinstance(prop_schema, bool):
+            return prop_schema
+        return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
+
+    def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
+        """Merge allOf items when they share object properties to avoid duplicate models."""
+        resolved_items: list[JsonSchemaObject] = []
+        property_signatures: dict[str, set[str | bool]] = {}
+        for item in obj.allOf:
+            resolved_item = self._load_ref_schema_object(item.ref) if item.ref else item
+            resolved_items.append(resolved_item)
+            if resolved_item.properties:
+                for prop_name, prop_schema in resolved_item.properties.items():
+                    property_signatures.setdefault(prop_name, set()).add(self._schema_signature(prop_schema))
+
+        if obj.properties:
+            for prop_name, prop_schema in obj.properties.items():
+                property_signatures.setdefault(prop_name, set()).add(self._schema_signature(prop_schema))
+
+        if not any(len(signatures) > 1 for signatures in property_signatures.values()):
+            return None
+
+        merged_schema: dict[str, Any] = obj.dict(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        for resolved_item in resolved_items:
+            merged_schema = self._deep_merge(merged_schema, resolved_item.dict(exclude_unset=True, by_alias=True))
+
+        if "required" in merged_schema and isinstance(merged_schema["required"], list):
+            merged_schema["required"] = list(dict.fromkeys(merged_schema["required"]))
+
+        merged_schema.pop("allOf", None)
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_schema)
+
     def parse_combined_schema(
         self,
         name: str,
@@ -986,6 +1034,10 @@ class JsonSchemaParser(Parser):
                 and get_model_by_path(self.raw_obj, single_obj.ref[2:].split("/")).get("enum")
             ):
                 return self.get_ref_data_type(single_obj.ref)
+
+        merged_all_of_obj = self._merge_all_of_object(obj)
+        if merged_all_of_obj:
+            return self._parse_object_common_part(name, merged_all_of_obj, path, ignore_duplicate_model, [], [], [])
         fields: list[DataModelFieldBase] = []
         base_classes: list[Reference] = []
         required: list[str] = []
