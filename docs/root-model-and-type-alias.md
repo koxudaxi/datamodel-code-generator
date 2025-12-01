@@ -10,12 +10,23 @@ When a schema defines a simple type (not an object with properties), `datamodel-
 - A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
 - Type aliases cannot be combined with `Annotated` for Pydantic v1
 
-## Pydantic v1 vs v2
+## Type Alias Behavior by Output Type and Python Version
 
-The type of type alias generated depends on the Pydantic version:
+The type of type alias generated depends on the output model type and target Python version:
 
-- **Pydantic v2**: Uses `TypeAliasType` (Python 3.9-3.11) or `type` statement (Python 3.12+)
-- **Pydantic v1**: Uses `TypeAlias` because Pydantic v1 cannot handle `TypeAliasType` objects
+| Output Type | Python 3.12+ | Python 3.10-3.11 | Python 3.9 |
+|-------------|--------------|------------------|------------|
+| **Pydantic v2** | `type` statement | `TypeAliasType` (typing_extensions) | `TypeAliasType` (typing_extensions) |
+| **Pydantic v1** | `TypeAlias` | `TypeAlias` | `TypeAlias` (typing_extensions) |
+| **TypedDict** | `type` statement | `TypeAlias` | `TypeAlias` (typing_extensions) |
+| **dataclasses** | `type` statement | `TypeAlias` | `TypeAlias` (typing_extensions) |
+| **msgspec** | `type` statement | `TypeAlias` | `TypeAlias` (typing_extensions) |
+
+**Why the difference?**
+
+- **Pydantic v2** requires `TypeAliasType` because it cannot properly handle `TypeAlias` annotations
+- **Other output types** (TypedDict, dataclasses, msgspec) use `TypeAlias` for better compatibility with libraries that may not expect `TypeAliasType` objects
+- **Python 3.12+** uses the native `type` statement for all output types
 
 ## Example
 

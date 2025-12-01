@@ -28,7 +28,7 @@ from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
-from typing_extensions import TypeAlias, TypeAliasType
+from typing_extensions import TypeAlias, TypeAliasType, TypedDict
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -53,8 +53,25 @@ if TYPE_CHECKING:
 
 MIN_VERSION: Final[int] = 9
 MAX_VERSION: Final[int] = 13
+DEFAULT_SHARED_MODULE_NAME: Final[str] = "shared"
 
 T = TypeVar("T")
+
+
+class DataclassArguments(TypedDict, total=False):
+    """Arguments for @dataclass decorator."""
+
+    init: bool
+    repr: bool
+    eq: bool
+    order: bool
+    unsafe_hash: bool
+    frozen: bool
+    match_args: bool
+    kw_only: bool
+    slots: bool
+    weakref_slot: bool
+
 
 if not TYPE_CHECKING:
     YamlScalar: TypeAlias = Union[str, int, float, bool, None]
@@ -208,6 +225,17 @@ class DataModelType(Enum):
     MsgspecStruct = "msgspec.Struct"
 
 
+class ReuseScope(Enum):
+    """Scope for model reuse deduplication.
+
+    module: Deduplicate identical models within each module (default).
+    tree: Deduplicate identical models across all modules, placing shared models in shared.py.
+    """
+
+    Module = "module"
+    Tree = "tree"
+
+
 class OpenAPIScope(Enum):
     """Scopes for OpenAPI model generation."""
 
@@ -215,6 +243,7 @@ class OpenAPIScope(Enum):
     Paths = "paths"
     Tags = "tags"
     Parameters = "parameters"
+    Webhooks = "webhooks"
 
 
 class GraphQLScope(Enum):
@@ -285,9 +314,12 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_standard_collections: bool = False,
     use_schema_description: bool = False,
     use_field_description: bool = False,
+    use_attribute_docstrings: bool = False,
     use_inline_field_description: bool = False,
     use_default_kwarg: bool = False,
     reuse_model: bool = False,
+    reuse_scope: ReuseScope = ReuseScope.Module,
+    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
     use_one_literal_as_default: bool = False,
@@ -319,6 +351,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_double_quotes: bool = False,
     use_union_operator: bool = False,
     collapse_root_models: bool = False,
+    skip_root_model: bool = False,
     use_type_alias: bool = False,
     special_field_name_prefix: str | None = None,
     remove_special_field_name_prefix: bool = False,
@@ -339,6 +372,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     parent_scoped_naming: bool = False,
+    dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
 ) -> None:
@@ -359,6 +393,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         )
     else:
         input_text = None
+
+    if dataclass_arguments is None:
+        dataclass_arguments = {}
+        if frozen_dataclasses:
+            dataclass_arguments["frozen"] = True
+        if keyword_only:
+            dataclass_arguments["kw_only"] = True
 
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
@@ -506,9 +547,12 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         base_path=input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         use_schema_description=use_schema_description,
         use_field_description=use_field_description,
+        use_attribute_docstrings=use_attribute_docstrings,
         use_inline_field_description=use_inline_field_description,
         use_default_kwarg=use_default_kwarg,
         reuse_model=reuse_model,
+        reuse_scope=reuse_scope,
+        shared_module_name=shared_module_name,
         enum_field_as_literal=LiteralType.All
         if output_model_type == DataModelType.TypingTypedDict
         else enum_field_as_literal,
@@ -541,6 +585,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_double_quotes=use_double_quotes,
         use_union_operator=use_union_operator,
         collapse_root_models=collapse_root_models,
+        skip_root_model=skip_root_model,
         use_type_alias=use_type_alias,
         special_field_name_prefix=special_field_name_prefix,
         remove_special_field_name_prefix=remove_special_field_name_prefix,
@@ -561,6 +606,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
+        dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
         **kwargs,
     )

@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "info": { "$ref": "#/$defs/UniqueModelB" }
+  },
+  "$defs": {
+    "UniqueModelB": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "integer" }
+      }
+    }
+  }
+}

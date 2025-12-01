@@ -4,50 +4,54 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, List, Union
 
-from msgspec import Meta, Struct
-from typing_extensions import TypeAliasType
+from msgspec import UNSET, Meta, Struct, UnsetType
+from typing_extensions import TypeAlias
 
 
 class Pet(Struct):
     id: Annotated[int, Meta(ge=0, le=9223372036854775807)]
     name: Annotated[str, Meta(max_length=256)]
-    tag: Optional[Annotated[str, Meta(max_length=64)]] = None
+    tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
 
 
-Pets = TypeAliasType("Pets", List[Pet])
+Pets: TypeAlias = List[Pet]
 
 
-UID = TypeAliasType("UID", Annotated[int, Meta(ge=0)])
+UID: TypeAlias = Annotated[int, Meta(ge=0)]
 
 
-Phone = TypeAliasType("Phone", Annotated[str, Meta(min_length=3)])
+Phone: TypeAlias = Annotated[str, Meta(min_length=3)]
 
 
-FaxItem = TypeAliasType("FaxItem", Annotated[str, Meta(min_length=3)])
+FaxItem: TypeAlias = Annotated[str, Meta(min_length=3)]
 
 
 class User(Struct):
     id: Annotated[int, Meta(ge=0)]
     name: Annotated[str, Meta(max_length=256)]
     uid: UID
-    tag: Optional[Annotated[str, Meta(max_length=64)]] = None
-    phones: Optional[List[Phone]] = None
-    fax: Optional[List[FaxItem]] = None
-    height: Optional[Annotated[Union[int, float], Meta(ge=1.0, le=300.0)]] = None
-    weight: Optional[Annotated[Union[float, int], Meta(ge=1.0, le=1000.0)]] = None
-    age: Optional[Annotated[int, Meta(gt=0, le=200)]] = None
-    rating: Optional[Annotated[float, Meta(gt=0.0, le=5.0)]] = None
+    tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
+    phones: Union[List[Phone], UnsetType] = UNSET
+    fax: Union[List[FaxItem], UnsetType] = UNSET
+    height: Union[Annotated[Union[int, float], Meta(ge=1.0, le=300.0)], UnsetType] = (
+        UNSET
+    )
+    weight: Union[Annotated[Union[float, int], Meta(ge=1.0, le=1000.0)], UnsetType] = (
+        UNSET
+    )
+    age: Union[Annotated[int, Meta(gt=0, le=200)], UnsetType] = UNSET
+    rating: Union[Annotated[float, Meta(gt=0.0, le=5.0)], UnsetType] = UNSET
 
 
-Users = TypeAliasType("Users", List[User])
+Users: TypeAlias = List[User]
 
 
-Id = TypeAliasType("Id", str)
+Id: TypeAlias = str
 
 
-Rules = TypeAliasType("Rules", List[str])
+Rules: TypeAlias = List[str]
 
 
 class Error(Struct):
@@ -56,29 +60,33 @@ class Error(Struct):
 
 
 class Api(Struct):
-    apiKey: Optional[
-        Annotated[str, Meta(description='To be used as a dataset parameter value')]
-    ] = None
-    apiVersionNumber: Optional[
-        Annotated[str, Meta(description='To be used as a version parameter value')]
-    ] = None
-    apiUrl: Optional[
+    apiKey: Union[
+        Annotated[str, Meta(description='To be used as a dataset parameter value')],
+        UnsetType,
+    ] = UNSET
+    apiVersionNumber: Union[
+        Annotated[str, Meta(description='To be used as a version parameter value')],
+        UnsetType,
+    ] = UNSET
+    apiUrl: Union[
         Annotated[
             str,
             Meta(description="The URL describing the dataset's fields", min_length=1),
-        ]
-    ] = None
-    apiDocumentationUrl: Optional[
-        Annotated[str, Meta(description='A URL to the API console for each API')]
-    ] = None
+        ],
+        UnsetType,
+    ] = UNSET
+    apiDocumentationUrl: Union[
+        Annotated[str, Meta(description='A URL to the API console for each API')],
+        UnsetType,
+    ] = UNSET
 
 
-Apis = TypeAliasType("Apis", List[Api])
+Apis: TypeAlias = List[Api]
 
 
 class Event(Struct):
-    name: Optional[str] = None
+    name: Union[str, UnsetType] = UNSET
 
 
 class Result(Struct):
-    event: Optional[Event] = None
+    event: Union[Event, UnsetType] = UNSET

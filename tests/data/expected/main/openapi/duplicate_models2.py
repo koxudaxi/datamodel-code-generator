@@ -5,9 +5,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class PetType(Enum):
@@ -40,3 +40,7 @@ class Car(BaseModel):
     tag: Optional[str] = None
     type: CarType
     details: Optional[CarDetails] = None
+
+
+class Cars(RootModel[Any]):
+    root: Any
