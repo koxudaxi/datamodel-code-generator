@@ -1,0 +1,31 @@
+FeedbackItemBase:
+  type: object
+  properties:
+    id:
+      type: integer
+    message:
+      type: string
+  required:
+    - id
+    - message
+
+FeedbackItem:
+  allOf:
+    - $ref: '#/FeedbackItemBase'
+    - type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - created_at
+
+FeedbackItemCreate:
+  allOf:
+    - $ref: '#/FeedbackItemBase'
+    - type: object
+      properties:
+        user_id:
+          type: integer
+      required:
+        - user_id

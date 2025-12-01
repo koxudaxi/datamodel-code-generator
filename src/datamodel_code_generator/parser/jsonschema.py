@@ -1914,7 +1914,7 @@ class JsonSchemaParser(Parser):
                 reserved_refs = set(self.reserved_refs.get(key) or [])
                 while reserved_refs:
                     for reserved_path in sorted(reserved_refs):
-                        reference = self.model_resolver.get(reserved_path)
+                        reference = self.model_resolver.references.get(reserved_path)
                         if not reference or reference.loaded:
                             continue
                         object_paths = reserved_path.split("#/", 1)[-1].split("/")
