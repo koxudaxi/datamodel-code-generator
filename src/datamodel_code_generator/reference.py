@@ -175,6 +175,8 @@ SINGULAR_NAME_SUFFIX: str = "Item"
 
 ID_PATTERN: Pattern[str] = re.compile(r"^#[^/].*")
 
+SPECIAL_PATH_MARKER: str = "#-datamodel-code-generator-#-"
+
 T = TypeVar("T")
 
 
@@ -509,7 +511,7 @@ class ModelResolver:  # noqa: PLR0904
             joined_path = get_relative_path(self._base_path, resolved_file_path).as_posix()
             if fragment:
                 joined_path += f"#{fragment}"
-        if ID_PATTERN.match(joined_path):
+        if ID_PATTERN.match(joined_path) and SPECIAL_PATH_MARKER not in joined_path:
             id_scope = "/".join(self.current_root)
             scoped_ids = self.ids[id_scope]
             ref: str | None = scoped_ids.get(joined_path)

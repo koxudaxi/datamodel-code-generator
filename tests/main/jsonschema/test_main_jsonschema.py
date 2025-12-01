@@ -561,6 +561,18 @@ def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, output_fil
     )
 
 
+def test_main_jsonschema_stdin_oneof_ref(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
+    """Test JSON Schema with oneOf $ref from stdin."""
+    run_main_and_assert(
+        stdin_path=JSON_SCHEMA_DATA_PATH / "stdin_oneof_ref.json",
+        output_path=output_file,
+        monkeypatch=monkeypatch,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="stdin_oneof_ref.py",
+    )
+
+
 def test_main_jsonschema_ids(output_dir: Path) -> None:
     """Test JSON Schema with multiple IDs."""
     with freeze_time(TIMESTAMP):
