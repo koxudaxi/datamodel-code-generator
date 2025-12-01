@@ -896,6 +896,32 @@ def test_main_all_of_with_object(output_file: Path) -> None:
         )
 
 
+def test_main_all_of_merge_same_property(output_file: Path) -> None:
+    """Test allOf merging when duplicate property names exist across refs."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_merge_same_property.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_merge_same_property.py",
+            extra_args=["--class-name", "Model"],
+        )
+
+
+def test_main_all_of_merge_boolean_property(output_file: Path) -> None:
+    """Test allOf merging when a property has a boolean schema (false)."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_merge_boolean_property.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_merge_boolean_property.py",
+            extra_args=["--class-name", "Model"],
+        )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
