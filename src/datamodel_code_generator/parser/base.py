@@ -1044,7 +1044,7 @@ class Parser(ABC):
         for duplicate in duplicates:
             models.remove(duplicate)
 
-    def __find_duplicate_models_across_modules(
+    def __find_duplicate_models_across_modules(  # noqa: PLR6301
         self,
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
     ) -> list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]]:
@@ -1154,9 +1154,7 @@ class Parser(ABC):
             return None
 
         self.__validate_shared_module_name(module_models)
-        return self.__create_shared_module_from_duplicates(
-            module_models, duplicates, require_update_action_models
-        )
+        return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
 
     def __collapse_root_models(  # noqa: PLR0912
         self,
