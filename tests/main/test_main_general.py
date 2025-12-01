@@ -22,6 +22,7 @@ from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
+    OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
     run_main_and_assert,
@@ -508,4 +509,92 @@ def test_check_normalizes_line_endings(output_file: Path) -> None:
         input_file_type="jsonschema",
         extra_args=["--disable-timestamp", "--check"],
         expected_exit=Exit.OK,
+    )
+
+
+def test_check_directory_matches(output_dir: Path) -> None:
+    """Test --check returns OK when directory matches."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_directory_file_differs(output_dir: Path) -> None:
+    """Test --check returns DIFF when a file in directory differs."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    py_files = list(output_dir.rglob("*.py"))
+    py_files[0].write_text("# Modified content\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_missing_file(output_dir: Path) -> None:
+    """Test --check returns DIFF when a generated file is missing."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    py_files = list(output_dir.rglob("*.py"))
+    py_files[0].unlink()
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_extra_file(output_dir: Path) -> None:
+    """Test --check returns DIFF when an extra file exists."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    (output_dir / "extra_model.py").write_text("# Extra file\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_does_not_exist(tmp_path: Path) -> None:
+    """Test --check returns DIFF when output directory does not exist."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=tmp_path / "nonexistent_model",
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
     )
