@@ -600,6 +600,12 @@ general_options.add_argument(
     help="Generate pyproject.toml configuration from the provided CLI arguments and exit",
 )
 general_options.add_argument(
+    "--generate-cli-command",
+    action="store_true",
+    default=None,
+    help="Generate CLI command from pyproject.toml configuration and exit",
+)
+general_options.add_argument(
     "--version",
     action="store_true",
     help="show version",
