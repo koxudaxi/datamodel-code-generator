@@ -465,6 +465,7 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 data_types[media_type] = self.parse_schema(name, media_obj.schema_, [*path, media_type])
             elif media_obj.schema_ is not None:
+                self.resolve_ref(media_obj.schema_.ref)
                 data_types[media_type] = self.get_ref_data_type(media_obj.schema_.ref)
         return data_types
 
@@ -499,6 +500,7 @@ class OpenAPIParser(JsonSchemaParser):
                         [*path, str(status_code), content_type],  # pyright: ignore[reportArgumentType]
                     )
                 else:
+                    self.resolve_ref(object_schema.ref)
                     data_types[status_code][content_type] = self.get_ref_data_type(  # pyright: ignore[reportArgumentType]
                         object_schema.ref
                     )
