@@ -2905,3 +2905,25 @@ def test_main_jsonschema_reuse_scope_tree_branch(output_dir: Path) -> None:
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree"],
     )
+
+
+def test_main_jsonschema_reuse_scope_tree_dataclass(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with dataclasses output type (supports inheritance)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with TypedDict output type (no inheritance, direct reference)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_typeddict",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_typeddict",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "typing.TypedDict"],
+    )

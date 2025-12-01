@@ -1105,12 +1105,21 @@ class Parser(ABC):
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
+        supports_inheritance = issubclass(
+            self.data_model_type,
+            (
+                pydantic_model.BaseModel,
+                pydantic_model_v2.BaseModel,
+                dataclass_model.DataClass,
+            ),
+        )
+
         for duplicate_module, duplicate_model, _, canonical_model in duplicates:
             shared_ref = canonical_to_shared_ref[canonical_model]
             for module, models in module_models:
                 if module != duplicate_module or duplicate_model not in models:
                     continue
-                if isinstance(duplicate_model, Enum):
+                if isinstance(duplicate_model, Enum) or not supports_inheritance:
                     for child in duplicate_model.reference.children[:]:
                         data_model = get_most_of_parent(child)
                         if data_model in models and isinstance(child, DataType):
