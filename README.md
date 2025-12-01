@@ -478,6 +478,8 @@ Model customization:
                         Set name of models defined inline from the parent model
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
+  --skip-root-model     Skip generating the root model and only output models defined in
+                        $defs
   --target-python-version {3.9,3.10,3.11,3.12,3.13,3.14}
                         target python version
   --treat-dot-as-module
