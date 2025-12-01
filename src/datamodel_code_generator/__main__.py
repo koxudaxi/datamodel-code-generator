@@ -491,7 +491,7 @@ def _format_cli_value(value: str | list[str]) -> str:
     return f'"{value}"' if " " in value else value
 
 
-def generate_cli_command(config: dict[str, Any]) -> str:
+def generate_cli_command(config: dict[str, TomlValue]) -> str:
     """Generate CLI command from pyproject.toml configuration."""
     parts: list[str] = ["datamodel-codegen"]
 
@@ -507,7 +507,7 @@ def generate_cli_command(config: dict[str, Any]) -> str:
             elif key in BOOLEAN_OPTIONAL_OPTIONS:
                 parts.append(f"--no-{cli_key}")
         elif isinstance(value, list):
-            parts.extend((f"--{cli_key}", _format_cli_value(value)))
+            parts.extend((f"--{cli_key}", _format_cli_value(cast("list[str]", value))))
         else:
             parts.extend((f"--{cli_key}", _format_cli_value(str(value))))
 
