@@ -355,3 +355,88 @@ def test_skip_root_model_command_line(output_file: Path) -> None:
         expected_file="skip_root_model.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--skip-root-model"],
     )
+
+
+def test_check_file_matches(output_file: Path) -> None:
+    """Test --check returns OK when file matches."""
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_file_does_not_exist(tmp_path: Path) -> None:
+    """Test --check returns DIFF when file does not exist."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=tmp_path / "nonexistent.py",
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_file_differs(output_file: Path) -> None:
+    """Test --check returns DIFF when file content differs."""
+    output_file.write_text("# Different content\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_with_stdout_output(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check with stdout output returns error."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=None,
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--check cannot be used with stdout",
+    )
+
+
+def test_check_with_nonexistent_input(tmp_path: Path) -> None:
+    """Test --check with nonexistent input file returns error."""
+    run_main_and_assert(
+        input_path=tmp_path / "nonexistent.json",
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_check_normalizes_line_endings(output_file: Path) -> None:
+    """Test --check normalizes line endings (CRLF vs LF)."""
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+    content = output_file.read_text(encoding="utf-8")
+    output_file.write_bytes(content.replace("\n", "\r\n").encode("utf-8"))
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
