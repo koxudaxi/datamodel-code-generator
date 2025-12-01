@@ -229,7 +229,7 @@ class ReuseScope(Enum):
     """Scope for model reuse deduplication.
 
     module: Deduplicate identical models within each module (default).
-    tree: Deduplicate identical models across all modules, placing shared models in _shared.py.
+    tree: Deduplicate identical models across all modules, placing shared models in shared.py.
     """
 
     Module = "module"
