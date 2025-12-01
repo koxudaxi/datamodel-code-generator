@@ -224,6 +224,17 @@ class DataModelType(Enum):
     MsgspecStruct = "msgspec.Struct"
 
 
+class ReuseScope(Enum):
+    """Scope for model reuse deduplication.
+
+    module: Deduplicate identical models within each module (default).
+    tree: Deduplicate identical models across all modules, placing shared models in _shared.py.
+    """
+
+    Module = "module"
+    Tree = "tree"
+
+
 class OpenAPIScope(Enum):
     """Scopes for OpenAPI model generation."""
 
@@ -306,6 +317,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_inline_field_description: bool = False,
     use_default_kwarg: bool = False,
     reuse_model: bool = False,
+    reuse_scope: ReuseScope = ReuseScope.Module,
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
     use_one_literal_as_default: bool = False,
@@ -536,6 +548,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_inline_field_description=use_inline_field_description,
         use_default_kwarg=use_default_kwarg,
         reuse_model=reuse_model,
+        reuse_scope=reuse_scope,
         enum_field_as_literal=LiteralType.All
         if output_model_type == DataModelType.TypingTypedDict
         else enum_field_as_literal,

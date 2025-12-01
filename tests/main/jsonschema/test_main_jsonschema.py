@@ -2790,3 +2790,14 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
         ],
         expected_stderr_contains="Invalid type mapping format",
     )
+
+
+def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
+    """Test --reuse-scope=tree to deduplicate models across multiple files."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )

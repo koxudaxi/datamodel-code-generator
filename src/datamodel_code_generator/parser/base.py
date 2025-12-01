@@ -20,6 +20,7 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
+from datamodel_code_generator import ReuseScope
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
     CodeFormatter,
@@ -405,6 +406,7 @@ class Parser(ABC):
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
+        reuse_scope: ReuseScope | None = None,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
@@ -494,6 +496,7 @@ class Parser(ABC):
         self.use_inline_field_description: bool = use_inline_field_description
         self.use_default_kwarg: bool = use_default_kwarg
         self.reuse_model: bool = reuse_model
+        self.reuse_scope: ReuseScope | None = reuse_scope
         self.encoding: str = encoding
         self.enum_field_as_literal: LiteralType | None = enum_field_as_literal
         self.set_default_enum_member: bool = set_default_enum_member
@@ -1000,7 +1003,7 @@ class Parser(ABC):
                     model_field.default = model_field.data_type.reference.source.default
 
     def __reuse_model(self, models: list[DataModel], require_update_action_models: list[str]) -> None:
-        if not self.reuse_model:
+        if not self.reuse_model or self.reuse_scope == ReuseScope.Tree:
             return
         model_cache: dict[tuple[HashableComparable, ...], Reference] = {}
         duplicates = []
@@ -1038,6 +1041,81 @@ class Parser(ABC):
 
         for duplicate in duplicates:
             models.remove(duplicate)
+
+    def __reuse_model_tree_scope(  # noqa: PLR0912
+        self,
+        module_models: list[tuple[tuple[str, ...], list[DataModel]]],
+        require_update_action_models: list[str],
+    ) -> tuple[tuple[str, ...], list[DataModel]] | None:
+        """Deduplicate models across all modules, placing shared models in _shared.py."""
+        if not self.reuse_model or self.reuse_scope != ReuseScope.Tree:
+            return None
+
+        all_models: list[tuple[tuple[str, ...], DataModel]] = []
+        for module, models in module_models:
+            all_models.extend((module, model) for model in models)
+
+        model_cache: dict[tuple[HashableComparable, ...], tuple[tuple[str, ...], DataModel]] = {}
+        duplicates: list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]] = []
+
+        for module, model in all_models:
+            model_key = tuple(to_hashable(v) for v in (model.render(class_name="M"), model.imports))
+            cached = model_cache.get(model_key)
+            if cached:
+                canonical_module, canonical_model = cached
+                duplicates.append((module, model, canonical_module, canonical_model))
+            else:
+                model_cache[model_key] = (module, model)
+
+        if not duplicates:
+            return None
+
+        shared_models: list[DataModel] = []
+        canonical_to_shared_ref: dict[DataModel, Reference] = {}
+        canonical_models_with_duplicates: set[DataModel] = set()
+        canonical_models_with_duplicates.update(canonical for _, _, _, canonical in duplicates)
+
+        for canonical in canonical_models_with_duplicates:
+            canonical.file_path = Path("_shared.py")
+            canonical_to_shared_ref[canonical] = canonical.reference
+            shared_models.append(canonical)
+
+        for duplicate_module, duplicate_model, _, canonical_model in duplicates:
+            shared_ref = canonical_to_shared_ref[canonical_model]
+            for module, models in module_models:
+                if module != duplicate_module or duplicate_model not in models:
+                    continue
+                if isinstance(duplicate_model, Enum):
+                    for child in duplicate_model.reference.children[:]:
+                        data_model = get_most_of_parent(child)
+                        if data_model in models and isinstance(child, DataType):
+                            child.replace_reference(shared_ref)
+                    models.remove(duplicate_model)
+                else:
+                    index = models.index(duplicate_model)
+                    inherited_model = duplicate_model.__class__(
+                        fields=[],
+                        base_classes=[shared_ref],
+                        description=duplicate_model.description,
+                        reference=Reference(
+                            name=duplicate_model.name,
+                            path=duplicate_model.reference.path + "/reuse",
+                        ),
+                        custom_template_dir=duplicate_model._custom_template_dir,  # noqa: SLF001
+                    )
+                    if shared_ref.path in require_update_action_models:
+                        add_model_path_to_list(require_update_action_models, inherited_model)
+                    models.insert(index, inherited_model)
+                    models.remove(duplicate_model)
+                break
+
+        for canonical in canonical_models_with_duplicates:
+            for _module, models in module_models:
+                if canonical in models:
+                    models.remove(canonical)
+                    break
+
+        return ("_shared",), shared_models
 
     def __collapse_root_models(  # noqa: PLR0912
         self,
@@ -1468,6 +1546,10 @@ class Parser(ABC):
                 models,
             ))
             previous_module = module
+
+        shared_module_entry = self.__reuse_model_tree_scope(module_models, require_update_action_models)
+        if shared_module_entry:
+            module_models.insert(0, shared_module_entry)
 
         class Processed(NamedTuple):
             module: tuple[str, ...]
