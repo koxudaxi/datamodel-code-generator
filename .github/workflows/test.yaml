@@ -127,7 +127,6 @@ jobs:
           - dev
           - docs
           - pkg_meta
-          - readme
     steps:
       - uses: actions/checkout@v4
         with:

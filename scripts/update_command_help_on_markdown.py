@@ -64,21 +64,22 @@ def main() -> Exit:
     """Update or validate command help in target markdown files."""
     help_text = get_help()
     arg_parser.add_argument(
-        "--validate",
+        "--check",
         action="store_true",
-        help="Validate the file content is up to date",
+        help="Check if the file content is up to date without modifying",
     )
     args = arg_parser.parse_args()
-    validate: bool = args.validate
+    check: bool = args.check
 
     for file_path in TARGET_MARKDOWN_FILES:
         with file_path.open("r") as f:
             markdown_text = f.read()
         new_markdown_text = inject_help(markdown_text, help_text)
-        if validate and new_markdown_text != markdown_text:
-            return Exit.ERROR
-        with file_path.open("w") as f:
-            f.write(new_markdown_text)
+        if new_markdown_text != markdown_text:
+            if check:
+                return Exit.ERROR
+            with file_path.open("w") as f:
+                f.write(new_markdown_text)
     return Exit.OK
 
 
