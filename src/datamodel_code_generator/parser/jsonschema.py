@@ -512,6 +512,7 @@ class JsonSchemaParser(Parser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        skip_root_model: bool = False,
         use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
@@ -599,6 +600,7 @@ class JsonSchemaParser(Parser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            skip_root_model=skip_root_model,
             use_type_alias=use_type_alias,
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
@@ -1900,7 +1902,7 @@ class JsonSchemaParser(Parser):
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
                     self.parse_obj(model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path)
-                else:
+                elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model in definitions.items():
                     path = [*path_parts, _schema_path, key]

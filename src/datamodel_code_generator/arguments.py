@@ -162,6 +162,12 @@ model_options.add_argument(
     help="Models generated with a root-type field will be merged into the models using that root-type model",
 )
 model_options.add_argument(
+    "--skip-root-model",
+    action="store_true",
+    default=None,
+    help="Skip generating the model for the root schema element",
+)
+model_options.add_argument(
     "--disable-appending-item-suffix",
     help="Disable appending `Item` suffix to model name in an array",
     action="store_true",

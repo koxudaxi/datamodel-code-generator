@@ -330,3 +330,28 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
     """Test that invalid input raises ArgumentTypeError."""
     with pytest.raises(ArgumentTypeError, match=match):
         _dataclass_arguments(json_str)
+
+
+def test_skip_root_model(tmp_path: Path) -> None:
+    """Test --skip-root-model flag functionality using generate()."""
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "skip_root_model_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        skip_root_model=True,
+    )
+    assert_file_content(output_file, "skip_root_model.py")
+
+
+def test_skip_root_model_command_line(output_file: Path) -> None:
+    """Test --skip-root-model flag via command line."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "skip_root_model_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="skip_root_model.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--skip-root-model"],
+    )
