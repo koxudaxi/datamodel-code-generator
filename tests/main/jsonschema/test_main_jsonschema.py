@@ -2814,9 +2814,7 @@ def test_main_jsonschema_reuse_scope_tree_enum(output_dir: Path) -> None:
     )
 
 
-def test_main_jsonschema_reuse_scope_tree_warning(
-    capsys: pytest.CaptureFixture[str], output_dir: Path
-) -> None:
+def test_main_jsonschema_reuse_scope_tree_warning(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
     """Test warning when --reuse-scope=tree is used without --reuse-model."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
