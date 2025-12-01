@@ -158,7 +158,7 @@ model_options.add_argument(
     "--skip-root-model",
     action="store_true",
     default=None,
-    help="Skip generating the root model and only output models defined in $defs",
+    help="Skip generating the model for the root schema element",
 )
 model_options.add_argument(
     "--disable-appending-item-suffix",
