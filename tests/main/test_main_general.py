@@ -370,6 +370,8 @@ strict-types = ["str", "int"]
             capsys=capsys,
             expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "list_option.txt",
         )
+
+
 @pytest.mark.parametrize(
     ("json_str", "expected"),
     [
