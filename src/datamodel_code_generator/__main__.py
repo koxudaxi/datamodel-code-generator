@@ -591,7 +591,6 @@ def _compare_directories(
     return diffs, missing_files, extra_files
 
 
-def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
 def _format_cli_value(value: str | list[str]) -> str:
     """Format a value for CLI argument."""
     if isinstance(value, list):
@@ -622,9 +621,8 @@ def generate_cli_command(config: dict[str, TomlValue]) -> str:
     return " ".join(parts) + "\n"
 
 
-def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
+def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
-    # add cli completion support
     argcomplete.autocomplete(arg_parser)
 
     if args is None:  # pragma: no cover
