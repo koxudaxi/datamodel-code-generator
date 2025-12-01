@@ -2851,7 +2851,7 @@ def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
 def test_main_jsonschema_reuse_scope_tree_conflict(
     capsys: pytest.CaptureFixture[str], output_dir: Path
 ) -> None:
-    """Test --reuse-scope=tree error when schema name conflicts with shared module."""
+    """Test --reuse-scope=tree error when schema file name conflicts with shared module."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict",
         output_path=output_dir,
@@ -2859,5 +2859,42 @@ def test_main_jsonschema_reuse_scope_tree_conflict(
         extra_args=["--reuse-model", "--reuse-scope", "tree"],
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="Schema file 'shared' conflicts with the shared module name",
+        expected_stderr_contains="Schema file or directory 'shared' conflicts with the shared module name",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_conflict_dir(
+    capsys: pytest.CaptureFixture[str], output_dir: Path
+) -> None:
+    """Test --reuse-scope=tree error when schema directory name conflicts with shared module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict_dir",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Schema file or directory 'shared' conflicts with the shared module name",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_no_conflict_dir(output_dir: Path) -> None:
+    """Test --reuse-scope=tree does not error when shared/ dir exists but no duplicates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_no_conflict_dir",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_no_conflict_dir",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_multi(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with multiple files where canonical is not in first module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_multi",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_multi",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
     )

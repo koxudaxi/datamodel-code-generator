@@ -20,7 +20,7 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, ReuseScope
+from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, Error, ReuseScope
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
     CodeFormatter,
@@ -1044,24 +1044,11 @@ class Parser(ABC):
         for duplicate in duplicates:
             models.remove(duplicate)
 
-    def __reuse_model_tree_scope(  # noqa: PLR0912
+    def __find_duplicate_models_across_modules(
         self,
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
-        require_update_action_models: list[str],
-    ) -> tuple[tuple[str, ...], list[DataModel]] | None:
-        """Deduplicate models across all modules, placing shared models in shared.py."""
-        if not self.reuse_model or self.reuse_scope != ReuseScope.Tree:
-            return None
-
-        shared_module = self.shared_module_name
-        existing_module_names = {module[0] for module, _ in module_models if len(module) == 1}
-        if shared_module in existing_module_names:
-            msg = (
-                f"Schema file '{shared_module}' conflicts with the shared module name. "
-                f"Use --shared-module-name to specify a different name."
-            )
-            raise Exception(msg)  # noqa: TRY002
-
+    ) -> list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]]:
+        """Find duplicate models across all modules by comparing render output and imports."""
         all_models: list[tuple[tuple[str, ...], DataModel]] = []
         for module, models in module_models:
             all_models.extend((module, model) for model in models)
@@ -1078,15 +1065,40 @@ class Parser(ABC):
             else:
                 model_cache[model_key] = (module, model)
 
-        if not duplicates:
-            return None
+        return duplicates
+
+    def __validate_shared_module_name(
+        self,
+        module_models: list[tuple[tuple[str, ...], list[DataModel]]],
+    ) -> None:
+        """Validate that the shared module name doesn't conflict with existing modules."""
+        shared_module = self.shared_module_name
+        existing_module_names = {module[0] for module, _ in module_models}
+        if shared_module in existing_module_names:
+            msg = (
+                f"Schema file or directory '{shared_module}' conflicts with the shared module name. "
+                f"Use --shared-module-name to specify a different name."
+            )
+            raise Error(msg)
+
+    def __create_shared_module_from_duplicates(  # noqa: PLR0912
+        self,
+        module_models: list[tuple[tuple[str, ...], list[DataModel]]],
+        duplicates: list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]],
+        require_update_action_models: list[str],
+    ) -> tuple[tuple[str, ...], list[DataModel]]:
+        """Create shared module with canonical models and replace duplicates with inherited models."""
+        shared_module = self.shared_module_name
 
         shared_models: list[DataModel] = []
         canonical_to_shared_ref: dict[DataModel, Reference] = {}
-        canonical_models_with_duplicates: set[DataModel] = set()
-        canonical_models_with_duplicates.update(canonical for _, _, _, canonical in duplicates)
+        canonical_models_seen: set[DataModel] = set()
 
-        for canonical in canonical_models_with_duplicates:
+        # Process in order of first appearance in duplicates to ensure stable ordering
+        for _, _, _, canonical in duplicates:
+            if canonical in canonical_models_seen:
+                continue
+            canonical_models_seen.add(canonical)
             canonical.file_path = Path(f"{shared_module}.py")
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
@@ -1120,13 +1132,31 @@ class Parser(ABC):
                     models.remove(duplicate_model)
                 break
 
-        for canonical in canonical_models_with_duplicates:
+        for canonical in canonical_models_seen:
             for _module, models in module_models:
                 if canonical in models:
                     models.remove(canonical)
                     break
 
         return (shared_module,), shared_models
+
+    def __reuse_model_tree_scope(
+        self,
+        module_models: list[tuple[tuple[str, ...], list[DataModel]]],
+        require_update_action_models: list[str],
+    ) -> tuple[tuple[str, ...], list[DataModel]] | None:
+        """Deduplicate models across all modules, placing shared models in shared.py."""
+        if not self.reuse_model or self.reuse_scope != ReuseScope.Tree:
+            return None
+
+        duplicates = self.__find_duplicate_models_across_modules(module_models)
+        if not duplicates:
+            return None
+
+        self.__validate_shared_module_name(module_models)
+        return self.__create_shared_module_from_duplicates(
+            module_models, duplicates, require_update_action_models
+        )
 
     def __collapse_root_models(  # noqa: PLR0912
         self,
