@@ -16,15 +16,18 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
     InputFileType,
+    PythonVersion,
     PythonVersionMin,
     chdir,
     generate,
 )
 from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
     run_main_and_assert,
     run_main_url_and_assert,
@@ -124,6 +127,49 @@ def test_main_jsonschema(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="general.py",
+    )
+
+
+def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) -> None:
+    """Test JSON Schema code generation with dataclass arguments passed but using Pydantic model.
+
+    This verifies that dataclass_arguments is properly ignored for non-dataclass models.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general.py",
+        extra_args=[
+            "--output-model",
+            "pydantic.BaseModel",
+            "--dataclass-arguments",
+            '{"slots": true, "order": true}',
+        ],
+    )
+
+
+def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> None:
+    """Test JSON Schema code generation with frozen and keyword-only dataclass.
+
+    This tests the 'if existing:' False branch in _create_data_model when
+    no --dataclass-arguments is provided but --frozen and --keyword-only are set.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="general_dataclass_frozen_kw_only.py",
+        extra_args=[
+            "--output-model",
+            "dataclasses.dataclass",
+            "--frozen",
+            "--keyword-only",
+            "--target-python-version",
+            "3.10",
+        ],
     )
 
 
@@ -328,6 +374,40 @@ def test_main_invalid_model_name(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
+    """Test reserved names are safely suffixed and aliased."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_property.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_property.py",
+    )
+
+
+def test_main_jsonschema_with_local_anchor(output_file: Path) -> None:
+    """Test $id anchor lookup resolves without error and reuses definitions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "with_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="with_anchor.py",
+    )
+
+
+def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
+    """Test missing $id anchor produces a clear error instead of KeyError trace."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "missing_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unresolved $id reference '#address'",
+    )
+
+
 def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
     root_id_response = mocker.Mock()
@@ -478,6 +558,18 @@ def test_main_jsonschema_id_as_stdin(monkeypatch: pytest.MonkeyPatch, output_fil
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="id_stdin.py",
+    )
+
+
+def test_main_jsonschema_stdin_oneof_ref(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
+    """Test JSON Schema with oneOf $ref from stdin."""
+    run_main_and_assert(
+        stdin_path=JSON_SCHEMA_DATA_PATH / "stdin_oneof_ref.json",
+        output_path=output_file,
+        monkeypatch=monkeypatch,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="stdin_oneof_ref.py",
     )
 
 
@@ -813,6 +905,32 @@ def test_main_all_of_with_object(output_file: Path) -> None:
             output_path=output_file,
             input_file_type="jsonschema",
             assert_func=assert_file_content,
+        )
+
+
+def test_main_all_of_merge_same_property(output_file: Path) -> None:
+    """Test allOf merging when duplicate property names exist across refs."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_merge_same_property.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_merge_same_property.py",
+            extra_args=["--class-name", "Model"],
+        )
+
+
+def test_main_all_of_merge_boolean_property(output_file: Path) -> None:
+    """Test allOf merging when a property has a boolean schema (false)."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_merge_boolean_property.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_merge_boolean_property.py",
+            extra_args=["--class-name", "Model"],
         )
 
 
@@ -1783,6 +1901,26 @@ def test_main_dataclass_field(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_312),
+    reason="Black does not support Python 3.12",
+)
+def test_main_dataclass_field_py312(output_file: Path) -> None:
+    """Test dataclass field generation with Python 3.12 type statement."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "user.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.12",
+        ],
+    )
+
+
 def test_main_jsonschema_enum_root_literal(output_file: Path) -> None:
     """Test enum root with literal type."""
     run_main_and_assert(
@@ -1992,9 +2130,10 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
             "pydantic_v2.BaseModel",
             "discriminator_with_external_reference.py",
         ),
-        (
+        pytest.param(
             "msgspec.Struct",
             "discriminator_with_external_reference_msgspec.py",
+            marks=MSGSPEC_LEGACY_BLACK_SKIP,
         ),
     ],
 )
@@ -2019,9 +2158,10 @@ def test_main_jsonschema_external_discriminator(
             "pydantic.BaseModel",
             "discriminator_with_external_references_folder",
         ),
-        (
+        pytest.param(
             "msgspec.Struct",
             "discriminator_with_external_references_folder_msgspec",
+            marks=MSGSPEC_LEGACY_BLACK_SKIP,
         ),
     ],
 )
@@ -2288,6 +2428,42 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
     assert_file_content(output_file, "discriminator_literals_msgspec_keyword_only_omit_defaults.py")
 
 
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_null_field(output_file: Path) -> None:
+    """Test msgspec Struct generation with null type fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_null_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_falsy_defaults(output_file: Path) -> None:
+    """Test msgspec Struct generation preserves falsy default values (0, '', False)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_falsy_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 def test_main_invalid_import_name(output_dir: Path) -> None:
     """Test invalid import name handling."""
     run_main_and_assert(
@@ -2298,6 +2474,15 @@ def test_main_invalid_import_name(output_dir: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+    )
+
+
+def test_main_alias_import_alias(output_dir: Path) -> None:
+    """Ensure imports with aliases are retained after cleanup."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "alias_import_alias",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "alias_import_alias",
     )
 
 
@@ -2642,4 +2827,141 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
             "invalid_without_equals",
         ],
         expected_stderr_contains="Invalid type mapping format",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
+    """Test --reuse-scope=tree to deduplicate models across multiple files."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_enum(output_dir: Path) -> None:
+    """Test --reuse-scope=tree to deduplicate enum models across multiple files."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_enum",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_enum",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_warning(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test warning when --reuse-scope=tree is used without --reuse-model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-scope", "tree"],
+        capsys=capsys,
+        expected_stderr_contains="Warning: --reuse-scope=tree has no effect without --reuse-model",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_no_dup(output_dir: Path) -> None:
+    """Test --reuse-scope=tree when there are no duplicate models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_no_dup",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_no_dup",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with self-referencing models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_self_ref",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_self_ref",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_conflict(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test --reuse-scope=tree error when schema file name conflicts with shared module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Schema file or directory 'shared' conflicts with the shared module name",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_conflict_dir(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test --reuse-scope=tree error when schema directory name conflicts with shared module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict_dir",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Schema file or directory 'shared' conflicts with the shared module name",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_no_conflict_dir(output_dir: Path) -> None:
+    """Test --reuse-scope=tree does not error when shared/ dir exists but no duplicates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_no_conflict_dir",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_no_conflict_dir",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_multi(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with multiple files where canonical is not in first module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_multi",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_multi",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_branch(output_dir: Path) -> None:
+    """Test --reuse-scope=tree branch coverage with duplicate in later modules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_branch",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_branch",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_dataclass(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with dataclasses output type (supports inheritance)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with TypedDict output type (no inheritance, direct reference)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_typeddict",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_typeddict",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "typing.TypedDict"],
     )

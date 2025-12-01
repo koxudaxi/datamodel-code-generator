@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties": {
+    "data": { "$ref": "#/$defs/ModelA" },
+    "info": { "$ref": "#/$defs/SharedModel2" }
+  },
+  "$defs": {
+    "ModelA": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
+    },
+    "SharedModel2": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "string" }
+      }
+    }
+  }
+}

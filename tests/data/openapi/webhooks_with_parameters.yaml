@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info:
+  title: Webhook Test API with Parameters
+  version: 1.0.0
+webhooks:
+  pet.new:
+    parameters:
+      - name: X-Webhook-Id
+        in: query
+        required: true
+        schema:
+          type: string
+    post:
+      parameters:
+        - name: X-Request-Id
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pet"
+      responses:
+        '200':
+          description: OK
+  pet.updated:
+    parameters:
+      - name: X-Correlation-Id
+        in: query
+        required: true
+        schema:
+          type: string
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pet"
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string

@@ -1,0 +1,28 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Test API",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ns.wrapper": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/ns.subns.item"
+          }
+        }
+      },
+      "ns.subns.item": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

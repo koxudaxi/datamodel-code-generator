@@ -19,11 +19,14 @@ from pydantic import BaseModel
 from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    DataclassArguments,
     DataModelType,
     Error,
     InputFileType,
     InvalidClassNameError,
     OpenAPIScope,
+    ReuseScope,
     enable_debug_message,
     generate,
 )
@@ -357,9 +360,12 @@ class Config(BaseModel):
     use_standard_collections: bool = False
     use_schema_description: bool = False
     use_field_description: bool = False
+    use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
+    reuse_scope: ReuseScope = ReuseScope.Module
+    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
     use_one_literal_as_default: bool = False
@@ -390,6 +396,7 @@ class Config(BaseModel):
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
+    skip_root_model: bool = False
     use_type_alias: bool = False
     special_field_name_prefix: Optional[str] = None  # noqa: UP045
     remove_special_field_name_prefix: bool = False
@@ -407,6 +414,7 @@ class Config(BaseModel):
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     keyword_only: bool = False
     frozen_dataclasses: bool = False
+    dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
     no_alias: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
@@ -577,6 +585,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
     if config.disable_warnings:
         warnings.simplefilter("ignore")
+
+    if config.reuse_scope == ReuseScope.Tree and not config.reuse_model:
+        print(  # noqa: T201
+            "Warning: --reuse-scope=tree has no effect without --reuse-model",
+            file=sys.stderr,
+        )
+
     extra_template_data: defaultdict[str, dict[str, Any]] | None
     if config.extra_template_data is None:
         extra_template_data = None
@@ -654,9 +669,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_standard_collections=config.use_standard_collections,
             use_schema_description=config.use_schema_description,
             use_field_description=config.use_field_description,
+            use_attribute_docstrings=config.use_attribute_docstrings,
             use_inline_field_description=config.use_inline_field_description,
             use_default_kwarg=config.use_default_kwarg,
             reuse_model=config.reuse_model,
+            reuse_scope=config.reuse_scope,
+            shared_module_name=config.shared_module_name,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
             use_one_literal_as_default=config.use_one_literal_as_default,
@@ -685,6 +703,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
             collapse_root_models=config.collapse_root_models,
+            skip_root_model=config.skip_root_model,
             use_type_alias=config.use_type_alias,
             use_union_operator=config.use_union_operator,
             special_field_name_prefix=config.special_field_name_prefix,
@@ -706,6 +725,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             no_alias=config.no_alias,
             formatters=config.formatters,
             parent_scoped_naming=config.parent_scoped_naming,
+            dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
         )

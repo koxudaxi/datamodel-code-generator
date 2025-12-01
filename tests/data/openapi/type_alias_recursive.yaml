@@ -1,0 +1,79 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: TypeAlias Test
+  description: |-
+    Test cases for recursive models
+components:
+  schemas:
+
+    # ----------------------------------------------------------------
+    # Simple self-referential recursive types
+    # ----------------------------------------------------------------
+
+    File:
+      type: object
+      required:
+        - path
+      properties:
+        path:
+          type: string
+
+    Folder:
+      type: object
+      required:
+        - files
+        - folders
+      properties:
+        address:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/File"
+        subfolders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Folder"
+
+    ElementaryType:
+      nullable: true
+      oneOf:
+        - type: boolean
+        - type: string
+        - type: integer
+        - type: number
+
+    JsonType:
+      oneOf:
+        - $ref: "#/components/schemas/ElementaryType"
+        - type: array
+          items:
+            $ref: "#/components/schemas/JsonType"
+        - type: object
+          additionalProperties:
+            $ref: "#/components/schemas/JsonType"
+
+    # ----------------------------------------------------------------
+    # Binary recursive types
+    # ----------------------------------------------------------------
+
+    Space:
+      type: object
+      properties:
+        label:
+          type: string
+        data:
+          $ref: "#/components/schemas/JsonType"
+        dual:
+          $ref: "#/components/schemas/DualSpace"
+
+    DualSpace:
+      type: object
+      properties:
+        label:
+          type: string
+        data:
+          $ref: "#/components/schemas/JsonType"
+        predual:
+          $ref: "#/components/schemas/Space"

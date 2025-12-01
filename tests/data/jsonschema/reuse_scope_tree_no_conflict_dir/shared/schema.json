@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "data": { "$ref": "#/$defs/ModelA" }
+  },
+  "$defs": {
+    "ModelA": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
+    }
+  }
+}

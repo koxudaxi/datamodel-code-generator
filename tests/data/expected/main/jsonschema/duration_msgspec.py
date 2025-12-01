@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any, Union
 
-from msgspec import Struct
-from typing_extensions import TypeAliasType
+from msgspec import UNSET, Struct, UnsetType
+from typing_extensions import TypeAlias
 
-Model = TypeAliasType("Model", Any)
+Model: TypeAlias = Any
 
 
 class Test(Struct):
-    s_duration: Optional[timedelta] = None
+    s_duration: Union[timedelta, UnsetType] = UNSET

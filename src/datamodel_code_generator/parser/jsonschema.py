@@ -7,6 +7,7 @@ Python data models. Supports draft-04 through draft-2020-12 schemas.
 from __future__ import annotations
 
 import enum as _enum
+import json
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import cached_property, lru_cache
@@ -20,7 +21,10 @@ from pydantic import (
 )
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    DataclassArguments,
     InvalidClassNameError,
+    ReuseScope,
     YamlValue,
     load_yaml,
     load_yaml_dict,
@@ -473,9 +477,12 @@ class JsonSchemaParser(Parser):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_attribute_docstrings: bool = False,
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
+        reuse_scope: ReuseScope | None = None,
+        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         use_one_literal_as_default: bool = False,
@@ -506,6 +513,7 @@ class JsonSchemaParser(Parser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        skip_root_model: bool = False,
         use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
@@ -525,6 +533,7 @@ class JsonSchemaParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
@@ -556,9 +565,12 @@ class JsonSchemaParser(Parser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             use_field_description=use_field_description,
+            use_attribute_docstrings=use_attribute_docstrings,
             use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
+            reuse_scope=reuse_scope,
+            shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,
@@ -589,6 +601,7 @@ class JsonSchemaParser(Parser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            skip_root_model=skip_root_model,
             use_type_alias=use_type_alias,
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
@@ -608,6 +621,7 @@ class JsonSchemaParser(Parser):
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
+            dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
         )
 
@@ -771,6 +785,53 @@ class JsonSchemaParser(Parser):
             result[key] = value
         return result
 
+    def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
+        """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        file_part, fragment = ([*resolved_ref.split("#", 1), ""])[:2]
+        raw_doc = self._get_ref_body(file_part) if file_part else self.raw_obj
+
+        target_schema: dict[str, YamlValue] | YamlValue = raw_doc
+        if fragment:
+            pointer = [p for p in fragment.split("/") if p]
+            target_schema = get_model_by_path(raw_doc, pointer)
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
+
+    def _schema_signature(self, prop_schema: JsonSchemaObject | bool) -> str | bool:  # noqa: FBT001, PLR6301
+        """Normalize property schema for comparison across allOf items."""
+        if isinstance(prop_schema, bool):
+            return prop_schema
+        return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
+
+    def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
+        """Merge allOf items when they share object properties to avoid duplicate models."""
+        resolved_items: list[JsonSchemaObject] = []
+        property_signatures: dict[str, set[str | bool]] = {}
+        for item in obj.allOf:
+            resolved_item = self._load_ref_schema_object(item.ref) if item.ref else item
+            resolved_items.append(resolved_item)
+            if resolved_item.properties:
+                for prop_name, prop_schema in resolved_item.properties.items():
+                    property_signatures.setdefault(prop_name, set()).add(self._schema_signature(prop_schema))
+
+        if obj.properties:
+            for prop_name, prop_schema in obj.properties.items():
+                property_signatures.setdefault(prop_name, set()).add(self._schema_signature(prop_schema))
+
+        if not any(len(signatures) > 1 for signatures in property_signatures.values()):
+            return None
+
+        merged_schema: dict[str, Any] = obj.dict(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        for resolved_item in resolved_items:
+            merged_schema = self._deep_merge(merged_schema, resolved_item.dict(exclude_unset=True, by_alias=True))
+
+        if "required" in merged_schema and isinstance(merged_schema["required"], list):
+            merged_schema["required"] = list(dict.fromkeys(merged_schema["required"]))
+
+        merged_schema.pop("allOf", None)
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_schema)
+
     def parse_combined_schema(
         self,
         name: str,
@@ -829,10 +890,26 @@ class JsonSchemaParser(Parser):
         return self.parse_combined_schema(name, obj, path, "oneOf")
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
-        """Create data model instance with conditional frozen parameter for DataClass."""
+        """Create data model instance with dataclass_arguments support for DataClass."""
         data_model_class = model_type or self.data_model_type
         if issubclass(data_model_class, DataClass):
-            kwargs["frozen"] = self.frozen_dataclasses
+            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
+            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
+            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
+            if dataclass_arguments is None:
+                dataclass_arguments = self.dataclass_arguments
+            if dataclass_arguments is None:
+                # Construct from legacy flags for library API compatibility
+                dataclass_arguments = {}
+                if self.frozen_dataclasses:
+                    dataclass_arguments["frozen"] = True
+                if self.keyword_only:
+                    dataclass_arguments["kw_only"] = True
+            kwargs["dataclass_arguments"] = dataclass_arguments
+            kwargs.pop("frozen", None)
+            kwargs.pop("keyword_only", None)
+        else:
+            kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
     def _parse_object_common_part(  # noqa: PLR0913, PLR0917
@@ -894,6 +971,7 @@ class JsonSchemaParser(Parser):
             description=obj.description if self.use_schema_description else None,
             keyword_only=self.keyword_only,
             treat_dot_as_module=self.treat_dot_as_module,
+            dataclass_arguments=self.dataclass_arguments,
         )
         self.results.append(data_model_type)
 
@@ -956,6 +1034,10 @@ class JsonSchemaParser(Parser):
                 and get_model_by_path(self.raw_obj, single_obj.ref[2:].split("/")).get("enum")
             ):
                 return self.get_ref_data_type(single_obj.ref)
+
+        merged_all_of_obj = self._merge_all_of_object(obj)
+        if merged_all_of_obj:
+            return self._parse_object_common_part(name, merged_all_of_obj, path, ignore_duplicate_model, [], [], [])
         fields: list[DataModelFieldBase] = []
         base_classes: list[Reference] = []
         required: list[str] = []
@@ -1139,6 +1221,7 @@ class JsonSchemaParser(Parser):
             nullable=obj.type_has_null,
             keyword_only=self.keyword_only,
             treat_dot_as_module=self.treat_dot_as_module,
+            dataclass_arguments=self.dataclass_arguments,
         )
         self.results.append(data_model_type)
         return self.data_type(reference=reference)
@@ -1855,26 +1938,27 @@ class JsonSchemaParser(Parser):
                 root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: dict[str, YamlValue] = {}
-                _schema_path = ""
-                for _schema_path, split_schema_path in self.schema_paths:
+                schema_path = ""
+                for schema_path_candidate, split_schema_path in self.schema_paths:
                     try:
                         if definitions := get_model_by_path(raw, split_schema_path):
+                            schema_path = schema_path_candidate
                             break
                     except KeyError:  # pragma: no cover
                         continue
 
                 for key, model in definitions.items():
                     obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)
-                    self.parse_id(obj, [*path_parts, _schema_path, key])
+                    self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
                     self.parse_obj(model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path)
-                else:
+                elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model in definitions.items():
-                    path = [*path_parts, _schema_path, key]
+                    path = [*path_parts, schema_path, key]
                     reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self.parse_raw_obj(key, model, path)
@@ -1883,7 +1967,7 @@ class JsonSchemaParser(Parser):
                 reserved_refs = set(self.reserved_refs.get(key) or [])
                 while reserved_refs:
                     for reserved_path in sorted(reserved_refs):
-                        reference = self.model_resolver.get(reserved_path)
+                        reference = self.model_resolver.references.get(reserved_path)
                         if not reference or reference.loaded:
                             continue
                         object_paths = reserved_path.split("#/", 1)[-1].split("/")

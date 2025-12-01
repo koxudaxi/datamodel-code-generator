@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "tree": { "$ref": "#/$defs/Node" }
+  },
+  "$defs": {
+    "Node": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer" },
+        "child": { "$ref": "#/$defs/Node" }
+      }
+    }
+  }
+}

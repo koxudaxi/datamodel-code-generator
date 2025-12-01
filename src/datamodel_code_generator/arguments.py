@@ -7,13 +7,21 @@ template customization, OpenAPI-specific options, and general options.
 
 from __future__ import annotations
 
+import json
 import locale
-from argparse import ArgumentParser, BooleanOptionalAction, HelpFormatter, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
 from operator import attrgetter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from datamodel_code_generator import DataModelType, InputFileType, OpenAPIScope
+from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    DataclassArguments,
+    DataModelType,
+    InputFileType,
+    OpenAPIScope,
+    ReuseScope,
+)
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
@@ -26,6 +34,28 @@ if TYPE_CHECKING:
 DEFAULT_ENCODING = locale.getpreferredencoding()
 
 namespace = Namespace(no_color=False)
+
+
+def _dataclass_arguments(value: str) -> DataclassArguments:
+    """Parse JSON string and validate it as DataclassArguments."""
+    try:
+        result = json.loads(value)
+    except json.JSONDecodeError as e:
+        msg = f"Invalid JSON: {e}"
+        raise ArgumentTypeError(msg) from e
+    if not isinstance(result, dict):
+        msg = f"Expected a JSON dictionary, got {type(result).__name__}"
+        raise ArgumentTypeError(msg)
+    valid_keys = set(DataclassArguments.__annotations__.keys())
+    invalid_keys = set(result.keys()) - valid_keys
+    if invalid_keys:
+        msg = f"Invalid keys: {invalid_keys}. Valid keys are: {valid_keys}"
+        raise ArgumentTypeError(msg)
+    for key, val in result.items():
+        if not isinstance(val, bool):
+            msg = f"Expected bool for '{key}', got {type(val).__name__}"
+            raise ArgumentTypeError(msg)
+    return cast("DataclassArguments", result)
 
 
 class SortingHelpFormatter(HelpFormatter):
@@ -132,6 +162,12 @@ model_options.add_argument(
     help="Models generated with a root-type field will be merged into the models using that root-type model",
 )
 model_options.add_argument(
+    "--skip-root-model",
+    action="store_true",
+    default=None,
+    help="Skip generating the model for the root schema element",
+)
+model_options.add_argument(
     "--disable-appending-item-suffix",
     help="Disable appending `Item` suffix to model name in an array",
     action="store_true",
@@ -180,9 +216,32 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--dataclass-arguments",
+    type=_dataclass_arguments,
+    default=None,
+    help=(
+        "Custom dataclass arguments as a JSON dictionary, "
+        'e.g. \'{"frozen": true, "kw_only": true}\'. '
+        "Overrides --frozen-dataclasses and similar flags."
+    ),
+)
+model_options.add_argument(
     "--reuse-model",
     help="Reuse models on the field when a module has the model with the same content",
     action="store_true",
+    default=None,
+)
+model_options.add_argument(
+    "--reuse-scope",
+    help="Scope for model reuse deduplication: module (per-file, default) or tree (cross-file with shared module). "
+    "Only effective when --reuse-model is set.",
+    choices=[s.value for s in ReuseScope],
+    default=None,
+)
+model_options.add_argument(
+    "--shared-module-name",
+    help=f'Name of the shared module for --reuse-scope=tree (default: "{DEFAULT_SHARED_MODULE_NAME}"). '
+    f'Use this option if your schema has a file named "{DEFAULT_SHARED_MODULE_NAME}".',
     default=None,
 )
 model_options.add_argument(
@@ -429,6 +488,12 @@ field_options.add_argument(
 field_options.add_argument(
     "--use-field-description",
     help="Use schema description to populate field docstring",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
+    "--use-attribute-docstrings",
+    help="Set use_attribute_docstrings=True in Pydantic v2 ConfigDict",
     action="store_true",
     default=None,
 )

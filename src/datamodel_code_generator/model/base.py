@@ -39,6 +39,8 @@ from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from datamodel_code_generator import DataclassArguments
+
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
 ALL_MODEL: str = "#all#"
@@ -338,6 +340,7 @@ class DataModel(TemplateBase, Nullable, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
+    IS_ALIAS: bool = False
 
     def __init__(  # noqa: PLR0913
         self,
@@ -357,10 +360,12 @@ class DataModel(TemplateBase, Nullable, ABC):
         keyword_only: bool = False,
         frozen: bool = False,
         treat_dot_as_module: bool = False,
+        dataclass_arguments: DataclassArguments | None = None,
     ) -> None:
         """Initialize a data model with fields, base classes, and configuration."""
         self.keyword_only = keyword_only
         self.frozen = frozen
+        self.dataclass_arguments: DataclassArguments = dataclass_arguments if dataclass_arguments is not None else {}
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
             raise Exception(msg)  # noqa: TRY002
@@ -520,6 +525,11 @@ class DataModel(TemplateBase, Nullable, ABC):
         yield from self.base_classes
 
     @property
+    def is_alias(self) -> bool:
+        """Whether is a type alias (i.e. not an instance of BaseModel/RootModel)."""
+        return self.IS_ALIAS
+
+    @property
     def nullable(self) -> bool:
         """Check if this model is nullable."""
         return self._nullable
@@ -538,8 +548,7 @@ class DataModel(TemplateBase, Nullable, ABC):
             base_class=self.base_class,
             methods=self.methods,
             description=self.description,
-            keyword_only=self.keyword_only,
-            frozen=self.frozen,
+            dataclass_arguments=self.dataclass_arguments,
             **self.extra_template_data,
         )
 

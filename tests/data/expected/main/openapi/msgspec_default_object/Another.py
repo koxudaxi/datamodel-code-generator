@@ -4,21 +4,21 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Union
 
-from msgspec import Struct, convert, field
-from typing_extensions import TypeAliasType
+from msgspec import Struct, UnsetType, convert, field
+from typing_extensions import TypeAlias
 
 from . import Foo as Foo_1
 from . import Nested
 
-Foo = TypeAliasType("Foo", str)
+Foo: TypeAlias = str
 
 
 class Bar(Struct):
-    original_foo: Optional[Foo_1] = field(
+    original_foo: Union[Foo_1, UnsetType] = field(
         default_factory=lambda: convert({'text': 'abc', 'number': 123}, type=Foo_1)
     )
-    nested_foo: Optional[List[Nested.Foo]] = field(
+    nested_foo: Union[List[Nested.Foo], UnsetType] = field(
         default_factory=lambda: convert(['abc', 'efg'], type=list[Nested.Foo])
     )

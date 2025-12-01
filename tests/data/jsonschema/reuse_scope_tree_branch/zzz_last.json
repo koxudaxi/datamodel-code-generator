@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "item": { "$ref": "#/$defs/SharedModel" }
+  },
+  "$defs": {
+    "SharedModel": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer" }
+      }
+    }
+  }
+}
