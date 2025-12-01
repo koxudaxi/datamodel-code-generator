@@ -38,5 +38,5 @@ repos:
     name: Update README command help
     entry: bash -c 'test -x .tox/fix/bin/python || tox run -e fix --notest -qq; .tox/fix/bin/python scripts/update_command_help_on_markdown.py'
     language: system
-    files: ^(src/datamodel_code_generator/__main__\.py|README\.md|docs/index\.md)$
+    files: ^(src/datamodel_code_generator/arguments\.py|README\.md|docs/index\.md)$
     pass_filenames: false
