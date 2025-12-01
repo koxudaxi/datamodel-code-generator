@@ -223,7 +223,7 @@ model_options.add_argument(
     help="Scope for model reuse deduplication: module (per-file, default) or tree (cross-file with shared module). "
     "Only effective when --reuse-model is set.",
     choices=[s.value for s in ReuseScope],
-    default=ReuseScope.Module.value,
+    default=None,
 )
 model_options.add_argument(
     "--target-python-version",
