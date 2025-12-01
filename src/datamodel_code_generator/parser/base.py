@@ -815,7 +815,7 @@ class Parser(ABC):
                 if from_ and import_ and alias != name:
                     data_type.alias = alias if data_type.reference.short_name == import_ else f"{alias}.{name}"
 
-                if init:
+                if init and not data_type.full_name.startswith(model.module_name + "."):
                     from_ = "." + from_
                 imports.append(
                     Import(

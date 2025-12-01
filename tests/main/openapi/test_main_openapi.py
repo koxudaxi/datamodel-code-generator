@@ -2401,3 +2401,19 @@ def test_main_openapi_external_ref_with_transitive_local_ref(output_file: Path) 
         expected_file="external_ref_with_transitive_local_ref/output.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def test_main_openapi_namespace_subns_ref(output_dir: Path) -> None:
+    """Test OpenAPI generation with namespaced schema referencing subnamespace.
+
+    Regression test for issue #2366: When a schema with a dot-delimited name
+    (e.g., ns.wrapper) references another schema in a subnamespace
+    (e.g., ns.subns.item), the generated import should be "from . import subns"
+    (same package) instead of "from .. import subns" (parent package).
+    """
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "namespace_subns_ref.json",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "namespace_subns_ref",
+        )
