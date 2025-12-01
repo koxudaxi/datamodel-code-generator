@@ -15,11 +15,13 @@ from typing import (
 from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
     DataclassArguments,
     DefaultPutDict,
     LiteralType,
     PythonVersion,
     PythonVersionMin,
+    ReuseScope,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
@@ -126,6 +128,8 @@ class GraphQLParser(Parser):
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
+        reuse_scope: ReuseScope | None = None,
+        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
@@ -211,6 +215,8 @@ class GraphQLParser(Parser):
             use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
+            reuse_scope=reuse_scope,
+            shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,

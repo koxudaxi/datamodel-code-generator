@@ -14,7 +14,14 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from datamodel_code_generator import DataclassArguments, DataModelType, InputFileType, OpenAPIScope
+from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    DataclassArguments,
+    DataModelType,
+    InputFileType,
+    OpenAPIScope,
+    ReuseScope,
+)
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
@@ -222,6 +229,19 @@ model_options.add_argument(
     "--reuse-model",
     help="Reuse models on the field when a module has the model with the same content",
     action="store_true",
+    default=None,
+)
+model_options.add_argument(
+    "--reuse-scope",
+    help="Scope for model reuse deduplication: module (per-file, default) or tree (cross-file with shared module). "
+    "Only effective when --reuse-model is set.",
+    choices=[s.value for s in ReuseScope],
+    default=None,
+)
+model_options.add_argument(
+    "--shared-module-name",
+    help=f'Name of the shared module for --reuse-scope=tree (default: "{DEFAULT_SHARED_MODULE_NAME}"). '
+    f'Use this option if your schema has a file named "{DEFAULT_SHARED_MODULE_NAME}".',
     default=None,
 )
 model_options.add_argument(

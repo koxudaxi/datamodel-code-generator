@@ -2790,3 +2790,140 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
         ],
         expected_stderr_contains="Invalid type mapping format",
     )
+
+
+def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
+    """Test --reuse-scope=tree to deduplicate models across multiple files."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_enum(output_dir: Path) -> None:
+    """Test --reuse-scope=tree to deduplicate enum models across multiple files."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_enum",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_enum",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_warning(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test warning when --reuse-scope=tree is used without --reuse-model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-scope", "tree"],
+        capsys=capsys,
+        expected_stderr_contains="Warning: --reuse-scope=tree has no effect without --reuse-model",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_no_dup(output_dir: Path) -> None:
+    """Test --reuse-scope=tree when there are no duplicate models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_no_dup",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_no_dup",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_self_ref(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with self-referencing models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_self_ref",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_self_ref",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_conflict(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test --reuse-scope=tree error when schema file name conflicts with shared module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Schema file or directory 'shared' conflicts with the shared module name",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_conflict_dir(capsys: pytest.CaptureFixture[str], output_dir: Path) -> None:
+    """Test --reuse-scope=tree error when schema directory name conflicts with shared module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_conflict_dir",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Schema file or directory 'shared' conflicts with the shared module name",
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_no_conflict_dir(output_dir: Path) -> None:
+    """Test --reuse-scope=tree does not error when shared/ dir exists but no duplicates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_no_conflict_dir",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_no_conflict_dir",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_multi(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with multiple files where canonical is not in first module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_multi",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_multi",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_branch(output_dir: Path) -> None:
+    """Test --reuse-scope=tree branch coverage with duplicate in later modules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_branch",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_branch",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_dataclass(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with dataclasses output type (supports inheritance)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with TypedDict output type (no inheritance, direct reference)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_typeddict",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_typeddict",
+        input_file_type="jsonschema",
+        extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "typing.TypedDict"],
+    )

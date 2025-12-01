@@ -19,12 +19,14 @@ from pydantic import BaseModel
 from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
     DataclassArguments,
     DataModelType,
     Error,
     InputFileType,
     InvalidClassNameError,
     OpenAPIScope,
+    ReuseScope,
     enable_debug_message,
     generate,
 )
@@ -357,6 +359,8 @@ class Config(BaseModel):
     use_inline_field_description: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
+    reuse_scope: ReuseScope = ReuseScope.Module
+    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
     use_one_literal_as_default: bool = False
@@ -535,6 +539,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
 
     if config.disable_warnings:
         warnings.simplefilter("ignore")
+
+    if config.reuse_scope == ReuseScope.Tree and not config.reuse_model:
+        print(  # noqa: T201
+            "Warning: --reuse-scope=tree has no effect without --reuse-model",
+            file=sys.stderr,
+        )
+
     extra_template_data: defaultdict[str, dict[str, Any]] | None
     if config.extra_template_data is None:
         extra_template_data = None
@@ -616,6 +627,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_inline_field_description=config.use_inline_field_description,
             use_default_kwarg=config.use_default_kwarg,
             reuse_model=config.reuse_model,
+            reuse_scope=config.reuse_scope,
+            shared_module_name=config.shared_module_name,
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
             use_one_literal_as_default=config.use_one_literal_as_default,
