@@ -1,0 +1,32 @@
+{
+  "$defs": {
+    "SelfLink": {
+      "type": "object",
+      "required": ["links"],
+      "properties": {
+        "links": {
+          "type": "object",
+          "properties": {
+            "self": { "type": "string" }
+          }
+        }
+      }
+    },
+    "CollectionLink": {
+      "type": "object",
+      "required": ["links"],
+      "properties": {
+        "links": {
+          "type": "object",
+          "properties": {
+            "collection": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/SelfLink" },
+    { "$ref": "#/$defs/CollectionLink" }
+  ]
+}

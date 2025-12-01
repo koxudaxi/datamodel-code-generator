@@ -1312,6 +1312,18 @@ def test_external_relative_ref(tmp_path: Path) -> None:
     )
 
 
+def test_paths_external_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with external refs in paths without components/schemas."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "paths_external_ref" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="paths_external_ref.py",
+        extra_args=["--openapi-scopes", "paths"],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_collapse_root_models(output_file: Path) -> None:
     """Test OpenAPI generation with collapsed root models."""
