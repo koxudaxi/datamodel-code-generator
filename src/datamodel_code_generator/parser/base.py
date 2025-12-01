@@ -1299,8 +1299,8 @@ class Parser(ABC):
                     model_field.nullable = False
 
     @classmethod
-    def __quote_type_alias_forward_refs(cls, models: list[DataModel]) -> None:
-        """Quote forward references in TypeAlias definitions per PEP 484."""
+    def __update_type_aliases(cls, models: list[DataModel]) -> None:
+        """Update type aliases to properly handle forward references per PEP 484."""
         rendered_aliases: set[str] = set()
 
         for model in models:
@@ -1575,7 +1575,7 @@ class Parser(ABC):
                 if with_import:
                     result += [str(self.imports), str(imports), "\n"]
 
-                self.__quote_type_alias_forward_refs(models)
+                self.__update_type_aliases(models)
                 code = dump_templates(models)
                 result += [code]
 
