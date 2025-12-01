@@ -802,7 +802,7 @@ class JsonSchemaParser(Parser):
         """Normalize property schema for comparison across allOf items."""
         if isinstance(prop_schema, bool):
             return prop_schema
-        return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True)
+        return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         """Merge allOf items when they share object properties to avoid duplicate models."""
