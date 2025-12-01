@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/datamodel_code_generator/__main__.py'
+      - 'src/datamodel_code_generator/arguments.py'
   pull_request:
     branches: [main]
     paths:
-      - 'src/datamodel_code_generator/__main__.py'
+      - 'src/datamodel_code_generator/arguments.py'
 
 permissions:
   contents: write
