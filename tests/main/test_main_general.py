@@ -11,6 +11,7 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     InputFileType,
+    chdir,
     generate,
     snooper_to_methods,
 )
@@ -271,4 +272,72 @@ def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
         generate(
             input_=invalid_file,
             output=output_file,
+        )
+
+
+def test_generate_cli_command_with_no_use_specialized_enum(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with use-specialized-enum = false."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+use-specialized-enum = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "no_use_specialized_enum.txt",
+        )
+
+
+def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+snake-case-field = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "false_boolean.txt",
+        )
+
+
+def test_generate_cli_command_with_true_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with boolean set to true."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+snake-case-field = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "true_boolean.txt",
+        )
+
+
+def test_generate_cli_command_with_list_option(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with list option."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+strict-types = ["str", "int"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "list_option.txt",
         )
