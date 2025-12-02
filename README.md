@@ -535,6 +535,9 @@ OpenAPI-only options:
                         deprecated. it will be removed in future releases
 
 General options:
+  --check               Verify generated files are up-to-date without modifying them. Exits
+                        with code 1 if differences found, 0 if up-to-date. Useful for CI to
+                        ensure generated code is committed.
   --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
                         generator[debug]''`)
   --disable-warnings    disable warnings
