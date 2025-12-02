@@ -11,7 +11,6 @@ from . import foo as foo_1
 from . import models
 from .nested import foo as foo_2
 
-
 __all__ = [
     "OptionalModel",
     "Id",

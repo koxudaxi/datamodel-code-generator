@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, Error, ReuseScope
 from datamodel_code_generator.format import (
@@ -349,7 +349,6 @@ class Result(BaseModel):
 
     body: str
     source: Optional[Path] = None  # noqa: UP045
-    exports: list[str] = Field(default_factory=list)
 
 
 class Source(BaseModel):
@@ -1569,6 +1568,7 @@ class Parser(ABC):
         format_: bool | None = True,  # noqa: FBT001, FBT002
         settings_path: Path | None = None,
         disable_future_imports: bool = False,  # noqa: FBT001, FBT002
+        use_all_exports: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
@@ -1710,9 +1710,21 @@ class Parser(ABC):
 
         for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
+            export_names: list[str] = []
             if models:
                 if with_import:
                     result += [str(self.imports), str(imports), "\n"]
+
+                is_init = module[-1] == "__init__.py"
+                if use_all_exports and is_init:
+                    export_names = [
+                        m.reference.short_name
+                        for m in models
+                        if m.reference and not m.reference.short_name.startswith("_")
+                    ]
+                    if export_names:
+                        all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                        result += [f"__all__ = [\n    {all_items},\n]\n"]
 
                 self.__update_type_aliases(models)
                 code = dump_templates(models)
@@ -1731,11 +1743,7 @@ class Parser(ABC):
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            # Collect export names from models (class names and type aliases)
-            export_names = [
-                m.reference.short_name for m in models if m.reference and not m.reference.short_name.startswith("_")
-            ]
-            results[module] = Result(body=body, source=models[0].file_path if models else None, exports=export_names)
+            results[module] = Result(body=body, source=models[0].file_path if models else None)
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:

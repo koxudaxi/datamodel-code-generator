@@ -13,7 +13,6 @@ from pydantic import BaseModel
 
 from .. import Id
 
-
 __all__ = [
     "Tea",
     "Cocoa",
