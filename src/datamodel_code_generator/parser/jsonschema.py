@@ -782,7 +782,7 @@ class JsonSchemaParser(Parser):
         self,
         fields: list[DataModelFieldBase],
         base_classes: list[Reference] | None,
-        path: list[str] | None,
+        path: list[str],
     ) -> list[DataModelFieldBase]:
         """Collect all fields including those from base classes for Request/Response models.
 
@@ -790,15 +790,15 @@ class JsonSchemaParser(Parser):
         """
         all_fields: list[DataModelFieldBase] = []
         for base_ref in base_classes or []:
-            all_fields.extend(self._iter_fields_from_reference(base_ref, path or []))
+            all_fields.extend(self._iter_fields_from_reference(base_ref, path))
         all_fields.extend(fields)
         return self._dedupe_and_copy_fields(all_fields)
 
     def _should_generate_separate_models(
         self,
         fields: list[DataModelFieldBase],
-        base_classes: list[Reference] | None = None,
-        path: list[str] | None = None,
+        base_classes: list[Reference] | None,
+        path: list[str],
     ) -> bool:
         """Determine if Request/Response models should be generated."""
         if self.read_only_write_only_model_type is None:

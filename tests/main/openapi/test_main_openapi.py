@@ -2565,3 +2565,83 @@ def test_main_openapi_read_only_write_only_union(output_file: Path) -> None:
             "all",
         ],
     )
+
+
+def test_main_openapi_read_only_write_only_url_ref(mocker: MockerFixture, output_file: Path) -> None:
+    """Test readOnly/writeOnly with URL $ref to external schema."""
+    remote_schema = (OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml").read_text()
+    mock_response = mocker.Mock()
+    mock_response.text = remote_schema
+
+    mocker.patch("httpx.get", return_value=mock_response)
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_url_ref.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_url_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )
+
+
+def test_main_openapi_read_only_write_only_allof_url_ref(mocker: MockerFixture, output_file: Path) -> None:
+    """Test readOnly/writeOnly with allOf that references external URL schema."""
+    remote_schema = (OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml").read_text()
+    mock_response = mocker.Mock()
+    mock_response.text = remote_schema
+
+    mocker.patch("httpx.get", return_value=mock_response)
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_allof_url_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )
+
+
+def test_main_openapi_read_only_write_only_allof_order(output_file: Path) -> None:
+    """Test readOnly/writeOnly with allOf where child is listed before parent in schema."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_allof_order.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_allof_order.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )
+
+
+def test_main_openapi_read_only_write_only_nested_allof_order(output_file: Path) -> None:
+    """Test readOnly/writeOnly with nested allOf where models are listed in reverse order."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_nested_allof_order.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_nested_allof_order.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )

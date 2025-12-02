@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  title: Common Schemas
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    BaseObject:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        password:
+          type: string
+          writeOnly: true
