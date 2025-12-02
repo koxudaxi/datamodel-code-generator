@@ -1715,16 +1715,14 @@ class Parser(ABC):
                 if with_import:
                     result += [str(self.imports), str(imports), "\n"]
 
-                is_init = module[-1] == "__init__.py"
-                if use_all_exports and is_init:
+                if use_all_exports and module[-1] == "__init__.py":
                     export_names = [
                         m.reference.short_name
                         for m in models
                         if m.reference and not m.reference.short_name.startswith("_")
                     ]
-                    if export_names:
-                        all_items = ",\n    ".join(f'"{name}"' for name in export_names)
-                        result += [f"__all__ = [\n    {all_items},\n]\n"]
+                    all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                    result += [f"__all__ = [\n    {all_items},\n]\n"]
 
                 self.__update_type_aliases(models)
                 code = dump_templates(models)
