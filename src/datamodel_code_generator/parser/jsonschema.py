@@ -1364,15 +1364,20 @@ class JsonSchemaParser(Parser):
         else:
             items = []
 
+        if items:
+            item_data_types = self.parse_list_item(
+                name,
+                items,
+                path,
+                obj,
+                singular_name=singular_name,
+            )
+        else:
+            item_data_types = [self.data_type_manager.get_data_type(Types.any)]
+
         data_types: list[DataType] = [
             self.data_type(
-                data_types=self.parse_list_item(
-                    name,
-                    items,
-                    path,
-                    obj,
-                    singular_name=singular_name,
-                ),
+                data_types=item_data_types,
                 is_list=True,
             )
         ]

@@ -13,5 +13,5 @@ class Commons(RootModel[Any]):
     root: Any = Field(..., description='Commons objects', title='Commons')
 
 
-class DefaultArray(RootModel[List]):
-    root: List = Field(..., max_length=100, min_length=1)
+class DefaultArray(RootModel[List[Any]]):
+    root: List[Any] = Field(..., max_length=100, min_length=1)
