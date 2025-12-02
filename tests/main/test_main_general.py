@@ -792,3 +792,18 @@ def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> 
         expected_exit=Exit.ERROR,
         expected_stderr_contains="conflicts with a model in __init__.py",
     )
+
+
+def test_all_exports_scope_children_no_child_exports(output_dir: Path) -> None:
+    """Test --all-exports-scope=children when __init__.py has models but no direct child exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_no_child.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_no_child",
+    )

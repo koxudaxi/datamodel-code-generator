@@ -1556,12 +1556,12 @@ class Parser(ABC):
                 continue
             if scope == AllExportsScope.Children and depth != 1:
                 continue
-            if rel := prefix[base_len:]:
-                exports.extend(
-                    (ref.short_name, rel, ".".join(rel))
-                    for m in proc_models
-                    if (ref := m.reference) and not ref.short_name.startswith("_")
-                )
+            rel = prefix[base_len:]
+            exports.extend(
+                (ref.short_name, rel, ".".join(rel))
+                for m in proc_models
+                if (ref := m.reference) and not ref.short_name.startswith("_")
+            )
         return exports
 
     @classmethod
@@ -1580,7 +1580,7 @@ class Parser(ABC):
         if not (colliding := {n for n, items in by_name.items() if len(items) > 1 or n in reserved}):
             return dict(by_name)
         if (effective := strategy or AllExportsCollisionStrategy.Error) == AllExportsCollisionStrategy.Error:
-            cls._raise_collision_error(by_name, colliding, reserved)
+            cls._raise_collision_error(by_name, colliding)
 
         used: set[str] = {n for n in by_name if n not in colliding} | reserved
         result = {n: items for n, items in by_name.items() if n not in colliding}
@@ -1605,14 +1605,13 @@ class Parser(ABC):
         cls,
         by_name: dict[str, list[tuple[str, tuple[str, ...], str]]],
         colliding: set[str],
-        reserved: set[str],
     ) -> None:
         """Raise an error with collision details."""
         details = []
         for n in colliding:
             if len(items := by_name[n]) > 1:
                 details.append(f"  '{n}' is defined in: {', '.join(f'.{s}' for _, _, s in items)}")
-            elif n in reserved:
+            else:
                 details.append(f"  '{n}' conflicts with a model in __init__.py")
         raise Error(
             "Name collision detected with --all-exports-scope:\n"
@@ -1883,7 +1882,9 @@ class Parser(ABC):
             for init_module, init_result in list(results.items()):
                 if init_module[-1] != "__init__.py" or init_module in processed_init_modules or init_result.body:
                     continue
-                if child_exports := self._collect_exports_for_init(init_module, processed_models, all_exports_scope):
+                if child_exports := self._collect_exports_for_init(
+                    init_module, processed_models, all_exports_scope
+                ):  # pragma: no branch
                     resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
                     export_imports, export_names = self._build_all_exports_code(resolved)
                     all_items = ",\n    ".join(f'"{name}"' for name in export_names)
