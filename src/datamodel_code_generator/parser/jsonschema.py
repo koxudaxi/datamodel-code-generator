@@ -9,6 +9,7 @@ from __future__ import annotations
 import enum as _enum
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from contextlib import contextmanager
 from functools import cached_property, lru_cache
 from pathlib import Path
@@ -714,18 +715,16 @@ class JsonSchemaParser(Parser):
             if ref_type == JSONReference.LOCAL:
                 return get_model_by_path(self.raw_obj, ref[2:].split("/"))
             if ref_type == JSONReference.REMOTE:
-                return self._resolve_ref_with_pointer(ref, self._get_ref_body)
-        except (KeyError, IndexError, FileNotFoundError):
+                file_path, json_pointer = ([*ref.split("#", 1), ""])[:2]
+                remote_obj = self._get_ref_body(file_path)
+                return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
+            if ref_type == JSONReference.URL and self.read_only_write_only_model_type is not None:
+                url_part, json_pointer = ([*ref.split("#", 1), ""])[:2]
+                remote_obj = self._get_ref_body_from_url(url_part)
+                return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
+        except (KeyError, IndexError, FileNotFoundError, Exception):  # noqa: BLE001, S110
             pass
         return None
-
-    def _resolve_ref_with_pointer(self, ref: str, fetch_func: Callable[[str], dict[str, Any]]) -> dict[str, Any] | None:
-        """Resolve a $ref with optional JSON pointer."""
-        if "#" not in ref:
-            return fetch_func(ref)
-        base, pointer = ref.split("#", 1)
-        obj = fetch_func(base) if base else self.raw_obj
-        return get_model_by_path(obj, pointer[1:].split("/")) if pointer else obj
 
     def _resolve_ro_wo_flag(self, obj: JsonSchemaObject, attr: str) -> bool:
         """Resolve readOnly/writeOnly flag from direct value, $ref, and compositions."""
@@ -737,53 +736,71 @@ class JsonSchemaParser(Parser):
             and self._resolve_ro_wo_flag(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), attr)
         ):
             return True
-        return any(self._resolve_ro_wo_flag(sub, attr) for sub in [*obj.allOf, *obj.anyOf, *obj.oneOf])
+        return any(self._resolve_ro_wo_flag(sub, attr) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
-    def _copy_field(self, field: DataModelFieldBase) -> DataModelFieldBase:  # noqa: PLR6301
+    @staticmethod
+    def _copy_field(field: DataModelFieldBase) -> DataModelFieldBase:
         """Create a deep copy of a field to avoid mutating the original."""
-        copied = field.copy()
-        if dt := field.data_type:
-            copied.data_type = dt.copy()
-            if dt.data_types:
-                copied.data_type.data_types = [t.copy() for t in dt.data_types]
+        copied = field.copy(deep=True)
+        copied.parent = None  # detach from original model
         return copied
+
+    def _iter_fields_from_reference(self, base_ref: Reference, path: list[str]) -> Iterable[DataModelFieldBase]:
+        """Yield fields from a reference, recursively collecting from base classes first."""
+        if source := base_ref.source:
+            for base_class in getattr(source, "base_classes", []) or []:
+                if reference := getattr(base_class, "reference", None):
+                    yield from self._iter_fields_from_reference(reference, path)
+            yield from getattr(source, "fields", [])
+        elif base_ref.path and "#" in base_ref.path:
+            if resolved := self._get_ref_schema(base_ref.path):
+                yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
+
+    def _iter_fields_from_schema(self, obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
+        """Yield fields from a schema object including allOf inheritance."""
+        module_name = get_module_name(path[-1] if path else "", None, treat_dot_as_module=self.treat_dot_as_module)
+        if obj.properties:
+            yield from self.parse_object_fields(obj, path, module_name)
+        for item in obj.allOf:
+            if item.ref and (resolved := self._get_ref_schema(item.ref)):
+                yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
+            elif item.properties:
+                yield from self.parse_object_fields(item, path, module_name)
+
+    def _dedupe_and_copy_fields(self, fields: Iterable[DataModelFieldBase]) -> list[DataModelFieldBase]:
+        """Deduplicate fields by name and create deep copies. Later fields override earlier ones."""
+        deduplicated: dict[str, DataModelFieldBase] = {}
+        for field in fields:
+            if field_key := (field.original_name or field.name):
+                deduplicated[field_key] = self._copy_field(field)
+        return list(deduplicated.values())
 
     def _collect_all_fields_for_request_response(
         self,
         fields: list[DataModelFieldBase],
         base_classes: list[Reference] | None,
+        path: list[str] | None,
     ) -> list[DataModelFieldBase]:
-        """Collect all fields including those from base classes for Request/Response models."""
-        fields_by_name: dict[str, DataModelFieldBase] = {}
+        """Collect all fields including those from base classes for Request/Response models.
 
+        Order: parent → child, with child fields overriding parent fields of the same name.
+        """
+        all_fields: list[DataModelFieldBase] = []
         for base_ref in base_classes or []:
-            if source := base_ref.source:
-                # Recursively collect from nested base classes
-                if nested := getattr(source, "base_classes", None):
-                    nested_refs = [bc.reference for bc in nested if getattr(bc, "reference", None)]
-                    for field in self._collect_all_fields_for_request_response([], nested_refs):
-                        if key := (field.original_name or field.name):
-                            fields_by_name[key] = field
-                # Collect fields from this base class
-                for field in getattr(source, "fields", []):
-                    if key := (field.original_name or field.name):
-                        fields_by_name[key] = self._copy_field(field)
-
-        for field in fields:
-            if key := (field.original_name or field.name):
-                fields_by_name[key] = self._copy_field(field)
-
-        return list(fields_by_name.values())
+            all_fields.extend(self._iter_fields_from_reference(base_ref, path or []))
+        all_fields.extend(fields)
+        return self._dedupe_and_copy_fields(all_fields)
 
     def _should_generate_separate_models(
         self,
         fields: list[DataModelFieldBase],
         base_classes: list[Reference] | None = None,
+        path: list[str] | None = None,
     ) -> bool:
         """Determine if Request/Response models should be generated."""
         if self.read_only_write_only_model_type is None:
             return False
-        all_fields = self._collect_all_fields_for_request_response(fields, base_classes)
+        all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
         return any(field.read_only or field.write_only for field in all_fields)
 
     def _should_generate_base_model(self) -> bool:
@@ -849,26 +866,22 @@ class JsonSchemaParser(Parser):
         base_classes: list[Reference] | None = None,
     ) -> None:
         """Generate Request and Response model variants."""
-        all_fields = self._collect_all_fields_for_request_response(fields, base_classes)
+        all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
 
-        if any(field.read_only for field in all_fields):
-            self._create_variant_model(
-                path,
-                name,
-                "Request",
-                [field for field in all_fields if not field.read_only],
-                obj,
-                data_model_type_class,
-            )
-        if any(field.write_only for field in all_fields):
-            self._create_variant_model(
-                path,
-                name,
-                "Response",
-                [field for field in all_fields if not field.write_only],
-                obj,
-                data_model_type_class,
-            )
+        variants = [
+            ("Request", "read_only"),
+            ("Response", "write_only"),
+        ]
+        for suffix, exclude_attr in variants:
+            if any(getattr(field, exclude_attr) for field in all_fields):
+                self._create_variant_model(
+                    path,
+                    name,
+                    suffix,
+                    [field for field in all_fields if not getattr(field, exclude_attr)],
+                    obj,
+                    data_model_type_class,
+                )
 
     def get_object_field(  # noqa: PLR0913
         self,
@@ -1128,7 +1141,7 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
-        if self._should_generate_separate_models(fields, base_classes):
+        if self._should_generate_separate_models(fields, base_classes, path):
             self._create_request_response_models(
                 name=reference.name,
                 obj=obj,
@@ -1389,7 +1402,7 @@ class JsonSchemaParser(Parser):
 
         self.set_additional_properties(reference.path, obj)
 
-        if self._should_generate_separate_models(fields):
+        if self._should_generate_separate_models(fields, None, path):
             self._create_request_response_models(
                 name=class_name,
                 obj=obj,
