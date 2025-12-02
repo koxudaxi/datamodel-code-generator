@@ -1850,6 +1850,30 @@ def test_main_custom_file_header_without_future_imports(output_file: Path) -> No
     )
 
 
+def test_main_custom_file_header_empty(output_file: Path) -> None:
+    """Test empty custom header file."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_empty.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_empty.txt")],
+    )
+
+
+def test_main_custom_file_header_invalid_syntax(output_file: Path) -> None:
+    """Test custom header with invalid Python syntax."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_invalid_syntax.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_invalid_syntax.txt")],
+    )
+
+
 def test_main_pydantic_v2(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic v2 output."""
     run_main_and_assert(

@@ -312,9 +312,6 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
 
 def _find_future_import_insertion_point(header: str) -> int:
     """Find position in header where __future__ import should be inserted."""
-    if not header:
-        return 0
-
     import ast  # noqa: PLC0415
 
     try:
