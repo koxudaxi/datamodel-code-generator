@@ -293,6 +293,12 @@ model_options.add_argument(
     action="store_true",
     default=None,
 )
+model_options.add_argument(
+    "--use-all-exports",
+    help="Generate __all__ = [...] in __init__.py to export all defined models and types",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Typing options for generated models
