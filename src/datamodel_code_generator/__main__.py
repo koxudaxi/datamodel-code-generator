@@ -540,45 +540,25 @@ def _compare_directories(
     actual_dir: Path,
     encoding: str,
 ) -> tuple[list[str], list[str], list[str]]:
-    """Compare generated directory with existing directory.
-
-    Returns:
-        Tuple of (diffs, missing_files, extra_files)
-        - diffs: List of diff lines for files that differ
-        - missing_files: Files in generated_dir but not in actual_dir
-        - extra_files: Files in actual_dir but not in generated_dir (stale files)
-    """
+    """Compare generated directory with existing directory."""
     diffs: list[str] = []
 
-    # Get all .py files from generated directory
-    generated_files: set[Path] = set()
-    for path in generated_dir.rglob("*.py"):
-        if "__pycache__" not in path.parts:
-            generated_files.add(path.relative_to(generated_dir))
+    generated_files = {path.relative_to(generated_dir) for path in generated_dir.rglob("*.py")}
 
-    # Get all .py files from actual directory
     actual_files: set[Path] = set()
     if actual_dir.exists():
         for path in actual_dir.rglob("*.py"):
             if "__pycache__" not in path.parts:
                 actual_files.add(path.relative_to(actual_dir))
 
-    # Find missing files (in generated but not in actual)
-    missing_files: list[str] = [str(rel_path) for rel_path in sorted(generated_files - actual_files)]
+    missing_files = [str(rel_path) for rel_path in sorted(generated_files - actual_files)]
+    extra_files = [str(rel_path) for rel_path in sorted(actual_files - generated_files)]
 
-    # Find extra files (in actual but not in generated)
-    extra_files: list[str] = [str(rel_path) for rel_path in sorted(actual_files - generated_files)]
-
-    # Compare common files
     for rel_path in sorted(generated_files & actual_files):
-        generated_path = generated_dir / rel_path
-        actual_path = actual_dir / rel_path
-
-        generated_content = _normalize_line_endings(generated_path.read_text(encoding=encoding))
-        actual_content = _normalize_line_endings(actual_path.read_text(encoding=encoding))
-
+        generated_content = _normalize_line_endings((generated_dir / rel_path).read_text(encoding=encoding))
+        actual_content = _normalize_line_endings((actual_dir / rel_path).read_text(encoding=encoding))
         if generated_content != actual_content:
-            file_diff = list(
+            diffs.extend(
                 difflib.unified_diff(
                     actual_content.splitlines(keepends=True),
                     generated_content.splitlines(keepends=True),
@@ -586,7 +566,6 @@ def _compare_directories(
                     tofile=f"{rel_path} (expected)",
                 )
             )
-            diffs.extend(file_diff)
 
     return diffs, missing_files, extra_files
 

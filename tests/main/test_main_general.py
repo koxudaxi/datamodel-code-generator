@@ -598,3 +598,25 @@ def test_check_directory_does_not_exist(tmp_path: Path) -> None:
         extra_args=["--disable-timestamp", "--check"],
         expected_exit=Exit.DIFF,
     )
+
+
+def test_check_directory_ignores_pycache(output_dir: Path) -> None:
+    """Test --check ignores __pycache__ directories in actual output."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    pycache_dir = output_dir / "__pycache__"
+    pycache_dir.mkdir()
+    (pycache_dir / "module.cpython-313.pyc").write_bytes(b"fake bytecode")
+    (pycache_dir / "extra.py").write_text("# should be ignored\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
