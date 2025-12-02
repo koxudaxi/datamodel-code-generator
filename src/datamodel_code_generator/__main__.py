@@ -22,6 +22,8 @@ from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllExportsCollisionStrategy,
+    AllExportsScope,
     DataclassArguments,
     DataModelType,
     Error,
@@ -241,6 +243,10 @@ class Config(BaseModel):
         f"`--keyword-only` requires `--target-python-version` {PythonVersion.PY_310.value} or higher."
     )
 
+    __validate_all_exports_collision_strategy_err: ClassVar[str] = (
+        "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
+    )
+
     if PYDANTIC_V2:
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -289,6 +295,13 @@ class Config(BaseModel):
                 self.field_constraints = True
             return self
 
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_all_exports_collision_strategy(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+            """Validate all_exports_collision_strategy requires recursive scope."""
+            if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
+                raise Error(self.__validate_all_exports_collision_strategy_err)
+            return self
+
     else:
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -335,6 +348,16 @@ class Config(BaseModel):
             """Validate root model configuration."""
             if values.get("use_annotated"):
                 values["field_constraints"] = True
+            return values
+
+        @model_validator()  # pyright: ignore[reportArgumentType]
+        def validate_all_exports_collision_strategy(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+            """Validate all_exports_collision_strategy requires recursive scope."""
+            if (
+                values.get("all_exports_collision_strategy") is not None
+                and values.get("all_exports_scope") != AllExportsScope.Recursive
+            ):
+                raise Error(cls.__validate_all_exports_collision_strategy_err)
             return values
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
@@ -425,7 +448,8 @@ class Config(BaseModel):
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
-    use_all_exports: bool = False
+    all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
+    all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -827,7 +851,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
-            use_all_exports=config.use_all_exports,
+            all_exports_scope=config.all_exports_scope,
+            all_exports_collision_strategy=config.all_exports_collision_strategy,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

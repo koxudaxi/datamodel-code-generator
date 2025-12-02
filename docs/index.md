@@ -435,6 +435,15 @@ Field customization:
                         docstring
 
 Model customization:
+  --all-exports-collision-strategy {error,minimal-prefix,full-prefix}
+                        Strategy for name collisions when using --all-exports-
+                        scope=recursive. ''error'': raise an error (default). ''minimal-
+                        prefix'': add module prefix only to colliding names. ''full-prefix'':
+                        add full module path prefix to colliding names.
+  --all-exports-scope {children,recursive}
+                        Generate __all__ in __init__.py with re-exports. ''children'': export
+                        from direct child modules only. ''recursive'': export from all
+                        descendant modules.
   --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is deprecated. Use
                         `--extra-fields=allow` instead.
   --allow-population-by-field-name
@@ -482,8 +491,6 @@ Model customization:
                         target python version
   --treat-dot-as-module
                         treat dotted module names as modules
-  --use-all-exports     Generate __all__ = [...] in __init__.py to export all defined models
-                        and types
   --use-exact-imports   import exact types instead of modules, for example: "from .foo
                         import Bar" instead of "from . import foo" with "foo.Bar"
   --use-pendulum        use pendulum instead of datetime

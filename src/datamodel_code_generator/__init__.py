@@ -246,6 +246,30 @@ class OpenAPIScope(Enum):
     Webhooks = "webhooks"
 
 
+class AllExportsScope(Enum):
+    """Scope for __all__ exports in __init__.py.
+
+    children: Export models from direct child modules only.
+    recursive: Export models from all descendant modules recursively.
+    """
+
+    Children = "children"
+    Recursive = "recursive"
+
+
+class AllExportsCollisionStrategy(Enum):
+    """Strategy for handling name collisions in recursive exports.
+
+    error: Raise an error when name collision is detected.
+    minimal_prefix: Add module prefix only to colliding names.
+    full_prefix: Add full module path prefix to all colliding names.
+    """
+
+    Error = "error"
+    MinimalPrefix = "minimal-prefix"
+    FullPrefix = "full-prefix"
+
+
 class GraphQLScope(Enum):
     """Scopes for GraphQL model generation."""
 
@@ -375,7 +399,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
-    use_all_exports: bool = False,
+    all_exports_scope: AllExportsScope | None = None,
+    all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -613,7 +638,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     )
 
     with chdir(output):
-        results = parser.parse(disable_future_imports=disable_future_imports, use_all_exports=use_all_exports)
+        results = parser.parse(
+            disable_future_imports=disable_future_imports,
+            all_exports_scope=all_exports_scope,
+            all_exports_collision_strategy=all_exports_collision_strategy,
+        )
     if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
             input_filename = "<stdin>"
@@ -704,6 +733,8 @@ inferred_message = (
 __all__ = [
     "MAX_VERSION",
     "MIN_VERSION",
+    "AllExportsCollisionStrategy",
+    "AllExportsScope",
     "DatetimeClassType",
     "DefaultPutDict",
     "Error",
