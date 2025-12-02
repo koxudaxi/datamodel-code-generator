@@ -22,6 +22,7 @@ from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
+    JSON_SCHEMA_DATA_PATH,
     OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
@@ -760,4 +761,19 @@ def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Pat
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="InputMessage",
+    )
+
+
+def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with JSONSchema multi-file input."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file",
     )

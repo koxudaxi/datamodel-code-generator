@@ -1619,10 +1619,9 @@ class Parser(ABC):
             elif n in reserved:
                 details.append(f"  '{n}' conflicts with a model in __init__.py")
         raise Error(
-            "Name collision detected with --all-exports-scope=recursive:\n"
+            "Name collision detected with --all-exports-scope:\n"
             + "\n".join(details)
-            + "\n\nUse --all-exports-collision-strategy to specify how to handle collisions, "
-            "or use --all-exports-scope=children instead."
+            + "\n\nUse --all-exports-collision-strategy to specify how to handle collisions."
         )
 
     @staticmethod
@@ -1888,6 +1887,22 @@ class Parser(ABC):
                 body = code_formatter.format_code(body)
 
             results[module] = Result(body=body, source=models[0].file_path if models else None)
+
+        if all_exports_scope is not None:
+            processed_init_modules = {m for m, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
+            for init_module, result in list(results.items()):
+                if init_module[-1] != "__init__.py" or init_module in processed_init_modules or result.body:
+                    continue
+                child_exports = self._collect_exports_for_init(init_module, processed_models, all_exports_scope)
+                if not child_exports:
+                    continue
+                resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
+                export_imports, export_names = self._build_all_exports_code(resolved)
+                all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                parts = [str(self.imports), "\n"] if with_import else []
+                parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
+                body = "\n".join(parts)
+                results[init_module] = Result(body=code_formatter.format_code(body) if code_formatter else body)
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:
