@@ -1798,6 +1798,42 @@ def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture
     )
 
 
+def test_main_custom_file_header_with_docstring(output_file: Path) -> None:
+    """Test future import placement after docstring in custom header."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_with_docstring.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_docstring.txt")],
+    )
+
+
+def test_main_custom_file_header_with_import(output_file: Path) -> None:
+    """Test future import placement before existing imports in custom header."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_with_import.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_import.txt")],
+    )
+
+
+def test_main_custom_file_header_with_docstring_and_import(output_file: Path) -> None:
+    """Test future import placement with docstring and imports in custom header."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_with_docstring_and_import.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt")],
+    )
+
+
 def test_main_pydantic_v2(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic v2 output."""
     run_main_and_assert(

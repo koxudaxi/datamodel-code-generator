@@ -310,6 +310,78 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise FileNotFoundError(msg)
 
 
+def _find_future_import_insertion_point(header: str) -> int:
+    """Find position in header where __future__ import should be inserted."""
+    if not header:
+        return 0
+
+    import ast  # noqa: PLC0415
+
+    try:
+        tree = ast.parse(header)
+    except SyntaxError:
+        return 0
+
+    lines = header.splitlines(keepends=True)
+
+    def line_end_pos(line_num: int) -> int:
+        return sum(len(lines[i]) for i in range(line_num))
+
+    if not tree.body:
+        return len(header)
+
+    first_stmt = tree.body[0]
+    is_docstring = isinstance(first_stmt, ast.Expr) and (
+        (isinstance(first_stmt.value, ast.Constant) and isinstance(first_stmt.value.value, str))
+        or isinstance(first_stmt.value, ast.JoinedStr)
+    )
+    if is_docstring:
+        end_line = first_stmt.end_lineno or len(lines)
+        pos = line_end_pos(end_line)
+        while end_line < len(lines) and not lines[end_line].strip():
+            pos += len(lines[end_line])
+            end_line += 1
+        return pos
+
+    pos = 0
+    for i in range(first_stmt.lineno - 1):
+        pos += len(lines[i])
+    return pos
+
+
+def _extract_future_imports_from_body(body: str) -> tuple[str, str]:
+    """Extract __future__ imports from body, returning (future_imports, rest_of_body)."""
+    if not body.lstrip().startswith("from __future__"):
+        return "", body
+
+    lines = body.split("\n")
+    future_lines = []
+    rest_start = 0
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            if future_lines:
+                rest_start = i
+                break
+            continue
+        if stripped.startswith("from __future__"):
+            future_lines.append(line)
+            rest_start = i + 1
+        elif future_lines:
+            rest_start = i
+            break
+        else:
+            break
+
+    if not future_lines:
+        return "", body
+
+    future_imports = "\n".join(future_lines)
+    rest_body = "\n".join(lines[rest_start:]).lstrip("\n")
+    return future_imports, rest_body
+
+
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
@@ -697,10 +769,31 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             file = path.open("wt", encoding=encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
-        print(custom_file_header or header.format(safe_filename), file=file)
-        if body:
-            print(file=file)
-            print(body.rstrip(), file=file)
+        effective_header = custom_file_header or header.format(safe_filename)
+
+        if custom_file_header and body:
+            future_imports, rest_body = _extract_future_imports_from_body(body)
+            if future_imports:
+                insertion_point = _find_future_import_insertion_point(custom_file_header)
+                header_before = custom_file_header[:insertion_point].rstrip()
+                header_after = custom_file_header[insertion_point:].strip()
+                if header_after:
+                    content = header_before + "\n" + future_imports + "\n\n" + header_after
+                else:
+                    content = header_before + "\n\n\n" + future_imports
+                print(content, file=file)
+                if rest_body:
+                    print(file=file)
+                    print(rest_body.rstrip(), file=file)
+            else:
+                print(effective_header, file=file)
+                print(file=file)
+                print(body.rstrip(), file=file)
+        else:
+            print(effective_header, file=file)
+            if body:
+                print(file=file)
+                print(body.rstrip(), file=file)
 
         if file is not None:
             file.close()
