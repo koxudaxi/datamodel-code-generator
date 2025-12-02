@@ -726,14 +726,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             return Exit.ERROR
 
-    # Set up output path - use temp directory for check mode
     if config.check:
-        assert config.output is not None
-        is_directory_output = not config.output.suffix
+        config_output = cast("Path", config.output)
+        is_directory_output = not config_output.suffix
         temp_context: tempfile.TemporaryDirectory[str] | None = tempfile.TemporaryDirectory()
         temp_dir = Path(temp_context.name)
         if is_directory_output:
-            generate_output: Path | None = temp_dir / config.output.name
+            generate_output: Path | None = temp_dir / config_output.name
         else:
             generate_output = temp_dir / "output.py"
     else:
@@ -846,9 +845,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             temp_context.cleanup()
         return Exit.ERROR
 
-    if config.check:
-        assert config.output is not None
-        assert generate_output is not None
+    if config.check and config.output is not None and generate_output is not None:
         has_differences = False
 
         if is_directory_output:
@@ -868,7 +865,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 print("".join(diff_lines), end="")  # noqa: T201
                 has_differences = True
 
-        if temp_context is not None:
+        if temp_context is not None:  # pragma: no branch
             temp_context.cleanup()
 
         return Exit.DIFF if has_differences else Exit.OK

@@ -635,3 +635,17 @@ def test_check_with_invalid_class_name(tmp_path: Path) -> None:
         expected_exit=Exit.ERROR,
         expected_stderr_contains="You have to set `--class-name` option",
     )
+
+
+def test_check_with_invalid_file_format(tmp_path: Path) -> None:
+    """Test --check cleans up temp directory when Error occurs (invalid file format)."""
+    invalid_file = tmp_path / "invalid.txt"
+    invalid_file.write_text("This is not a valid schema format!!!", encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=invalid_file,
+        output_path=output_path,
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="Invalid file format",
+    )
