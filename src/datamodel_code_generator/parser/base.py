@@ -12,7 +12,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import OrderedDict, defaultdict
-from collections.abc import Hashable
+from collections.abc import Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
@@ -20,7 +20,13 @@ from urllib.parse import ParseResult
 
 from pydantic import BaseModel
 
-from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, Error, ReuseScope
+from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    AllExportsCollisionStrategy,
+    AllExportsScope,
+    Error,
+    ReuseScope,
+)
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
     CodeFormatter,
@@ -1530,6 +1536,119 @@ class Parser(ABC):
                         )
 
     @classmethod
+    def _collect_exports_for_init(
+        cls,
+        module: tuple[str, ...],
+        processed_models: Sequence[tuple[tuple[str, ...], Sequence[DataModel], bool, Imports, ModelResolver]],
+        scope: AllExportsScope,
+    ) -> list[tuple[str, tuple[str, ...], str]]:
+        """Collect exports for __init__.py based on scope."""
+        exports: list[tuple[str, tuple[str, ...], str]] = []
+        base = module[:-1] if module[-1] == "__init__.py" else module
+        base_len = len(base)
+
+        for proc_module, proc_models, _, _, _ in processed_models:
+            if not proc_models or proc_module == module:
+                continue
+            if (last := proc_module[-1]) == "__init__.py":
+                prefix = proc_module[:-1]
+            elif last.endswith(".py"):
+                prefix = (*proc_module[:-1], last[:-3])
+            else:
+                prefix = proc_module
+            if prefix[:base_len] != base or (depth := len(prefix) - base_len) < 1:
+                continue
+            if scope == AllExportsScope.Children and depth != 1:
+                continue
+            if rel := prefix[base_len:]:
+                exports.extend(
+                    (ref.short_name, rel, ".".join(rel))
+                    for m in proc_models
+                    if (ref := m.reference) and not ref.short_name.startswith("_")
+                )
+        return exports
+
+    @classmethod
+    def _resolve_export_collisions(
+        cls,
+        exports: list[tuple[str, tuple[str, ...], str]],
+        strategy: AllExportsCollisionStrategy | None,
+        reserved: set[str] | None = None,
+    ) -> dict[str, list[tuple[str, tuple[str, ...], str]]]:
+        """Resolve name collisions in exports based on strategy."""
+        reserved = reserved or set()
+        by_name: dict[str, list[tuple[str, tuple[str, ...], str]]] = {}
+        for item in exports:
+            by_name.setdefault(item[0], []).append(item)
+
+        if not (colliding := {n for n, items in by_name.items() if len(items) > 1 or n in reserved}):
+            return dict(by_name)
+        if (effective := strategy or AllExportsCollisionStrategy.Error) == AllExportsCollisionStrategy.Error:
+            cls._raise_collision_error(by_name, colliding, reserved)
+
+        used: set[str] = {n for n in by_name if n not in colliding} | reserved
+        result = {n: items for n, items in by_name.items() if n not in colliding}
+
+        for name in sorted(colliding):
+            for item in sorted(by_name[name], key=lambda x: len(x[1])):
+                new_name = cls._make_prefixed_name(
+                    item[0], item[1], used, minimal=effective == AllExportsCollisionStrategy.MinimalPrefix
+                )
+                if new_name in reserved:
+                    msg = (
+                        f"Cannot resolve collision: '{new_name}' conflicts with __init__.py model. "
+                        "Please rename one of the models."
+                    )
+                    raise Error(msg)
+                result[new_name] = [item]
+                used.add(new_name)
+        return result
+
+    @classmethod
+    def _raise_collision_error(
+        cls,
+        by_name: dict[str, list[tuple[str, tuple[str, ...], str]]],
+        colliding: set[str],
+        reserved: set[str],
+    ) -> None:
+        """Raise an error with collision details."""
+        details = []
+        for n in colliding:
+            if len(items := by_name[n]) > 1:
+                details.append(f"  '{n}' is defined in: {', '.join(f'.{s}' for _, _, s in items)}")
+            elif n in reserved:
+                details.append(f"  '{n}' conflicts with a model in __init__.py")
+        raise Error(
+            "Name collision detected with --all-exports-scope=recursive:\n"
+            + "\n".join(details)
+            + "\n\nUse --all-exports-collision-strategy to specify how to handle collisions, "
+            "or use --all-exports-scope=children instead."
+        )
+
+    @staticmethod
+    def _make_prefixed_name(name: str, path: tuple[str, ...], used: set[str], *, minimal: bool) -> str:
+        """Generate a prefixed name, using minimal or full prefix."""
+        if minimal:
+            for depth in range(1, len(path) + 1):
+                if (candidate := "".join(p.title().replace("_", "") for p in path[-depth:]) + name) not in used:
+                    return candidate
+        return "".join(p.title().replace("_", "") for p in path) + name
+
+    @classmethod
+    def _build_all_exports_code(
+        cls,
+        resolved: dict[str, list[tuple[str, tuple[str, ...], str]]],
+    ) -> tuple[Imports, list[str]]:
+        """Build import statements and __all__ list from resolved exports."""
+        export_imports = Imports()
+        for export_name, items in resolved.items():
+            for orig, _, short in items:
+                export_imports.append(
+                    Import(from_=f".{short}", import_=orig, alias=export_name if export_name != orig else None)
+                )
+        return export_imports, sorted(resolved.keys())
+
+    @classmethod
     def _collect_used_names_from_models(cls, models: list[DataModel]) -> set[str]:
         """Collect identifiers referenced by models before rendering."""
         names: set[str] = set()
@@ -1562,13 +1681,14 @@ class Parser(ABC):
                 walk_data_type(field.data_type)
         return names
 
-    def parse(  # noqa: PLR0912, PLR0914, PLR0915
+    def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
         format_: bool | None = True,  # noqa: FBT001, FBT002
         settings_path: Path | None = None,
         disable_future_imports: bool = False,  # noqa: FBT001, FBT002
-        use_all_exports: bool = False,  # noqa: FBT001, FBT002
+        all_exports_scope: AllExportsScope | None = None,
+        all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
@@ -1710,18 +1830,37 @@ class Parser(ABC):
 
         for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
+            export_imports: Imports | None = None
             export_names: list[str] = []
+
+            if all_exports_scope is not None and module[-1] == "__init__.py":
+                child_exports = self._collect_exports_for_init(module, processed_models, all_exports_scope)
+                if child_exports:
+                    local_model_names = {
+                        m.reference.short_name
+                        for m in models
+                        if m.reference and not m.reference.short_name.startswith("_")
+                    }
+                    resolved_exports = self._resolve_export_collisions(
+                        child_exports, all_exports_collision_strategy, local_model_names
+                    )
+                    export_imports, export_names = self._build_all_exports_code(resolved_exports)
+
             if models:
                 if with_import:
                     result += [str(self.imports), str(imports), "\n"]
 
-                if use_all_exports and module[-1] == "__init__.py":
-                    export_names = [
+                if export_imports:
+                    result += [str(export_imports), ""]
+
+                if export_names:
+                    local_exports = [
                         m.reference.short_name
                         for m in models
                         if m.reference and not m.reference.short_name.startswith("_")
                     ]
-                    all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                    all_export_names = sorted(set(export_names + local_exports))
+                    all_items = ",\n    ".join(f'"{name}"' for name in all_export_names)
                     result += [f"__all__ = [\n    {all_items},\n]\n"]
 
                 self.__update_type_aliases(models)
@@ -1735,6 +1874,13 @@ class Parser(ABC):
                             m.reference.short_name for m in models if m.path in require_update_action_models
                         ),
                     ]
+            elif export_names:
+                if with_import:
+                    result += [str(self.imports), "\n"]
+                result += [str(export_imports), ""]
+                all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                result += [f"__all__ = [\n    {all_items},\n]"]
+
             if not result and not init:
                 continue
             body = "\n".join(result)
