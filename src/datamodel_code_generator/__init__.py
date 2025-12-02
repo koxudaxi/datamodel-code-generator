@@ -252,6 +252,17 @@ class GraphQLScope(Enum):
     Schema = "schema"
 
 
+class ReadOnlyWriteOnlyModelType(Enum):
+    """Model generation strategy for readOnly/writeOnly fields.
+
+    RequestResponse: Generate only Request/Response model variants (no base model).
+    All: Generate Base, Request, and Response models.
+    """
+
+    RequestResponse = "request-response"
+    All = "all"
+
+
 class Error(Exception):
     """Base exception for datamodel-code-generator errors."""
 
@@ -375,6 +386,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
+    read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -608,6 +620,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         parent_scoped_naming=parent_scoped_naming,
         dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
+        read_only_write_only_model_type=read_only_write_only_model_type,
         **kwargs,
     )
 
@@ -710,5 +723,6 @@ __all__ = [
     "InvalidClassNameError",
     "LiteralType",
     "PythonVersion",
+    "ReadOnlyWriteOnlyModelType",
     "generate",
 ]

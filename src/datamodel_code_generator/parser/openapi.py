@@ -23,6 +23,7 @@ from datamodel_code_generator import (
     OpenAPIScope,
     PythonVersion,
     PythonVersionMin,
+    ReadOnlyWriteOnlyModelType,
     ReuseScope,
     YamlValue,
     load_yaml_dict,
@@ -263,6 +264,7 @@ class OpenAPIParser(JsonSchemaParser):
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -351,6 +353,7 @@ class OpenAPIParser(JsonSchemaParser):
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            read_only_write_only_model_type=read_only_write_only_model_type,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters

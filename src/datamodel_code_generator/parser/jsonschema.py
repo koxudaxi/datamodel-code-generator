@@ -24,6 +24,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     DataclassArguments,
     InvalidClassNameError,
+    ReadOnlyWriteOnlyModelType,
     ReuseScope,
     YamlValue,
     load_yaml,
@@ -535,6 +536,7 @@ class JsonSchemaParser(Parser):
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -623,6 +625,7 @@ class JsonSchemaParser(Parser):
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            read_only_write_only_model_type=read_only_write_only_model_type,
         )
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
@@ -704,6 +707,267 @@ class JsonSchemaParser(Parser):
             self.field_constraints and not (obj.ref or obj.anyOf or obj.oneOf or obj.allOf or obj.is_object or obj.enum)
         )
 
+    def _get_ref_schema(self, ref: str) -> dict[str, Any] | None:  # noqa: PLR0911
+        """Get schema body from a $ref for readOnly/writeOnly resolution."""
+        ref_type = get_ref_type(ref)
+        if ref_type == JSONReference.LOCAL:
+            try:
+                return get_model_by_path(self.raw_obj, ref[2:].split("/"))
+            except (KeyError, IndexError):
+                return None
+        if ref_type == JSONReference.REMOTE:
+            try:
+                if "#" in ref:
+                    file_path, json_pointer = ref.split("#", 1)
+                    remote_obj = self._get_ref_body(file_path)
+                    if json_pointer:
+                        return get_model_by_path(remote_obj, json_pointer[1:].split("/"))
+                    return remote_obj
+                return self._get_ref_body(ref)
+            except (KeyError, IndexError, FileNotFoundError):
+                return None
+        if ref_type == JSONReference.URL and self.read_only_write_only_model_type is not None:
+            try:
+                if "#" in ref:
+                    url_part, json_pointer = ref.split("#", 1)
+                    remote_obj = self._get_ref_body_from_url(url_part)
+                    if json_pointer:
+                        return get_model_by_path(remote_obj, json_pointer[1:].split("/"))
+                    return remote_obj
+                return self._get_ref_body_from_url(ref)
+            except (KeyError, IndexError, Exception):  # noqa: BLE001
+                return None
+        return None
+
+    def _resolve_read_only(self, obj: JsonSchemaObject) -> bool:
+        """Resolve readOnly from direct value, $ref, and compositions."""
+        if obj.readOnly is True:
+            return True
+
+        if obj.ref:
+            resolved = self._get_ref_schema(obj.ref)
+            if resolved:
+                resolved_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(resolved)
+                if self._resolve_read_only(resolved_obj):
+                    return True
+
+        for sub in obj.allOf:
+            if self._resolve_read_only(sub):
+                return True
+
+        for sub in obj.anyOf:
+            if self._resolve_read_only(sub):
+                return True
+
+        return any(self._resolve_read_only(sub) for sub in obj.oneOf)
+
+    def _resolve_write_only(self, obj: JsonSchemaObject) -> bool:
+        """Resolve writeOnly from direct value, $ref, and compositions."""
+        if obj.writeOnly is True:
+            return True
+
+        if obj.ref:
+            resolved = self._get_ref_schema(obj.ref)
+            if resolved:
+                resolved_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(resolved)
+                if self._resolve_write_only(resolved_obj):
+                    return True
+
+        for sub in obj.allOf:
+            if self._resolve_write_only(sub):
+                return True
+
+        for sub in obj.anyOf:
+            if self._resolve_write_only(sub):
+                return True
+
+        return any(self._resolve_write_only(sub) for sub in obj.oneOf)
+
+    def _collect_fields_from_ref(self, ref: str, path: list[str]) -> list[DataModelFieldBase]:
+        """Collect fields from a $ref schema for Request/Response model generation."""
+        resolved = self._get_ref_schema(ref)
+        if not resolved:
+            return []
+
+        resolved_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(resolved)
+        fields: list[DataModelFieldBase] = []
+
+        if resolved_obj.properties:
+            fields.extend(
+                self.parse_object_fields(
+                    resolved_obj, path, get_module_name("", None, treat_dot_as_module=self.treat_dot_as_module)
+                )
+            )
+
+        for all_of_item in resolved_obj.allOf:
+            if all_of_item.ref:
+                fields.extend(self._collect_fields_from_ref(all_of_item.ref, path))
+            elif all_of_item.properties:
+                fields.extend(
+                    self.parse_object_fields(
+                        all_of_item, path, get_module_name("", None, treat_dot_as_module=self.treat_dot_as_module)
+                    )
+                )
+
+        return fields
+
+    @staticmethod
+    def _copy_field(field: DataModelFieldBase) -> DataModelFieldBase:
+        """Create a deep copy of a field to avoid mutating the original."""
+        copied_field = field.copy()
+        if field.data_type:
+            copied_field.data_type = field.data_type.copy()
+            if field.data_type.data_types:
+                copied_field.data_type.data_types = [dt.copy() for dt in field.data_type.data_types]
+        return copied_field
+
+    def _collect_all_fields_for_request_response(
+        self,
+        fields: list[DataModelFieldBase],
+        base_classes: list[Reference] | None,
+        path: list[str],
+    ) -> list[DataModelFieldBase]:
+        """Collect all fields including those from base classes for Request/Response models."""
+        fields_by_name: dict[str, DataModelFieldBase] = {}
+
+        def add_field(field: DataModelFieldBase) -> None:
+            """Add a deep copy of field, using original_name or name as key."""
+            key = field.original_name or field.name or ""
+            if key:
+                fields_by_name[key] = JsonSchemaParser._copy_field(field)
+
+        for base_ref in base_classes or []:
+            if base_ref.source and hasattr(base_ref.source, "fields"):
+                if hasattr(base_ref.source, "base_classes") and base_ref.source.base_classes:
+                    nested_base_classes = [
+                        bc.reference for bc in base_ref.source.base_classes if hasattr(bc, "reference") and bc.reference
+                    ]
+                    for field in self._collect_all_fields_for_request_response([], nested_base_classes, path):
+                        key = field.original_name or field.name or ""
+                        if key:
+                            fields_by_name[key] = field
+                for field in base_ref.source.fields:
+                    add_field(field)
+            elif base_ref.path and "#" in base_ref.path:
+                ref_str = "#" + base_ref.path.split("#", 1)[1]
+                for field in self._collect_fields_from_ref(ref_str, path):
+                    add_field(field)
+
+        for field in fields:
+            add_field(field)
+
+        return list(fields_by_name.values())
+
+    def _should_generate_separate_models(
+        self,
+        fields: list[DataModelFieldBase],
+        base_classes: list[Reference] | None = None,
+        path: list[str] | None = None,
+    ) -> bool:
+        """Determine if Request/Response models should be generated."""
+        if self.read_only_write_only_model_type is None:
+            return False
+
+        all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path or [])
+
+        return any(f.read_only or f.write_only for f in all_fields)
+
+    def _should_generate_base_model(self) -> bool:
+        """Determine if Base model should be generated."""
+        if self.read_only_write_only_model_type is None:
+            return True
+        return self.read_only_write_only_model_type == ReadOnlyWriteOnlyModelType.All
+
+    def _create_request_response_models(  # noqa: PLR0913, PLR0917
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+        fields: list[DataModelFieldBase],
+        data_model_type_class: type[DataModel],
+        base_classes: list[Reference] | None = None,
+    ) -> None:
+        """Generate Request and Response model variants."""
+        all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
+
+        has_read_only = any(f.read_only for f in all_fields)
+        has_write_only = any(f.write_only for f in all_fields)
+
+        def get_unique_model_name_and_path(base_name: str, suffix: str) -> tuple[str, list[str]]:
+            """Generate a unique model name and path, avoiding collisions."""
+            model_name = f"{base_name}{suffix}"
+            model_path = [*path[:-1], model_name]
+            joined_path = self.model_resolver.join_path(model_path)
+
+            existing_ref = self.model_resolver.references.get(joined_path)
+            if existing_ref and existing_ref.loaded:
+                model_name = f"{base_name}{suffix}Model"
+                model_path = [*path[:-1], model_name]
+                joined_path = self.model_resolver.join_path(model_path)
+
+                counter = 1
+                while self.model_resolver.references.get(joined_path):
+                    model_name = f"{base_name}{suffix}Model{counter}"
+                    model_path = [*path[:-1], model_name]
+                    joined_path = self.model_resolver.join_path(model_path)
+                    counter += 1
+
+            return model_name, model_path
+
+        if has_read_only:
+            request_fields = [f for f in all_fields if not f.read_only]
+            if request_fields:
+                request_name, request_path = get_unique_model_name_and_path(name, "Request")
+                request_reference = self.model_resolver.add(
+                    request_path,
+                    request_name,
+                    class_name=True,
+                    singular_name=False,
+                    loaded=True,
+                )
+                request_model = self._create_data_model(
+                    model_type=data_model_type_class,
+                    reference=request_reference,
+                    fields=request_fields,
+                    custom_base_class=obj.custom_base_path or self.base_class,
+                    custom_template_dir=self.custom_template_dir,
+                    extra_template_data=self.extra_template_data,
+                    path=self.current_source_path,
+                    description=obj.description if self.use_schema_description else None,
+                    nullable=obj.type_has_null,
+                    keyword_only=self.keyword_only,
+                    treat_dot_as_module=self.treat_dot_as_module,
+                    dataclass_arguments=self.dataclass_arguments,
+                )
+                self.results.append(request_model)
+
+        if has_write_only:
+            response_fields = [f for f in all_fields if not f.write_only]
+            if response_fields:
+                response_name, response_path = get_unique_model_name_and_path(name, "Response")
+                response_reference = self.model_resolver.add(
+                    response_path,
+                    response_name,
+                    class_name=True,
+                    singular_name=False,
+                    loaded=True,
+                )
+                response_model = self._create_data_model(
+                    model_type=data_model_type_class,
+                    reference=response_reference,
+                    fields=response_fields,
+                    custom_base_class=obj.custom_base_path or self.base_class,
+                    custom_template_dir=self.custom_template_dir,
+                    extra_template_data=self.extra_template_data,
+                    path=self.current_source_path,
+                    description=obj.description if self.use_schema_description else None,
+                    nullable=obj.type_has_null,
+                    keyword_only=self.keyword_only,
+                    treat_dot_as_module=self.treat_dot_as_module,
+                    dataclass_arguments=self.dataclass_arguments,
+                )
+                self.results.append(response_model)
+
     def get_object_field(  # noqa: PLR0913
         self,
         *,
@@ -732,6 +996,8 @@ class JsonSchemaParser(Parser):
             original_name=original_field_name,
             has_default=field.has_default,
             type_has_null=field.type_has_null,
+            read_only=self._resolve_read_only(field),
+            write_only=self._resolve_write_only(field),
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -912,7 +1178,7 @@ class JsonSchemaParser(Parser):
             kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
-    def _parse_object_common_part(  # noqa: PLR0913, PLR0917
+    def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0917
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -960,20 +1226,32 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
-        data_model_type = self._create_data_model(
-            reference=reference,
-            fields=fields,
-            base_classes=base_classes,
-            custom_base_class=obj.custom_base_path or self.base_class,
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
-            description=obj.description if self.use_schema_description else None,
-            keyword_only=self.keyword_only,
-            treat_dot_as_module=self.treat_dot_as_module,
-            dataclass_arguments=self.dataclass_arguments,
-        )
-        self.results.append(data_model_type)
+        if self._should_generate_separate_models(fields, base_classes, path):
+            self._create_request_response_models(
+                name=reference.name,
+                obj=obj,
+                path=path,
+                fields=fields,
+                data_model_type_class=self.data_model_type,
+                base_classes=base_classes,
+            )
+
+        # Generate base model if needed
+        if self._should_generate_base_model():
+            data_model_type = self._create_data_model(
+                reference=reference,
+                fields=fields,
+                base_classes=base_classes,
+                custom_base_class=obj.custom_base_path or self.base_class,
+                custom_template_dir=self.custom_template_dir,
+                extra_template_data=self.extra_template_data,
+                path=self.current_source_path,
+                description=obj.description if self.use_schema_description else None,
+                keyword_only=self.keyword_only,
+                treat_dot_as_module=self.treat_dot_as_module,
+                dataclass_arguments=self.dataclass_arguments,
+            )
+            self.results.append(data_model_type)
 
         return self.data_type(reference=reference)
 
@@ -1209,21 +1487,33 @@ class JsonSchemaParser(Parser):
 
         self.set_additional_properties(reference.path, obj)
 
-        data_model_type = self._create_data_model(
-            model_type=data_model_type_class,
-            reference=reference,
-            fields=fields,
-            custom_base_class=obj.custom_base_path or self.base_class,
-            custom_template_dir=self.custom_template_dir,
-            extra_template_data=self.extra_template_data,
-            path=self.current_source_path,
-            description=obj.description if self.use_schema_description else None,
-            nullable=obj.type_has_null,
-            keyword_only=self.keyword_only,
-            treat_dot_as_module=self.treat_dot_as_module,
-            dataclass_arguments=self.dataclass_arguments,
-        )
-        self.results.append(data_model_type)
+        if self._should_generate_separate_models(fields, None, path):
+            self._create_request_response_models(
+                name=class_name,
+                obj=obj,
+                path=path,
+                fields=fields,
+                data_model_type_class=data_model_type_class,
+            )
+
+        # Generate base model if needed
+        if self._should_generate_base_model():
+            data_model_type = self._create_data_model(
+                model_type=data_model_type_class,
+                reference=reference,
+                fields=fields,
+                custom_base_class=obj.custom_base_path or self.base_class,
+                custom_template_dir=self.custom_template_dir,
+                extra_template_data=self.extra_template_data,
+                path=self.current_source_path,
+                description=obj.description if self.use_schema_description else None,
+                nullable=obj.type_has_null,
+                keyword_only=self.keyword_only,
+                treat_dot_as_module=self.treat_dot_as_module,
+                dataclass_arguments=self.dataclass_arguments,
+            )
+            self.results.append(data_model_type)
+
         return self.data_type(reference=reference)
 
     def parse_pattern_properties(

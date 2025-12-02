@@ -132,6 +132,8 @@ class DataModelFieldBase(_BaseModel):
     _pass_fields: ClassVar[set[str]] = {"parent", "data_type"}
     can_have_extra_keys: ClassVar[bool] = True
     type_has_null: Optional[bool] = None  # noqa: UP045
+    read_only: bool = False
+    write_only: bool = False
 
     if not TYPE_CHECKING:
         if not PYDANTIC_V2:

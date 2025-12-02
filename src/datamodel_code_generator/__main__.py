@@ -8,7 +8,7 @@ import sys
 import warnings
 from collections import defaultdict
 from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
-from enum import IntEnum
+from enum import Enum, IntEnum
 from io import TextIOBase
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
@@ -26,6 +26,7 @@ from datamodel_code_generator import (
     InputFileType,
     InvalidClassNameError,
     OpenAPIScope,
+    ReadOnlyWriteOnlyModelType,
     ReuseScope,
     enable_debug_message,
     generate,
@@ -420,6 +421,7 @@ class Config(BaseModel):
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
+    read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -468,6 +470,8 @@ def _format_toml_value(value: TomlValue) -> str:
     """Format a Python value as a TOML value string."""
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, Enum):
+        return f'"{value.value}"'
     if isinstance(value, str):
         return f'"{value}"'
     formatted_items = [_format_toml_value(item) for item in value]
@@ -728,6 +732,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
+            read_only_write_only_model_type=config.read_only_write_only_model_type,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

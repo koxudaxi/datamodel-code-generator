@@ -210,3 +210,141 @@ class Api(BaseModel):
 class Apis(BaseModel):
     __root__: List[Api]
 ```
+
+## readOnly / writeOnly Properties
+
+OpenAPI 3.x supports `readOnly` and `writeOnly` property annotations:
+
+- **readOnly**: Property is only returned in responses (e.g., `id`, `created_at`)
+- **writeOnly**: Property is only sent in requests (e.g., `password`)
+
+### Option: `--read-only-write-only-model-type`
+
+This option generates separate Request/Response models based on these annotations.
+
+| Value | Description |
+|-------|-------------|
+| (not set) | Default. No special handling (backward compatible) |
+| `request-response` | Generate only Request/Response models (no base model) |
+| `all` | Generate base model + Request + Response models |
+
+### Example Schema
+
+```yaml
+openapi: "3.0.0"
+info:
+  title: User API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          readOnly: true      # Server-generated, not in requests
+        name:
+          type: string
+        password:
+          type: string
+          writeOnly: true     # Client-only, not in responses
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+```
+
+### Generated Output
+
+```bash
+$ datamodel-codegen --input user.yaml --input-file-type openapi \
+    --output-model-type pydantic_v2.BaseModel \
+    --read-only-write-only-model-type all
+```
+
+```python
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+# Request model: excludes readOnly fields (id, created_at)
+class UserRequest(BaseModel):
+    name: str
+    password: Optional[str] = None
+
+# Response model: excludes writeOnly fields (password)
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    created_at: Optional[datetime] = None
+
+# Base model: contains all fields
+class User(BaseModel):
+    id: int
+    name: str
+    password: Optional[str] = None
+    created_at: Optional[datetime] = None
+```
+
+### Usage Patterns
+
+| Use Case | Recommended Option | Generated Models |
+|----------|-------------------|------------------|
+| API client validation | `request-response` | `UserRequest`, `UserResponse` |
+| Database ORM mapping | (not set) | `User` |
+| Both client & ORM | `all` | `User`, `UserRequest`, `UserResponse` |
+
+### Behavior with allOf Inheritance
+
+When using `allOf` with `$ref`, fields from all referenced schemas are flattened into Request/Response models:
+
+```yaml
+components:
+  schemas:
+    Timestamps:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    User:
+      allOf:
+        - $ref: "#/components/schemas/Timestamps"
+        - type: object
+          properties:
+            name:
+              type: string
+```
+
+Generated `UserRequest` will exclude `created_at` (readOnly from Timestamps).
+
+### Collision Handling
+
+If a schema named `UserRequest` or `UserResponse` already exists, the generated model will be named `UserRequestModel` or `UserResponseModel` to avoid conflicts.
+
+### Supported Output Formats
+
+This option works with all output formats:
+
+- `pydantic.BaseModel` / `pydantic_v2.BaseModel`
+- `dataclasses.dataclass`
+- `typing.TypedDict`
+- `msgspec.Struct`
+
+### Supported $ref Types
+
+readOnly/writeOnly resolution works with all reference types:
+
+| Reference Type | Example | Support |
+|---------------|---------|---------|
+| Local | `#/components/schemas/User` | ✅ |
+| File | `./common.yaml#/User` | ✅ |
+| URL | `https://example.com/api.yaml#/User` | ✅ (cached) |
+
+URL references are resolved with caching to minimize HTTP calls.

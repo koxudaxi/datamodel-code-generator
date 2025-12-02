@@ -2417,3 +2417,49 @@ def test_main_openapi_namespace_subns_ref(output_dir: Path) -> None:
             output_path=output_dir,
             expected_directory=EXPECTED_OPENAPI_PATH / "namespace_subns_ref",
         )
+
+
+def test_main_openapi_read_only_write_only_default(output_file: Path) -> None:
+    """Test readOnly/writeOnly default: base model only."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_default.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_read_only_write_only_request_response(output_file: Path) -> None:
+    """Test readOnly/writeOnly request-response: Request/Response only, no base."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_request_response.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "request-response",
+        ],
+    )
+
+
+def test_main_openapi_read_only_write_only_all(output_file: Path) -> None:
+    """Test readOnly/writeOnly all: Base + Request + Response models."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_all.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )

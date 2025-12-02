@@ -431,8 +431,6 @@ Field customization:
   --strip-default-none  Strip default None on fields
   --union-mode {smart,left_to_right}
                         Union mode for only pydantic v2 field
-  --use-attribute-docstrings
-                        Set use_attribute_docstrings=True in Pydantic v2 ConfigDict
   --use-default         Use default value even if a field is required
   --use-default-kwarg   Use `default=` instead of a positional argument for Fields that have
                         default values.
@@ -452,10 +450,6 @@ Model customization:
   --collapse-root-models
                         Models generated with a root-type field will be merged into the
                         models using that root-type model
-  --dataclass-arguments DATACLASS_ARGUMENTS
-                        Custom dataclass arguments as a JSON dictionary, e.g. ''{"frozen":
-                        true, "kw_only": true}''. Overrides --frozen-dataclasses and similar
-                        flags.
   --disable-appending-item-suffix
                         Disable appending `Item` suffix to model name in an array
   --disable-timestamp   Disable timestamp on file headers
@@ -478,14 +472,6 @@ Model customization:
                         Set name of models defined inline from the parent model
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
-  --reuse-scope {module,tree}
-                        Scope for model reuse deduplication: module (per-file, default) or
-                        tree (cross-file with shared module). Only effective when --reuse-
-                        model is set.
-  --shared-module-name SHARED_MODULE_NAME
-                        Name of the shared module for --reuse-scope=tree (default:
-                        "shared"). Use this option if your schema has a file named "shared".
-  --skip-root-model     Skip generating the model for the root schema element
   --target-python-version {3.9,3.10,3.11,3.12,3.13,3.14}
                         target python version
   --treat-dot-as-module
@@ -526,7 +512,7 @@ OpenAPI-only options:
   --include-path-parameters
                         Include path parameters in generated parameter models in addition to
                         query parameters (Only OpenAPI)
-  --openapi-scopes {schemas,paths,tags,parameters,webhooks} [{schemas,paths,tags,parameters,webhooks} ...]
+  --openapi-scopes {schemas,paths,tags,parameters} [{schemas,paths,tags,parameters} ...]
                         Scopes of OpenAPI model generation (default: schemas)
   --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
   --use-operation-id-as-name
