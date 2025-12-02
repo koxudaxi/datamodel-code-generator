@@ -649,3 +649,29 @@ def test_check_with_invalid_file_format(tmp_path: Path) -> None:
         expected_exit=Exit.ERROR,
         expected_stderr_contains="Invalid file format",
     )
+
+
+def test_use_all_exports_modular(output_dir: Path) -> None:
+    """Test --use-all-exports generates __all__ in modular output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--use-all-exports"],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports",
+    )
+
+
+def test_use_all_exports_with_docstring_header(output_dir: Path) -> None:
+    """Test --use-all-exports with --custom-file-header containing docstring."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--use-all-exports",
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header_docstring.txt"),
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_docstring",
+    )

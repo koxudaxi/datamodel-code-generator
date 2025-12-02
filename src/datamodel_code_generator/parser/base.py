@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, Error, ReuseScope
 from datamodel_code_generator.format import (
@@ -349,6 +349,7 @@ class Result(BaseModel):
 
     body: str
     source: Optional[Path] = None  # noqa: UP045
+    exports: list[str] = Field(default_factory=list)
 
 
 class Source(BaseModel):
@@ -1730,7 +1731,11 @@ class Parser(ABC):
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            results[module] = Result(body=body, source=models[0].file_path if models else None)
+            # Collect export names from models (class names and type aliases)
+            export_names = [
+                m.reference.short_name for m in models if m.reference and not m.reference.short_name.startswith("_")
+            ]
+            results[module] = Result(body=body, source=models[0].file_path if models else None, exports=export_names)
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:

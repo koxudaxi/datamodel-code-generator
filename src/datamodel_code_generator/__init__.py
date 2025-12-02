@@ -286,6 +286,36 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise FileNotFoundError(msg)
 
 
+def _generate_all_declaration(exports: list[str]) -> str:
+    """Generate __all__ = [...] declaration string."""
+    items = ",\n    ".join(f'"{name}"' for name in exports)
+    return f"__all__ = [\n    {items},\n]"
+
+
+def _insert_all_after_imports(body: str, all_declaration: str) -> str:
+    """Insert __all__ declaration after import statements in the body.
+
+    The __all__ is placed after all import lines (including 'from __future__ import')
+    but before class/function definitions.
+    """
+    lines = body.split("\n")
+    insert_index = 0
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "import ", "from ")):
+            insert_index = i + 1
+        elif stripped.startswith(("class ", "def ", "@")):
+            break
+
+    while insert_index > 0 and not lines[insert_index - 1].strip():
+        insert_index -= 1
+    while insert_index < len(lines) and not lines[insert_index].strip():
+        lines.pop(insert_index)
+    lines.insert(insert_index, f"\n\n{all_declaration}\n\n")
+    return "\n".join(lines)
+
+
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
@@ -375,6 +405,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
+    use_all_exports: bool = False,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -628,7 +659,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         msg = "Models not found in the input data"
         raise Error(msg)
     if isinstance(results, str):
-        modules = {output: (results, input_filename)}
+        modules: dict[Path | None, tuple[str, str | None, list[str]]] = {output: (results, input_filename, [])}
     else:
         if output is None:
             msg = "Modular references require an output directory"
@@ -640,6 +671,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             output.joinpath(*name): (
                 result.body,
                 str(result.source.as_posix() if result.source else input_filename),
+                result.exports,
             )
             for name, result in sorted(results.items())
         }
@@ -658,7 +690,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         header += f"\n#   version:   {get_version()}"
 
     file: IO[Any] | None
-    for path, (body, filename) in modules.items():
+    for path, (body, filename, exports) in modules.items():
         if path is None:
             file = None
         else:
@@ -669,8 +701,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         print(custom_file_header or header.format(safe_filename), file=file)
         if body:
+            if use_all_exports and path is not None and path.name == "__init__.py" and exports:
+                all_declaration = _generate_all_declaration(exports)
+                body_with_all = _insert_all_after_imports(body, all_declaration)
+            else:
+                body_with_all = body
             print(file=file)
-            print(body.rstrip(), file=file)
+            print(body_with_all.rstrip(), file=file)
 
         if file is not None:
             file.close()
