@@ -425,6 +425,7 @@ class Config(BaseModel):
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
+    use_all_exports: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -826,6 +827,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
+            use_all_exports=config.use_all_exports,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

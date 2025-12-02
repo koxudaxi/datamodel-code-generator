@@ -1568,6 +1568,7 @@ class Parser(ABC):
         format_: bool | None = True,  # noqa: FBT001, FBT002
         settings_path: Path | None = None,
         disable_future_imports: bool = False,  # noqa: FBT001, FBT002
+        use_all_exports: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
@@ -1709,9 +1710,19 @@ class Parser(ABC):
 
         for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
+            export_names: list[str] = []
             if models:
                 if with_import:
                     result += [str(self.imports), str(imports), "\n"]
+
+                if use_all_exports and module[-1] == "__init__.py":
+                    export_names = [
+                        m.reference.short_name
+                        for m in models
+                        if m.reference and not m.reference.short_name.startswith("_")
+                    ]
+                    all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                    result += [f"__all__ = [\n    {all_items},\n]\n"]
 
                 self.__update_type_aliases(models)
                 code = dump_templates(models)
