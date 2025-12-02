@@ -1834,6 +1834,22 @@ def test_main_custom_file_header_with_docstring_and_import(output_file: Path) ->
     )
 
 
+def test_main_custom_file_header_without_future_imports(output_file: Path) -> None:
+    """Test custom header with --disable-future-imports option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_no_future.py",
+        extra_args=[
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header.txt"),
+            "--disable-future-imports",
+        ],
+    )
+
+
 def test_main_pydantic_v2(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic v2 output."""
     run_main_and_assert(

@@ -361,21 +361,11 @@ def _extract_future_imports_from_body(body: str) -> tuple[str, str]:
     for i, line in enumerate(lines):
         stripped = line.strip()
         if not stripped:
-            if future_lines:
-                rest_start = i
-                break
-            continue
+            rest_start = i
+            break
         if stripped.startswith("from __future__"):
             future_lines.append(line)
             rest_start = i + 1
-        elif future_lines:
-            rest_start = i
-            break
-        else:
-            break
-
-    if not future_lines:
-        return "", body
 
     future_imports = "\n".join(future_lines)
     rest_body = "\n".join(lines[rest_start:]).lstrip("\n")
