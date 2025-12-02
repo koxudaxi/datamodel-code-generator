@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import difflib
 import json
 import signal
 import sys
+import tempfile
 import warnings
 from collections import defaultdict
 from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
@@ -60,6 +62,7 @@ if TYPE_CHECKING:
 
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
+    "check",
     "generate_pyproject_config",
     "generate_cli_command",
     "version",
@@ -78,8 +81,9 @@ class Exit(IntEnum):
     """Exit reasons."""
 
     OK = 0
-    ERROR = 1
-    KeyboardInterrupt = 2
+    DIFF = 1
+    ERROR = 2
+    KeyboardInterrupt = 3
 
 
 def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
@@ -338,6 +342,7 @@ class Config(BaseModel):
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path] = None  # noqa: UP045
+    check: bool = False
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersionMin
@@ -422,6 +427,7 @@ class Config(BaseModel):
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
     read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
+    use_all_exports: bool = False
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -496,6 +502,79 @@ def generate_pyproject_config(args: Namespace) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _normalize_line_endings(text: str) -> str:
+    """Normalize line endings to LF for cross-platform comparison."""
+    return text.replace("\r\n", "\n")
+
+
+def _compare_single_file(
+    generated_path: Path,
+    actual_path: Path,
+    encoding: str,
+) -> tuple[bool, list[str]]:
+    """Compare generated file content with existing file.
+
+    Returns:
+        Tuple of (has_differences, diff_lines)
+        - has_differences: True if files differ or actual file doesn't exist
+        - diff_lines: List of diff lines for output
+    """
+    generated_content = _normalize_line_endings(generated_path.read_text(encoding=encoding))
+
+    if not actual_path.exists():
+        return True, [f"MISSING: {actual_path} (file does not exist but should be generated)"]
+
+    actual_content = _normalize_line_endings(actual_path.read_text(encoding=encoding))
+
+    if generated_content == actual_content:
+        return False, []
+
+    diff_lines = list(
+        difflib.unified_diff(
+            actual_content.splitlines(keepends=True),
+            generated_content.splitlines(keepends=True),
+            fromfile=str(actual_path),
+            tofile=f"{actual_path} (expected)",
+        )
+    )
+    return True, diff_lines
+
+
+def _compare_directories(
+    generated_dir: Path,
+    actual_dir: Path,
+    encoding: str,
+) -> tuple[list[str], list[str], list[str]]:
+    """Compare generated directory with existing directory."""
+    diffs: list[str] = []
+
+    generated_files = {path.relative_to(generated_dir) for path in generated_dir.rglob("*.py")}
+
+    actual_files: set[Path] = set()
+    if actual_dir.exists():
+        for path in actual_dir.rglob("*.py"):
+            if "__pycache__" not in path.parts:
+                actual_files.add(path.relative_to(actual_dir))
+
+    missing_files = [str(rel_path) for rel_path in sorted(generated_files - actual_files)]
+    extra_files = [str(rel_path) for rel_path in sorted(actual_files - generated_files)]
+
+    for rel_path in sorted(generated_files & actual_files):
+        generated_content = _normalize_line_endings((generated_dir / rel_path).read_text(encoding=encoding))
+        actual_content = _normalize_line_endings((actual_dir / rel_path).read_text(encoding=encoding))
+        if generated_content != actual_content:
+            diffs.extend(
+                difflib.unified_diff(
+                    actual_content.splitlines(keepends=True),
+                    generated_content.splitlines(keepends=True),
+                    fromfile=str(rel_path),
+                    tofile=f"{rel_path} (expected)",
+                )
+            )
+
+    return diffs, missing_files, extra_files
+
+
 def _format_cli_value(value: str | list[str]) -> str:
     """Format a value for CLI argument."""
     if isinstance(value, list):
@@ -526,9 +605,8 @@ def generate_cli_command(config: dict[str, TomlValue]) -> str:
     return " ".join(parts) + "\n"
 
 
-def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0915
+def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
-    # add cli completion support
     argcomplete.autocomplete(arg_parser)
 
     if args is None:  # pragma: no cover
@@ -573,6 +651,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             file=sys.stderr,
         )
         arg_parser.print_help()
+        return Exit.ERROR
+
+    if config.check and config.output is None:
+        print(  # noqa: T201
+            "Error: --check cannot be used with stdout output (no --output specified)",
+            file=sys.stderr,
+        )
         return Exit.ERROR
 
     if not is_supported_in_black(config.target_python_version):  # pragma: no cover
@@ -646,11 +731,25 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             return Exit.ERROR
 
+    if config.check:
+        config_output = cast("Path", config.output)
+        is_directory_output = not config_output.suffix
+        temp_context: tempfile.TemporaryDirectory[str] | None = tempfile.TemporaryDirectory()
+        temp_dir = Path(temp_context.name)
+        if is_directory_output:
+            generate_output: Path | None = temp_dir / config_output.name
+        else:
+            generate_output = temp_dir / "output.py"
+    else:
+        temp_context = None
+        generate_output = config.output
+        is_directory_output = False
+
     try:
         generate(
             input_=config.url or config.input or sys.stdin.read(),
             input_file_type=config.input_file_type,
-            output=config.output,
+            output=generate_output,
             output_model_type=config.output_model_type,
             target_python_version=config.target_python_version,
             base_class=config.base_class,
@@ -733,20 +832,52 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
             read_only_write_only_model_type=config.read_only_write_only_model_type,
+            use_all_exports=config.use_all_exports,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
+        if temp_context is not None:
+            temp_context.cleanup()
         return Exit.ERROR
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
+        if temp_context is not None:
+            temp_context.cleanup()
         return Exit.ERROR
     except Exception:  # noqa: BLE001
         import traceback  # noqa: PLC0415
 
         print(traceback.format_exc(), file=sys.stderr)  # noqa: T201
+        if temp_context is not None:
+            temp_context.cleanup()
         return Exit.ERROR
-    else:
-        return Exit.OK
+
+    if config.check and config.output is not None and generate_output is not None:
+        has_differences = False
+
+        if is_directory_output:
+            diffs, missing_files, extra_files = _compare_directories(generate_output, config.output, config.encoding)
+            if diffs:
+                print("".join(diffs), end="")  # noqa: T201
+                has_differences = True
+            for missing in missing_files:
+                print(f"MISSING: {missing} (should be generated)")  # noqa: T201
+                has_differences = True
+            for extra in extra_files:
+                print(f"EXTRA: {extra} (no longer generated)")  # noqa: T201
+                has_differences = True
+        else:
+            diff_found, diff_lines = _compare_single_file(generate_output, config.output, config.encoding)
+            if diff_found:
+                print("".join(diff_lines), end="")  # noqa: T201
+                has_differences = True
+
+        if temp_context is not None:  # pragma: no branch
+            temp_context.cleanup()
+
+        return Exit.DIFF if has_differences else Exit.OK
+
+    return Exit.OK
 
 
 if __name__ == "__main__":

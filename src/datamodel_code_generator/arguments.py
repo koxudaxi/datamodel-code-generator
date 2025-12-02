@@ -294,6 +294,12 @@ model_options.add_argument(
     action="store_true",
     default=None,
 )
+model_options.add_argument(
+    "--use-all-exports",
+    help="Generate __all__ = [...] in __init__.py to export all defined models and types",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Typing options for generated models
@@ -642,6 +648,14 @@ openapi_options.add_argument(
 # ======================================================================================
 # General options
 # ======================================================================================
+general_options.add_argument(
+    "--check",
+    action="store_true",
+    default=None,
+    help="Verify generated files are up-to-date without modifying them. "
+    "Exits with code 1 if differences found, 0 if up-to-date. "
+    "Useful for CI to ensure generated code is committed.",
+)
 general_options.add_argument(
     "--debug",
     help="show debug message (require \"debug\". `$ pip install 'datamodel-code-generator[debug]'`)",

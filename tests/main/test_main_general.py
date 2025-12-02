@@ -22,6 +22,7 @@ from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
+    OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
     run_main_and_assert,
@@ -423,4 +424,254 @@ def test_skip_root_model_command_line(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="skip_root_model.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--skip-root-model"],
+    )
+
+
+def test_check_file_matches(output_file: Path) -> None:
+    """Test --check returns OK when file matches."""
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_file_does_not_exist(tmp_path: Path) -> None:
+    """Test --check returns DIFF when file does not exist."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=tmp_path / "nonexistent.py",
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_file_differs(output_file: Path) -> None:
+    """Test --check returns DIFF when file content differs."""
+    output_file.write_text("# Different content\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_with_stdout_output(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check with stdout output returns error."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=None,
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--check cannot be used with stdout",
+    )
+
+
+def test_check_with_nonexistent_input(tmp_path: Path) -> None:
+    """Test --check with nonexistent input file returns error."""
+    run_main_and_assert(
+        input_path=tmp_path / "nonexistent.json",
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_check_normalizes_line_endings(output_file: Path) -> None:
+    """Test --check normalizes line endings (CRLF vs LF)."""
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+    content = output_file.read_text(encoding="utf-8")
+    output_file.write_bytes(content.replace("\n", "\r\n").encode("utf-8"))
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_directory_matches(output_dir: Path) -> None:
+    """Test --check returns OK when directory matches."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_directory_file_differs(output_dir: Path) -> None:
+    """Test --check returns DIFF when a file in directory differs."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    py_files = list(output_dir.rglob("*.py"))
+    py_files[0].write_text("# Modified content\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_missing_file(output_dir: Path) -> None:
+    """Test --check returns DIFF when a generated file is missing."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    py_files = list(output_dir.rglob("*.py"))
+    py_files[0].unlink()
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_extra_file(output_dir: Path) -> None:
+    """Test --check returns DIFF when an extra file exists."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    (output_dir / "extra_model.py").write_text("# Extra file\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_does_not_exist(tmp_path: Path) -> None:
+    """Test --check returns DIFF when output directory does not exist."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=tmp_path / "nonexistent_model",
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_ignores_pycache(output_dir: Path) -> None:
+    """Test --check ignores __pycache__ directories in actual output."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    pycache_dir = output_dir / "__pycache__"
+    pycache_dir.mkdir()
+    (pycache_dir / "module.cpython-313.pyc").write_bytes(b"fake bytecode")
+    (pycache_dir / "extra.py").write_text("# should be ignored\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_with_invalid_class_name(tmp_path: Path) -> None:
+    """Test --check cleans up temp directory when InvalidClassNameError occurs."""
+    invalid_schema = tmp_path / "invalid.json"
+    invalid_schema.write_text('{"title": "123InvalidName", "type": "object"}', encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=invalid_schema,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="You have to set `--class-name` option",
+    )
+
+
+def test_check_with_invalid_file_format(tmp_path: Path) -> None:
+    """Test --check cleans up temp directory when Error occurs (invalid file format)."""
+    invalid_file = tmp_path / "invalid.txt"
+    invalid_file.write_text("This is not a valid schema format!!!", encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=invalid_file,
+        output_path=output_path,
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="Invalid file format",
+    )
+
+
+def test_use_all_exports_modular(output_dir: Path) -> None:
+    """Test --use-all-exports generates __all__ in modular output."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--use-all-exports"],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports",
+    )
+
+
+def test_use_all_exports_with_docstring_header(output_dir: Path) -> None:
+    """Test --use-all-exports with --custom-file-header containing docstring."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--use-all-exports",
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header_docstring.txt"),
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_docstring",
     )

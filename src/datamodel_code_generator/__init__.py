@@ -387,6 +387,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+    use_all_exports: bool = False,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -625,7 +626,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     )
 
     with chdir(output):
-        results = parser.parse(disable_future_imports=disable_future_imports)
+        results = parser.parse(disable_future_imports=disable_future_imports, use_all_exports=use_all_exports)
     if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
             input_filename = "<stdin>"
@@ -641,7 +642,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         msg = "Models not found in the input data"
         raise Error(msg)
     if isinstance(results, str):
-        modules = {output: (results, input_filename)}
+        modules: dict[Path | None, tuple[str, str | None]] = {output: (results, input_filename)}
     else:
         if output is None:
             msg = "Modular references require an output directory"

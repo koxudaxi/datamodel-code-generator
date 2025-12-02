@@ -468,6 +468,8 @@ Model customization:
                         target python version
   --treat-dot-as-module
                         treat dotted module names as modules
+  --use-all-exports     Generate __all__ = [...] in __init__.py to export all defined models
+                        and types
   --use-exact-imports   import exact types instead of modules, for example: "from .foo
                         import Bar" instead of "from . import foo" with "foo.Bar"
   --use-pendulum        use pendulum instead of datetime
@@ -513,6 +515,9 @@ OpenAPI-only options:
                         deprecated. it will be removed in future releases
 
 General options:
+  --check               Verify generated files are up-to-date without modifying them. Exits
+                        with code 1 if differences found, 0 if up-to-date. Useful for CI to
+                        ensure generated code is committed.
   --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
                         generator[debug]''`)
   --disable-warnings    disable warnings
