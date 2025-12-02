@@ -22,6 +22,7 @@ from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
+    JSON_SCHEMA_DATA_PATH,
     OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
@@ -651,27 +652,158 @@ def test_check_with_invalid_file_format(tmp_path: Path) -> None:
     )
 
 
-def test_use_all_exports_modular(output_dir: Path) -> None:
-    """Test --use-all-exports generates __all__ in modular output."""
+def test_all_exports_scope_children(output_dir: Path) -> None:
+    """Test --all-exports-scope=children generates __all__ with child module exports."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
         input_file_type="openapi",
-        extra_args=["--disable-timestamp", "--use-all-exports"],
-        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports",
+        extra_args=["--disable-timestamp", "--all-exports-scope", "children"],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_children",
     )
 
 
-def test_use_all_exports_with_docstring_header(output_dir: Path) -> None:
-    """Test --use-all-exports with --custom-file-header containing docstring."""
+def test_all_exports_scope_recursive_with_collision(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with --all-exports-collision-strategy=minimal-prefix."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
         input_file_type="openapi",
         extra_args=[
-            "--use-all-exports",
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            "minimal-prefix",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_recursive",
+    )
+
+
+def test_all_exports_scope_children_with_docstring_header(output_dir: Path) -> None:
+    """Test --all-exports-scope=children with --custom-file-header containing docstring."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "children",
             "--custom-file-header-path",
             str(DATA_PATH / "custom_file_header_docstring.txt"),
         ],
-        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_docstring",
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_children_docstring",
+    )
+
+
+def test_all_exports_scope_recursive_collision_error(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive raises error on collision without strategy."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--all-exports-scope", "recursive"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="Name collision detected",
+    )
+
+
+def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
+    """Test --all-exports-collision-strategy requires --all-exports-scope=recursive."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "children",
+            "--all-exports-collision-strategy",
+            "minimal-prefix",
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="--all-exports-collision-strategy",
+    )
+
+
+def test_all_exports_scope_recursive_with_full_prefix(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with --all-exports-collision-strategy=full-prefix."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            "full-prefix",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_recursive_full_prefix",
+    )
+
+
+@pytest.mark.parametrize(
+    "strategy",
+    ["minimal-prefix", "full-prefix"],
+    ids=["minimal_prefix", "full_prefix"],
+)
+def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Path, strategy: str) -> None:
+    """Test that prefix resolution raises error when renamed export collides with local model."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_prefix_collision.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            strategy,
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="InputMessage",
+    )
+
+
+def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with JSONSchema multi-file input."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file",
+    )
+
+
+def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive raises error when child export collides with local model."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_local_collision.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "recursive",
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="conflicts with a model in __init__.py",
+    )
+
+
+def test_all_exports_scope_children_no_child_exports(output_dir: Path) -> None:
+    """Test --all-exports-scope=children when __init__.py has models but no direct child exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_no_child.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_no_child",
     )

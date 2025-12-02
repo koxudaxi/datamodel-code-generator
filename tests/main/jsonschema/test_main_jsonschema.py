@@ -2965,3 +2965,13 @@ def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "typing.TypedDict"],
     )
+
+
+def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
+    """Test that arrays with empty items ({}) generate List[Any] instead of bare List."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "empty_items_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )

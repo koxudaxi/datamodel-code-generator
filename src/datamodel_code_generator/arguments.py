@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, cast
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllExportsCollisionStrategy,
+    AllExportsScope,
     DataclassArguments,
     DataModelType,
     InputFileType,
@@ -295,9 +297,20 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
-    "--use-all-exports",
-    help="Generate __all__ = [...] in __init__.py to export all defined models and types",
-    action="store_true",
+    "--all-exports-scope",
+    help="Generate __all__ in __init__.py with re-exports. "
+    "'children': export from direct child modules only. "
+    "'recursive': export from all descendant modules.",
+    choices=[s.value for s in AllExportsScope],
+    default=None,
+)
+model_options.add_argument(
+    "--all-exports-collision-strategy",
+    help="Strategy for name collisions when using --all-exports-scope=recursive. "
+    "'error': raise an error (default). "
+    "'minimal-prefix': add module prefix only to colliding names. "
+    "'full-prefix': add full module path prefix to colliding names.",
+    choices=[s.value for s in AllExportsCollisionStrategy],
     default=None,
 )
 

@@ -333,8 +333,8 @@ def test_parse_one_of_object(source_obj: dict[str, Any], generated_classes: str)
     string_on_field: Optional[str] = Field('default string', description='description')
     number: Optional[float] = 123
     number_on_field: Optional[float] = Field(123, description='description')
-    number_array: Optional[List] = [1, 2, 3]
-    string_array: Optional[List] = ['a', 'b', 'c']
+    number_array: Optional[List[Any]] = [1, 2, 3]
+    string_array: Optional[List[Any]] = ['a', 'b', 'c']
     object: Optional[Dict[str, Any]] = {'key': 'value'}""",
         )
     ],

@@ -14,4 +14,4 @@ class Model(BaseModel):
 
 
 class ForwardingArray(BaseModel):
-    __root__: List
+    __root__: List[Any]
