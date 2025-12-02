@@ -351,21 +351,9 @@ def _extract_future_imports_from_body(body: str) -> tuple[str, str]:
     if not body.lstrip().startswith("from __future__"):
         return "", body
 
-    lines = body.split("\n")
-    future_lines = []
-    rest_start = 0
-
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if not stripped:
-            rest_start = i
-            break
-        if stripped.startswith("from __future__"):
-            future_lines.append(line)
-            rest_start = i + 1
-
-    future_imports = "\n".join(future_lines)
-    rest_body = "\n".join(lines[rest_start:]).lstrip("\n")
+    first_blank = body.find("\n\n")
+    future_imports = body[:first_blank]
+    rest_body = body[first_blank:].lstrip("\n")
     return future_imports, rest_body
 
 
@@ -769,9 +757,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 else:
                     content = header_before + "\n\n\n" + future_imports
                 print(content, file=file)
-                if rest_body:
-                    print(file=file)
-                    print(rest_body.rstrip(), file=file)
+                print(file=file)
+                print(rest_body.rstrip(), file=file)
             else:
                 print(effective_header, file=file)
                 print(file=file)
