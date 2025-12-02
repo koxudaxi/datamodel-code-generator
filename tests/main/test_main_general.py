@@ -620,3 +620,18 @@ def test_check_directory_ignores_pycache(output_dir: Path) -> None:
         extra_args=["--disable-timestamp", "--check"],
         expected_exit=Exit.OK,
     )
+
+
+def test_check_with_invalid_class_name(tmp_path: Path) -> None:
+    """Test --check cleans up temp directory when InvalidClassNameError occurs."""
+    invalid_schema = tmp_path / "invalid.json"
+    invalid_schema.write_text('{"title": "123InvalidName", "type": "object"}', encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=invalid_schema,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="You have to set `--class-name` option",
+    )
