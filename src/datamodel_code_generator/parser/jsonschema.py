@@ -738,11 +738,14 @@ class JsonSchemaParser(Parser):
             return True
         return any(self._resolve_ro_wo_flag(sub, attr) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
-    @staticmethod
-    def _copy_field(field: DataModelFieldBase) -> DataModelFieldBase:
+    def _copy_field(self, field: DataModelFieldBase) -> DataModelFieldBase:  # noqa: PLR6301
         """Create a deep copy of a field to avoid mutating the original."""
-        copied = field.copy(deep=True)
-        copied.parent = None  # detach from original model
+        copied = field.copy()
+        copied.parent = None
+        if data_type := field.data_type:
+            copied.data_type = data_type.copy()
+            if data_type.data_types:
+                copied.data_type.data_types = [dt.copy() for dt in data_type.data_types]
         return copied
 
     def _iter_fields_from_reference(self, base_ref: Reference, path: list[str]) -> Iterable[DataModelFieldBase]:
