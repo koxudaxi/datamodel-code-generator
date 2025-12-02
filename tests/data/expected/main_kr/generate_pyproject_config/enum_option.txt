@@ -1,0 +1,4 @@
+[tool.datamodel-codegen]
+input = "schema.yaml"
+read-only-write-only-model-type = "all"
+

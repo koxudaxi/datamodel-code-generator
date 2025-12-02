@@ -10,7 +10,7 @@ import tempfile
 import warnings
 from collections import defaultdict
 from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
-from enum import Enum, IntEnum
+from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
@@ -500,8 +500,6 @@ def _format_toml_value(value: TomlValue) -> str:
     """Format a Python value as a TOML value string."""
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, Enum):
-        return f'"{value.value}"'
     if isinstance(value, str):
         return f'"{value}"'
     formatted_items = [_format_toml_value(item) for item in value]

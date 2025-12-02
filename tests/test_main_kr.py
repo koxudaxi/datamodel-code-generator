@@ -468,6 +468,21 @@ def test_generate_pyproject_config_excludes_meta_options(capsys: pytest.CaptureF
     )
 
 
+def test_generate_pyproject_config_with_enum_option(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-pyproject-config with Enum option."""
+    run_main_with_args(
+        [
+            "--generate-pyproject-config",
+            "--input",
+            "schema.yaml",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "enum_option.txt",
+    )
+
+
 EXPECTED_GENERATE_CLI_COMMAND_PATH = EXPECTED_MAIN_KR_PATH / "generate_cli_command"
 
 

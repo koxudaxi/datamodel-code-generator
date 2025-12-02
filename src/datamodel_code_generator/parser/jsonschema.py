@@ -715,9 +715,7 @@ class JsonSchemaParser(Parser):
                 return get_model_by_path(self.raw_obj, ref[2:].split("/"))
             if ref_type == JSONReference.REMOTE:
                 return self._resolve_ref_with_pointer(ref, self._get_ref_body)
-            if ref_type == JSONReference.URL and self.read_only_write_only_model_type is not None:
-                return self._resolve_ref_with_pointer(ref, self._get_ref_body_from_url)
-        except (KeyError, IndexError, FileNotFoundError, Exception):  # noqa: BLE001, S110
+        except (KeyError, IndexError, FileNotFoundError):
             pass
         return None
 
@@ -740,19 +738,6 @@ class JsonSchemaParser(Parser):
         ):
             return True
         return any(self._resolve_ro_wo_flag(sub, attr) for sub in [*obj.allOf, *obj.anyOf, *obj.oneOf])
-
-    def _collect_fields_from_schema(self, obj: JsonSchemaObject, path: list[str]) -> list[DataModelFieldBase]:
-        """Collect fields from a schema object including allOf inheritance."""
-        module_name = get_module_name("", None, treat_dot_as_module=self.treat_dot_as_module)
-        fields: list[DataModelFieldBase] = []
-        if obj.properties:
-            fields.extend(self.parse_object_fields(obj, path, module_name))
-        for item in obj.allOf:
-            if item.ref and (resolved := self._get_ref_schema(item.ref)):
-                fields.extend(self._collect_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path))
-            elif item.properties:
-                fields.extend(self.parse_object_fields(item, path, module_name))
-        return fields
 
     def _copy_field(self, field: DataModelFieldBase) -> DataModelFieldBase:  # noqa: PLR6301
         """Create a deep copy of a field to avoid mutating the original."""

@@ -1,0 +1,31 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only Double Collision Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    UserRequest:
+      type: object
+      properties:
+        existing_field:
+          type: string
+    UserRequestModel:
+      type: object
+      properties:
+        another_field:
+          type: string
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        password:
+          type: string
+          writeOnly: true

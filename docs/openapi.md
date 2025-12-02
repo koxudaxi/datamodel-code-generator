@@ -339,12 +339,9 @@ This option works with all output formats:
 
 ### Supported $ref Types
 
-readOnly/writeOnly resolution works with all reference types:
+readOnly/writeOnly resolution works with local and file reference types:
 
 | Reference Type | Example | Support |
 |---------------|---------|---------|
 | Local | `#/components/schemas/User` | ✅ |
 | File | `./common.yaml#/User` | ✅ |
-| URL | `https://example.com/api.yaml#/User` | ✅ (cached) |
-
-URL references are resolved with caching to minimize HTTP calls.
