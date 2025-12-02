@@ -1550,12 +1550,8 @@ class Parser(ABC):
         for proc_module, proc_models, _, _, _ in processed_models:
             if not proc_models or proc_module == module:
                 continue
-            if (last := proc_module[-1]) == "__init__.py":
-                prefix = proc_module[:-1]
-            elif last.endswith(".py"):
-                prefix = (*proc_module[:-1], last[:-3])
-            else:
-                prefix = proc_module
+            last = proc_module[-1]
+            prefix = proc_module[:-1] if last == "__init__.py" else (*proc_module[:-1], last[:-3])
             if prefix[:base_len] != base or (depth := len(prefix) - base_len) < 1:
                 continue
             if scope == AllExportsScope.Children and depth != 1:
@@ -1873,12 +1869,6 @@ class Parser(ABC):
                             m.reference.short_name for m in models if m.path in require_update_action_models
                         ),
                     ]
-            elif export_names:
-                if with_import:
-                    result += [str(self.imports), "\n"]
-                result += [str(export_imports), ""]
-                all_items = ",\n    ".join(f'"{name}"' for name in export_names)
-                result += [f"__all__ = [\n    {all_items},\n]"]
 
             if not result and not init:
                 continue
@@ -1890,19 +1880,17 @@ class Parser(ABC):
 
         if all_exports_scope is not None:
             processed_init_modules = {m for m, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
-            for init_module, result in list(results.items()):
-                if init_module[-1] != "__init__.py" or init_module in processed_init_modules or result.body:
+            for init_module, init_result in list(results.items()):
+                if init_module[-1] != "__init__.py" or init_module in processed_init_modules or init_result.body:
                     continue
-                child_exports = self._collect_exports_for_init(init_module, processed_models, all_exports_scope)
-                if not child_exports:
-                    continue
-                resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
-                export_imports, export_names = self._build_all_exports_code(resolved)
-                all_items = ",\n    ".join(f'"{name}"' for name in export_names)
-                parts = [str(self.imports), "\n"] if with_import else []
-                parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
-                body = "\n".join(parts)
-                results[init_module] = Result(body=code_formatter.format_code(body) if code_formatter else body)
+                if child_exports := self._collect_exports_for_init(init_module, processed_models, all_exports_scope):
+                    resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
+                    export_imports, export_names = self._build_all_exports_code(resolved)
+                    all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                    parts = [str(self.imports), "\n"] if with_import else []
+                    parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
+                    body = "\n".join(parts)
+                    results[init_module] = Result(body=code_formatter.format_code(body) if code_formatter else body)
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:

@@ -777,3 +777,18 @@ def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> 
         ],
         expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file",
     )
+
+
+def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive raises error when child export collides with local model."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_local_collision.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "recursive",
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="conflicts with a model in __init__.py",
+    )
