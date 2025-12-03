@@ -54,6 +54,7 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    sanitize_module_name,
 )
 from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
@@ -577,6 +578,7 @@ class Parser(ABC):
             capitalise_enum_members=capitalise_enum_members,
             no_alias=no_alias,
             parent_scoped_naming=parent_scoped_naming,
+            treat_dot_as_module=treat_dot_as_module,
         )
         self.class_name: str | None = class_name
         self.wrap_string_literal: bool | None = wrap_string_literal
@@ -1783,7 +1785,15 @@ class Parser(ABC):
                     module = (*module_, "__init__.py")
                     init = True
                 else:
-                    module = tuple(part.replace("-", "_") for part in (*module_[:-1], f"{module_[-1]}.py"))
+                    # Sanitize directory parts but preserve .py extension for the file
+                    sanitized_dirs = tuple(
+                        sanitize_module_name(part, treat_dot_as_module=self.treat_dot_as_module)
+                        for part in module_[:-1]
+                    )
+                    sanitized_filename = (
+                        f"{sanitize_module_name(module_[-1], treat_dot_as_module=self.treat_dot_as_module)}.py"
+                    )
+                    module = (*sanitized_dirs, sanitized_filename)
             else:
                 module = ("__init__.py",)
 
