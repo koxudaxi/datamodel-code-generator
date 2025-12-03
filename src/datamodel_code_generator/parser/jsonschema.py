@@ -748,28 +748,44 @@ class JsonSchemaParser(Parser):
             copied.data_type.data_types = [dt.copy() for dt in data_type.data_types]
         return copied
 
-    def _iter_fields_from_reference(self, base_ref: Reference, path: list[str]) -> Iterable[DataModelFieldBase]:
+    def _iter_fields_from_reference(
+        self, base_ref: Reference, path: list[str], visited: set[str] | None = None
+    ) -> Iterable[DataModelFieldBase]:
         """Yield fields from a reference, recursively collecting from base classes first."""
+        if visited is None:
+            visited = set()
+        if base_ref.path in visited:  # pragma: no cover
+            return  # pragma: no cover
+        visited.add(base_ref.path)
+
         if source := base_ref.source:
             for base_class in getattr(source, "base_classes", []) or []:
                 if reference := getattr(base_class, "reference", None):
-                    yield from self._iter_fields_from_reference(reference, path)
+                    yield from self._iter_fields_from_reference(reference, path, visited)
             yield from getattr(source, "fields", [])
         else:
             resolved = self._get_ref_schema(base_ref.path)
             if resolved is None:  # pragma: no cover
                 msg = f"Failed to resolve reference: {base_ref.path}"
                 raise ValueError(msg)
-            yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
+            yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path, visited)
 
-    def _iter_fields_from_schema(self, obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
+    def _iter_fields_from_schema(
+        self, obj: JsonSchemaObject, path: list[str], visited: set[str] | None = None
+    ) -> Iterable[DataModelFieldBase]:
         """Yield fields from a schema object including allOf inheritance."""
+        if visited is None:  # pragma: no cover
+            visited = set()  # pragma: no cover
         module_name = get_module_name(path[-1] if path else "", None, treat_dot_as_module=self.treat_dot_as_module)
         if obj.properties:
             yield from self.parse_object_fields(obj, path, module_name)
         for item in obj.allOf:
-            if item.ref and (resolved := self._get_ref_schema(item.ref)):
-                yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
+            if item.ref:
+                if item.ref in visited:  # pragma: no cover
+                    continue  # pragma: no cover
+                visited.add(item.ref)
+                if resolved := self._get_ref_schema(item.ref):
+                    yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path, visited)
             elif item.properties:
                 yield from self.parse_object_fields(item, path, module_name)
 
