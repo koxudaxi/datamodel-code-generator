@@ -537,21 +537,6 @@ class DataModel(TemplateBase, Nullable, ABC):
             yield from field.data_type.all_data_types
         yield from self.base_classes
 
-    def iter_all_fields(self, visited: set[str] | None = None) -> Iterator[DataModelFieldBase]:
-        """Yield all fields including inherited fields from base classes."""
-        if visited is None:
-            visited = set()
-        if self.path in visited:
-            return
-        visited.add(self.path)
-
-        for base_class in self.base_classes or []:
-            if base_class.reference and base_class.reference.source:
-                source = base_class.reference.source
-                if isinstance(source, DataModel):
-                    yield from source.iter_all_fields(visited)
-        yield from self.fields
-
     @property
     def is_alias(self) -> bool:
         """Whether is a type alias (i.e. not an instance of BaseModel/RootModel)."""
