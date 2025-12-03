@@ -1506,6 +1506,29 @@ def test_main_jsonschema_combine_any_of_object(
 
 
 @pytest.mark.benchmark
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        (["--output-model", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
+        (
+            ["--output-model", "pydantic_v2.BaseModel", "--keep-model-order"],
+            "jsonschema_root_model_ordering_keep_model_order.py",
+        ),
+    ],
+)
+def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list[str], expected_file: str) -> None:
+    """Test RootModel is ordered after the types it references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_ordering.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+    )
+
+
+@pytest.mark.benchmark
 def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
     """Test field generation including all keys."""
     run_main_and_assert(
