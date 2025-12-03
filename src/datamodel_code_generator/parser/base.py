@@ -38,6 +38,8 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
+    IMPORT_OPTIONAL,
+    IMPORT_UNION,
     Import,
     Imports,
 )
@@ -206,11 +208,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             ordered_models: list[tuple[int, DataModel]] = []
             unresolved_reference_model_names = [m.path for m in unresolved_references]
             for model in unresolved_references:
-                indexes = [
-                    unresolved_reference_model_names.index(b.reference.path)
-                    for b in model.base_classes
-                    if b.reference and b.reference.path in unresolved_reference_model_names
-                ]
+                if isinstance(model, pydantic_model_v2.RootModel):
+                    indexes = [
+                        unresolved_reference_model_names.index(ref_path)
+                        for f in model.fields
+                        for t in f.data_type.all_data_types
+                        if t.reference and (ref_path := t.reference.path) in unresolved_reference_model_names
+                    ]
+                else:
+                    indexes = [
+                        unresolved_reference_model_names.index(b.reference.path)
+                        for b in model.base_classes
+                        if b.reference and b.reference.path in unresolved_reference_model_names
+                    ]
                 if indexes:
                     ordered_models.append((
                         max(indexes),
@@ -1284,7 +1294,10 @@ class Parser(ABC):
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
-                        imports.append(original_field.imports)
+                        # Use list instead of set because Import is not hashable
+                        excluded_imports = [IMPORT_OPTIONAL, IMPORT_UNION]
+                        field_imports = [i for i in original_field.imports if i not in excluded_imports]
+                        imports.append(field_imports)
 
                     data_type.remove_reference()
 
@@ -1384,7 +1397,7 @@ class Parser(ABC):
             base_class_refs = {b.type_hint for b in model.base_classes if b.reference}
             if base_class_refs:
                 refs = base_class_refs - {class_name}
-            elif isinstance(model, TypeAliasBase):
+            elif isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
                 refs = {
                     t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference
                 } - {class_name}
