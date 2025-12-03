@@ -1874,6 +1874,18 @@ def test_main_custom_file_header_invalid_syntax(output_file: Path) -> None:
     )
 
 
+def test_main_custom_file_header_comments_only(output_file: Path) -> None:
+    """Test custom header with only comments (no statements)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_comments_only.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_comments_only.txt")],
+    )
+
+
 def test_main_pydantic_v2(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic v2 output."""
     run_main_and_assert(
