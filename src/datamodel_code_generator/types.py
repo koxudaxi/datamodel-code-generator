@@ -53,16 +53,6 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 
-if TYPE_CHECKING:
-    import builtins
-    from collections.abc import Iterable, Iterator, Sequence
-
-    from datamodel_code_generator.model.base import DataModelFieldBase
-
-if PYDANTIC_V2:
-    from pydantic import GetCoreSchemaHandler
-    from pydantic_core import core_schema
-
 T = TypeVar("T")
 
 OPTIONAL = "Optional"
@@ -90,6 +80,16 @@ STR = "str"
 
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
+
+if TYPE_CHECKING:
+    import builtins
+    from collections.abc import Iterable, Iterator, Sequence
+
+    from datamodel_code_generator.model.base import DataModelFieldBase
+
+if PYDANTIC_V2:
+    from pydantic import GetCoreSchemaHandler
+    from pydantic_core import core_schema
 
 
 class StrictTypes(Enum):
