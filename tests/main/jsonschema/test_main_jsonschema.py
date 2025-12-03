@@ -3016,8 +3016,8 @@ def test_main_jsonschema_type_alias_with_circular_ref_to_class_msgspec(min_versi
             min_version,
         ],
     )
-    
-    
+
+
 def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
     """Test that enum with object values uses title/name/const for member names (issue #1620)."""
     run_main_and_assert(
