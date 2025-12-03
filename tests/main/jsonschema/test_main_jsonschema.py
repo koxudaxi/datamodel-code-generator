@@ -2975,3 +2975,18 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
+
+
+def test_main_jsonschema_collapse_root_models_empty_union(output_file: Path) -> None:
+    """Test that collapse-root-models with empty union fallback generates Any instead of invalid Union syntax.
+
+    This test covers the fix for issue #2161 where --collapse-root-models could generate
+    invalid Python syntax like Union[, str] when all union members are filtered out.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_empty_union.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )

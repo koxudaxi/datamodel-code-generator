@@ -38,6 +38,7 @@ from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
     IMPORT_ABC_SET,
+    IMPORT_ANY,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
     IMPORT_LIST,
@@ -486,7 +487,7 @@ class DataType(_BaseModel):
                 data_types: list[str] = []
                 for data_type in self.data_types:
                     data_type_type = data_type.type_hint
-                    if data_type_type in data_types:  # pragma: no cover
+                    if not data_type_type or data_type_type in data_types:
                         continue
 
                     if data_type_type == NONE:
@@ -501,7 +502,10 @@ class DataType(_BaseModel):
                         self.is_optional = True
 
                     data_types.append(non_optional_data_type_type)
-                if len(data_types) == 1:
+                if not data_types:
+                    type_ = ANY
+                    self.import_ = self.import_ or IMPORT_ANY
+                elif len(data_types) == 1:
                     type_ = data_types[0]
                 elif self.use_union_operator:
                     type_ = UNION_OPERATOR_DELIMITER.join(data_types)
