@@ -784,8 +784,11 @@ class JsonSchemaParser(Parser):
                 if item.ref in visited:  # pragma: no cover
                     continue  # pragma: no cover
                 visited.add(item.ref)
-                if resolved := self._get_ref_schema(item.ref):
-                    yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path, visited)
+                resolved = self._get_ref_schema(item.ref)
+                if resolved is None:  # pragma: no cover
+                    msg = f"Failed to resolve reference in allOf: {item.ref}"
+                    raise ValueError(msg)
+                yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path, visited)
             elif item.properties:
                 yield from self.parse_object_fields(item, path, module_name)
 
@@ -794,8 +797,9 @@ class JsonSchemaParser(Parser):
         deduplicated: dict[str, DataModelFieldBase] = {}
         for field in fields:
             field_key = field.original_name or field.name
-            if field_key is not None:
-                deduplicated[field_key] = self._copy_field(field)
+            if field_key is None:  # pragma: no cover
+                continue  # pragma: no cover
+            deduplicated[field_key] = self._copy_field(field)
         return list(deduplicated.values())
 
     def _collect_all_fields_for_request_response(
