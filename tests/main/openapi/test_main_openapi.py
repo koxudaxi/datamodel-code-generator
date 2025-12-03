@@ -2482,6 +2482,23 @@ def test_main_openapi_read_only_write_only_allof(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_read_only_write_only_allof_request_response(output_file: Path) -> None:
+    """Test readOnly/writeOnly with allOf using request-response mode (no base model)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_allof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_allof_request_response.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "request-response",
+        ],
+    )
+
+
 def test_main_openapi_read_only_write_only_collision(output_file: Path) -> None:
     """Test readOnly/writeOnly with name collision (UserRequest already exists)."""
     run_main_and_assert(
