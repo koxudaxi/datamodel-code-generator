@@ -2679,3 +2679,20 @@ def test_main_openapi_read_only_write_only_allof_required_only(output_file: Path
             "all",
         ],
     )
+
+
+def test_main_openapi_read_only_write_only_mixed(output_file: Path) -> None:
+    """Test request-response mode generates base models for schemas without readOnly/writeOnly."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_mixed.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_mixed.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "request-response",
+        ],
+    )

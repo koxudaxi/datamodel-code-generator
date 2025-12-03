@@ -830,12 +830,13 @@ class JsonSchemaParser(Parser):
         all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
         return any(field.read_only or field.write_only for field in all_fields)
 
-    def _should_generate_base_model(self) -> bool:
+    def _should_generate_base_model(self, *, generates_separate_models: bool = False) -> bool:
         """Determine if Base model should be generated."""
-        return (
-            self.read_only_write_only_model_type is None
-            or self.read_only_write_only_model_type == ReadOnlyWriteOnlyModelType.All
-        )
+        if self.read_only_write_only_model_type is None:
+            return True
+        if self.read_only_write_only_model_type == ReadOnlyWriteOnlyModelType.All:
+            return True
+        return not generates_separate_models
 
     def _get_unique_model_name(self, path: list[str], base_name: str, suffix: str) -> tuple[str, list[str]]:
         """Generate a unique model name and path, avoiding collisions."""
@@ -1168,7 +1169,8 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
-        if self._should_generate_separate_models(fields, base_classes, path):
+        generates_separate = self._should_generate_separate_models(fields, base_classes, path)
+        if generates_separate:
             self._create_request_response_models(
                 name=reference.name,
                 obj=obj,
@@ -1179,7 +1181,7 @@ class JsonSchemaParser(Parser):
             )
 
         # Generate base model if needed
-        if self._should_generate_base_model():
+        if self._should_generate_base_model(generates_separate_models=generates_separate):
             data_model_type = self._create_data_model(
                 reference=reference,
                 fields=fields,
@@ -1429,7 +1431,8 @@ class JsonSchemaParser(Parser):
 
         self.set_additional_properties(reference.path, obj)
 
-        if self._should_generate_separate_models(fields, None, path):
+        generates_separate = self._should_generate_separate_models(fields, None, path)
+        if generates_separate:
             self._create_request_response_models(
                 name=class_name,
                 obj=obj,
@@ -1439,7 +1442,7 @@ class JsonSchemaParser(Parser):
             )
 
         # Generate base model if needed
-        if self._should_generate_base_model():
+        if self._should_generate_base_model(generates_separate_models=generates_separate):
             data_model_type = self._create_data_model(
                 model_type=data_model_type_class,
                 reference=reference,
