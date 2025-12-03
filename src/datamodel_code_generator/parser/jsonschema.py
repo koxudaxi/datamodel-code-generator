@@ -925,7 +925,10 @@ class JsonSchemaParser(Parser):
         if obj.properties:
             fields.extend(
                 self.parse_object_fields(
-                    obj, path, get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
+                    obj,
+                    path,
+                    get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module),
+                    class_name=name,
                 )
             )
         # ignore an undetected object
@@ -996,6 +999,7 @@ class JsonSchemaParser(Parser):
                     all_of_item,
                     path,
                     module_name,
+                    class_name=name,
                 )
 
                 if object_fields:
@@ -1099,6 +1103,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: list[str],
         module_name: Optional[str] = None,  # noqa: UP045
+        class_name: Optional[str] = None,  # noqa: UP045
     ) -> list[DataModelFieldBase]:
         """Parse object properties into a list of data model fields."""
         properties: dict[str, JsonSchemaObject | bool] = {} if obj.properties is None else obj.properties
@@ -1108,7 +1113,9 @@ class JsonSchemaParser(Parser):
         exclude_field_names: set[str] = set()
         for original_field_name, field in properties.items():
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                original_field_name, excludes=exclude_field_names
+                original_field_name,
+                excludes=exclude_field_names,
+                class_name=class_name,
             )
             modular_name = f"{module_name}.{field_name}" if module_name else field_name
 
@@ -1180,7 +1187,10 @@ class JsonSchemaParser(Parser):
         class_name = reference.name
         self.set_title(reference.path, obj)
         fields = self.parse_object_fields(
-            obj, path, get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module)
+            obj,
+            path,
+            get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module),
+            class_name=class_name,
         )
         if fields or not isinstance(obj.additionalProperties, JsonSchemaObject):
             data_model_type_class = self.data_model_type

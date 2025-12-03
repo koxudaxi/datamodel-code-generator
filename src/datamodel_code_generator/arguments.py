@@ -541,7 +541,12 @@ field_options.add_argument(
 # ======================================================================================
 template_options.add_argument(
     "--aliases",
-    help="Alias mapping file",
+    help="Alias mapping file (JSON) for renaming fields. "
+    "Supports hierarchical formats: "
+    "Flat: {'field': 'alias'} applies to all occurrences. "
+    "Scoped: {'ClassName.field': 'alias'} applies to specific class. "
+    "Priority: scoped > flat. "
+    "Example: {'User.name': 'user_name', 'Address.name': 'addr_name', 'id': 'id_'}",
     type=Path,
 )
 template_options.add_argument(

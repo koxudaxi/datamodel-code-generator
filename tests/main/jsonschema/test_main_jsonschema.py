@@ -2975,3 +2975,17 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
+
+
+def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
+    """Test hierarchical aliases with scoped format (ClassName.field)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hierarchical_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(JSON_SCHEMA_DATA_PATH / "hierarchical_aliases_scoped.json"),
+        ],
+    )
