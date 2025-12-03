@@ -28,6 +28,7 @@ from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
     NONE,
+    OPTIONAL_PREFIX,
     UNION_PREFIX,
     DataType,
     Nullable,
@@ -188,16 +189,16 @@ class DataModelFieldBase(_BaseModel):
         """Get all imports required for this field's type hint."""
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
+        has_optional = OPTIONAL_PREFIX in type_hint
         imports: list[tuple[Import] | Iterator[Import]] = [
-            iter(i for i in self.data_type.all_imports if not (not has_union and i == IMPORT_UNION))
+            iter(
+                i
+                for i in self.data_type.all_imports
+                if not ((not has_union and i == IMPORT_UNION) or (not has_optional and i == IMPORT_OPTIONAL))
+            )
         ]
 
-        if self.fall_back_to_nullable:
-            if (
-                self.nullable or (self.nullable is None and not self.required)
-            ) and not self.data_type.use_union_operator:
-                imports.append((IMPORT_OPTIONAL,))
-        elif self.nullable and not self.data_type.use_union_operator:  # pragma: no cover
+        if has_optional:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated and self.annotated:
             imports.append((IMPORT_ANNOTATED,))
