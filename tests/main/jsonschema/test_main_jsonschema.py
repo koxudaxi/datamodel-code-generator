@@ -2975,3 +2975,13 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
+
+
+def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
+    """Test that enum with object values uses title/name/const for member names (issue #1620)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_object_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )

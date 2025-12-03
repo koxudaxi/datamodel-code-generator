@@ -1539,6 +1539,17 @@ class JsonSchemaParser(Parser):
         """Parse enum values as a Literal type."""
         return self.data_type(literals=[i for i in obj.enum if i is not None])
 
+    @classmethod
+    def _get_field_name_from_dict_enum(cls, enum_part: dict[str, Any], index: int) -> str:
+        """Extract field name from dict enum value using title, name, or const keys."""
+        if enum_part.get("title"):
+            return str(enum_part["title"])
+        if enum_part.get("name"):
+            return str(enum_part["name"])
+        if "const" in enum_part:
+            return str(enum_part["const"])
+        return f"value_{index}"
+
     def parse_enum(
         self,
         name: str,
@@ -1575,6 +1586,8 @@ class JsonSchemaParser(Parser):
                 default = enum_part
                 if obj.x_enum_varnames:
                     field_name = obj.x_enum_varnames[i]
+                elif isinstance(enum_part, dict):
+                    field_name = self._get_field_name_from_dict_enum(enum_part, i)
                 else:
                     prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
                     field_name = f"{prefix}_{enum_part}"
