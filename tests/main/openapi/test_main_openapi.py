@@ -2645,3 +2645,20 @@ def test_main_openapi_read_only_write_only_nested_allof_order(output_file: Path)
             "all",
         ],
     )
+
+
+def test_main_openapi_read_only_write_only_allof_required_only(output_file: Path) -> None:
+    """Test readOnly/writeOnly with allOf containing item with only 'required' (no ref, no properties)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_allof_required_only.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_allof_required_only.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )

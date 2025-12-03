@@ -718,13 +718,13 @@ class JsonSchemaParser(Parser):
                 file_path, json_pointer = ([*ref.split("#", 1), ""])[:2]
                 remote_obj = self._get_ref_body(file_path)
                 return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
-            if ref_type == JSONReference.URL and self.read_only_write_only_model_type is not None:
-                url_part, json_pointer = ([*ref.split("#", 1), ""])[:2]
-                remote_obj = self._get_ref_body_from_url(url_part)
-                return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
-        except (KeyError, IndexError, FileNotFoundError, Exception):  # noqa: BLE001, S110
-            pass
-        return None
+            url_part, json_pointer = ([*ref.split("#", 1), ""])[:2]
+            if url_part == self.root_id:
+                return get_model_by_path(self.raw_obj, json_pointer[1:].split("/")) if json_pointer else self.raw_obj
+            remote_obj = self._get_ref_body_from_url(url_part)
+            return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
+        except (KeyError, IndexError, FileNotFoundError, Exception):  # noqa: BLE001
+            return None
 
     def _resolve_ro_wo_flag(self, obj: JsonSchemaObject, attr: str) -> bool:
         """Resolve readOnly/writeOnly flag from direct value, $ref, and compositions."""
@@ -742,10 +742,10 @@ class JsonSchemaParser(Parser):
         """Create a deep copy of a field to avoid mutating the original."""
         copied = field.copy()
         copied.parent = None
-        if data_type := field.data_type:
-            copied.data_type = data_type.copy()
-            if data_type.data_types:
-                copied.data_type.data_types = [dt.copy() for dt in data_type.data_types]
+        data_type = field.data_type
+        copied.data_type = data_type.copy()
+        if data_type.data_types:
+            copied.data_type.data_types = [dt.copy() for dt in data_type.data_types]
         return copied
 
     def _iter_fields_from_reference(self, base_ref: Reference, path: list[str]) -> Iterable[DataModelFieldBase]:
@@ -755,9 +755,8 @@ class JsonSchemaParser(Parser):
                 if reference := getattr(base_class, "reference", None):
                     yield from self._iter_fields_from_reference(reference, path)
             yield from getattr(source, "fields", [])
-        elif base_ref.path and "#" in base_ref.path:
-            if resolved := self._get_ref_schema(base_ref.path):
-                yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
+        elif resolved := self._get_ref_schema(base_ref.path):
+            yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
 
     def _iter_fields_from_schema(self, obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
         """Yield fields from a schema object including allOf inheritance."""
@@ -774,8 +773,8 @@ class JsonSchemaParser(Parser):
         """Deduplicate fields by name and create deep copies. Later fields override earlier ones."""
         deduplicated: dict[str, DataModelFieldBase] = {}
         for field in fields:
-            if field_key := (field.original_name or field.name):
-                deduplicated[field_key] = self._copy_field(field)
+            field_key = field.original_name or field.name
+            deduplicated[field_key] = self._copy_field(field)
         return list(deduplicated.values())
 
     def _collect_all_fields_for_request_response(
