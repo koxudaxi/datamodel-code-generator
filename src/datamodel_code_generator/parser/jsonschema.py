@@ -776,7 +776,7 @@ class JsonSchemaParser(Parser):
                 if base_class.reference:
                     yield from self._iter_fields_from_reference(base_class.reference, path, visited)
             yield from source.fields
-        elif source is None:
+        else:
             resolved = self._get_ref_schema(base_ref.path)
             if resolved is None:  # pragma: no cover
                 msg = f"Failed to resolve reference: {base_ref.path}"
