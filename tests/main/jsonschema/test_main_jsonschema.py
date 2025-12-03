@@ -3000,6 +3000,16 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
+    """Test multiple types in array including object with properties generates Union type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_types_with_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 @MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_jsonschema_type_alias_with_circular_ref_to_class_msgspec(min_version: str, output_file: Path) -> None:
     """Test TypeAlias with circular reference to class generates quoted forward refs."""
