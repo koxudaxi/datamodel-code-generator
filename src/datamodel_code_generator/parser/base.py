@@ -354,6 +354,7 @@ class Result(BaseModel):
     """Generated code result with optional source file reference."""
 
     body: str
+    future_imports: str = ""
     source: Optional[Path] = None  # noqa: UP045
 
 
@@ -1822,6 +1823,9 @@ class Parser(ABC):
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
+        future_imports = self.imports.extract_future()
+        future_imports_str = str(future_imports)
+
         for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
             export_imports: Imports | None = None
@@ -1842,7 +1846,8 @@ class Parser(ABC):
 
             if models:
                 if with_import:
-                    result += [str(self.imports), str(imports), "\n"]
+                    import_parts = [s for s in [future_imports_str, str(self.imports), str(imports)] if s]
+                    result += [*import_parts, "\n"]
 
                 if export_imports:
                     result += [str(export_imports), ""]
@@ -1875,7 +1880,11 @@ class Parser(ABC):
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            results[module] = Result(body=body, source=models[0].file_path if models else None)
+            results[module] = Result(
+                body=body,
+                future_imports=future_imports_str,
+                source=models[0].file_path if models else None,
+            )
 
         if all_exports_scope is not None:
             processed_init_modules = {m for m, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
@@ -1888,14 +1897,19 @@ class Parser(ABC):
                     resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
                     export_imports, export_names = self._build_all_exports_code(resolved)
                     all_items = ",\n    ".join(f'"{name}"' for name in export_names)
-                    parts = [str(self.imports), "\n"] if with_import else []
+                    import_parts = [s for s in [future_imports_str, str(self.imports)] if s] if with_import else []
+                    parts = import_parts + (["\n"] if import_parts else [])
                     parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
                     body = "\n".join(parts)
-                    results[init_module] = Result(body=code_formatter.format_code(body) if code_formatter else body)
+                    results[init_module] = Result(
+                        body=code_formatter.format_code(body) if code_formatter else body,
+                        future_imports=future_imports_str,
+                    )
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:
-            return results["__init__.py",].body
+            result = results["__init__.py",]
+            return result.body
 
         results = {tuple(i.replace("-", "_") for i in k): v for k, v in results.items()}
         return (

@@ -346,17 +346,6 @@ def _find_future_import_insertion_point(header: str) -> int:
     return pos
 
 
-def _extract_future_imports_from_body(body: str) -> tuple[str, str]:
-    """Extract __future__ imports from body, returning (future_imports, rest_of_body)."""
-    if not body.lstrip().startswith("from __future__"):
-        return "", body
-
-    first_blank = body.find("\n\n")
-    future_imports = body[:first_blank]
-    rest_body = body[first_blank:].lstrip("\n")
-    return future_imports, rest_body
-
-
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
@@ -705,7 +694,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         msg = "Models not found in the input data"
         raise Error(msg)
     if isinstance(results, str):
-        modules: dict[Path | None, tuple[str, str | None]] = {output: (results, input_filename)}
+        # Single-file output: body already contains future imports
+        # Only store future_imports separately if we have a non-empty custom_file_header
+        body = results
+        future_imports = ""
+        modules: dict[Path | None, tuple[str, str, str | None]] = {output: (body, future_imports, input_filename)}
     else:
         if output is None:
             msg = "Modular references require an output directory"
@@ -716,6 +709,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         modules = {
             output.joinpath(*name): (
                 result.body,
+                result.future_imports,
                 str(result.source.as_posix() if result.source else input_filename),
             )
             for name, result in sorted(results.items())
@@ -735,7 +729,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         header += f"\n#   version:   {get_version()}"
 
     file: IO[Any] | None
-    for path, (body, filename) in modules.items():
+    for path, (body, future_imports, filename) in modules.items():
         if path is None:
             file = None
         else:
@@ -747,23 +741,35 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         effective_header = custom_file_header or header.format(safe_filename)
 
         if custom_file_header and body:
-            future_imports, rest_body = _extract_future_imports_from_body(body)
-            if future_imports:
+            # Extract future imports from body for correct placement after custom_file_header
+            body_without_future = body
+            extracted_future = future_imports  # Use pre-extracted if available
+            lines = body.split("\n")
+            future_indices = [i for i, line in enumerate(lines) if line.strip().startswith("from __future__")]
+            if future_indices:
+                if not extracted_future:
+                    # Extract future imports from body
+                    extracted_future = "\n".join(lines[i] for i in future_indices)
+                remaining_lines = [line for i, line in enumerate(lines) if i not in future_indices]
+                body_without_future = "\n".join(remaining_lines).lstrip("\n")
+
+            if extracted_future:
                 insertion_point = _find_future_import_insertion_point(custom_file_header)
                 header_before = custom_file_header[:insertion_point].rstrip()
                 header_after = custom_file_header[insertion_point:].strip()
                 if header_after:
-                    content = header_before + "\n" + future_imports + "\n\n" + header_after
+                    content = header_before + "\n" + extracted_future + "\n\n" + header_after
                 else:
-                    content = header_before + "\n\n\n" + future_imports
+                    content = header_before + "\n\n\n" + extracted_future
                 print(content, file=file)
                 print(file=file)
-                print(rest_body.rstrip(), file=file)
+                print(body_without_future.rstrip(), file=file)
             else:
                 print(effective_header, file=file)
                 print(file=file)
                 print(body.rstrip(), file=file)
         else:
+            # Body already contains future imports, just print as-is
             print(effective_header, file=file)
             if body:
                 print(file=file)
