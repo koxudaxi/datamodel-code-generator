@@ -10,7 +10,7 @@
 {{ decorator }}
 {% endfor -%}
 
-class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields)}}]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
+class {{ class_name }}({{ base_class }}{%- if fields -%}["{{get_type_hint(fields)}}"]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     """
     {{ description | indent(4) }}
@@ -18,7 +18,13 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields)
 {%- endif %}
 {%- if config %}
 {%- filter indent(4) %}
-{% include 'ConfigDict.jinja2' %}
+model_config = ConfigDict(
+{%- for field_name, value in config.dict(exclude_unset=True).items() %}
+    {%- if field_name != 'extra' %}
+    {{ field_name }}={{ value }},
+    {%- endif %}
+{%- endfor %}
+)
 {%- endfilter %}
 {%- endif %}
 {%- if not fields and not description %}
