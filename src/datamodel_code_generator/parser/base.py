@@ -38,6 +38,8 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
+    IMPORT_OPTIONAL,
+    IMPORT_UNION,
     Import,
     Imports,
 )
@@ -1292,7 +1294,10 @@ class Parser(ABC):
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
-                        imports.append(original_field.imports)
+                        # Use list instead of set because Import is not hashable
+                        excluded_imports = [IMPORT_OPTIONAL, IMPORT_UNION]
+                        field_imports = [i for i in original_field.imports if i not in excluded_imports]
+                        imports.append(field_imports)
 
                     data_type.remove_reference()
 
