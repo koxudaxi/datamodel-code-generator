@@ -70,7 +70,7 @@ def test_extract_future_no_future_imports() -> None:
 
     future = imports.extract_future()
 
-    assert str(future) == ""
+    assert not str(future)
     assert str(imports) == "from typing import Optional"
 
 
@@ -82,7 +82,7 @@ def test_extract_future_only_future_imports() -> None:
     future = imports.extract_future()
 
     assert str(future) == "from __future__ import annotations"
-    assert str(imports) == ""
+    assert not str(imports)
 
 
 def test_extract_future_with_alias() -> None:
