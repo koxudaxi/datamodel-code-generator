@@ -3012,8 +3012,8 @@ def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
             str(JSON_SCHEMA_DATA_PATH / "hierarchical_aliases_scoped.json"),
         ],
     )
-    
-    
+
+
 def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
     """Test multiple types in array including object with properties generates Union type."""
     run_main_and_assert(
