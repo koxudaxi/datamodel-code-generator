@@ -1736,10 +1736,7 @@ def test_jsonschema_without_titles_use_title_as_name(output_file: Path) -> None:
 
 
 def test_jsonschema_title_with_dots(output_file: Path) -> None:
-    """Test using title as name when title contains dots (e.g., version numbers).
-
-    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/1638
-    """
+    """Test using title as name when title contains dots (e.g., version numbers)."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "title_with_dots.json",
         output_path=output_file,
