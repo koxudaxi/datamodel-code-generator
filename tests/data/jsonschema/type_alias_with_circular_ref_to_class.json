@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "SpanB": {
+      "type": "object",
+      "properties": {
+        "recur": { "type": "array", "items": [{ "$ref": "#/$defs/Span" }] }
+      },
+      "required": ["recur"]
+    },
+    "Either": { "oneOf": [{ "$ref": "#/$defs/SpanB" }, { "$ref": "#/$defs/Span" }] },
+    "Span": {
+      "type": "object",
+      "properties": {
+        "recur": {
+          "type": "array",
+          "items": [{ "$ref": "#/$defs/Either" }]
+        }
+      },
+      "required": ["recur"]
+    }
+  },
+  "title": "Defaults",
+  "type": "object",
+  "properties": {
+    "a": {
+      "type": "array",
+      "items": [{ "$ref": "#/$defs/Span" }]
+    }
+  },
+  "required": ["a"]
+}

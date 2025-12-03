@@ -1577,6 +1577,38 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "union_default_object.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_union_default_object.py",
+        ),
+        (
+            "msgspec.Struct",
+            "msgspec_union_default_object.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_union_default_object(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with Union type default object values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "union_default_object.yaml",
+        output_path=output_file,
+        expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+    )
+
+
 def test_main_dataclass(output_file: Path) -> None:
     """Test OpenAPI generation with dataclass output."""
     run_main_and_assert(
@@ -1795,6 +1827,94 @@ def test_main_custom_file_header_duplicate_options(capsys: pytest.CaptureFixture
         ],
         capsys=capsys,
         expected_stderr_contains="`--custom_file_header_path` can not be used with `--custom_file_header`.",
+    )
+
+
+def test_main_custom_file_header_with_docstring(output_file: Path) -> None:
+    """Test future import placement after docstring in custom header."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_with_docstring.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_docstring.txt")],
+    )
+
+
+def test_main_custom_file_header_with_import(output_file: Path) -> None:
+    """Test future import placement before existing imports in custom header."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_with_import.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_import.txt")],
+    )
+
+
+def test_main_custom_file_header_with_docstring_and_import(output_file: Path) -> None:
+    """Test future import placement with docstring and imports in custom header."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_with_docstring_and_import.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt")],
+    )
+
+
+def test_main_custom_file_header_without_future_imports(output_file: Path) -> None:
+    """Test custom header with --disable-future-imports option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_no_future.py",
+        extra_args=[
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header.txt"),
+            "--disable-future-imports",
+        ],
+    )
+
+
+def test_main_custom_file_header_empty(output_file: Path) -> None:
+    """Test empty custom header file."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_empty.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_empty.txt")],
+    )
+
+
+def test_main_custom_file_header_invalid_syntax(output_file: Path) -> None:
+    """Test custom header with invalid Python syntax."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_invalid_syntax.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_invalid_syntax.txt")],
+    )
+
+
+def test_main_custom_file_header_comments_only(output_file: Path) -> None:
+    """Test custom header with only comments (no statements)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="custom_file_header_comments_only.py",
+        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_comments_only.txt")],
     )
 
 
