@@ -477,9 +477,16 @@ class ModelResolver:  # noqa: PLR0904
             yield
 
     @contextmanager
-    def base_url_context(self, base_url: str) -> Generator[None, None, None]:
-        """Temporarily set the base URL within a context."""
-        if self._base_url:
+    def base_url_context(self, base_url: str | None) -> Generator[None, None, None]:
+        """Temporarily set the base URL within a context.
+
+        Only sets the base_url if:
+        - The new value is actually a URL (http:// or https://)
+        - OR _base_url was already set (switching between URLs)
+        This preserves backward compatibility for local file parsing where
+        this method was previously a no-op.
+        """
+        if self._base_url or (base_url and is_url(base_url)):
             with context_variable(self.set_base_url, self.base_url, base_url):
                 yield
         else:
@@ -548,12 +555,16 @@ class ModelResolver:  # noqa: PLR0904
         else:
             if "#" not in joined_path:
                 joined_path += "#"
-            elif joined_path[0] == "#":
+            elif joined_path[0] == "#" and not self.base_url:
                 joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
             file_path, fragment = joined_path.split("#", 1)
             ref = f"{file_path}#{fragment}"
-            if self.root_id_base_path and not (is_url(joined_path) or Path(self._base_path, file_path).is_file()):
+            if (
+                self.root_id_base_path
+                and not self.base_url
+                and not (is_url(joined_path) or Path(self._base_path, file_path).is_file())
+            ):
                 ref = f"{self.root_id_base_path}/{ref}"
 
         if self.base_url:
@@ -847,4 +858,8 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 
 def is_url(ref: str) -> bool:
     """Check if a reference string is a URL."""
-    return ref.startswith(("https://", "http://"))
+    parsed = urlparse(ref)
+    # Exclude single-letter schemes (Windows drive letters like c:, d:)
+    if not parsed.scheme or len(parsed.scheme) == 1:
+        return False
+    return bool(parsed.netloc or parsed.path.startswith("/"))
