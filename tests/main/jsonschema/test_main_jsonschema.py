@@ -25,6 +25,7 @@ from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
+    ALIASES_DATA_PATH,
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -3009,6 +3010,30 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
     """Test that arrays with empty items ({}) generate List[Any] instead of bare List."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "empty_items_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
+    """Test hierarchical aliases with scoped format (ClassName.field)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hierarchical_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
+    """Test multiple types in array including object with properties generates Union type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_types_with_object.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
