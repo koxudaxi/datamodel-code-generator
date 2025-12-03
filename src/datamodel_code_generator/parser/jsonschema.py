@@ -750,16 +750,6 @@ class JsonSchemaParser(Parser):
             return True
         return any(self._resolve_write_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
-    def _copy_field(self, field: DataModelFieldBase) -> DataModelFieldBase:  # noqa: PLR6301
-        """Create a deep copy of a field to avoid mutating the original."""
-        copied = field.copy()
-        copied.parent = None
-        data_type = field.data_type
-        copied.data_type = data_type.copy()
-        if data_type.data_types:
-            copied.data_type.data_types = [dt.copy() for dt in data_type.data_types]
-        return copied
-
     def _iter_fields_from_reference(
         self, base_ref: Reference, path: list[str], visited: set[str] | None = None
     ) -> Iterable[DataModelFieldBase]:
@@ -805,14 +795,15 @@ class JsonSchemaParser(Parser):
             elif item.properties:
                 yield from self.parse_object_fields(item, path, module_name)
 
-    def _dedupe_and_copy_fields(self, fields: Iterable[DataModelFieldBase]) -> list[DataModelFieldBase]:
+    @classmethod
+    def _dedupe_and_copy_fields(cls, fields: Iterable[DataModelFieldBase]) -> list[DataModelFieldBase]:
         """Deduplicate fields by name and create deep copies. Later fields override earlier ones."""
         deduplicated: dict[str, DataModelFieldBase] = {}
         for field in fields:
             field_key = field.original_name or field.name
             if field_key is None:  # pragma: no cover
                 continue  # pragma: no cover
-            deduplicated[field_key] = self._copy_field(field)
+            deduplicated[field_key] = field.copy_deep()
         return list(deduplicated.values())
 
     def _collect_all_fields_for_request_response(

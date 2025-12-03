@@ -17,6 +17,7 @@ from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import Field
+from typing_extensions import Self
 
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
@@ -46,6 +47,7 @@ TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 ALL_MODEL: str = "#all#"
 
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
+DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound="DataModelFieldBase")
 
 
 class ConstraintsBase(_BaseModel):
@@ -262,6 +264,15 @@ class DataModelFieldBase(_BaseModel):
     def fall_back_to_nullable(self) -> bool:
         """Check if optional fields should be nullable by default."""
         return True
+
+    def copy_deep(self) -> Self:
+        """Create a deep copy of this field to avoid mutating the original."""
+        copied = self.copy()
+        copied.parent = None
+        copied.data_type = self.data_type.copy()
+        if self.data_type.data_types:
+            copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
+        return copied
 
 
 @lru_cache
@@ -525,6 +536,21 @@ class DataModel(TemplateBase, Nullable, ABC):
         for field in self.fields:
             yield from field.data_type.all_data_types
         yield from self.base_classes
+
+    def iter_all_fields(self, visited: set[str] | None = None) -> Iterator[DataModelFieldBase]:
+        """Yield all fields including inherited fields from base classes."""
+        if visited is None:
+            visited = set()
+        if self.path in visited:
+            return
+        visited.add(self.path)
+
+        for base_class in self.base_classes or []:
+            if base_class.reference and base_class.reference.source:
+                source = base_class.reference.source
+                if isinstance(source, DataModel):
+                    yield from source.iter_all_fields(visited)
+        yield from self.fields
 
     @property
     def is_alias(self) -> bool:
