@@ -708,47 +708,39 @@ class JsonSchemaParser(Parser):
             self.field_constraints and not (obj.ref or obj.anyOf or obj.oneOf or obj.allOf or obj.is_object or obj.enum)
         )
 
-    def _get_ref_schema(self, ref: str) -> dict[str, Any] | None:
-        """Get schema body from a $ref for readOnly/writeOnly resolution."""
-        ref_type = get_ref_type(ref)
-        try:
-            if ref_type == JSONReference.LOCAL:
-                return get_model_by_path(self.raw_obj, ref[2:].split("/"))
-            if ref_type == JSONReference.REMOTE:
-                file_path, json_pointer = ([*ref.split("#", 1), ""])[:2]
-                remote_obj = self._get_ref_body(file_path)
-                return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
-            url_part, json_pointer = ([*ref.split("#", 1), ""])[:2]
-            if url_part == self.root_id:
-                return get_model_by_path(self.raw_obj, json_pointer[1:].split("/")) if json_pointer else self.raw_obj
-            remote_obj = self._get_ref_body_from_url(url_part)
-            return get_model_by_path(remote_obj, json_pointer[1:].split("/")) if json_pointer else remote_obj
-        except (KeyError, IndexError, FileNotFoundError, Exception):  # noqa: BLE001
-            return None
+    def _resolve_read_only(self, obj: JsonSchemaObject, *, follow_ref: bool = True) -> bool:
+        """Resolve readOnly flag from direct value, $ref, and compositions.
 
-    def _resolve_read_only(self, obj: JsonSchemaObject) -> bool:
-        """Resolve readOnly flag from direct value, $ref, and compositions."""
+        Args:
+            obj: The schema object to check.
+            follow_ref: Whether to follow $ref (False when checking loaded schemas to avoid context issues).
+        """
         if obj.readOnly is True:
             return True
-        if (
-            obj.ref
-            and (resolved := self._get_ref_schema(obj.ref))
-            and self._resolve_read_only(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved))
-        ):
-            return True
-        return any(self._resolve_read_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
+        if follow_ref and obj.ref:
+            # Only check the direct referenced schema, don't recursively follow its refs
+            # to avoid context issues with relative paths
+            resolved = self._load_ref_schema_object(obj.ref)
+            if self._resolve_read_only(resolved, follow_ref=False):
+                return True
+        return any(self._resolve_read_only(sub, follow_ref=follow_ref) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
-    def _resolve_write_only(self, obj: JsonSchemaObject) -> bool:
-        """Resolve writeOnly flag from direct value, $ref, and compositions."""
+    def _resolve_write_only(self, obj: JsonSchemaObject, *, follow_ref: bool = True) -> bool:
+        """Resolve writeOnly flag from direct value, $ref, and compositions.
+
+        Args:
+            obj: The schema object to check.
+            follow_ref: Whether to follow $ref (False when checking loaded schemas to avoid context issues).
+        """
         if obj.writeOnly is True:
             return True
-        if (
-            obj.ref
-            and (resolved := self._get_ref_schema(obj.ref))
-            and self._resolve_write_only(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved))
-        ):
-            return True
-        return any(self._resolve_write_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
+        if follow_ref and obj.ref:
+            # Only check the direct referenced schema, don't recursively follow its refs
+            # to avoid context issues with relative paths
+            resolved = self._load_ref_schema_object(obj.ref)
+            if self._resolve_write_only(resolved, follow_ref=False):
+                return True
+        return any(self._resolve_write_only(sub, follow_ref=follow_ref) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
     def _iter_fields_from_reference(
         self, base_ref: Reference, path: list[str], visited: set[str] | None = None
@@ -767,11 +759,7 @@ class JsonSchemaParser(Parser):
                     yield from self._iter_fields_from_reference(base_class.reference, path, visited)
             yield from source.fields
         else:
-            resolved = self._get_ref_schema(base_ref.path)
-            if resolved is None:  # pragma: no cover
-                msg = f"Failed to resolve reference: {base_ref.path}"
-                raise ValueError(msg)
-            yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path, visited)
+            yield from self._iter_fields_from_schema(self._load_ref_schema_object(base_ref.path), path, visited)
 
     def _iter_fields_from_schema(
         self, obj: JsonSchemaObject, path: list[str], visited: set[str] | None = None
@@ -787,11 +775,7 @@ class JsonSchemaParser(Parser):
                 if item.ref in visited:  # pragma: no cover
                     continue  # pragma: no cover
                 visited.add(item.ref)
-                resolved = self._get_ref_schema(item.ref)
-                if resolved is None:  # pragma: no cover
-                    msg = f"Failed to resolve reference in allOf: {item.ref}"
-                    raise ValueError(msg)
-                yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path, visited)
+                yield from self._iter_fields_from_schema(self._load_ref_schema_object(item.ref), path, visited)
             elif item.properties:
                 yield from self.parse_object_fields(item, path, module_name)
 
