@@ -25,6 +25,7 @@ from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
+    ALIASES_DATA_PATH,
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -2986,6 +2987,6 @@ def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
         assert_func=assert_file_content,
         extra_args=[
             "--aliases",
-            str(JSON_SCHEMA_DATA_PATH / "hierarchical_aliases_scoped.json"),
+            str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json"),
         ],
     )
