@@ -391,6 +391,14 @@ class JsonSchemaObject(BaseModel):
         """Check if the type list contains null."""
         return isinstance(self.type, list) and "null" in self.type
 
+    @cached_property
+    def has_multiple_types(self) -> bool:
+        """Check if the type is a list with multiple non-null types."""
+        if not isinstance(self.type, list):
+            return False
+        non_null_types = [t for t in self.type if t != "null"]
+        return len(non_null_types) > 1
+
 
 @lru_cache
 def get_ref_type(ref: str) -> JSONReference:
@@ -1301,6 +1309,18 @@ class JsonSchemaParser(Parser):
         if item.is_object or item.patternProperties:
             object_path = get_special_path("object", path)
             if item.properties:
+                if item.has_multiple_types:
+                    data_types: list[DataType] = []
+                    data_types.append(self.parse_object(name, item, object_path, singular_name=singular_name))
+                    if isinstance(item.type, list):
+                        data_types.extend(
+                            self.data_type_manager.get_data_type(
+                                self._get_type_with_mappings(t, item.format or "default"),
+                            )
+                            for t in item.type
+                            if t not in {"object", "null"}
+                        )
+                    return self.data_type(data_types=data_types)
                 return self.parse_object(name, item, object_path, singular_name=singular_name)
             if item.patternProperties:
                 # support only single key dict.
@@ -1534,6 +1554,66 @@ class JsonSchemaParser(Parser):
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
+
+    def _parse_multiple_types_with_properties(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> None:
+        """Parse a schema with multiple types including object with properties."""
+        data_types: list[DataType] = []
+
+        object_path = get_special_path("object", path)
+        object_data_type = self.parse_object(name, obj, object_path)
+        data_types.append(object_data_type)
+
+        if isinstance(obj.type, list):
+            data_types.extend(
+                self.data_type_manager.get_data_type(
+                    self._get_type_with_mappings(t, obj.format or "default"),
+                )
+                for t in obj.type
+                if t not in {"object", "null"}
+            )
+
+        if self.force_optional_for_required_fields:
+            required: bool = False
+        else:
+            is_nullable = obj.nullable or obj.type_has_null
+            required = not is_nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
+
+        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        self.set_title(reference.path, obj)
+        self.set_additional_properties(reference.path, obj)
+
+        data_model_root_type = self.data_model_root_type(
+            reference=reference,
+            fields=[
+                self.data_model_field_type(
+                    data_type=self.data_type(data_types=data_types),
+                    default=obj.default,
+                    required=required,
+                    constraints=obj.dict() if self.field_constraints else {},
+                    nullable=obj.type_has_null if self.strict_nullable else None,
+                    strip_default_none=self.strip_default_none,
+                    extras=self.get_field_extras(obj),
+                    use_annotated=self.use_annotated,
+                    use_field_description=self.use_field_description,
+                    use_inline_field_description=self.use_inline_field_description,
+                    original_name=None,
+                    has_default=obj.has_default,
+                )
+            ],
+            custom_base_class=obj.custom_base_path or self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
+            default=obj.default if obj.has_default else UNDEFINED,
+        )
+        self.results.append(data_model_root_type)
 
     def parse_enum_as_literal(self, obj: JsonSchemaObject) -> DataType:
         """Parse enum values as a Literal type."""
@@ -1830,7 +1910,10 @@ class JsonSchemaParser(Parser):
             if isinstance(data_type, EmptyDataType) and obj.properties:
                 self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
-            self.parse_object(name, obj, path)
+            if obj.has_multiple_types:
+                self._parse_multiple_types_with_properties(name, obj, path)
+            else:
+                self.parse_object(name, obj, path)
         elif obj.patternProperties:
             self.parse_root_type(name, obj, path)
         elif obj.type == "object":

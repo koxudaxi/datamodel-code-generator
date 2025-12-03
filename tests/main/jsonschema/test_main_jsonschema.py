@@ -2975,3 +2975,13 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
+
+
+def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
+    """Test multiple types in array including object with properties generates Union type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_types_with_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
