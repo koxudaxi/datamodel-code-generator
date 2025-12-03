@@ -726,17 +726,29 @@ class JsonSchemaParser(Parser):
         except (KeyError, IndexError, FileNotFoundError, Exception):  # noqa: BLE001
             return None
 
-    def _resolve_ro_wo_flag(self, obj: JsonSchemaObject, attr: str) -> bool:
-        """Resolve readOnly/writeOnly flag from direct value, $ref, and compositions."""
-        if getattr(obj, attr) is True:
+    def _resolve_read_only(self, obj: JsonSchemaObject) -> bool:
+        """Resolve readOnly flag from direct value, $ref, and compositions."""
+        if obj.readOnly is True:
             return True
         if (
             obj.ref
             and (resolved := self._get_ref_schema(obj.ref))
-            and self._resolve_ro_wo_flag(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), attr)
+            and self._resolve_read_only(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved))
         ):
             return True
-        return any(self._resolve_ro_wo_flag(sub, attr) for sub in obj.allOf + obj.anyOf + obj.oneOf)
+        return any(self._resolve_read_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
+
+    def _resolve_write_only(self, obj: JsonSchemaObject) -> bool:
+        """Resolve writeOnly flag from direct value, $ref, and compositions."""
+        if obj.writeOnly is True:
+            return True
+        if (
+            obj.ref
+            and (resolved := self._get_ref_schema(obj.ref))
+            and self._resolve_write_only(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved))
+        ):
+            return True
+        return any(self._resolve_write_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
     def _copy_field(self, field: DataModelFieldBase) -> DataModelFieldBase:  # noqa: PLR6301
         """Create a deep copy of a field to avoid mutating the original."""
@@ -759,10 +771,11 @@ class JsonSchemaParser(Parser):
         visited.add(base_ref.path)
 
         if source := base_ref.source:
-            for base_class in getattr(source, "base_classes", []) or []:
-                if reference := getattr(base_class, "reference", None):
-                    yield from self._iter_fields_from_reference(reference, path, visited)
-            yield from getattr(source, "fields", [])
+            if isinstance(source, DataModel):
+                for base_class in source.base_classes or []:
+                    if base_class.reference:
+                        yield from self._iter_fields_from_reference(base_class.reference, path, visited)
+                yield from source.fields
         else:
             resolved = self._get_ref_schema(base_ref.path)
             if resolved is None:  # pragma: no cover
@@ -896,20 +909,26 @@ class JsonSchemaParser(Parser):
         """Generate Request and Response model variants."""
         all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
 
-        variants = [
-            ("Request", "read_only"),
-            ("Response", "write_only"),
-        ]
-        for suffix, exclude_attr in variants:
-            if any(getattr(field, exclude_attr) for field in all_fields):
-                self._create_variant_model(
-                    path,
-                    name,
-                    suffix,
-                    [field for field in all_fields if not getattr(field, exclude_attr)],
-                    obj,
-                    data_model_type_class,
-                )
+        # Request model: exclude readOnly fields
+        if any(field.read_only for field in all_fields):
+            self._create_variant_model(
+                path,
+                name,
+                "Request",
+                [field for field in all_fields if not field.read_only],
+                obj,
+                data_model_type_class,
+            )
+        # Response model: exclude writeOnly fields
+        if any(field.write_only for field in all_fields):
+            self._create_variant_model(
+                path,
+                name,
+                "Response",
+                [field for field in all_fields if not field.write_only],
+                obj,
+                data_model_type_class,
+            )
 
     def get_object_field(  # noqa: PLR0913
         self,
@@ -939,8 +958,8 @@ class JsonSchemaParser(Parser):
             original_name=original_field_name,
             has_default=field.has_default,
             type_has_null=field.type_has_null,
-            read_only=self._resolve_ro_wo_flag(field, "readOnly"),
-            write_only=self._resolve_ro_wo_flag(field, "writeOnly"),
+            read_only=self._resolve_read_only(field),
+            write_only=self._resolve_write_only(field),
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
