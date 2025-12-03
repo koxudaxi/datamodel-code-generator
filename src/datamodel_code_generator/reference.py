@@ -412,6 +412,7 @@ class ModelResolver:  # noqa: PLR0904
         no_alias: bool = False,  # noqa: FBT001, FBT002
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -447,6 +448,7 @@ class ModelResolver:  # noqa: PLR0904
         self._current_base_path: Path | None = self._base_path
         self.remove_suffix_number: bool = remove_suffix_number
         self.parent_scoped_naming = parent_scoped_naming
+        self.treat_dot_as_module = treat_dot_as_module
 
     @property
     def current_base_path(self) -> Path | None:

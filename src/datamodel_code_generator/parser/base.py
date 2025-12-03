@@ -578,6 +578,7 @@ class Parser(ABC):
             capitalise_enum_members=capitalise_enum_members,
             no_alias=no_alias,
             parent_scoped_naming=parent_scoped_naming,
+            treat_dot_as_module=treat_dot_as_module,
         )
         self.class_name: str | None = class_name
         self.wrap_string_literal: bool | None = wrap_string_literal

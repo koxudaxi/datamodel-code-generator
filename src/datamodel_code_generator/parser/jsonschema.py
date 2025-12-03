@@ -40,7 +40,7 @@ from datamodel_code_generator.format import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.base import UNDEFINED, get_module_name
+from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
@@ -967,7 +967,7 @@ class JsonSchemaParser(Parser):
                         self.data_model_field_type(required=True, original_name=required_, data_type=DataType())
                     )
         if self.use_title_as_name and obj.title:  # pragma: no cover
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
@@ -1184,7 +1184,7 @@ class JsonSchemaParser(Parser):
                 stacklevel=2,
             )
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(
             path,
             name,
@@ -1281,7 +1281,7 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         """Parse a single JSON Schema item into a data type."""
         if self.use_title_as_name and item.title:
-            name = item.title
+            name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
             singular_name = False
         if parent and not item.enum and item.has_constraint and (parent.has_constraint or self.field_constraints):
             root_type_path = get_special_path("array", path)
@@ -1441,7 +1441,7 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         """Parse array schema into a root model with array type."""
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
@@ -1530,7 +1530,7 @@ class JsonSchemaParser(Parser):
         else:
             required = not obj.nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self.set_title(reference.path, obj)
@@ -1729,7 +1729,7 @@ class JsonSchemaParser(Parser):
             return self.data_type(reference=reference_)
 
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(
             path,
             name,
