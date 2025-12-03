@@ -1454,14 +1454,12 @@ class Parser(ABC):
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
         """Update type aliases to properly handle forward references per PEP 484."""
-        rendered_aliases: set[str] = set()
+        model_index: dict[str, int] = {m.class_name: i for i, m in enumerate(models)}
 
-        for model in models:
+        for i, model in enumerate(models):
             if not isinstance(model, TypeAliasBase):
                 continue
-
             if isinstance(model, TypeStatement):
-                rendered_aliases.add(model.class_name)
                 continue
 
             for field in model.fields:
@@ -1469,15 +1467,16 @@ class Parser(ABC):
                     if not data_type.reference:
                         continue
                     source = data_type.reference.source
-                    if not isinstance(source, TypeAliasBase):
-                        continue
-                    if isinstance(source, TypeStatement):  # pragma: no cover
+                    if not isinstance(source, DataModel):
+                        continue  # pragma: no cover
+                    if isinstance(source, TypeStatement):
+                        continue  # pragma: no cover
+                    if source.module_path != model.module_path:
                         continue
                     name = data_type.reference.short_name
-                    if name not in rendered_aliases:
+                    source_index = model_index.get(name)
+                    if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
-
-            rendered_aliases.add(model.class_name)
 
     @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
