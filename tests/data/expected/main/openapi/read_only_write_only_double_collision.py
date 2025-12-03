@@ -17,7 +17,7 @@ class UserRequestModel(BaseModel):
     another_field: Optional[str] = None
 
 
-class UserRequestModel1(BaseModel):
+class UserRequest1(BaseModel):
     name: str
     password: Optional[str] = None
 

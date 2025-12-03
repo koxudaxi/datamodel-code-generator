@@ -851,22 +851,6 @@ class JsonSchemaParser(Parser):
             return True
         return not generates_separate_models
 
-    def _get_unique_model_name(self, path: list[str], base_name: str, suffix: str) -> tuple[str, list[str]]:
-        """Generate a unique model name and path, avoiding collisions."""
-        model_name = f"{base_name}{suffix}"
-        model_path = [*path[:-1], model_name]
-
-        if (ref := self.model_resolver.references.get(self.model_resolver.join_path(model_path))) and ref.loaded:
-            model_name = f"{base_name}{suffix}Model"
-            model_path = [*path[:-1], model_name]
-            counter = 1
-            while self.model_resolver.references.get(self.model_resolver.join_path(model_path)):
-                model_name = f"{base_name}{suffix}Model{counter}"
-                model_path = [*path[:-1], model_name]
-                counter += 1
-
-        return model_name, model_path
-
     def _create_variant_model(  # noqa: PLR0913, PLR0917
         self,
         path: list[str],
@@ -879,7 +863,14 @@ class JsonSchemaParser(Parser):
         """Create a Request or Response model variant."""
         if not model_fields:
             return
-        model_name, model_path = self._get_unique_model_name(path, base_name, suffix)
+        model_name = f"{base_name}{suffix}"
+        model_path = [*path[:-1], model_name]
+        # Check for path collision and generate unique path if needed
+        counter = 1
+        while (ref := self.model_resolver.get(model_path)) and ref.loaded:
+            model_name = f"{base_name}{suffix}{counter}"
+            model_path = [*path[:-1], model_name]
+            counter += 1
         reference = self.model_resolver.add(model_path, model_name, class_name=True, singular_name=False, loaded=True)
         model = self._create_data_model(
             model_type=data_model_type_class,

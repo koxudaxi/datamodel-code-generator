@@ -13,7 +13,7 @@ class UserRequest(BaseModel):
     existing_field: Optional[str] = None
 
 
-class UserRequestModel(BaseModel):
+class UserRequest1(BaseModel):
     name: str
     password: Optional[str] = None
 
