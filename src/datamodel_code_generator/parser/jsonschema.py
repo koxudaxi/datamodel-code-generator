@@ -778,7 +778,8 @@ class JsonSchemaParser(Parser):
         deduplicated: dict[str, DataModelFieldBase] = {}
         for field in fields:
             field_key = field.original_name or field.name
-            deduplicated[field_key] = self._copy_field(field)
+            if field_key is not None:
+                deduplicated[field_key] = self._copy_field(field)
         return list(deduplicated.values())
 
     def _collect_all_fields_for_request_response(
