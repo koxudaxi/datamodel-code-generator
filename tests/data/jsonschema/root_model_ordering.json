@@ -1,0 +1,128 @@
+{
+  "$defs": {
+    "Dog": {
+      "properties": {
+        "name": {
+          "const": "dog",
+          "default": "dog",
+          "title": "woof",
+          "type": "string"
+        },
+        "friends": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bird": "#/$defs/Bird",
+                "cat": "#/$defs/Cat",
+                "dog": "#/$defs/Dog"
+              },
+              "propertyName": "name"
+            },
+            "oneOf": [
+              {"$ref": "#/$defs/Dog"},
+              {"$ref": "#/$defs/Cat"},
+              {"$ref": "#/$defs/Bird"}
+            ],
+            "title": "Animal"
+          },
+          "title": "Friends",
+          "type": "array",
+          "default": []
+        }
+      },
+      "title": "Dog",
+      "type": "object"
+    },
+    "Cat": {
+      "properties": {
+        "name": {
+          "const": "cat",
+          "default": "cat",
+          "title": "meow",
+          "type": "string"
+        },
+        "friends": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bird": "#/$defs/Bird",
+                "cat": "#/$defs/Cat",
+                "dog": "#/$defs/Dog"
+              },
+              "propertyName": "name"
+            },
+            "oneOf": [
+              {"$ref": "#/$defs/Dog"},
+              {"$ref": "#/$defs/Cat"},
+              {"$ref": "#/$defs/Bird"}
+            ],
+            "title": "Animal"
+          },
+          "title": "Friends",
+          "type": "array",
+          "default": []
+        }
+      },
+      "title": "Cat",
+      "type": "object"
+    },
+    "Bird": {
+      "properties": {
+        "name": {
+          "const": "bird",
+          "default": "bird",
+          "title": "chirp",
+          "type": "string"
+        },
+        "friends": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bird": "#/$defs/Bird",
+                "cat": "#/$defs/Cat",
+                "dog": "#/$defs/Dog"
+              },
+              "propertyName": "name"
+            },
+            "oneOf": [
+              {"$ref": "#/$defs/Dog"},
+              {"$ref": "#/$defs/Cat"},
+              {"$ref": "#/$defs/Bird"}
+            ],
+            "title": "Animal"
+          },
+          "title": "Friends",
+          "type": "array",
+          "default": []
+        }
+      },
+      "title": "Bird",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "animals": {
+      "default": [],
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "bird": "#/$defs/Bird",
+            "cat": "#/$defs/Cat",
+            "dog": "#/$defs/Dog"
+          },
+          "propertyName": "name"
+        },
+        "oneOf": [
+          {"$ref": "#/$defs/Dog"},
+          {"$ref": "#/$defs/Cat"},
+          {"$ref": "#/$defs/Bird"}
+        ],
+        "title": "Animal"
+      },
+      "title": "Animals",
+      "type": "array"
+    }
+  },
+  "title": "Zoo",
+  "type": "object"
+}
