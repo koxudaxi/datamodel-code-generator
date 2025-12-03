@@ -1,5 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "TopLevelMultiType": {
+      "type": ["boolean", "object"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
   "type": "object",
   "properties": {
     "external": {
@@ -17,6 +27,9 @@
           "type": "integer"
         }
       }
+    },
+    "top_level_ref": {
+      "$ref": "#/definitions/TopLevelMultiType"
     }
   }
 }

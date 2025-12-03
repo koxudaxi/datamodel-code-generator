@@ -17,6 +17,15 @@ class Config(BaseModel):
     value: Optional[int] = None
 
 
+class TopLevelMultiType1(BaseModel):
+    enabled: Optional[bool] = None
+
+
+class TopLevelMultiType(BaseModel):
+    __root__: Union[TopLevelMultiType1, bool]
+
+
 class Model(BaseModel):
     external: Optional[Union[External, bool]] = None
     config: Optional[Union[Optional[Config], str]] = None
+    top_level_ref: Optional[TopLevelMultiType] = None

@@ -1309,17 +1309,16 @@ class JsonSchemaParser(Parser):
         if item.is_object or item.patternProperties:
             object_path = get_special_path("object", path)
             if item.properties:
-                if item.has_multiple_types:
+                if item.has_multiple_types and isinstance(item.type, list):
                     data_types: list[DataType] = []
                     data_types.append(self.parse_object(name, item, object_path, singular_name=singular_name))
-                    if isinstance(item.type, list):
-                        data_types.extend(
-                            self.data_type_manager.get_data_type(
-                                self._get_type_with_mappings(t, item.format or "default"),
-                            )
-                            for t in item.type
-                            if t not in {"object", "null"}
+                    data_types.extend(
+                        self.data_type_manager.get_data_type(
+                            self._get_type_with_mappings(t, item.format or "default"),
                         )
+                        for t in item.type
+                        if t not in {"object", "null"}
+                    )
                     return self.data_type(data_types=data_types)
                 return self.parse_object(name, item, object_path, singular_name=singular_name)
             if item.patternProperties:
@@ -1562,20 +1561,21 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> None:
         """Parse a schema with multiple types including object with properties."""
+        if not isinstance(obj.type, list):
+            return
         data_types: list[DataType] = []
 
         object_path = get_special_path("object", path)
         object_data_type = self.parse_object(name, obj, object_path)
         data_types.append(object_data_type)
 
-        if isinstance(obj.type, list):
-            data_types.extend(
-                self.data_type_manager.get_data_type(
-                    self._get_type_with_mappings(t, obj.format or "default"),
-                )
-                for t in obj.type
-                if t not in {"object", "null"}
+        data_types.extend(
+            self.data_type_manager.get_data_type(
+                self._get_type_with_mappings(t, obj.format or "default"),
             )
+            for t in obj.type
+            if t not in {"object", "null"}
+        )
 
         if self.force_optional_for_required_fields:
             required: bool = False
