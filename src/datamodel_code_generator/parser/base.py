@@ -1441,30 +1441,30 @@ class Parser(ABC):
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
         """Update type aliases to properly handle forward references per PEP 484."""
-        rendered_aliases: set[str] = set()
+        rendered_models: set[str] = set()
 
         for model in models:
-            if not isinstance(model, TypeAliasBase):
-                continue
+            if isinstance(model, TypeAliasBase):
+                if isinstance(model, TypeStatement):
+                    rendered_models.add(model.class_name)
+                    continue
 
-            if isinstance(model, TypeStatement):
-                rendered_aliases.add(model.class_name)
-                continue
+                for field in model.fields:
+                    for data_type in field.data_type.all_data_types:
+                        if not data_type.reference:
+                            continue
+                        source = data_type.reference.source
+                        if not isinstance(source, DataModel):
+                            continue
+                        if isinstance(source, TypeStatement):
+                            continue
+                        if source.file_path and model.file_path and source.file_path != model.file_path:
+                            continue
+                        name = data_type.reference.short_name
+                        if name not in rendered_models:
+                            data_type.alias = f'"{name}"'
 
-            for field in model.fields:
-                for data_type in field.data_type.all_data_types:
-                    if not data_type.reference:
-                        continue
-                    source = data_type.reference.source
-                    if not isinstance(source, TypeAliasBase):
-                        continue
-                    if isinstance(source, TypeStatement):  # pragma: no cover
-                        continue
-                    name = data_type.reference.short_name
-                    if name not in rendered_aliases:
-                        data_type.alias = f'"{name}"'
-
-            rendered_aliases.add(model.class_name)
+            rendered_models.add(model.class_name)
 
     @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
