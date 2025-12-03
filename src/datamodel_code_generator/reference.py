@@ -530,7 +530,7 @@ class ModelResolver:  # noqa: PLR0904
         """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912
+    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(path)
         if joined_path == "#":
@@ -570,7 +570,8 @@ class ModelResolver:  # noqa: PLR0904
         if self.base_url:
             from .http import join_url  # noqa: PLC0415
 
-            joined_url = join_url(self.base_url, ref)
+            effective_base = self.root_id or self.base_url
+            joined_url = join_url(effective_base, ref)
             if "#" in joined_url:
                 return joined_url
             return f"{joined_url}#"
@@ -857,9 +858,5 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 
 
 def is_url(ref: str) -> bool:
-    """Check if a reference string is a URL."""
-    parsed = urlparse(ref)
-    # Exclude single-letter schemes (Windows drive letters like c:, d:)
-    if not parsed.scheme or len(parsed.scheme) == 1:
-        return False
-    return bool(parsed.netloc or parsed.path.startswith("/"))
+    """Check if a reference string is an HTTP(S) URL."""
+    return ref.startswith(("https://", "http://"))

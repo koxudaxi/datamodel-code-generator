@@ -171,15 +171,15 @@ def test_resolve_ref_local_fragment_with_base_url() -> None:
 @pytest.mark.parametrize(
     ("ref", "expected"),
     [
-        # HTTP/HTTPS URLs
+        # HTTP/HTTPS URLs (only supported schemes)
         ("https://example.com/schema.json", True),
         ("http://example.com/schema.json", True),
         ("https://example.com/path/to/schema.json", True),
-        # file:// URLs
-        ("file:///home/user/schema.json", True),
-        ("file:/home/user/schema.json", True),
-        # Other URL schemes
-        ("ftp://example.com/schema.json", True),
+        # file:// URLs - NOT recognized (fetcher only supports HTTP)
+        ("file:///home/user/schema.json", False),
+        ("file:/home/user/schema.json", False),
+        # Other URL schemes - NOT recognized
+        ("ftp://example.com/schema.json", False),
         # Relative paths (not URLs)
         ("../relative/path.json", False),
         ("relative/path.json", False),
@@ -188,22 +188,22 @@ def test_resolve_ref_local_fragment_with_base_url() -> None:
         ("#", False),
         # Absolute paths (not URLs)
         ("/absolute/path.json", False),
-        # Windows paths (not URLs - single letter scheme)
+        # Windows paths (not URLs)
         ("c:/windows/path.json", False),
         ("d:/path/to/file.json", False),
     ],
 )
 def test_is_url(ref: str, expected: bool) -> None:
-    """Test is_url correctly identifies URLs vs file paths."""
+    """Test is_url correctly identifies HTTP(S) URLs only."""
     assert is_url(ref) == expected
 
 
-def test_base_url_context_with_file_url() -> None:
-    """base_url_context should work with file:// URLs."""
-    resolver = ModelResolver()
-    assert resolver.base_url is None
+def test_resolve_ref_with_root_id_differs_from_base_url() -> None:
+    """When $id differs from fetch URL, refs should resolve against $id."""
+    # Scenario: Schema fetched from CDN but has canonical $id
+    resolver = ModelResolver(base_url="https://cdn.example.com/latest/schema.json")
+    resolver.set_root_id("https://example.com/v1/schema.json")
 
-    with resolver.base_url_context("file:///home/user/schema.json"):
-        assert resolver.base_url == "file:///home/user/schema.json"
+    result = resolver.resolve_ref("../common/types.json")
 
-    assert resolver.base_url is None
+    assert result == "https://example.com/common/types.json#"
