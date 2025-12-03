@@ -755,7 +755,11 @@ class JsonSchemaParser(Parser):
                 if reference := getattr(base_class, "reference", None):
                     yield from self._iter_fields_from_reference(reference, path)
             yield from getattr(source, "fields", [])
-        elif resolved := self._get_ref_schema(base_ref.path):
+        else:
+            resolved = self._get_ref_schema(base_ref.path)
+            if resolved is None:  # pragma: no cover
+                msg = f"Failed to resolve reference: {base_ref.path}"
+                raise ValueError(msg)
             yield from self._iter_fields_from_schema(self.SCHEMA_OBJECT_TYPE.parse_obj(resolved), path)
 
     def _iter_fields_from_schema(self, obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
