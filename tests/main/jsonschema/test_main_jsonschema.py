@@ -2985,8 +2985,8 @@ def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
-    
-    
+
+
 def test_main_jsonschema_collapse_root_models_empty_union(output_file: Path) -> None:
     """Test that collapse-root-models with empty union fallback generates Any instead of invalid Union syntax.
 
