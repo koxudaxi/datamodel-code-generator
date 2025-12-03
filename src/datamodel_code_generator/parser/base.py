@@ -38,7 +38,6 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
-    IMPORT_OPTIONAL,
     Import,
     Imports,
 )
@@ -1285,7 +1284,7 @@ class Parser(ABC):
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
-                        imports.append([i for i in original_field.imports if i != IMPORT_OPTIONAL])
+                        imports.append(original_field.imports)
 
                     data_type.remove_reference()
 
