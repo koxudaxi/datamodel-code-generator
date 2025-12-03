@@ -3008,8 +3008,8 @@ def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
-    
-    
+
+
 @MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_jsonschema_type_alias_with_circular_ref_to_class_msgspec(min_version: str, output_file: Path) -> None:
     """Test TypeAlias with circular reference to class generates quoted forward refs."""
