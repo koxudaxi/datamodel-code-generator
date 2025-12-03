@@ -3015,6 +3015,24 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
     )
 
 
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_jsonschema_type_alias_with_circular_ref_to_class_msgspec(min_version: str, output_file: Path) -> None:
+    """Test TypeAlias with circular reference to class generates quoted forward refs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_with_circular_ref_to_class.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_with_circular_ref_to_class_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            min_version,
+        ],
+    )
+
+
 def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
     """Test that enum with object values uses title/name/const for member names (issue #1620)."""
     run_main_and_assert(
