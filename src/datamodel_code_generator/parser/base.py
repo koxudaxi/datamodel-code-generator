@@ -1908,8 +1908,8 @@ class Parser(ABC):
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:
-            result = results["__init__.py",]
-            return result.body
+            single_result = results["__init__.py",]
+            return single_result.body
 
         results = {tuple(i.replace("-", "_") for i in k): v for k, v in results.items()}
         return (
