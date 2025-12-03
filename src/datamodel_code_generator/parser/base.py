@@ -1286,7 +1286,9 @@ class Parser(ABC):
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
-                        field_imports = [i for i in original_field.imports if i != IMPORT_OPTIONAL and i != IMPORT_UNION]
+                        field_imports = [
+                            i for i in original_field.imports if i not in {IMPORT_OPTIONAL, IMPORT_UNION}
+                        ]
                         imports.append(field_imports)
 
                     data_type.remove_reference()
