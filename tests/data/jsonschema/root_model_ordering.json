@@ -7,6 +7,27 @@
           "default": "dog",
           "title": "woof",
           "type": "string"
+        },
+        "friends": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bird": "#/$defs/Bird",
+                "cat": "#/$defs/Cat",
+                "dog": "#/$defs/Dog"
+              },
+              "propertyName": "name"
+            },
+            "oneOf": [
+              {"$ref": "#/$defs/Dog"},
+              {"$ref": "#/$defs/Cat"},
+              {"$ref": "#/$defs/Bird"}
+            ],
+            "title": "Animal"
+          },
+          "title": "Friends",
+          "type": "array",
+          "default": []
         }
       },
       "title": "Dog",
@@ -19,6 +40,27 @@
           "default": "cat",
           "title": "meow",
           "type": "string"
+        },
+        "friends": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bird": "#/$defs/Bird",
+                "cat": "#/$defs/Cat",
+                "dog": "#/$defs/Dog"
+              },
+              "propertyName": "name"
+            },
+            "oneOf": [
+              {"$ref": "#/$defs/Dog"},
+              {"$ref": "#/$defs/Cat"},
+              {"$ref": "#/$defs/Bird"}
+            ],
+            "title": "Animal"
+          },
+          "title": "Friends",
+          "type": "array",
+          "default": []
         }
       },
       "title": "Cat",
@@ -31,6 +73,27 @@
           "default": "bird",
           "title": "chirp",
           "type": "string"
+        },
+        "friends": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bird": "#/$defs/Bird",
+                "cat": "#/$defs/Cat",
+                "dog": "#/$defs/Dog"
+              },
+              "propertyName": "name"
+            },
+            "oneOf": [
+              {"$ref": "#/$defs/Dog"},
+              {"$ref": "#/$defs/Cat"},
+              {"$ref": "#/$defs/Bird"}
+            ],
+            "title": "Animal"
+          },
+          "title": "Friends",
+          "type": "array",
+          "default": []
         }
       },
       "title": "Bird",

@@ -9,21 +9,34 @@ from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, Field, RootModel
 
 
+class Zoo(BaseModel):
+    animals: Optional[List[Animals]] = Field([], title='Animals')
+
+
 class Dog(BaseModel):
     name: Literal['dog'] = Field('dog', title='woof')
+    friends: Optional[List[Friends]] = Field([], title='Friends')
 
 
 class Cat(BaseModel):
     name: Literal['cat'] = Field('cat', title='meow')
+    friends: Optional[List[Friends]] = Field([], title='Friends')
 
 
 class Bird(BaseModel):
     name: Literal['bird'] = Field('bird', title='chirp')
+    friends: Optional[List[Friends]] = Field([], title='Friends')
 
 
 class Animals(RootModel[Union[Dog, Cat, Bird]]):
     root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
 
 
-class Zoo(BaseModel):
-    animals: Optional[List[Animals]] = Field([], title='Animals')
+class Friends(RootModel[Union[Dog, Cat, Bird]]):
+    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
+
+
+Zoo.model_rebuild()
+Dog.model_rebuild()
+Cat.model_rebuild()
+Bird.model_rebuild()
