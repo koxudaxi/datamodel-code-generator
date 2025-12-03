@@ -1577,6 +1577,38 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "union_default_object.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_union_default_object.py",
+        ),
+        (
+            "msgspec.Struct",
+            "msgspec_union_default_object.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_union_default_object(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with Union type default object values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "union_default_object.yaml",
+        output_path=output_file,
+        expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+    )
+
+
 def test_main_dataclass(output_file: Path) -> None:
     """Test OpenAPI generation with dataclass output."""
     run_main_and_assert(
