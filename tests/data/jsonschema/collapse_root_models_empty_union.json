@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "field": {
+      "anyOf": [
+        {"$ref": "#/$defs/NullType1"},
+        {"$ref": "#/$defs/NullType2"}
+      ]
+    }
+  },
+  "$defs": {
+    "NullType1": {
+      "type": "null"
+    },
+    "NullType2": {
+      "type": "null"
+    }
+  }
+}

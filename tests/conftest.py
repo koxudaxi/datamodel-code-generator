@@ -285,6 +285,11 @@ def assert_directory_content(
         _assert_with_external_file(result, expected_path)
 
 
+def _get_full_body(result: object) -> str:
+    """Get full body from Result."""
+    return getattr(result, "body", "")
+
+
 def assert_parser_results(
     results: dict,
     expected_dir: Path,
@@ -305,7 +310,7 @@ def assert_parser_results(
     for expected_path in expected_dir.rglob(pattern):
         key = str(expected_path.relative_to(expected_dir))
         result_obj = results.pop(key)
-        _assert_with_external_file(result_obj.body, expected_path)
+        _assert_with_external_file(_get_full_body(result_obj), expected_path)
 
 
 def assert_parser_modules(
@@ -325,7 +330,7 @@ def assert_parser_modules(
     __tracebackhide__ = True
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
-        _assert_with_external_file(result.body, expected_path)
+        _assert_with_external_file(_get_full_body(result), expected_path)
 
 
 @pytest.fixture(autouse=True)
