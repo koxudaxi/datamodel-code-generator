@@ -1558,11 +1558,10 @@ class JsonSchemaParser(Parser):
         self,
         name: str,
         obj: JsonSchemaObject,
+        type_list: list[str],
         path: list[str],
     ) -> None:
         """Parse a schema with multiple types including object with properties."""
-        if not isinstance(obj.type, list):
-            return
         data_types: list[DataType] = []
 
         object_path = get_special_path("object", path)
@@ -1573,15 +1572,12 @@ class JsonSchemaParser(Parser):
             self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(t, obj.format or "default"),
             )
-            for t in obj.type
+            for t in type_list
             if t not in {"object", "null"}
         )
 
-        if self.force_optional_for_required_fields:
-            required: bool = False
-        else:
-            is_nullable = obj.nullable or obj.type_has_null
-            required = not is_nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
+        is_nullable = obj.nullable or obj.type_has_null
+        required = not is_nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
 
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self.set_title(reference.path, obj)
@@ -1910,8 +1906,8 @@ class JsonSchemaParser(Parser):
             if isinstance(data_type, EmptyDataType) and obj.properties:
                 self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
-            if obj.has_multiple_types:
-                self._parse_multiple_types_with_properties(name, obj, path)
+            if obj.has_multiple_types and isinstance(obj.type, list):
+                self._parse_multiple_types_with_properties(name, obj, obj.type, path)
             else:
                 self.parse_object(name, obj, path)
         elif obj.patternProperties:
