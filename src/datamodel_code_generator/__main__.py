@@ -30,6 +30,7 @@ from datamodel_code_generator import (
     InputFileType,
     InvalidClassNameError,
     OpenAPIScope,
+    ReadOnlyWriteOnlyModelType,
     ReuseScope,
     enable_debug_message,
     generate,
@@ -448,6 +449,7 @@ class Config(BaseModel):
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
+    read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
     all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
 
@@ -851,6 +853,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,
             type_mappings=config.type_mappings,
+            read_only_write_only_model_type=config.read_only_write_only_model_type,
             all_exports_scope=config.all_exports_scope,
             all_exports_collision_strategy=config.all_exports_collision_strategy,
         )

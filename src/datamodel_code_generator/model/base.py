@@ -17,6 +17,7 @@ from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import Field
+from typing_extensions import Self
 
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
@@ -47,6 +48,7 @@ TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 ALL_MODEL: str = "#all#"
 
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
+DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound="DataModelFieldBase")
 
 
 class ConstraintsBase(_BaseModel):
@@ -133,6 +135,8 @@ class DataModelFieldBase(_BaseModel):
     _pass_fields: ClassVar[set[str]] = {"parent", "data_type"}
     can_have_extra_keys: ClassVar[bool] = True
     type_has_null: Optional[bool] = None  # noqa: UP045
+    read_only: bool = False
+    write_only: bool = False
 
     if not TYPE_CHECKING:
         if not PYDANTIC_V2:
@@ -261,6 +265,15 @@ class DataModelFieldBase(_BaseModel):
     def fall_back_to_nullable(self) -> bool:
         """Check if optional fields should be nullable by default."""
         return True
+
+    def copy_deep(self) -> Self:
+        """Create a deep copy of this field to avoid mutating the original."""
+        copied = self.copy()
+        copied.parent = None
+        copied.data_type = self.data_type.copy()
+        if self.data_type.data_types:
+            copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
+        return copied
 
 
 @lru_cache
@@ -433,6 +446,18 @@ class DataModel(TemplateBase, Nullable, ABC):
                 names.add(field.name)
             unique_fields.append(field)
         return unique_fields
+
+    def iter_all_fields(self, visited: set[str] | None = None) -> Iterator[DataModelFieldBase]:
+        """Yield all fields including those from base classes (parent fields first)."""
+        if visited is None:
+            visited = set()
+        if self.reference.path in visited:  # pragma: no cover
+            return
+        visited.add(self.reference.path)
+        for base_class in self.base_classes:
+            if base_class.reference and isinstance(base_class.reference.source, DataModel):
+                yield from base_class.reference.source.iter_all_fields(visited)
+        yield from self.fields
 
     def set_base_class(self) -> None:
         """Set up the base class for this model."""

@@ -1,0 +1,14 @@
+openapi: "3.0.0"
+info:
+  title: Common Schemas
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    ReadOnlyTimestamp:
+      type: string
+      format: date-time
+      readOnly: true
+    WriteOnlySecret:
+      type: string
+      writeOnly: true

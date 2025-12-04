@@ -541,6 +541,10 @@ OpenAPI-only options:
                         query parameters (Only OpenAPI)
   --openapi-scopes {schemas,paths,tags,parameters,webhooks} [{schemas,paths,tags,parameters,webhooks} ...]
                         Scopes of OpenAPI model generation (default: schemas)
+  --read-only-write-only-model-type {request-response,all}
+                        Model generation for readOnly/writeOnly fields: ''request-response'' =
+                        Request/Response models only (no base model), ''all'' = Base + Request
+                        + Response models.
   --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
   --use-operation-id-as-name
                         use operation id of OpenAPI as class names of models
