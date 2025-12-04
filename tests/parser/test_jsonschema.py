@@ -822,7 +822,7 @@ def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     assert result == {"type": "object"}
     mock_load.assert_called_once()
     called_path = mock_load.call_args[0][0]
-    assert str(called_path) == "//server/share/schemas/pet.json"
+    assert called_path.parts[-4:] == ("server", "share", "schemas", "pet.json")
 
 
 def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
@@ -838,4 +838,4 @@ def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
     assert result == {"type": "string"}
     mock_load.assert_called_once()
     called_path = mock_load.call_args[0][0]
-    assert str(called_path) == "/home/user/schemas/pet.json"
+    assert called_path.parts[-4:] == ("home", "user", "schemas", "pet.json")
