@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote
 from warnings import warn
 
@@ -716,104 +716,67 @@ class JsonSchemaParser(Parser):
             self.field_constraints and not (obj.ref or obj.anyOf or obj.oneOf or obj.allOf or obj.is_object or obj.enum)
         )
 
-    def _resolve_read_only(self, obj: JsonSchemaObject) -> bool:
-        """Resolve readOnly flag from direct value, $ref, and compositions."""
-        if obj.readOnly is True:
+    def _resolve_field_flag(self, obj: JsonSchemaObject, flag: Literal["readOnly", "writeOnly"]) -> bool:
+        """Resolve a field flag (readOnly/writeOnly) from direct value, $ref, and compositions."""
+        if getattr(obj, flag) is True:
             return True
         if (
             self.read_only_write_only_model_type
             and obj.ref
-            and self._resolve_read_only(self._load_ref_schema_object(obj.ref))
+            and self._resolve_field_flag(self._load_ref_schema_object(obj.ref), flag)
         ):
             return True
-        return any(self._resolve_read_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
-
-    def _resolve_write_only(self, obj: JsonSchemaObject) -> bool:
-        """Resolve writeOnly flag from direct value, $ref, and compositions."""
-        if obj.writeOnly is True:
-            return True
-        if (
-            self.read_only_write_only_model_type
-            and obj.ref
-            and self._resolve_write_only(self._load_ref_schema_object(obj.ref))
-        ):
-            return True
-        return any(self._resolve_write_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
-
-    def _iter_fields_from_reference(
-        self, base_ref: Reference, path: list[str], visited: set[str] | None = None
-    ) -> Iterable[DataModelFieldBase]:
-        """Yield fields from a reference, recursively collecting from base classes first."""
-        if visited is None:
-            visited = set()
-        if base_ref.path in visited:  # pragma: no cover
-            return  # pragma: no cover
-        visited.add(base_ref.path)
-
-        source = base_ref.source
-        if isinstance(source, DataModel):
-            for base_class in source.base_classes or []:
-                if base_class.reference:
-                    yield from self._iter_fields_from_reference(base_class.reference, path, visited)
-            yield from source.fields
-        else:
-            yield from self._iter_fields_from_schema(self._load_ref_schema_object(base_ref.path), path, visited)
-
-    def _iter_fields_from_schema(
-        self, obj: JsonSchemaObject, path: list[str], visited: set[str] | None = None
-    ) -> Iterable[DataModelFieldBase]:
-        """Yield fields from a schema object including allOf inheritance."""
-        if visited is None:  # pragma: no cover
-            visited = set()  # pragma: no cover
-        module_name = get_module_name(path[-1] if path else "", None, treat_dot_as_module=self.treat_dot_as_module)
-        if obj.properties:
-            yield from self.parse_object_fields(obj, path, module_name)
-        for item in obj.allOf:
-            if item.ref:
-                if item.ref in visited:  # pragma: no cover
-                    continue  # pragma: no cover
-                visited.add(item.ref)
-                yield from self._iter_fields_from_schema(self._load_ref_schema_object(item.ref), path, visited)
-            elif item.properties:
-                yield from self.parse_object_fields(item, path, module_name)
-
-    @classmethod
-    def _dedupe_and_copy_fields(cls, fields: Iterable[DataModelFieldBase]) -> list[DataModelFieldBase]:
-        """Deduplicate fields by name and create deep copies. Later fields override earlier ones."""
-        deduplicated: dict[str, DataModelFieldBase] = {}
-        for field in fields:
-            field_key = field.original_name or field.name
-            if field_key is None:  # pragma: no cover
-                continue  # pragma: no cover
-            deduplicated[field_key] = field.copy_deep()
-        return list(deduplicated.values())
+        return any(self._resolve_field_flag(sub, flag) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
     def _collect_all_fields_for_request_response(
         self,
         fields: list[DataModelFieldBase],
         base_classes: list[Reference] | None,
-        path: list[str],
     ) -> list[DataModelFieldBase]:
         """Collect all fields including those from base classes for Request/Response models.
 
         Order: parent → child, with child fields overriding parent fields of the same name.
         """
         all_fields: list[DataModelFieldBase] = []
+        visited: set[str] = set()
+
+        def iter_from_schema(obj: JsonSchemaObject, path: list[str]) -> Iterable[DataModelFieldBase]:
+            module_name = get_module_name(path[-1] if path else "", None, treat_dot_as_module=self.treat_dot_as_module)
+            if obj.properties:
+                yield from self.parse_object_fields(obj, path, module_name)
+            for item in obj.allOf:
+                if item.ref:
+                    if item.ref in visited:
+                        continue
+                    visited.add(item.ref)
+                    yield from iter_from_schema(self._load_ref_schema_object(item.ref), path)
+                elif item.properties:
+                    yield from self.parse_object_fields(item, path, module_name)
+
         for base_ref in base_classes or []:
-            all_fields.extend(self._iter_fields_from_reference(base_ref, path))
+            if isinstance(base_ref.source, DataModel):
+                all_fields.extend(base_ref.source.iter_all_fields(visited))
+            elif base_ref.path not in visited:
+                visited.add(base_ref.path)
+                all_fields.extend(iter_from_schema(self._load_ref_schema_object(base_ref.path), []))
         all_fields.extend(fields)
-        return self._dedupe_and_copy_fields(all_fields)
+
+        deduplicated: dict[str, DataModelFieldBase] = {}
+        for field in all_fields:
+            key = field.original_name or field.name
+            if key:
+                deduplicated[key] = field.copy_deep()
+        return list(deduplicated.values())
 
     def _should_generate_separate_models(
         self,
         fields: list[DataModelFieldBase],
         base_classes: list[Reference] | None,
-        path: list[str],
     ) -> bool:
         """Determine if Request/Response models should be generated."""
         if self.read_only_write_only_model_type is None:
             return False
-        all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
+        all_fields = self._collect_all_fields_for_request_response(fields, base_classes)
         return any(field.read_only or field.write_only for field in all_fields)
 
     def _should_generate_base_model(self, *, generates_separate_models: bool = False) -> bool:
@@ -836,15 +799,10 @@ class JsonSchemaParser(Parser):
         """Create a Request or Response model variant."""
         if not model_fields:
             return
-        model_name = f"{base_name}{suffix}"
-        model_path = [*path[:-1], model_name]
-        # Check for path collision and generate unique path if needed
-        counter = 1
-        while (ref := self.model_resolver.get(model_path)) and ref.loaded:
-            model_name = f"{base_name}{suffix}{counter}"
-            model_path = [*path[:-1], model_name]
-            counter += 1
-        reference = self.model_resolver.add(model_path, model_name, class_name=True, singular_name=False, loaded=True)
+        variant_name = f"{base_name}{suffix}"
+        unique_name = self.model_resolver.get_class_name(variant_name, unique=True).name
+        model_path = [*path[:-1], unique_name]
+        reference = self.model_resolver.add(model_path, unique_name, class_name=True, unique=False, loaded=True)
         model = self._create_data_model(
             model_type=data_model_type_class,
             reference=reference,
@@ -871,7 +829,7 @@ class JsonSchemaParser(Parser):
         base_classes: list[Reference] | None = None,
     ) -> None:
         """Generate Request and Response model variants."""
-        all_fields = self._collect_all_fields_for_request_response(fields, base_classes, path)
+        all_fields = self._collect_all_fields_for_request_response(fields, base_classes)
 
         # Request model: exclude readOnly fields
         if any(field.read_only for field in all_fields):
@@ -922,8 +880,8 @@ class JsonSchemaParser(Parser):
             original_name=original_field_name,
             has_default=field.has_default,
             type_has_null=field.type_has_null,
-            read_only=self._resolve_read_only(field),
-            write_only=self._resolve_write_only(field),
+            read_only=self._resolve_field_flag(field, "readOnly"),
+            write_only=self._resolve_field_flag(field, "writeOnly"),
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -1159,7 +1117,7 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
-        generates_separate = self._should_generate_separate_models(fields, base_classes, path)
+        generates_separate = self._should_generate_separate_models(fields, base_classes)
         if generates_separate:
             self._create_request_response_models(
                 name=reference.name,
@@ -1432,7 +1390,7 @@ class JsonSchemaParser(Parser):
 
         self.set_additional_properties(reference.path, obj)
 
-        generates_separate = self._should_generate_separate_models(fields, None, path)
+        generates_separate = self._should_generate_separate_models(fields, None)
         if generates_separate:
             self._create_request_response_models(
                 name=class_name,

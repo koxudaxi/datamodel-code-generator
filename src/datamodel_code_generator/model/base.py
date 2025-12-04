@@ -447,6 +447,18 @@ class DataModel(TemplateBase, Nullable, ABC):
             unique_fields.append(field)
         return unique_fields
 
+    def iter_all_fields(self, visited: set[str] | None = None) -> Iterator[DataModelFieldBase]:
+        """Yield all fields including those from base classes (parent fields first)."""
+        if visited is None:
+            visited = set()
+        if self.reference.path in visited:
+            return
+        visited.add(self.reference.path)
+        for base_class in self.base_classes:
+            if base_class.reference and isinstance(base_class.reference.source, DataModel):
+                yield from base_class.reference.source.iter_all_fields(visited)
+        yield from self.fields
+
     def set_base_class(self) -> None:
         """Set up the base class for this model."""
         base_class = self.custom_base_class or self.BASE_CLASS
