@@ -716,39 +716,29 @@ class JsonSchemaParser(Parser):
             self.field_constraints and not (obj.ref or obj.anyOf or obj.oneOf or obj.allOf or obj.is_object or obj.enum)
         )
 
-    def _resolve_read_only(self, obj: JsonSchemaObject, *, follow_ref: bool = True) -> bool:
-        """Resolve readOnly flag from direct value, $ref, and compositions.
-
-        Args:
-            obj: The schema object to check.
-            follow_ref: Whether to follow $ref (False when checking loaded schemas to avoid context issues).
-        """
+    def _resolve_read_only(self, obj: JsonSchemaObject) -> bool:
+        """Resolve readOnly flag from direct value, $ref, and compositions."""
         if obj.readOnly is True:
             return True
-        if follow_ref and obj.ref:
-            # Only check the direct referenced schema, don't recursively follow its refs
-            # to avoid context issues with relative paths
-            resolved = self._load_ref_schema_object(obj.ref)
-            if self._resolve_read_only(resolved, follow_ref=False):
-                return True
-        return any(self._resolve_read_only(sub, follow_ref=follow_ref) for sub in obj.allOf + obj.anyOf + obj.oneOf)
+        if (
+            self.read_only_write_only_model_type
+            and obj.ref
+            and self._resolve_read_only(self._load_ref_schema_object(obj.ref))
+        ):
+            return True
+        return any(self._resolve_read_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
-    def _resolve_write_only(self, obj: JsonSchemaObject, *, follow_ref: bool = True) -> bool:
-        """Resolve writeOnly flag from direct value, $ref, and compositions.
-
-        Args:
-            obj: The schema object to check.
-            follow_ref: Whether to follow $ref (False when checking loaded schemas to avoid context issues).
-        """
+    def _resolve_write_only(self, obj: JsonSchemaObject) -> bool:
+        """Resolve writeOnly flag from direct value, $ref, and compositions."""
         if obj.writeOnly is True:
             return True
-        if follow_ref and obj.ref:
-            # Only check the direct referenced schema, don't recursively follow its refs
-            # to avoid context issues with relative paths
-            resolved = self._load_ref_schema_object(obj.ref)
-            if self._resolve_write_only(resolved, follow_ref=False):
-                return True
-        return any(self._resolve_write_only(sub, follow_ref=follow_ref) for sub in obj.allOf + obj.anyOf + obj.oneOf)
+        if (
+            self.read_only_write_only_model_type
+            and obj.ref
+            and self._resolve_write_only(self._load_ref_schema_object(obj.ref))
+        ):
+            return True
+        return any(self._resolve_write_only(sub) for sub in obj.allOf + obj.anyOf + obj.oneOf)
 
     def _iter_fields_from_reference(
         self, base_ref: Reference, path: list[str], visited: set[str] | None = None
@@ -1124,6 +1114,10 @@ class JsonSchemaParser(Parser):
         base_classes: list[Reference],
         required: list[str],
     ) -> DataType:
+        if self.read_only_write_only_model_type is not None and obj.properties:
+            for prop in obj.properties.values():
+                if isinstance(prop, JsonSchemaObject) and prop.ref:
+                    self._load_ref_schema_object(prop.ref)
         if obj.properties:
             fields.extend(
                 self.parse_object_fields(
@@ -1401,6 +1395,10 @@ class JsonSchemaParser(Parser):
         )
         class_name = reference.name
         self.set_title(reference.path, obj)
+        if self.read_only_write_only_model_type is not None and obj.properties:
+            for prop in obj.properties.values():
+                if isinstance(prop, JsonSchemaObject) and prop.ref:
+                    self._load_ref_schema_object(prop.ref)
         fields = self.parse_object_fields(
             obj,
             path,

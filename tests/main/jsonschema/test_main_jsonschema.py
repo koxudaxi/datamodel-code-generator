@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from unittest.mock import call
 
 import black
@@ -1050,20 +1050,25 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
-    base_url = "https://example.com/external_files_in_directory/"
 
-    def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:  # noqa: ARG001
-        # Extract relative path from URL
-        path = (
-            url[len(base_url) :]
-            if url.startswith(base_url)
-            else url.rsplit("/external_files_in_directory/", maxsplit=1)[-1]
-        )
+    def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
         return mock
 
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=get_mock_response)
+    httpx_get_mock = mocker.patch(
+        "httpx.get",
+        side_effect=[
+            get_mock_response("person.json"),
+            get_mock_response("definitions/relative/animal/pet/pet.json"),
+            get_mock_response("definitions/relative/animal/fur.json"),
+            get_mock_response("definitions/friends.json"),
+            get_mock_response("definitions/food.json"),
+            get_mock_response("definitions/machine/robot.json"),
+            get_mock_response("definitions/drink/coffee.json"),
+            get_mock_response("definitions/drink/tea.json"),
+        ],
+    )
     run_main_url_and_assert(
         url="https://example.com/external_files_in_directory/person.json",
         output_path=output_file,
@@ -1075,19 +1080,64 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
             "#   filename:  person.json",
         ),
     )
-    # Verify essential URLs were called (order may vary, caching prevents duplicates)
-    called_urls = {c.args[0] for c in httpx_get_mock.call_args_list}
-    expected_urls = {
-        "https://example.com/external_files_in_directory/person.json",
-        "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-        "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-        "https://example.com/external_files_in_directory/definitions/friends.json",
-        "https://example.com/external_files_in_directory/definitions/food.json",
-        "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-        "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-        "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-    }
-    assert expected_urls <= called_urls, f"Missing URLs: {expected_urls - called_urls}"
+    httpx_get_mock.assert_has_calls([
+        call(
+            "https://example.com/external_files_in_directory/person.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/friends.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/food.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/machine/robot.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/drink/tea.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+        ),
+    ])
 
 
 @pytest.mark.parametrize(
@@ -1126,20 +1176,25 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
 ) -> None:
     """Test HTTP JSON Schema with headers, query params, and TLS ignore."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
-    base_url = "https://example.com/external_files_in_directory/"
 
-    def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:  # noqa: ARG001
-        # Extract relative path from URL
-        path = (
-            url[len(base_url) :]
-            if url.startswith(base_url)
-            else url.rsplit("/external_files_in_directory/", maxsplit=1)[-1]
-        )
+    def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
         return mock
 
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=get_mock_response)
+    httpx_get_mock = mocker.patch(
+        "httpx.get",
+        side_effect=[
+            get_mock_response("person.json"),
+            get_mock_response("definitions/relative/animal/pet/pet.json"),
+            get_mock_response("definitions/relative/animal/fur.json"),
+            get_mock_response("definitions/friends.json"),
+            get_mock_response("definitions/food.json"),
+            get_mock_response("definitions/machine/robot.json"),
+            get_mock_response("definitions/drink/coffee.json"),
+            get_mock_response("definitions/drink/tea.json"),
+        ],
+    )
     output_file: Path = tmp_path / "output.py"
     extra_args = [
         "--http-headers",
@@ -1162,24 +1217,64 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
             "#   filename:  person.json",
         ),
     )
-    # Verify essential URLs were called (order may vary, caching prevents duplicates)
-    called_urls = {c.args[0] for c in httpx_get_mock.call_args_list}
-    expected_urls = {
-        "https://example.com/external_files_in_directory/person.json",
-        "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-        "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-        "https://example.com/external_files_in_directory/definitions/friends.json",
-        "https://example.com/external_files_in_directory/definitions/food.json",
-        "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-        "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-        "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-    }
-    assert expected_urls <= called_urls, f"Missing URLs: {expected_urls - called_urls}"
-    # Verify headers, verify (TLS), and params were passed correctly
-    for call_args in httpx_get_mock.call_args_list:
-        assert call_args.kwargs["headers"] == headers_requests
-        assert call_args.kwargs["verify"] == (not http_ignore_tls)
-        assert call_args.kwargs["params"] == query_parameters_requests
+    httpx_get_mock.assert_has_calls([
+        call(
+            "https://example.com/external_files_in_directory/person.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/friends.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/food.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/machine/robot.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+        call(
+            "https://example.com/external_files_in_directory/definitions/drink/tea.json",
+            headers=headers_requests,
+            verify=bool(not http_ignore_tls),
+            follow_redirects=True,
+            params=query_parameters_requests,
+        ),
+    ])
 
 
 def test_main_self_reference(output_file: Path) -> None:
