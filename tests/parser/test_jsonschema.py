@@ -822,7 +822,12 @@ def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     assert result == {"type": "object"}
     mock_load.assert_called_once()
     called_path = mock_load.call_args[0][0]
-    assert called_path.parts[-4:] == ("server", "share", "schemas", "pet.json")
+    # On Windows, UNC paths have \\server\share\ as a single "drive" part
+    # On POSIX, they're separate: /, server, share, schemas, pet.json
+    path_str = str(called_path)
+    assert "server" in path_str
+    assert "share" in path_str
+    assert called_path.parts[-2:] == ("schemas", "pet.json")
 
 
 def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
