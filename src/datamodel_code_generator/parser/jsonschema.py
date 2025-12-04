@@ -42,7 +42,7 @@ from datamodel_code_generator.format import (
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.base import UNDEFINED, get_module_name
+from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import (
     SPECIALIZED_ENUM_TYPE_MATCH,
@@ -392,6 +392,14 @@ class JsonSchemaObject(BaseModel):
     def type_has_null(self) -> bool:
         """Check if the type list contains null."""
         return isinstance(self.type, list) and "null" in self.type
+
+    @cached_property
+    def has_multiple_types(self) -> bool:
+        """Check if the type is a list with multiple non-null types."""
+        if not isinstance(self.type, list):
+            return False
+        non_null_types = [t for t in self.type if t != "null"]
+        return len(non_null_types) > 1
 
 
 @lru_cache
@@ -1119,7 +1127,10 @@ class JsonSchemaParser(Parser):
         if obj.properties:
             fields.extend(
                 self.parse_object_fields(
-                    obj, path, get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
+                    obj,
+                    path,
+                    get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module),
+                    class_name=name,
                 )
             )
         # ignore an undetected object
@@ -1150,7 +1161,7 @@ class JsonSchemaParser(Parser):
                         self.data_model_field_type(required=True, original_name=required_, data_type=DataType())
                     )
         if self.use_title_as_name and obj.title:  # pragma: no cover
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
@@ -1203,6 +1214,7 @@ class JsonSchemaParser(Parser):
                     all_of_item,
                     path,
                     module_name,
+                    class_name=name,
                 )
 
                 if object_fields:
@@ -1306,6 +1318,7 @@ class JsonSchemaParser(Parser):
         obj: JsonSchemaObject,
         path: list[str],
         module_name: Optional[str] = None,  # noqa: UP045
+        class_name: Optional[str] = None,  # noqa: UP045
     ) -> list[DataModelFieldBase]:
         """Parse object properties into a list of data model fields."""
         properties: dict[str, JsonSchemaObject | bool] = {} if obj.properties is None else obj.properties
@@ -1315,7 +1328,9 @@ class JsonSchemaParser(Parser):
         exclude_field_names: set[str] = set()
         for original_field_name, field in properties.items():
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                original_field_name, excludes=exclude_field_names
+                original_field_name,
+                excludes=exclude_field_names,
+                class_name=class_name,
             )
             modular_name = f"{module_name}.{field_name}" if module_name else field_name
 
@@ -1376,7 +1391,7 @@ class JsonSchemaParser(Parser):
                 stacklevel=2,
             )
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(
             path,
             name,
@@ -1387,7 +1402,10 @@ class JsonSchemaParser(Parser):
         class_name = reference.name
         self.set_title(reference.path, obj)
         fields = self.parse_object_fields(
-            obj, path, get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module)
+            obj,
+            path,
+            get_module_name(class_name, None, treat_dot_as_module=self.treat_dot_as_module),
+            class_name=class_name,
         )
         if fields or not isinstance(obj.additionalProperties, JsonSchemaObject):
             data_model_type_class = self.data_model_type
@@ -1483,7 +1501,7 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         """Parse a single JSON Schema item into a data type."""
         if self.use_title_as_name and item.title:
-            name = item.title
+            name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
             singular_name = False
         if parent and not item.enum and item.has_constraint and (parent.has_constraint or self.field_constraints):
             root_type_path = get_special_path("array", path)
@@ -1521,6 +1539,17 @@ class JsonSchemaParser(Parser):
         if item.is_object or item.patternProperties:
             object_path = get_special_path("object", path)
             if item.properties:
+                if item.has_multiple_types and isinstance(item.type, list):
+                    data_types: list[DataType] = []
+                    data_types.append(self.parse_object(name, item, object_path, singular_name=singular_name))
+                    data_types.extend(
+                        self.data_type_manager.get_data_type(
+                            self._get_type_with_mappings(t, item.format or "default"),
+                        )
+                        for t in item.type
+                        if t not in {"object", "null"}
+                    )
+                    return self.data_type(data_types=data_types)
                 return self.parse_object(name, item, object_path, singular_name=singular_name)
             if item.patternProperties:
                 # support only single key dict.
@@ -1632,7 +1661,7 @@ class JsonSchemaParser(Parser):
     ) -> DataType:
         """Parse array schema into a root model with array type."""
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
@@ -1721,7 +1750,7 @@ class JsonSchemaParser(Parser):
         else:
             required = not obj.nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self.set_title(reference.path, obj)
@@ -1755,9 +1784,77 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
 
+    def _parse_multiple_types_with_properties(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        type_list: list[str],
+        path: list[str],
+    ) -> None:
+        """Parse a schema with multiple types including object with properties."""
+        data_types: list[DataType] = []
+
+        object_path = get_special_path("object", path)
+        object_data_type = self.parse_object(name, obj, object_path)
+        data_types.append(object_data_type)
+
+        data_types.extend(
+            self.data_type_manager.get_data_type(
+                self._get_type_with_mappings(t, obj.format or "default"),
+            )
+            for t in type_list
+            if t not in {"object", "null"}
+        )
+
+        is_nullable = obj.nullable or obj.type_has_null
+        required = not is_nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
+
+        reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        self.set_title(reference.path, obj)
+        self.set_additional_properties(reference.path, obj)
+
+        data_model_root_type = self.data_model_root_type(
+            reference=reference,
+            fields=[
+                self.data_model_field_type(
+                    data_type=self.data_type(data_types=data_types),
+                    default=obj.default,
+                    required=required,
+                    constraints=obj.dict() if self.field_constraints else {},
+                    nullable=obj.type_has_null if self.strict_nullable else None,
+                    strip_default_none=self.strip_default_none,
+                    extras=self.get_field_extras(obj),
+                    use_annotated=self.use_annotated,
+                    use_field_description=self.use_field_description,
+                    use_inline_field_description=self.use_inline_field_description,
+                    original_name=None,
+                    has_default=obj.has_default,
+                )
+            ],
+            custom_base_class=obj.custom_base_path or self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            nullable=obj.type_has_null,
+            treat_dot_as_module=self.treat_dot_as_module,
+            default=obj.default if obj.has_default else UNDEFINED,
+        )
+        self.results.append(data_model_root_type)
+
     def parse_enum_as_literal(self, obj: JsonSchemaObject) -> DataType:
         """Parse enum values as a Literal type."""
         return self.data_type(literals=[i for i in obj.enum if i is not None])
+
+    @classmethod
+    def _get_field_name_from_dict_enum(cls, enum_part: dict[str, Any], index: int) -> str:
+        """Extract field name from dict enum value using title, name, or const keys."""
+        if enum_part.get("title"):
+            return str(enum_part["title"])
+        if enum_part.get("name"):
+            return str(enum_part["name"])
+        if "const" in enum_part:
+            return str(enum_part["const"])
+        return f"value_{index}"
 
     def parse_enum(
         self,
@@ -1795,6 +1892,8 @@ class JsonSchemaParser(Parser):
                 default = enum_part
                 if obj.x_enum_varnames:
                     field_name = obj.x_enum_varnames[i]
+                elif isinstance(enum_part, dict):
+                    field_name = self._get_field_name_from_dict_enum(enum_part, i)
                 else:
                     prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
                     field_name = f"{prefix}_{enum_part}"
@@ -1850,7 +1949,7 @@ class JsonSchemaParser(Parser):
             return self.data_type(reference=reference_)
 
         if self.use_title_as_name and obj.title:
-            name = obj.title
+            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         reference = self.model_resolver.add(
             path,
             name,
@@ -2050,7 +2149,10 @@ class JsonSchemaParser(Parser):
             if isinstance(data_type, EmptyDataType) and obj.properties:
                 self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
-            self.parse_object(name, obj, path)
+            if obj.has_multiple_types and isinstance(obj.type, list):
+                self._parse_multiple_types_with_properties(name, obj, obj.type, path)
+            else:
+                self.parse_object(name, obj, path)
         elif obj.patternProperties:
             self.parse_root_type(name, obj, path)
         elif obj.type == "object":

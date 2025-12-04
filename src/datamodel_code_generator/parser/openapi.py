@@ -396,9 +396,10 @@ class OpenAPIParser(JsonSchemaParser):
         obj: JsonSchemaObject,
         path: list[str],
         module_name: Optional[str] = None,  # noqa: UP045
+        class_name: Optional[str] = None,  # noqa: UP045
     ) -> list[DataModelFieldBase]:
         """Parse object fields, adding discriminator info for allOf polymorphism."""
-        fields = super().parse_object_fields(obj, path, module_name)
+        fields = super().parse_object_fields(obj, path, module_name, class_name=class_name)
         properties = obj.properties or {}
 
         result_fields: list[DataModelFieldBase] = []
@@ -553,7 +554,9 @@ class OpenAPIParser(JsonSchemaParser):
                 raise Exception(msg)  # noqa: TRY002
 
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name=parameter_name, excludes=exclude_field_names
+                field_name=parameter_name,
+                excludes=exclude_field_names,
+                class_name=name,
             )
             if parameter.schema_:
                 fields.append(

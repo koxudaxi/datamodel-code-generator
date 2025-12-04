@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnumObjectTest",
+  "type": "object",
+  "properties": {
+    "country_with_title": {
+      "enum": [
+        {"title": "USA", "code": "US"},
+        {"title": "CANADA", "code": "CA"}
+      ]
+    },
+    "country_with_name": {
+      "enum": [
+        {"name": "USA", "code": "US"},
+        {"name": "CANADA", "code": "CA"}
+      ]
+    },
+    "country_with_const": {
+      "enum": [
+        {"const": "us_value"},
+        {"const": "ca_value"}
+      ]
+    },
+    "country_no_identifier": {
+      "enum": [
+        {"code": "US"},
+        {"code": "CA"}
+      ]
+    },
+    "country_duplicate_title": {
+      "enum": [
+        {"title": "SAME", "code": "US"},
+        {"title": "SAME", "code": "CA"}
+      ]
+    }
+  }
+}

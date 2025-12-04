@@ -321,6 +321,42 @@ def get_first_file(path: Path) -> Path:  # pragma: no cover
     raise FileNotFoundError(msg)
 
 
+def _find_future_import_insertion_point(header: str) -> int:
+    """Find position in header where __future__ import should be inserted."""
+    import ast  # noqa: PLC0415
+
+    try:
+        tree = ast.parse(header)
+    except SyntaxError:
+        return 0
+
+    lines = header.splitlines(keepends=True)
+
+    def line_end_pos(line_num: int) -> int:
+        return sum(len(lines[i]) for i in range(line_num))
+
+    if not tree.body:
+        return len(header)
+
+    first_stmt = tree.body[0]
+    is_docstring = isinstance(first_stmt, ast.Expr) and (
+        (isinstance(first_stmt.value, ast.Constant) and isinstance(first_stmt.value.value, str))
+        or isinstance(first_stmt.value, ast.JoinedStr)
+    )
+    if is_docstring:
+        end_line = first_stmt.end_lineno or len(lines)
+        pos = line_end_pos(end_line)
+        while end_line < len(lines) and not lines[end_line].strip():
+            pos += len(lines[end_line])
+            end_line += 1
+        return pos
+
+    pos = 0
+    for i in range(first_stmt.lineno - 1):
+        pos += len(lines[i])
+    return pos
+
+
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
@@ -671,7 +707,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         msg = "Models not found in the input data"
         raise Error(msg)
     if isinstance(results, str):
-        modules: dict[Path | None, tuple[str, str | None]] = {output: (results, input_filename)}
+        # Single-file output: body already contains future imports
+        # Only store future_imports separately if we have a non-empty custom_file_header
+        body = results
+        future_imports = ""
+        modules: dict[Path | None, tuple[str, str, str | None]] = {output: (body, future_imports, input_filename)}
     else:
         if output is None:
             msg = "Modular references require an output directory"
@@ -682,6 +722,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         modules = {
             output.joinpath(*name): (
                 result.body,
+                result.future_imports,
                 str(result.source.as_posix() if result.source else input_filename),
             )
             for name, result in sorted(results.items())
@@ -701,7 +742,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         header += f"\n#   version:   {get_version()}"
 
     file: IO[Any] | None
-    for path, (body, filename) in modules.items():
+    for path, (body, future_imports, filename) in modules.items():
         if path is None:
             file = None
         else:
@@ -710,10 +751,42 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             file = path.open("wt", encoding=encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
-        print(custom_file_header or header.format(safe_filename), file=file)
-        if body:
-            print(file=file)
-            print(body.rstrip(), file=file)
+        effective_header = custom_file_header or header.format(safe_filename)
+
+        if custom_file_header and body:
+            # Extract future imports from body for correct placement after custom_file_header
+            body_without_future = body
+            extracted_future = future_imports  # Use pre-extracted if available
+            lines = body.split("\n")
+            future_indices = [i for i, line in enumerate(lines) if line.strip().startswith("from __future__")]
+            if future_indices:
+                if not extracted_future:
+                    # Extract future imports from body
+                    extracted_future = "\n".join(lines[i] for i in future_indices)
+                remaining_lines = [line for i, line in enumerate(lines) if i not in future_indices]
+                body_without_future = "\n".join(remaining_lines).lstrip("\n")
+
+            if extracted_future:
+                insertion_point = _find_future_import_insertion_point(custom_file_header)
+                header_before = custom_file_header[:insertion_point].rstrip()
+                header_after = custom_file_header[insertion_point:].strip()
+                if header_after:
+                    content = header_before + "\n" + extracted_future + "\n\n" + header_after
+                else:
+                    content = header_before + "\n\n\n" + extracted_future
+                print(content, file=file)
+                print(file=file)
+                print(body_without_future.rstrip(), file=file)
+            else:
+                print(effective_header, file=file)
+                print(file=file)
+                print(body.rstrip(), file=file)
+        else:
+            # Body already contains future imports, just print as-is
+            print(effective_header, file=file)
+            if body:
+                print(file=file)
+                print(body.rstrip(), file=file)
 
         if file is not None:
             file.close()

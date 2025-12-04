@@ -283,11 +283,33 @@ class FieldNameResolver:
         return new_name
 
     def get_valid_field_name_and_alias(
-        self, field_name: str, excludes: set[str] | None = None
+        self,
+        field_name: str,
+        excludes: set[str] | None = None,
+        path: list[str] | None = None,
+        class_name: str | None = None,
     ) -> tuple[str, str | None]:
-        """Get valid field name and original alias if different."""
+        """Get valid field name and original alias if different.
+
+        Supports hierarchical alias resolution with the following priority:
+        1. Scoped aliases (ClassName.field_name) - class-level specificity
+        2. Flat aliases (field_name) - applies to all occurrences
+
+        Args:
+            field_name: The original field name from the schema.
+            excludes: Set of names to avoid when generating valid names.
+            path: Unused, kept for backward compatibility.
+            class_name: Optional class name for scoped alias resolution.
+        """
+        del path
+        if class_name:
+            scoped_key = f"{class_name}.{field_name}"
+            if scoped_key in self.aliases:
+                return self.aliases[scoped_key], field_name
+
         if field_name in self.aliases:
             return self.aliases[field_name], field_name
+
         valid_name = self.get_valid_name(field_name, excludes=excludes)
         return (
             valid_name,
@@ -390,6 +412,7 @@ class ModelResolver:  # noqa: PLR0904
         no_alias: bool = False,  # noqa: FBT001, FBT002
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -425,6 +448,7 @@ class ModelResolver:  # noqa: PLR0904
         self._current_base_path: Path | None = self._base_path
         self.remove_suffix_number: bool = remove_suffix_number
         self.parent_scoped_naming = parent_scoped_naming
+        self.treat_dot_as_module = treat_dot_as_module
 
     @property
     def current_base_path(self) -> Path | None:
@@ -453,9 +477,16 @@ class ModelResolver:  # noqa: PLR0904
             yield
 
     @contextmanager
-    def base_url_context(self, base_url: str) -> Generator[None, None, None]:
-        """Temporarily set the base URL within a context."""
-        if self._base_url:
+    def base_url_context(self, base_url: str | None) -> Generator[None, None, None]:
+        """Temporarily set the base URL within a context.
+
+        Only sets the base_url if:
+        - The new value is actually a URL (http:// or https://)
+        - OR _base_url was already set (switching between URLs)
+        This preserves backward compatibility for local file parsing where
+        this method was previously a no-op.
+        """
+        if self._base_url or (base_url and is_url(base_url)):
             with context_variable(self.set_base_url, self.base_url, base_url):
                 yield
         else:
@@ -499,7 +530,7 @@ class ModelResolver:  # noqa: PLR0904
         """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912
+    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(path)
         if joined_path == "#":
@@ -524,18 +555,23 @@ class ModelResolver:  # noqa: PLR0904
         else:
             if "#" not in joined_path:
                 joined_path += "#"
-            elif joined_path[0] == "#":
+            elif joined_path[0] == "#" and not self.base_url:
                 joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
             file_path, fragment = joined_path.split("#", 1)
             ref = f"{file_path}#{fragment}"
-            if self.root_id_base_path and not (is_url(joined_path) or Path(self._base_path, file_path).is_file()):
+            if (
+                self.root_id_base_path
+                and not self.base_url
+                and not (is_url(joined_path) or Path(self._base_path, file_path).is_file())
+            ):
                 ref = f"{self.root_id_base_path}/{ref}"
 
         if self.base_url:
             from .http import join_url  # noqa: PLC0415
 
-            joined_url = join_url(self.base_url, ref)
+            effective_base = self.root_id or self.base_url
+            joined_url = join_url(effective_base, ref)
             if "#" in joined_url:
                 return joined_url
             return f"{joined_url}#"
@@ -767,9 +803,25 @@ class ModelResolver:  # noqa: PLR0904
         field_name: str,
         excludes: set[str] | None = None,
         model_type: ModelType = ModelType.PYDANTIC,
+        path: list[str] | None = None,
+        class_name: str | None = None,
     ) -> tuple[str, str | None]:
-        """Get a valid field name and alias for the specified model type."""
-        return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(field_name, excludes)
+        """Get a valid field name and alias for the specified model type.
+
+        Args:
+            field_name: The original field name from the schema.
+            excludes: Set of names to avoid when generating valid names.
+            model_type: The type of model (PYDANTIC, ENUM, or CLASS).
+            path: Unused, kept for backward compatibility.
+            class_name: Optional class name for scoped alias resolution.
+
+        Returns:
+            A tuple of (valid_field_name, alias_or_none).
+        """
+        del path
+        return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(
+            field_name, excludes, class_name=class_name
+        )
 
 
 def _get_inflect_engine() -> inflect.engine:
@@ -806,5 +858,5 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 
 
 def is_url(ref: str) -> bool:
-    """Check if a reference string is a URL."""
+    """Check if a reference string is an HTTP(S) URL."""
     return ref.startswith(("https://", "http://"))

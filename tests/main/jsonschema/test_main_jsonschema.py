@@ -25,6 +25,7 @@ from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
+    ALIASES_DATA_PATH,
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -1411,6 +1412,29 @@ def test_main_jsonschema_combine_any_of_object(
 
 
 @pytest.mark.benchmark
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        (["--output-model", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
+        (
+            ["--output-model", "pydantic_v2.BaseModel", "--keep-model-order"],
+            "jsonschema_root_model_ordering_keep_model_order.py",
+        ),
+    ],
+)
+def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list[str], expected_file: str) -> None:
+    """Test RootModel is ordered after the types it references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_ordering.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+    )
+
+
+@pytest.mark.benchmark
 def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
     """Test field generation including all keys."""
     run_main_and_assert(
@@ -1612,6 +1636,18 @@ def test_jsonschema_without_titles_use_title_as_name(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="without_titles_use_title_as_name.py",
+        extra_args=["--use-title-as-name"],
+    )
+
+
+def test_jsonschema_title_with_dots(output_file: Path) -> None:
+    """Test using title as name when title contains dots (e.g., version numbers)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "title_with_dots.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="title_with_dots.py",
         extra_args=["--use-title-as-name"],
     )
 
@@ -2879,4 +2915,78 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
+    """Test hierarchical aliases with scoped format (ClassName.field)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hierarchical_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json"),
+        ],
+    )
+
+
+def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
+    """Test multiple types in array including object with properties generates Union type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_types_with_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_jsonschema_type_alias_with_circular_ref_to_class_msgspec(min_version: str, output_file: Path) -> None:
+    """Test TypeAlias with circular reference to class generates quoted forward refs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_with_circular_ref_to_class.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_with_circular_ref_to_class_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            min_version,
+        ],
+    )
+
+
+def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
+    """Test that enum with object values uses title/name/const for member names (issue #1620)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_object_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_empty_union(output_file: Path) -> None:
+    """Test that collapse-root-models with empty union fallback generates Any instead of invalid Union syntax."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_empty_union.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_with_optional(output_file: Path) -> None:
+    """Test that collapse-root-models correctly preserves Optional import when needed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_with_optional.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
     )

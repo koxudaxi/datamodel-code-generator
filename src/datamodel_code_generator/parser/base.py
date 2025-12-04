@@ -39,6 +39,8 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
+    IMPORT_OPTIONAL,
+    IMPORT_UNION,
     Import,
     Imports,
 )
@@ -207,11 +209,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             ordered_models: list[tuple[int, DataModel]] = []
             unresolved_reference_model_names = [m.path for m in unresolved_references]
             for model in unresolved_references:
-                indexes = [
-                    unresolved_reference_model_names.index(b.reference.path)
-                    for b in model.base_classes
-                    if b.reference and b.reference.path in unresolved_reference_model_names
-                ]
+                if isinstance(model, pydantic_model_v2.RootModel):
+                    indexes = [
+                        unresolved_reference_model_names.index(ref_path)
+                        for f in model.fields
+                        for t in f.data_type.all_data_types
+                        if t.reference and (ref_path := t.reference.path) in unresolved_reference_model_names
+                    ]
+                else:
+                    indexes = [
+                        unresolved_reference_model_names.index(b.reference.path)
+                        for b in model.base_classes
+                        if b.reference and b.reference.path in unresolved_reference_model_names
+                    ]
                 if indexes:
                     ordered_models.append((
                         max(indexes),
@@ -355,6 +365,7 @@ class Result(BaseModel):
     """Generated code result with optional source file reference."""
 
     body: str
+    future_imports: str = ""
     source: Optional[Path] = None  # noqa: UP045
 
 
@@ -569,6 +580,7 @@ class Parser(ABC):
             capitalise_enum_members=capitalise_enum_members,
             no_alias=no_alias,
             parent_scoped_naming=parent_scoped_naming,
+            treat_dot_as_module=treat_dot_as_module,
         )
         self.class_name: str | None = class_name
         self.wrap_string_literal: bool | None = wrap_string_literal
@@ -1287,7 +1299,10 @@ class Parser(ABC):
                     original_field = get_most_of_parent(data_type, DataModelFieldBase)
                     if original_field:  # pragma: no cover
                         # TODO: Improve detection of reference type
-                        imports.append(original_field.imports)
+                        # Use list instead of set because Import is not hashable
+                        excluded_imports = [IMPORT_OPTIONAL, IMPORT_UNION]
+                        field_imports = [i for i in original_field.imports if i not in excluded_imports]
+                        imports.append(field_imports)
 
                     data_type.remove_reference()
 
@@ -1387,7 +1402,7 @@ class Parser(ABC):
             base_class_refs = {b.type_hint for b in model.base_classes if b.reference}
             if base_class_refs:
                 refs = base_class_refs - {class_name}
-            elif isinstance(model, TypeAliasBase):
+            elif isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
                 refs = {
                     t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference
                 } - {class_name}
@@ -1444,14 +1459,12 @@ class Parser(ABC):
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
         """Update type aliases to properly handle forward references per PEP 484."""
-        rendered_aliases: set[str] = set()
+        model_index: dict[str, int] = {m.class_name: i for i, m in enumerate(models)}
 
-        for model in models:
+        for i, model in enumerate(models):
             if not isinstance(model, TypeAliasBase):
                 continue
-
             if isinstance(model, TypeStatement):
-                rendered_aliases.add(model.class_name)
                 continue
 
             for field in model.fields:
@@ -1459,15 +1472,16 @@ class Parser(ABC):
                     if not data_type.reference:
                         continue
                     source = data_type.reference.source
-                    if not isinstance(source, TypeAliasBase):
-                        continue
-                    if isinstance(source, TypeStatement):  # pragma: no cover
+                    if not isinstance(source, DataModel):
+                        continue  # pragma: no cover
+                    if isinstance(source, TypeStatement):
+                        continue  # pragma: no cover
+                    if source.module_path != model.module_path:
                         continue
                     name = data_type.reference.short_name
-                    if name not in rendered_aliases:
+                    source_index = model_index.get(name)
+                    if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
-
-            rendered_aliases.add(model.class_name)
 
     @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
@@ -1825,6 +1839,9 @@ class Parser(ABC):
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
+        future_imports = self.imports.extract_future()
+        future_imports_str = str(future_imports)
+
         for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
             export_imports: Imports | None = None
@@ -1845,7 +1862,8 @@ class Parser(ABC):
 
             if models:
                 if with_import:
-                    result += [str(self.imports), str(imports), "\n"]
+                    import_parts = [s for s in [future_imports_str, str(self.imports), str(imports)] if s]
+                    result += [*import_parts, "\n"]
 
                 if export_imports:
                     result += [str(export_imports), ""]
@@ -1878,7 +1896,11 @@ class Parser(ABC):
             if code_formatter:
                 body = code_formatter.format_code(body)
 
-            results[module] = Result(body=body, source=models[0].file_path if models else None)
+            results[module] = Result(
+                body=body,
+                future_imports=future_imports_str,
+                source=models[0].file_path if models else None,
+            )
 
         if all_exports_scope is not None:
             processed_init_modules = {m for m, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
@@ -1891,14 +1913,19 @@ class Parser(ABC):
                     resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
                     export_imports, export_names = self._build_all_exports_code(resolved)
                     all_items = ",\n    ".join(f'"{name}"' for name in export_names)
-                    parts = [str(self.imports), "\n"] if with_import else []
+                    import_parts = [s for s in [future_imports_str, str(self.imports)] if s] if with_import else []
+                    parts = import_parts + (["\n"] if import_parts else [])
                     parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
                     body = "\n".join(parts)
-                    results[init_module] = Result(body=code_formatter.format_code(body) if code_formatter else body)
+                    results[init_module] = Result(
+                        body=code_formatter.format_code(body) if code_formatter else body,
+                        future_imports=future_imports_str,
+                    )
 
         # retain existing behaviour
         if [*results] == [("__init__.py",)]:
-            return results["__init__.py",].body
+            single_result = results["__init__.py",]
+            return single_result.body
 
         results = {tuple(i.replace("-", "_") for i in k): v for k, v in results.items()}
         return (

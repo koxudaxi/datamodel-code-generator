@@ -507,7 +507,11 @@ Model customization:
   --use-title-as-name   use titles as class names of models
 
 Template customization:
-  --aliases ALIASES     Alias mapping file
+  --aliases ALIASES     Alias mapping file (JSON) for renaming fields. Supports hierarchical
+                        formats: Flat: {''field'': ''alias''} applies to all occurrences.
+                        Scoped: {''ClassName.field'': ''alias''} applies to specific class.
+                        Priority: scoped > flat. Example: {''User.name'': ''user_name'',
+                        ''Address.name'': ''addr_name'', ''id'': ''id_''}
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
