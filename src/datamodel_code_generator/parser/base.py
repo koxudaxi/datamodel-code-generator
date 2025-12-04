@@ -326,28 +326,21 @@ def title_to_class_name(title: str) -> str:
 
 
 def _find_base_classes(model: DataModel) -> list[DataModel]:
+    """Get direct base class DataModels."""
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
 def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
-    def _find_field_and_base_classes(
-        model_: DataModel,
-    ) -> tuple[DataModelFieldBase | None, list[DataModel]]:
-        for field_ in model_.fields:
-            if field_.original_name == original_name:
-                return field_, []
-        return None, _find_base_classes(model_)  # pragma: no cover
-
+    """Find a field by original_name in the models and their base classes."""
     for model in models:
-        field, base_models = _find_field_and_base_classes(model)
-        if field:
-            return field
-        models.extend(base_models)  # pragma: no cover  # noqa: B909
-
+        for field in model.iter_all_fields():
+            if field.original_name == original_name:
+                return field
     return None  # pragma: no cover
 
 
 def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
+    """Deep copy a list of DataType objects, preserving references."""
     copied_data_types: list[DataType] = []
     for data_type_ in data_types:
         if data_type_.reference:
