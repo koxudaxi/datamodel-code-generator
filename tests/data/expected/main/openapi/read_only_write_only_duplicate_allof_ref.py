@@ -23,7 +23,7 @@ class ParentRequest(BaseModel):
     parent_field: Optional[str] = None
 
 
-class Parent(Base, Base):
+class Parent(Base):
     parent_field: Optional[str] = None
 
 

@@ -1159,7 +1159,9 @@ class JsonSchemaParser(Parser):
     ) -> None:
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                base_classes.append(self.model_resolver.add_ref(all_of_item.ref))
+                ref = self.model_resolver.add_ref(all_of_item.ref)
+                if ref.path not in {b.path for b in base_classes}:
+                    base_classes.append(ref)
             else:
                 module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
                 object_fields = self.parse_object_fields(

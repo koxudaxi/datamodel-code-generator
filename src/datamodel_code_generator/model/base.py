@@ -451,7 +451,7 @@ class DataModel(TemplateBase, Nullable, ABC):
         """Yield all fields including those from base classes (parent fields first)."""
         if visited is None:
             visited = set()
-        if self.reference.path in visited:
+        if self.reference.path in visited:  # pragma: no cover
             return
         visited.add(self.reference.path)
         for base_class in self.base_classes:
