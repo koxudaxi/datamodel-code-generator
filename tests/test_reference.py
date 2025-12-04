@@ -179,6 +179,7 @@ def test_resolve_ref_local_fragment_with_base_url() -> None:
         # file:// URLs - recognized and handled via filesystem
         ("file:///home/user/schema.json", True),
         ("file:///C:/path/to/schema.json", True),
+        ("file://server/share/schema.json", True),
         # file:/ (single slash) - NOT recognized as valid file URL
         ("file:/home/user/schema.json", False),
         # Other URL schemes - NOT recognized
@@ -223,6 +224,9 @@ def test_resolve_ref_with_root_id_differs_from_base_url() -> None:
         ("file:///home/user/schemas/main.json", "file:///other/schema.json", "file:///other/schema.json"),
         # Windows-style file:// URLs
         ("file:///C:/schemas/main.json", "../common/types.json", "file:///C:/common/types.json"),
+        # UNC file:// URLs
+        ("file://server/share/main.json", "../common/types.json", "file://server/share/common/types.json"),
+        ("file://server/share/main.json", "child.json", "file://server/share/child.json"),
     ],
 )
 def test_join_url_file_scheme(base_url: str, ref: str, expected: str) -> None:

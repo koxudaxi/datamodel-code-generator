@@ -1788,10 +1788,13 @@ class JsonSchemaParser(Parser):
     def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
         """Get reference body from a URL (HTTP, HTTPS, or file scheme)."""
         if ref.startswith("file://"):
-            from urllib.parse import unquote, urlparse  # noqa: PLC0415
+            from urllib.parse import urlparse  # noqa: PLC0415
+            from urllib.request import url2pathname  # noqa: PLC0415
 
             parsed = urlparse(ref)
-            path = unquote(parsed.path)
+            # url2pathname handles percent-decoding and Windows drive letters
+            path = url2pathname(parsed.path)
+            # Handle UNC paths (file://server/share/path)
             if parsed.netloc:
                 path = f"//{parsed.netloc}{path}"
             file_path = Path(path)

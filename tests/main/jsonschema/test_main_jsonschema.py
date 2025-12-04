@@ -7,7 +7,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import call
-from urllib.parse import quote
 
 import black
 import pytest
@@ -3102,7 +3101,7 @@ def test_main_jsonschema_file_url_ref(tmp_path: Path) -> None:
     main_schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {"pet": {"$ref": f"file://{pet_file}"}},
+        "properties": {"pet": {"$ref": pet_file.as_uri()}},
     }
     main_file = tmp_path / "main.json"
     main_file.write_text(json.dumps(main_schema))
@@ -3142,11 +3141,10 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
     pet_file = dir_with_space / "pet.json"
     pet_file.write_text(json.dumps(pet_schema))
 
-    encoded_path = quote(str(pet_file), safe="/:")
     main_schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {"pet": {"$ref": f"file://{encoded_path}"}},
+        "properties": {"pet": {"$ref": pet_file.as_uri()}},
     }
     main_file = tmp_path / "main.json"
     main_file.write_text(json.dumps(main_schema))
