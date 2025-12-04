@@ -617,7 +617,7 @@ class ModelResolver:  # noqa: PLR0904
     @staticmethod
     def is_external_root_ref(ref: str) -> bool:
         """Check if a reference points to an external file root."""
-        return ref[-1] == "#"
+        return bool(ref) and ref[-1] == "#"
 
     @staticmethod
     def join_path(path: Sequence[str]) -> str:
@@ -694,7 +694,7 @@ class ModelResolver:  # noqa: PLR0904
                 name = get_singular_name(name, singular_name_suffix or self.singular_name_suffix)
             elif unique:  # pragma: no cover
                 unique_name = self._get_unique_name(name)
-                if unique_name == name:
+                if unique_name != name:
                     duplicate_name = name
                 name = unique_name
         if reference:
@@ -719,8 +719,9 @@ class ModelResolver:  # noqa: PLR0904
 
     def delete(self, path: Sequence[str] | str) -> None:
         """Delete a reference by path if it exists."""
-        if self.resolve_ref(path) in self.references:
-            del self.references[self.resolve_ref(path)]
+        resolved = self.resolve_ref(path)
+        if resolved in self.references:
+            del self.references[resolved]
 
     def default_class_name_generator(self, name: str) -> str:
         """Generate a valid class name from a string."""
