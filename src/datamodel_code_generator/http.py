@@ -44,8 +44,39 @@ def get_body(
 def join_url(url: str, ref: str = ".") -> str:
     """Join a base URL with a relative reference."""
     if url.startswith("file://"):
-        from urllib.parse import urljoin  # noqa: PLC0415
+        from urllib.parse import urlparse  # noqa: PLC0415
 
-        return urljoin(url, ref)
+        parsed = urlparse(url)
+
+        if ref.startswith("file://"):
+            return ref
+
+        ref_path, *frag = ref.split("#", 1)
+
+        if ref_path.startswith("/"):
+            joined_path = ref_path
+        else:
+            base_segments = parsed.path.lstrip("/").split("/")
+            if base_segments and not base_segments[0]:
+                base_segments = []
+            if base_segments:
+                base_segments = base_segments[:-1]
+
+            min_depth = 1 if parsed.netloc else 0
+            for segment in ref_path.split("/"):
+                if segment in {"", "."}:
+                    continue
+                if segment == "..":
+                    if len(base_segments) > min_depth:
+                        base_segments.pop()
+                    continue
+                base_segments.append(segment)
+
+            joined_path = "/" + "/".join(base_segments)
+
+        joined = f"file://{parsed.netloc}{joined_path}"
+        if frag:
+            joined += f"#{frag[0]}"
+        return joined
     httpx = _get_httpx()
     return str(httpx.URL(url).join(ref))
