@@ -477,9 +477,16 @@ class ModelResolver:  # noqa: PLR0904
             yield
 
     @contextmanager
-    def base_url_context(self, base_url: str) -> Generator[None, None, None]:
-        """Temporarily set the base URL within a context."""
-        if self._base_url:
+    def base_url_context(self, base_url: str | None) -> Generator[None, None, None]:
+        """Temporarily set the base URL within a context.
+
+        Only sets the base_url if:
+        - The new value is actually a URL (http:// or https://)
+        - OR _base_url was already set (switching between URLs)
+        This preserves backward compatibility for local file parsing where
+        this method was previously a no-op.
+        """
+        if self._base_url or (base_url and is_url(base_url)):
             with context_variable(self.set_base_url, self.base_url, base_url):
                 yield
         else:
@@ -523,7 +530,7 @@ class ModelResolver:  # noqa: PLR0904
         """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912
+    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(path)
         if joined_path == "#":
@@ -548,18 +555,23 @@ class ModelResolver:  # noqa: PLR0904
         else:
             if "#" not in joined_path:
                 joined_path += "#"
-            elif joined_path[0] == "#":
+            elif joined_path[0] == "#" and not self.base_url:
                 joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
             file_path, fragment = joined_path.split("#", 1)
             ref = f"{file_path}#{fragment}"
-            if self.root_id_base_path and not (is_url(joined_path) or Path(self._base_path, file_path).is_file()):
+            if (
+                self.root_id_base_path
+                and not self.base_url
+                and not (is_url(joined_path) or Path(self._base_path, file_path).is_file())
+            ):
                 ref = f"{self.root_id_base_path}/{ref}"
 
         if self.base_url:
             from .http import join_url  # noqa: PLC0415
 
-            joined_url = join_url(self.base_url, ref)
+            effective_base = self.root_id or self.base_url
+            joined_url = join_url(effective_base, ref)
             if "#" in joined_url:
                 return joined_url
             return f"{joined_url}#"
@@ -846,5 +858,5 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 
 
 def is_url(ref: str) -> bool:
-    """Check if a reference string is a URL."""
+    """Check if a reference string is an HTTP(S) URL."""
     return ref.startswith(("https://", "http://"))
