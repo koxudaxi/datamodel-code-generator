@@ -166,7 +166,7 @@ class Config(BaseModel):
             return urlparse(value)
         if value is None:  # pragma: no cover
             return None
-        msg = f"This protocol doesn't support only http/https. --input={value}"  # pragma: no cover
+        msg = f"Unsupported URL scheme. Supported: http, https, file. --input={value}"  # pragma: no cover
         raise Error(msg)  # pragma: no cover
 
     # Pydantic 1.5.1 doesn't support each_item=True correctly

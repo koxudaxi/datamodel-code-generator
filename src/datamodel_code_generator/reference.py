@@ -481,7 +481,7 @@ class ModelResolver:  # noqa: PLR0904
         """Temporarily set the base URL within a context.
 
         Only sets the base_url if:
-        - The new value is actually a URL (http:// or https://)
+        - The new value is actually a URL (http://, https://, or file://)
         - OR _base_url was already set (switching between URLs)
         This preserves backward compatibility for local file parsing where
         this method was previously a no-op.
@@ -858,5 +858,5 @@ def snake_to_upper_camel(word: str, delimiter: str = "_") -> str:
 
 
 def is_url(ref: str) -> bool:
-    """Check if a reference string is an HTTP(S) URL."""
-    return ref.startswith(("https://", "http://"))
+    """Check if a reference string is a URL (HTTP, HTTPS, or file scheme)."""
+    return ref.startswith(("https://", "http://", "file://"))

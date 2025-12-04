@@ -1964,8 +1964,21 @@ class JsonSchemaParser(Parser):
         return self._get_ref_body_from_remote(resolved_ref)
 
     def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
-        """Get reference body from a URL."""
-        # URL Reference: $ref: 'http://path/to/your/resource' Uses the whole document located on the different server.
+        """Get reference body from a URL (HTTP, HTTPS, or file scheme)."""
+        if ref.startswith("file://"):
+            from urllib.parse import urlparse  # noqa: PLC0415
+            from urllib.request import url2pathname  # noqa: PLC0415
+
+            parsed = urlparse(ref)
+            # url2pathname handles percent-decoding and Windows drive letters
+            path = url2pathname(parsed.path)
+            # Handle UNC paths (file://server/share/path)
+            if parsed.netloc:
+                path = f"//{parsed.netloc}{path}"
+            file_path = Path(path)
+            return self.remote_object_cache.get_or_put(
+                ref, default_factory=lambda _: load_yaml_dict_from_path(file_path, self.encoding)
+            )
         return self.remote_object_cache.get_or_put(
             ref, default_factory=lambda key: load_yaml_dict(self._get_text_from_url(key))
         )
