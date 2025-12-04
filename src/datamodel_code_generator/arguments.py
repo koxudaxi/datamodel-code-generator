@@ -22,6 +22,7 @@ from datamodel_code_generator import (
     DataModelType,
     InputFileType,
     OpenAPIScope,
+    ReadOnlyWriteOnlyModelType,
     ReuseScope,
 )
 from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
@@ -651,6 +652,14 @@ openapi_options.add_argument(
     help="Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future "
     "releases",
     action="store_true",
+    default=None,
+)
+openapi_options.add_argument(
+    "--read-only-write-only-model-type",
+    help="Model generation for readOnly/writeOnly fields: "
+    "'request-response' = Request/Response models only (no base model), "
+    "'all' = Base + Request + Response models.",
+    choices=[e.value for e in ReadOnlyWriteOnlyModelType],
     default=None,
 )
 

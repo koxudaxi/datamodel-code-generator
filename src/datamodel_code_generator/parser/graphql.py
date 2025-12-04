@@ -21,6 +21,7 @@ from datamodel_code_generator import (
     LiteralType,
     PythonVersion,
     PythonVersionMin,
+    ReadOnlyWriteOnlyModelType,
     ReuseScope,
     snooper_to_methods,
 )
@@ -182,6 +183,7 @@ class GraphQLParser(Parser):
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         super().__init__(
@@ -269,6 +271,7 @@ class GraphQLParser(Parser):
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            read_only_write_only_model_type=read_only_write_only_model_type,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

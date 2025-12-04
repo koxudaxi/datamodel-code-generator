@@ -1,0 +1,37 @@
+openapi: "3.0.0"
+info:
+  title: Mixed Schema Test
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        password:
+          type: string
+          writeOnly: true
+    Address:
+      type: object
+      required:
+        - city
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string

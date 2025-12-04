@@ -1,0 +1,30 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only Empty Base Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    # Empty base class (no properties)
+    EmptyBase:
+      type: object
+      # No properties - this creates a model with no fields
+    # HasFieldBase has a field
+    HasFieldBase:
+      type: object
+      properties:
+        base_field:
+          type: string
+    # Child inherits from EmptyBase first, then uses required from HasFieldBase
+    # The required field lookup will check EmptyBase first (no fields)
+    Child:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/EmptyBase"
+        - $ref: "#/components/schemas/HasFieldBase"
+        - required:
+            - base_field
+      properties:
+        id:
+          type: integer
+          readOnly: true
