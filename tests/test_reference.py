@@ -6,6 +6,7 @@ from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 
+from datamodel_code_generator.http import join_url
 from datamodel_code_generator.reference import ModelResolver, get_relative_path, is_url
 
 
@@ -171,12 +172,14 @@ def test_resolve_ref_local_fragment_with_base_url() -> None:
 @pytest.mark.parametrize(
     ("ref", "expected"),
     [
-        # HTTP/HTTPS URLs (only supported schemes)
+        # HTTP/HTTPS URLs
         ("https://example.com/schema.json", True),
         ("http://example.com/schema.json", True),
         ("https://example.com/path/to/schema.json", True),
-        # file:// URLs - NOT recognized (fetcher only supports HTTP)
-        ("file:///home/user/schema.json", False),
+        # file:// URLs - recognized and handled via filesystem
+        ("file:///home/user/schema.json", True),
+        ("file:///C:/path/to/schema.json", True),
+        # file:/ (single slash) - NOT recognized as valid file URL
         ("file:/home/user/schema.json", False),
         # Other URL schemes - NOT recognized
         ("ftp://example.com/schema.json", False),
@@ -194,7 +197,7 @@ def test_resolve_ref_local_fragment_with_base_url() -> None:
     ],
 )
 def test_is_url(ref: str, expected: bool) -> None:
-    """Test is_url correctly identifies HTTP(S) URLs only."""
+    """Test is_url correctly identifies HTTP(S) and file:// URLs."""
     assert is_url(ref) == expected
 
 
@@ -207,3 +210,21 @@ def test_resolve_ref_with_root_id_differs_from_base_url() -> None:
     result = resolver.resolve_ref("../common/types.json")
 
     assert result == "https://example.com/common/types.json#"
+
+
+@pytest.mark.parametrize(
+    ("base_url", "ref", "expected"),
+    [
+        # file:// URL joining - relative refs
+        ("file:///home/user/schemas/main.json", "../common/types.json", "file:///home/user/common/types.json"),
+        ("file:///home/user/schemas/main.json", "other.json", "file:///home/user/schemas/other.json"),
+        ("file:///home/user/schemas/main.json", "./sub/schema.json", "file:///home/user/schemas/sub/schema.json"),
+        # file:// URL joining - absolute refs
+        ("file:///home/user/schemas/main.json", "file:///other/schema.json", "file:///other/schema.json"),
+        # Windows-style file:// URLs
+        ("file:///C:/schemas/main.json", "../common/types.json", "file:///C:/common/types.json"),
+    ],
+)
+def test_join_url_file_scheme(base_url: str, ref: str, expected: str) -> None:
+    """Test join_url correctly handles file:// URLs."""
+    assert join_url(base_url, ref) == expected
