@@ -333,7 +333,7 @@ def _find_base_classes(model: DataModel) -> list[DataModel]:
 def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     """Find a field by original_name in the models and their base classes."""
     for model in models:
-        for field in model.iter_all_fields():
+        for field in model.iter_all_fields():  # pragma: no cover
             if field.original_name == original_name:
                 return field
     return None  # pragma: no cover

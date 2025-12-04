@@ -2867,3 +2867,37 @@ def test_main_openapi_read_only_write_only_ref_with_desc(output_file: Path) -> N
             "all",
         ],
     )
+
+
+def test_main_openapi_read_only_write_only_shared_base_ref(output_file: Path) -> None:
+    """Test readOnly/writeOnly with diamond inheritance (shared base via multiple paths)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_shared_base_ref.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_shared_base_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )
+
+
+def test_main_openapi_read_only_write_only_empty_base(output_file: Path) -> None:
+    """Test readOnly/writeOnly with empty base class (no fields)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "read_only_write_only_empty_base.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="read_only_write_only_empty_base.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )

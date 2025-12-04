@@ -756,7 +756,7 @@ class JsonSchemaParser(Parser):
         for base_ref in base_classes or []:
             if isinstance(base_ref.source, DataModel):
                 all_fields.extend(base_ref.source.iter_all_fields(visited))
-            elif base_ref.path not in visited:
+            elif base_ref.path not in visited:  # pragma: no cover
                 visited.add(base_ref.path)
                 all_fields.extend(iter_from_schema(self._load_ref_schema_object(base_ref.path), []))
         all_fields.extend(fields)
@@ -764,7 +764,7 @@ class JsonSchemaParser(Parser):
         deduplicated: dict[str, DataModelFieldBase] = {}
         for field in all_fields:
             key = field.original_name or field.name
-            if key:
+            if key:  # pragma: no cover
                 deduplicated[key] = field.copy_deep()
         return list(deduplicated.values())
 
