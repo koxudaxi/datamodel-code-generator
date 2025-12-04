@@ -41,7 +41,7 @@ def get_body(
     ).text
 
 
-def join_url(url: str, ref: str = ".") -> str:
+def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912
     """Join a base URL with a relative reference."""
     if url.startswith("file://"):
         from urllib.parse import urlparse  # noqa: PLC0415
@@ -52,6 +52,13 @@ def join_url(url: str, ref: str = ".") -> str:
             return ref
 
         ref_path, *frag = ref.split("#", 1)
+
+        # Fragment-only ref: keep the original path
+        if not ref_path:
+            joined = url.split("#", maxsplit=1)[0]
+            if frag:
+                joined += f"#{frag[0]}"
+            return joined
 
         if ref_path.startswith("/"):
             joined_path = ref_path
@@ -73,6 +80,8 @@ def join_url(url: str, ref: str = ".") -> str:
                 base_segments.append(segment)
 
             joined_path = "/" + "/".join(base_segments)
+            if ref_path.endswith("/"):
+                joined_path += "/"
 
         joined = f"file://{parsed.netloc}{joined_path}"
         if frag:

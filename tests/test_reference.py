@@ -220,13 +220,41 @@ def test_resolve_ref_with_root_id_differs_from_base_url() -> None:
         ("file:///home/user/schemas/main.json", "../common/types.json", "file:///home/user/common/types.json"),
         ("file:///home/user/schemas/main.json", "other.json", "file:///home/user/schemas/other.json"),
         ("file:///home/user/schemas/main.json", "./sub/schema.json", "file:///home/user/schemas/sub/schema.json"),
-        # file:// URL joining - absolute refs
+        # file:// URL joining - absolute file:// refs
         ("file:///home/user/schemas/main.json", "file:///other/schema.json", "file:///other/schema.json"),
+        # file:// URL joining - absolute path refs (starts with /)
+        ("file:///home/user/schemas/main.json", "/absolute/path.json", "file:///absolute/path.json"),
+        ("file://server/share/main.json", "/absolute/path.json", "file://server/absolute/path.json"),
         # Windows-style file:// URLs
         ("file:///C:/schemas/main.json", "../common/types.json", "file:///C:/common/types.json"),
         # UNC file:// URLs
         ("file://server/share/main.json", "../common/types.json", "file://server/share/common/types.json"),
         ("file://server/share/main.json", "child.json", "file://server/share/child.json"),
+        # Fragment handling
+        (
+            "file:///home/user/schemas/main.json",
+            "other.json#/definitions/Foo",
+            "file:///home/user/schemas/other.json#/definitions/Foo",
+        ),
+        (
+            "file:///home/user/schemas/main.json",
+            "#/definitions/Bar",
+            "file:///home/user/schemas/main.json#/definitions/Bar",
+        ),
+        # Multiple .. traversal - stops at root for non-UNC
+        ("file:///a/b/main.json", "../../../other.json", "file:///other.json"),
+        # Multiple .. traversal - stops at share level for UNC (min_depth=1)
+        ("file://server/share/a/b/main.json", "../../../../other.json", "file://server/share/other.json"),
+        # Empty and dot segments
+        ("file:///home/user/schemas/main.json", "./", "file:///home/user/schemas/"),
+        ("file:///home/user/schemas/main.json", "a//b/./c.json", "file:///home/user/schemas/a/b/c.json"),
+        # Fragment-only ref without fragment content (just #)
+        ("file:///home/user/schemas/main.json", "#", "file:///home/user/schemas/main.json#"),
+        # Empty ref (keeps base URL unchanged)
+        ("file:///home/user/schemas/main.json", "", "file:///home/user/schemas/main.json"),
+        # Root directory base URL (triggers empty base_segments branch)
+        ("file:///", "schema.json", "file:///schema.json"),
+        ("file:///main.json", "../other.json", "file:///other.json"),
     ],
 )
 def test_join_url_file_scheme(base_url: str, ref: str, expected: str) -> None:
