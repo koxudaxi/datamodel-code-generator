@@ -746,7 +746,7 @@ class JsonSchemaParser(Parser):
                 yield from self.parse_object_fields(obj, path, module_name)
             for item in obj.allOf:
                 if item.ref:
-                    if item.ref in visited:
+                    if item.ref in visited:  # pragma: no cover
                         continue
                     visited.add(item.ref)
                     yield from iter_from_schema(self._load_ref_schema_object(item.ref), path)

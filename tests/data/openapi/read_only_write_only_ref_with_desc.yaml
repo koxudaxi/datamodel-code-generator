@@ -1,0 +1,39 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only Ref with Description Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+          readOnly: true
+    Base:
+      type: object
+      properties:
+        base_id:
+          type: integer
+    # User with allOf and properties containing $ref + description
+    # This triggers _parse_object_common_part with obj.properties
+    User:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Base"
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        # Property with $ref AND description - makes it a JsonSchemaObject with ref
+        home_address:
+          $ref: "#/components/schemas/Address"
+          description: "User's home address"
+        # Property with $ref AND readOnly
+        work_address:
+          $ref: "#/components/schemas/Address"
+          readOnly: true
