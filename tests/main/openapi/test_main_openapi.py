@@ -73,6 +73,28 @@ def test_main_openapi_discriminator_enum(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_openapi_discriminator_enum_use_enum_values(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator enum using enum values in literal."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator/enum_use_enum_values.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-enum-values-in-discriminator",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_enum_duplicate(output_file: Path) -> None:
     """Test OpenAPI generation with duplicate discriminator enum."""
     run_main_and_assert(

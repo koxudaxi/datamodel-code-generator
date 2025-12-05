@@ -381,6 +381,9 @@ Typing customization:
                         times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
+  --use-enum-values-in-discriminator
+                        Use enum member literals in discriminator fields instead of string
+                        literals
   --use-generic-container-types
                         Use generic container types for type hinting (typing.Sequence,
                         typing.Mapping). If `--use-standard-collections` option is set, then

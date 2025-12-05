@@ -459,6 +459,7 @@ class Parser(ABC):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
+        use_enum_values_in_discriminator: bool = False,
         known_third_party: list[str] | None = None,
         custom_formatters: list[str] | None = None,
         custom_formatters_kwargs: dict[str, Any] | None = None,
@@ -597,6 +598,7 @@ class Parser(ABC):
         self.capitalise_enum_members = capitalise_enum_members
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
+        self.use_enum_values_in_discriminator = use_enum_values_in_discriminator
         self.known_third_party = known_third_party
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
@@ -872,7 +874,7 @@ class Parser(ABC):
                 )
                 models.remove(model)
 
-    def __apply_discriminator_type(  # noqa: PLR0912, PLR0915
+    def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
         imports: Imports,
@@ -948,6 +950,48 @@ class Parser(ABC):
                         msg = f"Discriminator type is not found. {data_type.reference.path}"
                         raise RuntimeError(msg)
 
+                    enum_from_base: Enum | None = None
+                    if self.use_enum_values_in_discriminator:
+                        for base_class in discriminator_model.base_classes:
+                            if not base_class.reference or not base_class.reference.source:
+                                continue
+                            base_model = base_class.reference.source
+                            if not isinstance(
+                                base_model,
+                                (
+                                    pydantic_model.BaseModel,
+                                    pydantic_model_v2.BaseModel,
+                                    dataclass_model.DataClass,
+                                    msgspec_model.Struct,
+                                ),
+                            ):
+                                continue
+                            for base_field in base_model.fields:
+                                if field_name not in {base_field.original_name, base_field.name}:
+                                    continue
+                                for field_data_type in base_field.data_type.all_data_types:
+                                    if field_data_type.reference:
+                                        source = field_data_type.reference.source
+                                        if isinstance(source, Enum):
+                                            enum_from_base = source
+                                            break
+                                if enum_from_base:
+                                    break
+                            if enum_from_base:
+                                break
+
+                    def resolve_enum_member_literals(enum_source: Enum, values: list[str]) -> list[tuple[str, str]]:
+                        """Resolve discriminator values to actual enum member names."""
+                        result: list[tuple[str, str]] = []
+                        enum_class_name = enum_source.reference.short_name
+                        for value in values:
+                            member = enum_source.find_member(value)
+                            if member and member.field.name:
+                                result.append((enum_class_name, member.field.name))
+                            else:
+                                result.append((enum_class_name, value))
+                        return result
+
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
@@ -961,19 +1005,45 @@ class Parser(ABC):
                                 discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
                             break
+
+                        enum_source: Enum | None = None
+                        if self.use_enum_values_in_discriminator:
+                            for field_data_type in discriminator_field.data_type.all_data_types:
+                                if field_data_type.reference:
+                                    source = field_data_type.reference.source
+                                    if isinstance(source, Enum):
+                                        enum_source = source
+                                        break
+                            if not enum_source:
+                                enum_source = enum_from_base
+
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
-                        discriminator_field.data_type = self.data_type(literals=type_names)
+
+                        if enum_source:
+                            enum_member_literals = resolve_enum_member_literals(enum_source, type_names)
+                            discriminator_field.data_type = self.data_type(enum_member_literals=enum_member_literals)
+                            if "." in enum_source.name:
+                                imports.append(Import.from_full_path(enum_source.name))
+                        else:
+                            discriminator_field.data_type = self.data_type(literals=type_names)
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
                         imports.append(discriminator_field.imports)
                         has_one_literal = True
                     if not has_one_literal:
+                        if enum_from_base:
+                            enum_member_literals = resolve_enum_member_literals(enum_from_base, type_names)
+                            new_data_type = self.data_type(enum_member_literals=enum_member_literals)
+                            if "." in enum_from_base.name:
+                                imports.append(Import.from_full_path(enum_from_base.name))
+                        else:
+                            new_data_type = self.data_type(literals=type_names)
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=field_name,
-                                data_type=self.data_type(literals=type_names),
+                                data_type=new_data_type,
                                 required=True,
                                 alias=alias,
                             )

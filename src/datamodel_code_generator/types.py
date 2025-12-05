@@ -321,6 +321,7 @@ class DataType(_BaseModel):
     is_set: bool = False
     is_custom_type: bool = False
     literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
+    enum_member_literals: list[tuple[str, str]] = []  # noqa: RUF012  # [(EnumClassName, member_name), ...]
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
@@ -424,7 +425,7 @@ class DataType(_BaseModel):
         imports: tuple[tuple[bool, Import], ...] = (
             (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
             (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
-            (bool(self.literals), IMPORT_LITERAL),
+            (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
         )
 
         if self.use_generic_container:
@@ -513,6 +514,9 @@ class DataType(_BaseModel):
                     type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
+            elif self.enum_member_literals:
+                parts = [f"{enum_class}.{member}" for enum_class, member in self.enum_member_literals]
+                type_ = f"{LITERAL}[{', '.join(parts)}]"
             elif self.literals:
                 type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
             elif self.reference:
