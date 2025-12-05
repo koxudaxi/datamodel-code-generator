@@ -17,6 +17,7 @@ from datamodel_code_generator.parser.base import (
     exact_import,
     relative,
     sort_data_models,
+    to_hashable,
 )
 from datamodel_code_generator.reference import Reference, snake_to_upper_camel
 from datamodel_code_generator.types import DataType
@@ -512,3 +513,65 @@ def test_use_non_positive_negative_number_constrained_types(flag: bool) -> None:
     instance = C(source="", use_non_positive_negative_number_constrained_types=flag)
 
     assert instance.data_type_manager.use_non_positive_negative_number_constrained_types == flag
+
+
+def test_to_hashable_simple_values() -> None:
+    """Test to_hashable with simple values."""
+    assert to_hashable("string") == "string"
+    assert to_hashable(123) == 123
+    assert to_hashable(None) == ""  # noqa: PLC1901
+
+
+def test_to_hashable_list_and_tuple() -> None:
+    """Test to_hashable with list and tuple."""
+    result = to_hashable([3, 1, 2])
+    assert isinstance(result, tuple)
+    assert result == (1, 2, 3)  # sorted
+
+    result = to_hashable((3, 1, 2))
+    assert isinstance(result, tuple)
+    assert result == (1, 2, 3)  # sorted
+
+
+def test_to_hashable_dict() -> None:
+    """Test to_hashable with dict."""
+    result = to_hashable({"b": 2, "a": 1})
+    assert isinstance(result, tuple)
+    # sorted by key
+    assert result == (("a", 1), ("b", 2))
+
+
+def test_to_hashable_mixed_types_fallback() -> None:
+    """Test to_hashable with mixed types that cannot be compared."""
+    mixed_list = [complex(1, 2), complex(3, 4)]
+    result = to_hashable(mixed_list)
+    assert isinstance(result, tuple)
+    # Should preserve order since sorting fails
+    assert result == (complex(1, 2), complex(3, 4))
+
+
+def test_to_hashable_nested_structures() -> None:
+    """Test to_hashable with nested structures."""
+    nested = {"outer": [{"inner": 1}]}
+    result = to_hashable(nested)
+    assert isinstance(result, tuple)
+
+
+def test_postprocess_result_modules_single_element_tuple() -> None:
+    """Test postprocessing with single element tuple (len < 2)."""
+    input_data = {
+        ("__init__.py",): "init_content",
+    }
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    # Single element tuple should remain unchanged
+    assert ("__init__.py",) in result
+
+
+def test_postprocess_result_modules_single_file_no_dot() -> None:
+    """Test postprocessing with single file without dot in name."""
+    input_data = {
+        ("module.py",): "content",
+        ("__init__.py",): "init_content",
+    }
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert ("module.py",) in result
