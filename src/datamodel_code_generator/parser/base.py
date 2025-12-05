@@ -1583,19 +1583,17 @@ class Parser(ABC):
     ) -> None:
         for model in models:
             for model_field in model.fields:
-                if (
-                    model_field.data_type.type in all_model_field_names
-                    and model_field.data_type.type == model_field.name
-                ):
-                    alias = model_field.data_type.type + "_aliased"
-                    model_field.data_type.type = alias
-                    if model_field.data_type.import_:  # pragma: no cover
-                        model_field.data_type.import_ = Import(
-                            from_=model_field.data_type.import_.from_,
-                            import_=model_field.data_type.import_.import_,
-                            alias=alias,
-                            reference_path=model_field.data_type.import_.reference_path,
-                        )
+                for data_type in model_field.data_type.all_data_types:
+                    if data_type and data_type.type in all_model_field_names and data_type.type == model_field.name:
+                        alias = data_type.type + "_aliased"
+                        data_type.type = alias
+                        if data_type.import_:  # pragma: no cover
+                            data_type.import_ = Import(
+                                from_=data_type.import_.from_,
+                                import_=data_type.import_.import_,
+                                alias=alias,
+                                reference_path=data_type.import_.reference_path,
+                            )
 
     @classmethod
     def _collect_exports_for_init(
