@@ -11,7 +11,7 @@ from datamodel_code_generator import Error, InputFileType, infer_input_type
 DATA_PATH: Path = Path(__file__).parent / "data"
 
 
-def test_infer_input_type() -> None:
+def test_infer_input_type() -> None:  # noqa: PLR0912
     """Test automatic input type detection for various file formats."""
 
     def assert_infer_input_type(file: Path, raw_data_type: InputFileType) -> None:

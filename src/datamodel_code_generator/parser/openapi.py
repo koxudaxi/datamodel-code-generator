@@ -686,7 +686,7 @@ class OpenAPIParser(JsonSchemaParser):
                 path=[*path, "tags"],
             )
 
-    def parse_raw(self) -> None:  # noqa: PLR0912, PLR0915
+    def parse_raw(self) -> None:  # noqa: PLR0912, PLR0914, PLR0915
         """Parse OpenAPI specification including schemas, paths, and operations."""
         for source, path_parts in self._get_context_source_path_parts():  # noqa: PLR1702
             if self.validation:
