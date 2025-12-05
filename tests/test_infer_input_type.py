@@ -11,7 +11,7 @@ from datamodel_code_generator import Error, InputFileType, infer_input_type
 DATA_PATH: Path = Path(__file__).parent / "data"
 
 
-def test_infer_input_type() -> None:
+def test_infer_input_type() -> None:  # noqa: PLR0912
     """Test automatic input type detection for various file formats."""
 
     def assert_infer_input_type(file: Path, raw_data_type: InputFileType) -> None:
@@ -56,6 +56,10 @@ def test_infer_input_type() -> None:
         if "external_ref_with_transitive_local_ref" in file.parts and file.name != "openapi.yaml":
             continue
         if "paths_external_ref" in file.parts and file.name != "openapi.yaml":
+            continue
+        if "paths_ref_with_external_schema" in file.parts and file.name != "openapi.yaml":
+            continue
+        if "webhooks_ref_with_external_schema" in file.parts and file.name != "openapi.yaml":
             continue
         if file.name.endswith((
             "aliases.json",

@@ -1362,6 +1362,18 @@ def test_paths_external_ref(output_file: Path) -> None:
     )
 
 
+def test_paths_ref_with_external_schema(output_file: Path) -> None:
+    """Test OpenAPI generation with $ref to external path file containing relative schema refs."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "paths_ref_with_external_schema" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="paths_ref_with_external_schema.py",
+        extra_args=["--openapi-scopes", "schemas", "paths"],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_collapse_root_models(output_file: Path) -> None:
     """Test OpenAPI generation with collapsed root models."""
@@ -2546,6 +2558,18 @@ def test_main_openapi_webhooks_with_parameters(output_file: Path) -> None:
         input_file_type="openapi",
         assert_func=assert_file_content,
         extra_args=["--openapi-scopes", "schemas", "webhooks", "parameters"],
+    )
+
+
+def test_webhooks_ref_with_external_schema(output_file: Path) -> None:
+    """Test OpenAPI generation with $ref to external webhook file containing relative schema refs."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "webhooks_ref_with_external_schema" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="webhooks_ref_with_external_schema.py",
+        extra_args=["--openapi-scopes", "schemas", "webhooks"],
     )
 
 
