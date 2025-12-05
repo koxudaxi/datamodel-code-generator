@@ -2015,8 +2015,7 @@ class JsonSchemaParser(Parser):
 
         # https://swagger.io/docs/specification/using-ref/
         ref = self.model_resolver.resolve_ref(object_ref)
-        if get_ref_type(object_ref) == JSONReference.LOCAL:
-            # Local Reference: $ref: '#/definitions/myElement'
+        if get_ref_type(object_ref) == JSONReference.LOCAL or get_ref_type(ref) == JSONReference.LOCAL:
             self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)
             return reference
         if self.model_resolver.is_after_load(ref):

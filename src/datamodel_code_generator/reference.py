@@ -567,6 +567,18 @@ class ModelResolver:  # noqa: PLR0904
             ):
                 ref = f"{self.root_id_base_path}/{ref}"
 
+        if is_url(ref):
+            file_part, path_part = ref.split("#", 1)
+            id_scope = "/".join(self.current_root)
+            scoped_ids = self.ids[id_scope]
+            if file_part in scoped_ids:
+                mapped_ref = scoped_ids[file_part]
+                if path_part:
+                    mapped_base, mapped_fragment = mapped_ref.split("#", 1) if "#" in mapped_ref else (mapped_ref, "")
+                    combined_fragment = f"{mapped_fragment.rstrip('/')}/{path_part.lstrip('/')}"
+                    return f"{mapped_base}#{combined_fragment}"
+                return mapped_ref
+
         if self.base_url:
             from .http import join_url  # noqa: PLC0415
 
