@@ -852,12 +852,9 @@ class Parser(ABC):
 
                 if isinstance(data_type, BaseClassDataType):
                     left, right = relative(model.module_name, data_type.full_name)
-                    if is_ancestor_package_reference(model.module_name, data_type.full_name):
-                        from_ = left
-                        import_ = data_type.reference.short_name
-                    else:
-                        from_ = f"{left}{right}" if left.endswith(".") else f"{left}.{right}"
-                        import_ = data_type.reference.short_name
+                    is_ancestor = is_ancestor_package_reference(model.module_name, data_type.full_name)
+                    from_ = left if is_ancestor else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
+                    import_ = data_type.reference.short_name
                     full_path = from_, import_
                 else:
                     from_, import_ = full_path = relative(model.module_name, data_type.full_name)
