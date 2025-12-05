@@ -57,6 +57,8 @@ def test_infer_input_type() -> None:
             continue
         if "paths_external_ref" in file.parts and file.name != "openapi.yaml":
             continue
+        if "paths_ref_with_external_schema" in file.parts and file.name != "openapi.yaml":
+            continue
         if file.name.endswith((
             "aliases.json",
             "extra_data.json",
