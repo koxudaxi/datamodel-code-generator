@@ -98,7 +98,7 @@ escape_characters = str.maketrans({
 })
 
 
-def to_hashable(item: Any) -> HashableComparable:
+def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
     """Convert an item to a hashable and comparable representation.
 
     Returns a value that is both hashable and supports comparison operators.
@@ -111,7 +111,11 @@ def to_hashable(item: Any) -> HashableComparable:
             tuple,
         ),
     ):
-        return tuple(sorted(to_hashable(i) for i in item))
+        try:
+            return tuple(sorted((to_hashable(i) for i in item), key=lambda v: (str(type(v)), v)))
+        except TypeError:
+            # Fallback when mixed, non-comparable types are present; preserve original order
+            return tuple(to_hashable(i) for i in item)
     if isinstance(item, dict):
         return tuple(
             sorted(
@@ -669,7 +673,7 @@ class Parser(ABC):
 
         return self.remote_text_cache.get_or_put(
             url,
-            default_factory=lambda url_: get_body(  # noqa: ARG005
+            default_factory=lambda _url: get_body(
                 url, self.http_headers, self.http_ignore_tls, self.http_query_parameters
             ),
         )
@@ -972,9 +976,9 @@ class Parser(ABC):
                                 alias=alias,
                             )
                         )
-                    has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
-                    if has_imported_literal:  # pragma: no cover
-                        imports.append(IMPORT_LITERAL)
+            has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
+            if has_imported_literal:  # pragma: no cover
+                imports.append(IMPORT_LITERAL)
 
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> DataType | None:
@@ -1404,6 +1408,7 @@ class Parser(ABC):
             model_class_name_refs[model] = (class_name, refs)
 
         changed: bool = True
+        max_passes = len(models) * len(models) if models else 0
         while changed:
             changed = False
             resolved = imported.copy()
@@ -1415,6 +1420,10 @@ class Parser(ABC):
                     continue
                 models[i], models[i + 1] = models[i + 1], model
                 changed = True
+            if max_passes:
+                max_passes -= 1
+                if max_passes <= 0:  # pragma: no cover
+                    break
 
     def __change_field_name(
         self,
@@ -1488,7 +1497,8 @@ class Parser(ABC):
                 else:
                     r.append(item)
 
-            r = [*r[:-2], f"{r[-2]}.{r[-1]}"]
+            if len(r) >= 2:  # noqa: PLR2004
+                r = [*r[:-2], f"{r[-2]}.{r[-1]}"]
             return tuple(r)
 
         results = {process(k): v for k, v in results.items()}

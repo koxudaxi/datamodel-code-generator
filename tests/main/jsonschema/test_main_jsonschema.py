@@ -1808,6 +1808,16 @@ def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
     )
 
 
+def test_treat_dot_as_module_single_file(output_dir: Path) -> None:
+    """Test treat-dot-as-module with single file having short path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module_single",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "treat_dot_as_module_single",
+        extra_args=["--treat-dot-as-module"],
+    )
+
+
 def test_main_jsonschema_duplicate_name(output_dir: Path) -> None:
     """Test duplicate name handling."""
     run_main_and_assert(
