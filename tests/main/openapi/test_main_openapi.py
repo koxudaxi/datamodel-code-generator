@@ -1991,6 +1991,18 @@ def test_main_openapi_custom_id_pydantic_v2(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_serialize_as_any_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI generation with SerializeAsAny for types with subtypes."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "serialize_as_any.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="serialize_as_any_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
