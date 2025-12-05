@@ -2024,6 +2024,17 @@ def test_main_all_of_any_of(output_dir: Path) -> None:
     )
 
 
+def test_main_all_of_any_of_base_class_ref(output_file: Path) -> None:
+    """Test allOf/anyOf with base class references to avoid invalid imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_of_any_of_base_class_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--snake-case-field", "--use-double-quotes", "--reuse-model"],
+    )
+
+
 def test_main_all_of_one_of(output_dir: Path) -> None:
     """Test combination of allOf and oneOf."""
     run_main_and_assert(

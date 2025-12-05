@@ -1,0 +1,57 @@
+{
+  "$id": "https://example.com/schemas/MapState.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MapState",
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+            "longitude": {"type": "number", "minimum": -180, "maximum": 180},
+            "zoom": {"type": "number", "minimum": 0, "maximum": 25, "default": 0},
+            "bearing": {"type": "number"},
+            "pitch": {"type": "number", "minimum": 0, "exclusiveMaximum": 90},
+            "dragRotate": {"type": "boolean"},
+            "mapSplitMode": {"type": "string", "const": "SINGLE_MAP"},
+            "isSplit": {"type": "boolean", "const": false, "default": false}
+          },
+          "required": ["latitude", "longitude", "pitch", "mapSplitMode"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "latitude": {"$ref": "#/allOf/0/anyOf/0/properties/latitude"},
+            "longitude": {"$ref": "#/allOf/0/anyOf/0/properties/longitude"},
+            "zoom": {"$ref": "#/allOf/0/anyOf/0/properties/zoom"},
+            "bearing": {"$ref": "#/allOf/0/anyOf/0/properties/bearing"},
+            "pitch": {"$ref": "#/allOf/0/anyOf/0/properties/pitch"},
+            "dragRotate": {"$ref": "#/allOf/0/anyOf/0/properties/dragRotate"},
+            "mapSplitMode": {"type": "string", "const": "SWIPE_COMPARE"},
+            "isSplit": {"type": "boolean", "const": true, "default": true}
+          },
+          "required": ["latitude", "longitude", "pitch", "mapSplitMode"]
+        }
+      ]
+    },
+    {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mapViewMode": {"type": "string", "const": "MODE_2D"}
+          },
+          "required": ["mapViewMode"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mapViewMode": {"type": "string", "const": "MODE_3D"}
+          },
+          "required": ["mapViewMode"]
+        }
+      ]
+    }
+  ]
+}
