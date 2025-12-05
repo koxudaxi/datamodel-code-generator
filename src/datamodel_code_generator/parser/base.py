@@ -796,6 +796,8 @@ class Parser(ABC):
         scoped_model_resolver: ModelResolver,
         init: bool,  # noqa: FBT001
     ) -> None:
+        model_paths = {model.path for model in models}
+
         for model in models:
             scoped_model_resolver.add([model.path], model.class_name)
         for model in models:
@@ -804,7 +806,7 @@ class Parser(ABC):
             for data_type in model.all_data_types:
                 # To change from/import
 
-                if not data_type.reference or data_type.reference.source in models:
+                if not data_type.reference or data_type.reference.path in model_paths:
                     # No need to import non-reference model.
                     # Or, Referenced model is in the same file. we don't need to import the model
                     continue
