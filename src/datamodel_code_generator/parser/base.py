@@ -293,6 +293,45 @@ def relative(current_module: str, reference: str) -> tuple[str, str]:
     return left, right
 
 
+def is_ancestor_package_reference(current_module: str, reference: str) -> bool:
+    """Check if reference is in an ancestor package (__init__.py).
+
+    When the reference's module path is an ancestor (prefix) of the current module,
+    the reference is in an ancestor package's __init__.py file.
+
+    Args:
+        current_module: The current module path (e.g., "v0.mammal.canine")
+        reference: The full reference path (e.g., "v0.Animal")
+
+    Returns:
+        True if the reference is in an ancestor package, False otherwise.
+
+    Examples:
+        - current="v0.animal", ref="v0.Animal" -> True (immediate parent)
+        - current="v0.mammal.canine", ref="v0.Animal" -> True (grandparent)
+        - current="v0.animal", ref="v0.animal.Dog" -> False (same or child)
+        - current="pets", ref="Animal" -> True (root package is immediate parent)
+    """
+    current_path = current_module.split(".") if current_module else []
+    *reference_path, _ = reference.split(".")
+
+    if not current_path:
+        return False
+
+    # Case 1: Direct parent package (includes root package when reference_path is empty)
+    # e.g., current="pets", ref="Animal" -> current_path[:-1]=[] == reference_path=[]
+    if current_path[:-1] == reference_path:
+        return True
+
+    # Case 2: Deeper ancestor package (reference_path must be non-empty proper prefix)
+    # e.g., current="v0.mammal.canine", ref="v0.Animal" -> ["v0"] is prefix of ["v0","mammal","canine"]
+    return (
+        len(reference_path) > 0
+        and len(reference_path) < len(current_path)
+        and current_path[: len(reference_path)] == reference_path
+    )
+
+
 def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
     """Create exact import path to avoid relative import issues."""
     if from_ == len(from_) * ".":
@@ -813,7 +852,8 @@ class Parser(ABC):
 
                 if isinstance(data_type, BaseClassDataType):
                     left, right = relative(model.module_name, data_type.full_name)
-                    from_ = f"{left}{right}" if left.endswith(".") else f"{left}.{right}"
+                    is_ancestor = is_ancestor_package_reference(model.module_name, data_type.full_name)
+                    from_ = left if is_ancestor else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
                     import_ = data_type.reference.short_name
                     full_path = from_, import_
                 else:
@@ -1543,19 +1583,17 @@ class Parser(ABC):
     ) -> None:
         for model in models:
             for model_field in model.fields:
-                if (
-                    model_field.data_type.type in all_model_field_names
-                    and model_field.data_type.type == model_field.name
-                ):
-                    alias = model_field.data_type.type + "_aliased"
-                    model_field.data_type.type = alias
-                    if model_field.data_type.import_:  # pragma: no cover
-                        model_field.data_type.import_ = Import(
-                            from_=model_field.data_type.import_.from_,
-                            import_=model_field.data_type.import_.import_,
-                            alias=alias,
-                            reference_path=model_field.data_type.import_.reference_path,
-                        )
+                for data_type in model_field.data_type.all_data_types:
+                    if data_type and data_type.type in all_model_field_names and data_type.type == model_field.name:
+                        alias = data_type.type + "_aliased"
+                        data_type.type = alias
+                        if data_type.import_:  # pragma: no cover
+                            data_type.import_ = Import(
+                                from_=data_type.import_.from_,
+                                import_=data_type.import_.import_,
+                                alias=alias,
+                                reference_path=data_type.import_.reference_path,
+                            )
 
     @classmethod
     def _collect_exports_for_init(

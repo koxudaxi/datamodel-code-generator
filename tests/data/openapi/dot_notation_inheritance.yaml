@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  title: Test API with dot notation schema names and inheritance
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    v0.properties:
+      type: object
+      description: Base properties schema
+      properties:
+        name:
+          type: string
+    v0.animal:
+      type: object
+      description: Animal schema that references v0.properties
+      properties:
+        species:
+          type: string
+        props:
+          $ref: '#/components/schemas/v0.properties'
+    v0.animal.dog:
+      description: Dog schema that extends v0.animal
+      allOf:
+        - $ref: '#/components/schemas/v0.animal'
+        - type: object
+          properties:
+            breed:
+              type: string
