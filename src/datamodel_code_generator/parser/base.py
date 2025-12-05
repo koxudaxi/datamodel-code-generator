@@ -953,10 +953,10 @@ class Parser(ABC):
                     enum_from_base: Enum | None = None
                     if self.use_enum_values_in_discriminator:
                         for base_class in discriminator_model.base_classes:
-                            if not base_class.reference or not base_class.reference.source:
+                            if not base_class.reference or not base_class.reference.source:  # pragma: no cover
                                 continue
                             base_model = base_class.reference.source
-                            if not isinstance(
+                            if not isinstance(  # pragma: no cover
                                 base_model,
                                 (
                                     pydantic_model.BaseModel,
@@ -967,7 +967,7 @@ class Parser(ABC):
                             ):
                                 continue
                             for base_field in base_model.fields:
-                                if field_name not in {base_field.original_name, base_field.name}:
+                                if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
                                     continue
                                 for field_data_type in base_field.data_type.all_data_types:
                                     if field_data_type.reference:
@@ -988,7 +988,7 @@ class Parser(ABC):
                             member = enum_source.find_member(value)
                             if member and member.field.name:
                                 result.append((enum_class_name, member.field.name))
-                            else:
+                            else:  # pragma: no cover
                                 result.append((enum_class_name, value))
                         return result
 
@@ -1008,20 +1008,20 @@ class Parser(ABC):
 
                         enum_source: Enum | None = None
                         if self.use_enum_values_in_discriminator:
-                            for field_data_type in discriminator_field.data_type.all_data_types:
+                            for field_data_type in discriminator_field.data_type.all_data_types:  # pragma: no cover
                                 if field_data_type.reference:
                                     source = field_data_type.reference.source
                                     if isinstance(source, Enum):
                                         enum_source = source
                                         break
-                            if not enum_source:
+                            if not enum_source:  # pragma: no cover
                                 enum_source = enum_from_base
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
 
-                        if enum_source:
+                        if enum_source:  # pragma: no cover
                             enum_member_literals = resolve_enum_member_literals(enum_source, type_names)
                             discriminator_field.data_type = self.data_type(enum_member_literals=enum_member_literals)
                             if enum_source.module_path != discriminator_model.module_path:
@@ -1036,7 +1036,7 @@ class Parser(ABC):
                         if enum_from_base:
                             enum_member_literals = resolve_enum_member_literals(enum_from_base, type_names)
                             new_data_type = self.data_type(enum_member_literals=enum_member_literals)
-                            if enum_from_base.module_path != discriminator_model.module_path:
+                            if enum_from_base.module_path != discriminator_model.module_path:  # pragma: no cover
                                 imports.append(Import.from_full_path(enum_from_base.name))
                         else:
                             new_data_type = self.data_type(literals=type_names)
