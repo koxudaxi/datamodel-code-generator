@@ -394,6 +394,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
     use_one_literal_as_default: bool = False,
+    use_enum_values_in_discriminator: bool = False,
     set_default_enum_member: bool = False,
     use_subclass_enum: bool = False,
     use_specialized_enum: bool = True,
@@ -631,6 +632,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         if output_model_type == DataModelType.TypingTypedDict
         else enum_field_as_literal,
         use_one_literal_as_default=use_one_literal_as_default,
+        use_enum_values_in_discriminator=use_enum_values_in_discriminator,
         set_default_enum_member=True
         if output_model_type == DataModelType.DataclassesDataclass
         else set_default_enum_member,
