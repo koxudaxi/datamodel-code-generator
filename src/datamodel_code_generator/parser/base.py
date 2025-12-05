@@ -1420,7 +1420,7 @@ class Parser(ABC):
                     continue
                 models[i], models[i + 1] = models[i + 1], model
                 changed = True
-            if max_passes:
+            if max_passes:  # pragma: no branch
                 max_passes -= 1
                 if max_passes <= 0:  # pragma: no cover
                     break
