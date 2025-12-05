@@ -1527,6 +1527,29 @@ def test_main_openapi_override_required_all_of_field(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_allof_with_required_inherited_fields(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes inherited fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_fields.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_fields_force_optional(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf and --force-optional flag."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_fields_force_optional.py",
+        extra_args=["--force-optional"],
+    )
+
+
 def test_main_use_default_kwarg(output_file: Path) -> None:
     """Test OpenAPI generation with use default kwarg."""
     run_main_and_assert(

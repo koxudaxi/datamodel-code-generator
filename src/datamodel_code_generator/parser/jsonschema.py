@@ -1186,6 +1186,17 @@ class JsonSchemaParser(Parser):
 
                 if object_fields:
                     fields.extend(object_fields)
+                    if all_of_item.required:
+                        required.extend(all_of_item.required)
+                        field_names = {f.original_name or f.name for f in object_fields}
+                        for request in all_of_item.required:
+                            if request in field_names:
+                                continue
+                            fields.append(
+                                self.data_model_field_type(
+                                    required=True, original_name=request, data_type=DataType()
+                                )
+                            )
                 elif all_of_item.required:
                     required.extend(all_of_item.required)
                 self._parse_all_of_item(
