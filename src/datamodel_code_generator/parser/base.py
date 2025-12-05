@@ -914,7 +914,31 @@ class Parser(ABC):
                 )
                 models.remove(model)
 
-    def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
+    def _create_discriminator_data_type(
+        self,
+        enum_source: Enum | None,
+        type_names: list[str],
+        discriminator_model: DataModel,
+        imports: Imports,
+    ) -> DataType:
+        """Create a data type for discriminator field, using enum literals if available."""
+        if enum_source:
+            enum_class_name = enum_source.reference.short_name
+            enum_member_literals: list[tuple[str, str]] = []
+            for value in type_names:
+                member = enum_source.find_member(value)
+                if member and member.field.name:
+                    enum_member_literals.append((enum_class_name, member.field.name))
+                else:  # pragma: no cover
+                    enum_member_literals.append((enum_class_name, value))
+            data_type = self.data_type(enum_member_literals=enum_member_literals)
+            if enum_source.module_path != discriminator_model.module_path:  # pragma: no cover
+                imports.append(Import.from_full_path(enum_source.name))
+        else:
+            data_type = self.data_type(literals=type_names)
+        return data_type
+
+    def __apply_discriminator_type(  # noqa: PLR0912, PLR0915
         self,
         models: list[DataModel],
         imports: Imports,
@@ -1009,28 +1033,11 @@ class Parser(ABC):
                             for base_field in base_model.fields:  # pragma: no branch
                                 if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
                                     continue
-                                for field_data_type in base_field.data_type.all_data_types:  # pragma: no branch
-                                    if field_data_type.reference:  # pragma: no branch
-                                        source = field_data_type.reference.source
-                                        if isinstance(source, Enum):  # pragma: no branch
-                                            enum_from_base = source
-                                            break
+                                enum_from_base = base_field.data_type.find_source(Enum)
                                 if enum_from_base:  # pragma: no branch
                                     break
                             if enum_from_base:  # pragma: no branch
                                 break
-
-                    def resolve_enum_member_literals(enum_source: Enum, values: list[str]) -> list[tuple[str, str]]:
-                        """Resolve discriminator values to actual enum member names."""
-                        result: list[tuple[str, str]] = []
-                        enum_class_name = enum_source.reference.short_name
-                        for value in values:
-                            member = enum_source.find_member(value)
-                            if member and member.field.name:
-                                result.append((enum_class_name, member.field.name))
-                            else:  # pragma: no cover
-                                result.append((enum_class_name, value))
-                        return result
 
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
@@ -1048,38 +1055,25 @@ class Parser(ABC):
 
                         enum_source: Enum | None = None
                         if self.use_enum_values_in_discriminator:
-                            for field_data_type in discriminator_field.data_type.all_data_types:  # pragma: no cover
-                                if field_data_type.reference:
-                                    source = field_data_type.reference.source
-                                    if isinstance(source, Enum):
-                                        enum_source = source
-                                        break
-                            if not enum_source:  # pragma: no cover
-                                enum_source = enum_from_base
+                            enum_source = (  # pragma: no cover
+                                discriminator_field.data_type.find_source(Enum) or enum_from_base
+                            )
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
 
-                        if enum_source:  # pragma: no cover
-                            enum_member_literals = resolve_enum_member_literals(enum_source, type_names)
-                            discriminator_field.data_type = self.data_type(enum_member_literals=enum_member_literals)
-                            if enum_source.module_path != discriminator_model.module_path:
-                                imports.append(Import.from_full_path(enum_source.name))
-                        else:
-                            discriminator_field.data_type = self.data_type(literals=type_names)
+                        discriminator_field.data_type = self._create_discriminator_data_type(
+                            enum_source, type_names, discriminator_model, imports
+                        )
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
                         imports.append(discriminator_field.imports)
                         has_one_literal = True
                     if not has_one_literal:
-                        if enum_from_base:
-                            enum_member_literals = resolve_enum_member_literals(enum_from_base, type_names)
-                            new_data_type = self.data_type(enum_member_literals=enum_member_literals)
-                            if enum_from_base.module_path != discriminator_model.module_path:  # pragma: no cover
-                                imports.append(Import.from_full_path(enum_from_base.name))
-                        else:
-                            new_data_type = self.data_type(literals=type_names)
+                        new_data_type = self._create_discriminator_data_type(
+                            enum_from_base, type_names, discriminator_model, imports
+                        )
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=field_name,

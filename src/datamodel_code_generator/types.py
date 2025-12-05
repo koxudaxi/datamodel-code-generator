@@ -54,6 +54,7 @@ from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 
 T = TypeVar("T")
+SourceT = TypeVar("SourceT")
 
 OPTIONAL = "Optional"
 OPTIONAL_PREFIX = f"{OPTIONAL}["
@@ -406,6 +407,16 @@ class DataType(_BaseModel):
         for data_type in self.data_types:
             yield from data_type.all_data_types
         yield self
+
+    def find_source(self, source_type: type[SourceT]) -> SourceT | None:
+        """Find the first reference source matching the given type from all nested data types."""
+        for data_type in self.all_data_types:  # pragma: no branch
+            if not data_type.reference:  # pragma: no cover
+                continue
+            source = data_type.reference.source
+            if isinstance(source, source_type):  # pragma: no cover
+                return source
+        return None  # pragma: no cover
 
     @property
     def all_imports(self) -> Iterator[Import]:
