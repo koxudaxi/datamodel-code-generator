@@ -575,3 +575,13 @@ def test_postprocess_result_modules_single_file_no_dot() -> None:
     }
     result = Parser._Parser__postprocess_result_modules(input_data)
     assert ("module.py",) in result
+
+
+def test_postprocess_result_modules_single_element_no_dot() -> None:
+    """Test postprocessing with single element without dot (len(r) < 2 branch)."""
+    input_data = {
+        ("__init__.py",): "init_content",
+        ("file",): "content",  # Single element without dot, so len(r) = 1
+    }
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert ("file",) in result
