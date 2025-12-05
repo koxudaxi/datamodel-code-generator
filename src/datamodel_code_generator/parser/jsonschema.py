@@ -1159,9 +1159,22 @@ class JsonSchemaParser(Parser):
     ) -> None:
         for all_of_item in obj.allOf:
             if all_of_item.ref:  # $ref
-                ref = self.model_resolver.add_ref(all_of_item.ref)
-                if ref.path not in {b.path for b in base_classes}:
-                    base_classes.append(ref)
+                ref_schema = self._load_ref_schema_object(all_of_item.ref)
+
+                if ref_schema.oneOf or ref_schema.anyOf:
+                    self.model_resolver.add(path, name, class_name=True, loaded=True)
+                    if ref_schema.anyOf:
+                        union_models.extend(
+                            d.reference for d in self.parse_any_of(name, ref_schema, path) if d.reference
+                        )
+                    if ref_schema.oneOf:
+                        union_models.extend(
+                            d.reference for d in self.parse_one_of(name, ref_schema, path) if d.reference
+                        )
+                else:
+                    ref = self.model_resolver.add_ref(all_of_item.ref)
+                    if ref.path not in {b.path for b in base_classes}:
+                        base_classes.append(ref)
             else:
                 module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
                 object_fields = self.parse_object_fields(
