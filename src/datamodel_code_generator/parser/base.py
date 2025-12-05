@@ -1024,7 +1024,7 @@ class Parser(ABC):
                         if enum_source:
                             enum_member_literals = resolve_enum_member_literals(enum_source, type_names)
                             discriminator_field.data_type = self.data_type(enum_member_literals=enum_member_literals)
-                            if "." in enum_source.name:
+                            if enum_source.module_path != discriminator_model.module_path:
                                 imports.append(Import.from_full_path(enum_source.name))
                         else:
                             discriminator_field.data_type = self.data_type(literals=type_names)
@@ -1036,7 +1036,7 @@ class Parser(ABC):
                         if enum_from_base:
                             enum_member_literals = resolve_enum_member_literals(enum_from_base, type_names)
                             new_data_type = self.data_type(enum_member_literals=enum_member_literals)
-                            if "." in enum_from_base.name:
+                            if enum_from_base.module_path != discriminator_model.module_path:
                                 imports.append(Import.from_full_path(enum_from_base.name))
                         else:
                             new_data_type = self.data_type(literals=type_names)

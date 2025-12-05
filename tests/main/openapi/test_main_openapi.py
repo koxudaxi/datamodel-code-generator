@@ -95,6 +95,54 @@ def test_main_openapi_discriminator_enum_use_enum_values(output_file: Path) -> N
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_openapi_discriminator_enum_use_enum_values_sanitized(output_file: Path) -> None:
+    """Enum values requiring sanitization are rendered as enum members in discriminator."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "discriminator_enum_sanitized.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="discriminator/enum_use_enum_values_sanitized.py",
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--use-enum-values-in-discriminator",
+            ],
+        )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_enum_use_enum_values_shared_module(output_dir: Path) -> None:
+    """Enum in shared module gets imported when used for discriminator literals."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "reuse_scope_tree_enum_discriminator",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "reuse_scope_tree_enum_discriminator",
+            input_file_type="openapi",
+            extra_args=[
+                "--reuse-model",
+                "--reuse-scope",
+                "tree",
+                "--use-enum-values-in-discriminator",
+                "--target-python-version",
+                "3.10",
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+            ],
+        )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_enum_duplicate(output_file: Path) -> None:
     """Test OpenAPI generation with duplicate discriminator enum."""
     run_main_and_assert(
