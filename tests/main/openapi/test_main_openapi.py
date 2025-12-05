@@ -135,6 +135,44 @@ def test_main_openapi_discriminator_allof_no_subtypes(output_file: Path) -> None
     )
 
 
+def test_main_openapi_allof_with_oneof_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf referencing a oneOf schema.
+
+    This tests the case where allOf combines a $ref to a schema with oneOf/discriminator
+    and additional properties. Regression test for issue #1763.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_oneof_ref.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "allof_with_oneof_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_openapi_allof_with_anyof_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf referencing an anyOf schema.
+
+    This tests the case where allOf combines a $ref to a schema with anyOf
+    and additional properties.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_anyof_ref.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "allof_with_anyof_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_pydantic_basemodel(output_file: Path) -> None:
     """Test OpenAPI generation with Pydantic BaseModel output."""
     run_main_and_assert(
