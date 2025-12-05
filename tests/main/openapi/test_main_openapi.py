@@ -2523,6 +2523,18 @@ def test_main_openapi_webhooks_with_parameters(output_file: Path) -> None:
     )
 
 
+def test_webhooks_ref_with_external_schema(output_file: Path) -> None:
+    """Test OpenAPI generation with $ref to external webhook file containing relative schema refs."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "webhooks_ref_with_external_schema" / "openapi.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="webhooks_ref_with_external_schema.py",
+        extra_args=["--openapi-scopes", "schemas", "webhooks"],
+    )
+
+
 def test_main_openapi_external_ref_with_transitive_local_ref(output_file: Path) -> None:
     """Test OpenAPI generation with external ref that has transitive local refs."""
     run_main_and_assert(
