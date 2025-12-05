@@ -3008,3 +3008,23 @@ def test_main_openapi_read_only_write_only_empty_base(output_file: Path) -> None
             "all",
         ],
     )
+
+
+def test_main_openapi_dot_notation_inheritance(output_dir: Path) -> None:
+    """Test dot notation in schema names with inheritance."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dot_notation_inheritance.yaml",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_inheritance",
+        input_file_type="openapi",
+    )
+
+
+def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
+    """Test dot notation with deep inheritance from ancestor packages (issue #2039)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dot_notation_deep_inheritance.yaml",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_deep_inheritance",
+        input_file_type="openapi",
+    )
