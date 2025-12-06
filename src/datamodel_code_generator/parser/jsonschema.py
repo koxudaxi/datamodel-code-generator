@@ -1050,7 +1050,10 @@ class JsonSchemaParser(Parser):
                 constraint_only_items.append(item)
 
         if ref_items and not primitive_items and not object_items:
-            return self.get_ref_data_type(ref_items[0].ref)
+            ref = ref_items[0].ref
+            if ref:
+                return self.get_ref_data_type(ref)
+            return None
 
         if ref_items and (primitive_items or object_items or constraint_only_items):
             ignored_count = len(primitive_items) + len(constraint_only_items)
@@ -1060,7 +1063,10 @@ class JsonSchemaParser(Parser):
                     f"in inherited field type resolution. Consider defining constraints in the referenced schema.",
                     stacklevel=4,
                 )
-            return self.get_ref_data_type(ref_items[0].ref)
+            ref = ref_items[0].ref
+            if ref:
+                return self.get_ref_data_type(ref)
+            return None
 
         if primitive_items and not object_items:
             all_primitives = primitive_items + constraint_only_items
@@ -1445,8 +1451,18 @@ class JsonSchemaParser(Parser):
                     fields.extend(object_fields)
                     if all_of_item.required:
                         required.extend(all_of_item.required)
-                        field_names = {f.original_name or f.name for f in object_fields}
-                        existing_field_names = {f.original_name or f.name for f in fields}
+                        field_names: set[str] = set()
+                        for f in object_fields:
+                            if f.original_name:
+                                field_names.add(f.original_name)
+                            elif f.name:
+                                field_names.add(f.name)
+                        existing_field_names: set[str] = set()
+                        for f in fields:
+                            if f.original_name:
+                                existing_field_names.add(f.original_name)
+                            elif f.name:
+                                existing_field_names.add(f.name)
                         for request in all_of_item.required:
                             if request in field_names or request in existing_field_names:
                                 continue
