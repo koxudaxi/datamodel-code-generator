@@ -1,0 +1,14 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: TypeAlias Mutual Recursive Test
+components:
+  schemas:
+    NodeA:
+      oneOf:
+        - type: integer
+        - $ref: "#/components/schemas/NodeB"
+    NodeB:
+      oneOf:
+        - type: string
+        - $ref: "#/components/schemas/NodeA"

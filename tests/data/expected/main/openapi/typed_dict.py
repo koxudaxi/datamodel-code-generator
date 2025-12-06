@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import List, TypedDict
 
-from typing_extensions import NotRequired, TypeAliasType
+from typing_extensions import NotRequired, TypeAlias
 
 
 class Pet(TypedDict):
@@ -15,7 +15,7 @@ class Pet(TypedDict):
     tag: NotRequired[str]
 
 
-Pets = TypeAliasType("Pets", List[Pet])
+Pets: TypeAlias = List[Pet]
 
 
 class User(TypedDict):
@@ -24,13 +24,13 @@ class User(TypedDict):
     tag: NotRequired[str]
 
 
-Users = TypeAliasType("Users", List[User])
+Users: TypeAlias = List[User]
 
 
-Id = TypeAliasType("Id", str)
+Id: TypeAlias = str
 
 
-Rules = TypeAliasType("Rules", List[str])
+Rules: TypeAlias = List[str]
 
 
 class Error(TypedDict):
@@ -45,7 +45,7 @@ class Api(TypedDict):
     apiDocumentationUrl: NotRequired[str]
 
 
-Apis = TypeAliasType("Apis", List[Api])
+Apis: TypeAlias = List[Api]
 
 
 class Event(TypedDict):

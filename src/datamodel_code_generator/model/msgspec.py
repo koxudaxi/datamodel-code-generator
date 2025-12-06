@@ -332,8 +332,8 @@ class DataModelField(DataModelFieldBase):
         """Convert default value to Struct model using msgspec convert."""
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
-            if data_type.is_dict or self.data_type.is_union:
-                # TODO: Parse Union and dict model for default
+            if data_type.is_dict:
+                # TODO: Parse dict model for default
                 continue  # pragma: no cover
             if data_type.is_list and len(data_type.data_types) == 1:
                 data_type_child = data_type.data_types[0]
@@ -347,6 +347,11 @@ class DataModelField(DataModelFieldBase):
                         f"type=list[{data_type_child.alias or data_type_child.reference.source.class_name}])"
                     )
             elif data_type.reference and isinstance(data_type.reference.source, Struct):
+                if self.data_type.is_union:
+                    if not isinstance(self.default, (dict, list)):
+                        continue
+                    if isinstance(self.default, dict) and any(dt.is_dict for dt in self.data_type.data_types):
+                        continue
                 return (
                     f"lambda: {self._PARSE_METHOD}({self.default!r},  "
                     f"type={data_type.alias or data_type.reference.source.class_name})"

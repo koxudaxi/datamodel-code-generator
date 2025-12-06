@@ -1,0 +1,59 @@
+# Test case for allOf referencing a schema with anyOf
+# This tests the anyOf branch in _parse_all_of_item
+
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /items:
+    post:
+      summary: Create an item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemPostRequest'
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    TextItem:
+      type: object
+      required:
+        - itemType
+        - text
+      properties:
+        itemType:
+          type: string
+          enum:
+            - text
+        text:
+          type: string
+    NumberItem:
+      type: object
+      required:
+        - itemType
+        - value
+      properties:
+        itemType:
+          type: string
+          enum:
+            - number
+        value:
+          type: integer
+    Item:
+      anyOf:
+        - $ref: '#/components/schemas/TextItem'
+        - $ref: '#/components/schemas/NumberItem'
+    ItemPostRequest:
+      allOf:
+        - $ref: '#/components/schemas/Item'
+        - type: object
+          required:
+            - itemId
+          properties:
+            itemId:
+              type: string

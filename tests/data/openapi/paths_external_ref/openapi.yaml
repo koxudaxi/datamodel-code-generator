@@ -1,0 +1,25 @@
+openapi: 3.0.3
+info:
+  title: Paths External Ref Test
+  version: "1.0"
+paths:
+  /cats:
+    get:
+      operationId: getCats
+      responses:
+        "200":
+          description: List of cats
+          content:
+            application/json:
+              schema:
+                $ref: "./schemas/cat.yaml#/Cat"
+    post:
+      operationId: createCat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas/cat.yaml#/Cat"
+      responses:
+        "201":
+          description: Created

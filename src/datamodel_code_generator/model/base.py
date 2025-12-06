@@ -17,6 +17,7 @@ from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import Field
+from typing_extensions import Self
 
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
@@ -28,6 +29,7 @@ from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
     NONE,
+    OPTIONAL_PREFIX,
     UNION_PREFIX,
     DataType,
     Nullable,
@@ -39,11 +41,14 @@ from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from datamodel_code_generator import DataclassArguments
+
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
 ALL_MODEL: str = "#all#"
 
 ConstraintsBaseT = TypeVar("ConstraintsBaseT", bound="ConstraintsBase")
+DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound="DataModelFieldBase")
 
 
 class ConstraintsBase(_BaseModel):
@@ -130,6 +135,8 @@ class DataModelFieldBase(_BaseModel):
     _pass_fields: ClassVar[set[str]] = {"parent", "data_type"}
     can_have_extra_keys: ClassVar[bool] = True
     type_has_null: Optional[bool] = None  # noqa: UP045
+    read_only: bool = False
+    write_only: bool = False
 
     if not TYPE_CHECKING:
         if not PYDANTIC_V2:
@@ -186,16 +193,16 @@ class DataModelFieldBase(_BaseModel):
         """Get all imports required for this field's type hint."""
         type_hint = self.type_hint
         has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
+        has_optional = OPTIONAL_PREFIX in type_hint
         imports: list[tuple[Import] | Iterator[Import]] = [
-            iter(i for i in self.data_type.all_imports if not (not has_union and i == IMPORT_UNION))
+            iter(
+                i
+                for i in self.data_type.all_imports
+                if not ((not has_union and i == IMPORT_UNION) or (not has_optional and i == IMPORT_OPTIONAL))
+            )
         ]
 
-        if self.fall_back_to_nullable:
-            if (
-                self.nullable or (self.nullable is None and not self.required)
-            ) and not self.data_type.use_union_operator:
-                imports.append((IMPORT_OPTIONAL,))
-        elif self.nullable and not self.data_type.use_union_operator:  # pragma: no cover
+        if has_optional:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated and self.annotated:
             imports.append((IMPORT_ANNOTATED,))
@@ -258,6 +265,15 @@ class DataModelFieldBase(_BaseModel):
     def fall_back_to_nullable(self) -> bool:
         """Check if optional fields should be nullable by default."""
         return True
+
+    def copy_deep(self) -> Self:
+        """Create a deep copy of this field to avoid mutating the original."""
+        copied = self.copy()
+        copied.parent = None
+        copied.data_type = self.data_type.copy()
+        if self.data_type.data_types:
+            copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
+        return copied
 
 
 @lru_cache
@@ -338,6 +354,7 @@ class DataModel(TemplateBase, Nullable, ABC):
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
+    IS_ALIAS: bool = False
 
     def __init__(  # noqa: PLR0913
         self,
@@ -357,10 +374,12 @@ class DataModel(TemplateBase, Nullable, ABC):
         keyword_only: bool = False,
         frozen: bool = False,
         treat_dot_as_module: bool = False,
+        dataclass_arguments: DataclassArguments | None = None,
     ) -> None:
         """Initialize a data model with fields, base classes, and configuration."""
         self.keyword_only = keyword_only
         self.frozen = frozen
+        self.dataclass_arguments: DataclassArguments = dataclass_arguments if dataclass_arguments is not None else {}
         if not self.TEMPLATE_FILE_PATH:
             msg = "TEMPLATE_FILE_PATH is undefined"
             raise Exception(msg)  # noqa: TRY002
@@ -427,6 +446,18 @@ class DataModel(TemplateBase, Nullable, ABC):
                 names.add(field.name)
             unique_fields.append(field)
         return unique_fields
+
+    def iter_all_fields(self, visited: set[str] | None = None) -> Iterator[DataModelFieldBase]:
+        """Yield all fields including those from base classes (parent fields first)."""
+        if visited is None:
+            visited = set()
+        if self.reference.path in visited:  # pragma: no cover
+            return
+        visited.add(self.reference.path)
+        for base_class in self.base_classes:
+            if base_class.reference and isinstance(base_class.reference.source, DataModel):
+                yield from base_class.reference.source.iter_all_fields(visited)
+        yield from self.fields
 
     def set_base_class(self) -> None:
         """Set up the base class for this model."""
@@ -520,6 +551,11 @@ class DataModel(TemplateBase, Nullable, ABC):
         yield from self.base_classes
 
     @property
+    def is_alias(self) -> bool:
+        """Whether is a type alias (i.e. not an instance of BaseModel/RootModel)."""
+        return self.IS_ALIAS
+
+    @property
     def nullable(self) -> bool:
         """Check if this model is nullable."""
         return self._nullable
@@ -538,8 +574,7 @@ class DataModel(TemplateBase, Nullable, ABC):
             base_class=self.base_class,
             methods=self.methods,
             description=self.description,
-            keyword_only=self.keyword_only,
-            frozen=self.frozen,
+            dataclass_arguments=self.dataclass_arguments,
             **self.extra_template_data,
         )
 

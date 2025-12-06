@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
+from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -11,15 +11,19 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     InputFileType,
+    chdir,
     generate,
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import Config, Exit
+from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.format import PythonVersion
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
+    JSON_SCHEMA_DATA_PATH,
+    OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
     run_main_and_assert,
@@ -112,7 +116,19 @@ def test_direct_input_dict(tmp_path: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("keyword_only", "target_python_version", "expected_file"),
+    [
+        (False, PythonVersion.PY_39, "frozen_dataclasses.py"),
+        (True, PythonVersion.PY_310, "frozen_dataclasses_keyword_only.py"),
+    ],
+)
+def test_frozen_dataclasses(
+    tmp_path: Path,
+    keyword_only: bool,
+    target_python_version: PythonVersion,
+    expected_file: str,
+) -> None:
     """Test --frozen-dataclasses flag functionality."""
     output_file = tmp_path / "output.py"
     generate(
@@ -121,55 +137,71 @@ def test_frozen_dataclasses(tmp_path: Path) -> None:
         output=output_file,
         output_model_type=DataModelType.DataclassesDataclass,
         frozen_dataclasses=True,
+        keyword_only=keyword_only,
+        target_python_version=target_python_version,
     )
-    assert_file_content(output_file)
+    assert_file_content(output_file, expected_file)
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only(tmp_path: Path) -> None:
-    """Test --frozen-dataclasses with --keyword-only flag combination."""
-    output_file = tmp_path / "output.py"
-    generate(
-        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
-        input_file_type=InputFileType.JsonSchema,
-        output=output_file,
-        output_model_type=DataModelType.DataclassesDataclass,
-        frozen_dataclasses=True,
-        keyword_only=True,
-        target_python_version=PythonVersion.PY_310,
-    )
-    assert_file_content(output_file, "frozen_dataclasses_keyword_only.py")
-
-
-@freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_command_line(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        (["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"], "frozen_dataclasses.py"),
+        (
+            [
+                "--output-model-type",
+                "dataclasses.dataclass",
+                "--frozen-dataclasses",
+                "--keyword-only",
+                "--target-python-version",
+                "3.10",
+            ],
+            "frozen_dataclasses_keyword_only.py",
+        ),
+    ],
+)
+def test_frozen_dataclasses_command_line(output_file: Path, extra_args: list[str], expected_file: str) -> None:
     """Test --frozen-dataclasses flag via command line."""
     run_main_and_assert(
         input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="frozen_dataclasses.py",
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"],
+        expected_file=expected_file,
+        extra_args=extra_args,
     )
 
 
 @freeze_time(TIMESTAMP)
-def test_frozen_dataclasses_with_keyword_only_command_line(output_file: Path) -> None:
-    """Test --frozen-dataclasses with --keyword-only flag via command line."""
+def test_use_attribute_docstrings(tmp_path: Path) -> None:
+    """Test --use-attribute-docstrings flag functionality."""
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "use_attribute_docstrings_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        use_field_description=True,
+        use_attribute_docstrings=True,
+    )
+    assert_file_content(output_file)
+
+
+@freeze_time(TIMESTAMP)
+def test_use_attribute_docstrings_command_line(output_file: Path) -> None:
+    """Test --use-attribute-docstrings flag via command line."""
     run_main_and_assert(
-        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        input_path=DATA_PATH / "jsonschema" / "use_attribute_docstrings_test.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="frozen_dataclasses_keyword_only.py",
+        expected_file="use_attribute_docstrings.py",
         extra_args=[
             "--output-model-type",
-            "dataclasses.dataclass",
-            "--frozen-dataclasses",
-            "--keyword-only",
-            "--target-python-version",
-            "3.10",
+            "pydantic_v2.BaseModel",
+            "--use-field-description",
+            "--use-attribute-docstrings",
         ],
     )
 
@@ -272,3 +304,506 @@ def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
             input_=invalid_file,
             output=output_file,
         )
+
+
+def test_generate_cli_command_with_no_use_specialized_enum(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with use-specialized-enum = false."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+use-specialized-enum = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "no_use_specialized_enum.txt",
+        )
+
+
+def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+snake-case-field = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "false_boolean.txt",
+        )
+
+
+def test_generate_cli_command_with_true_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with boolean set to true."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+snake-case-field = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "true_boolean.txt",
+        )
+
+
+def test_generate_cli_command_with_list_option(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command with list option."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+input = "schema.yaml"
+strict-types = ["str", "int"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_MAIN_PATH / "generate_cli_command" / "list_option.txt",
+        )
+
+
+@pytest.mark.parametrize(
+    ("json_str", "expected"),
+    [
+        ('{"frozen": true, "slots": true}', {"frozen": True, "slots": True}),
+        ("{}", {}),
+    ],
+)
+def test_dataclass_arguments_valid(json_str: str, expected: dict) -> None:
+    """Test that valid JSON is parsed correctly."""
+    assert _dataclass_arguments(json_str) == expected
+
+
+@pytest.mark.parametrize(
+    ("json_str", "match"),
+    [
+        ("not-valid-json", "Invalid JSON:"),
+        ("[1, 2, 3]", "Expected a JSON dictionary, got list"),
+        ('"just a string"', "Expected a JSON dictionary, got str"),
+        ("42", "Expected a JSON dictionary, got int"),
+        ('{"invalid_key": true}', "Invalid keys:"),
+        ('{"frozen": "not_bool"}', "Expected bool for 'frozen', got str"),
+    ],
+)
+def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
+    """Test that invalid input raises ArgumentTypeError."""
+    with pytest.raises(ArgumentTypeError, match=match):
+        _dataclass_arguments(json_str)
+
+
+def test_skip_root_model(tmp_path: Path) -> None:
+    """Test --skip-root-model flag functionality using generate()."""
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "skip_root_model_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        skip_root_model=True,
+    )
+    assert_file_content(output_file, "skip_root_model.py")
+
+
+def test_skip_root_model_command_line(output_file: Path) -> None:
+    """Test --skip-root-model flag via command line."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "skip_root_model_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="skip_root_model.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--skip-root-model"],
+    )
+
+
+def test_check_file_matches(output_file: Path) -> None:
+    """Test --check returns OK when file matches."""
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_file_does_not_exist(tmp_path: Path) -> None:
+    """Test --check returns DIFF when file does not exist."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=tmp_path / "nonexistent.py",
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_file_differs(output_file: Path) -> None:
+    """Test --check returns DIFF when file content differs."""
+    output_file.write_text("# Different content\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_with_stdout_output(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check with stdout output returns error."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=None,
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--check cannot be used with stdout",
+    )
+
+
+def test_check_with_nonexistent_input(tmp_path: Path) -> None:
+    """Test --check with nonexistent input file returns error."""
+    run_main_and_assert(
+        input_path=tmp_path / "nonexistent.json",
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_check_normalizes_line_endings(output_file: Path) -> None:
+    """Test --check normalizes line endings (CRLF vs LF)."""
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+    content = output_file.read_text(encoding="utf-8")
+    output_file.write_bytes(content.replace("\n", "\r\n").encode("utf-8"))
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_directory_matches(output_dir: Path) -> None:
+    """Test --check returns OK when directory matches."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_directory_file_differs(output_dir: Path) -> None:
+    """Test --check returns DIFF when a file in directory differs."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    py_files = list(output_dir.rglob("*.py"))
+    py_files[0].write_text("# Modified content\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_missing_file(output_dir: Path) -> None:
+    """Test --check returns DIFF when a generated file is missing."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    py_files = list(output_dir.rglob("*.py"))
+    py_files[0].unlink()
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_extra_file(output_dir: Path) -> None:
+    """Test --check returns DIFF when an extra file exists."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    (output_dir / "extra_model.py").write_text("# Extra file\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_does_not_exist(tmp_path: Path) -> None:
+    """Test --check returns DIFF when output directory does not exist."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=tmp_path / "nonexistent_model",
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.DIFF,
+    )
+
+
+def test_check_directory_ignores_pycache(output_dir: Path) -> None:
+    """Test --check ignores __pycache__ directories in actual output."""
+    input_path = OPEN_API_DATA_PATH / "modular.yaml"
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp"],
+    )
+    pycache_dir = output_dir / "__pycache__"
+    pycache_dir.mkdir()
+    (pycache_dir / "module.cpython-313.pyc").write_bytes(b"fake bytecode")
+    (pycache_dir / "extra.py").write_text("# should be ignored\n", encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_check_with_invalid_class_name(tmp_path: Path) -> None:
+    """Test --check cleans up temp directory when InvalidClassNameError occurs."""
+    invalid_schema = tmp_path / "invalid.json"
+    invalid_schema.write_text('{"title": "123InvalidName", "type": "object"}', encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=invalid_schema,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="You have to set `--class-name` option",
+    )
+
+
+def test_check_with_invalid_file_format(tmp_path: Path) -> None:
+    """Test --check cleans up temp directory when Error occurs (invalid file format)."""
+    invalid_file = tmp_path / "invalid.txt"
+    invalid_file.write_text("This is not a valid schema format!!!", encoding="utf-8")
+    output_path = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=invalid_file,
+        output_path=output_path,
+        extra_args=["--check"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="Invalid file format",
+    )
+
+
+def test_all_exports_scope_children(output_dir: Path) -> None:
+    """Test --all-exports-scope=children generates __all__ with child module exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--all-exports-scope", "children"],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_children",
+    )
+
+
+def test_all_exports_scope_recursive_with_collision(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with --all-exports-collision-strategy=minimal-prefix."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            "minimal-prefix",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_recursive",
+    )
+
+
+def test_all_exports_scope_children_with_docstring_header(output_dir: Path) -> None:
+    """Test --all-exports-scope=children with --custom-file-header containing docstring."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "children",
+            "--custom-file-header-path",
+            str(DATA_PATH / "custom_file_header_docstring.txt"),
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_children_docstring",
+    )
+
+
+def test_all_exports_scope_recursive_collision_error(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive raises error on collision without strategy."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--disable-timestamp", "--all-exports-scope", "recursive"],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="Name collision detected",
+    )
+
+
+def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
+    """Test --all-exports-collision-strategy requires --all-exports-scope=recursive."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "children",
+            "--all-exports-collision-strategy",
+            "minimal-prefix",
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="--all-exports-collision-strategy",
+    )
+
+
+def test_all_exports_scope_recursive_with_full_prefix(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with --all-exports-collision-strategy=full-prefix."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            "full-prefix",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "modular_all_exports_recursive_full_prefix",
+    )
+
+
+@pytest.mark.parametrize(
+    "strategy",
+    ["minimal-prefix", "full-prefix"],
+    ids=["minimal_prefix", "full_prefix"],
+)
+def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Path, strategy: str) -> None:
+    """Test that prefix resolution raises error when renamed export collides with local model."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_prefix_collision.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            strategy,
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="InputMessage",
+    )
+
+
+def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive with JSONSchema multi-file input."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file",
+    )
+
+
+def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive raises error when child export collides with local model."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_local_collision.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--all-exports-scope",
+            "recursive",
+        ],
+        expected_exit=Exit.ERROR,
+        expected_stderr_contains="conflicts with a model in __init__.py",
+    )
+
+
+def test_all_exports_scope_children_no_child_exports(output_dir: Path) -> None:
+    """Test --all-exports-scope=children when __init__.py has models but no direct child exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_no_child.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_no_child",
+    )

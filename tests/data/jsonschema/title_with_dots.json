@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GenomeStudio 2.0 - Methylation Module",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "nested": {
+      "title": "Nested 1.5",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

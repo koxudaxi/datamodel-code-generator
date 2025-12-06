@@ -9,12 +9,15 @@ import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
+from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasBackport, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
     Parser,
+    add_model_path_to_list,
     escape_characters,
     exact_import,
     relative,
     sort_data_models,
+    to_hashable,
 )
 from datamodel_code_generator.reference import Reference, snake_to_upper_camel
 from datamodel_code_generator.types import DataType
@@ -52,6 +55,45 @@ def test_parser() -> None:
     assert c.data_model_root_type == B
     assert c.data_model_field_type == DataModelFieldBase
     assert c.base_class == "Base"
+
+
+def test_add_model_path_to_list() -> None:
+    """Test method which adds model paths to "update" list."""
+    reference_1 = Reference(path="Base1", original_name="A", name="A")
+    reference_2 = Reference(path="Alias2", original_name="B", name="B")
+    reference_3 = Reference(path="Alias3", original_name="B", name="B")
+    reference_4 = Reference(path="Alias4", original_name="B", name="B")
+    reference_5 = Reference(path="Alias5", original_name="B", name="B")
+    model1 = BaseModel(fields=[], reference=reference_1)
+    model2 = TypeAlias(fields=[], reference=reference_2)
+    model3 = TypeAliasBackport(fields=[], reference=reference_3)
+    model4 = TypeAliasTypeBackport(fields=[], reference=reference_4)
+    model5 = TypeStatement(fields=[], reference=reference_5)
+
+    paths = add_model_path_to_list(None, model1)
+    assert "Base1" in paths
+    assert len(paths) == 1
+
+    paths = list[str]()
+    add_model_path_to_list(paths, model1)
+    assert "Base1" in paths
+    assert len(paths) == 1
+
+    add_model_path_to_list(paths, model1)
+    assert len(paths) != 2
+    assert len(paths) == 1
+
+    add_model_path_to_list(paths, model2)
+    assert "Alias2" not in paths
+
+    add_model_path_to_list(paths, model3)
+    assert "Alias3" not in paths
+
+    add_model_path_to_list(paths, model4)
+    assert "Alias4" not in paths
+
+    add_model_path_to_list(paths, model5)
+    assert "Alias5" not in paths
 
 
 def test_sort_data_models() -> None:
@@ -471,3 +513,75 @@ def test_use_non_positive_negative_number_constrained_types(flag: bool) -> None:
     instance = C(source="", use_non_positive_negative_number_constrained_types=flag)
 
     assert instance.data_type_manager.use_non_positive_negative_number_constrained_types == flag
+
+
+def test_to_hashable_simple_values() -> None:
+    """Test to_hashable with simple values."""
+    assert to_hashable("string") == "string"
+    assert to_hashable(123) == 123
+    assert to_hashable(None) == ""  # noqa: PLC1901
+
+
+def test_to_hashable_list_and_tuple() -> None:
+    """Test to_hashable with list and tuple."""
+    result = to_hashable([3, 1, 2])
+    assert isinstance(result, tuple)
+    assert result == (1, 2, 3)  # sorted
+
+    result = to_hashable((3, 1, 2))
+    assert isinstance(result, tuple)
+    assert result == (1, 2, 3)  # sorted
+
+
+def test_to_hashable_dict() -> None:
+    """Test to_hashable with dict."""
+    result = to_hashable({"b": 2, "a": 1})
+    assert isinstance(result, tuple)
+    # sorted by key
+    assert result == (("a", 1), ("b", 2))
+
+
+def test_to_hashable_mixed_types_fallback() -> None:
+    """Test to_hashable with mixed types that cannot be compared."""
+    mixed_list = [complex(1, 2), complex(3, 4)]
+    result = to_hashable(mixed_list)
+    assert isinstance(result, tuple)
+    # Should preserve order since sorting fails
+    assert result == (complex(1, 2), complex(3, 4))
+
+
+def test_to_hashable_nested_structures() -> None:
+    """Test to_hashable with nested structures."""
+    nested = {"outer": [{"inner": 1}]}
+    result = to_hashable(nested)
+    assert isinstance(result, tuple)
+
+
+def test_postprocess_result_modules_single_element_tuple() -> None:
+    """Test postprocessing with single element tuple (len < 2)."""
+    input_data = {
+        ("__init__.py",): "init_content",
+    }
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    # Single element tuple should remain unchanged
+    assert ("__init__.py",) in result
+
+
+def test_postprocess_result_modules_single_file_no_dot() -> None:
+    """Test postprocessing with single file without dot in name."""
+    input_data = {
+        ("module.py",): "content",
+        ("__init__.py",): "init_content",
+    }
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert ("module.py",) in result
+
+
+def test_postprocess_result_modules_single_element_no_dot() -> None:
+    """Test postprocessing with single element without dot (len(r) < 2 branch)."""
+    input_data = {
+        ("__init__.py",): "init_content",
+        ("file",): "content",  # Single element without dot, so len(r) = 1
+    }
+    result = Parser._Parser__postprocess_result_modules(input_data)
+    assert ("file",) in result

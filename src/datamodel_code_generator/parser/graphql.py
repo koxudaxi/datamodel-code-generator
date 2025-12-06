@@ -15,10 +15,14 @@ from typing import (
 from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
+    DataclassArguments,
     DefaultPutDict,
     LiteralType,
     PythonVersion,
     PythonVersionMin,
+    ReadOnlyWriteOnlyModelType,
+    ReuseScope,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DatetimeClassType, Formatter
@@ -121,9 +125,12 @@ class GraphQLParser(Parser):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_attribute_docstrings: bool = False,
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
+        reuse_scope: ReuseScope | None = None,
+        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         set_default_enum_member: bool = False,
@@ -153,12 +160,14 @@ class GraphQLParser(Parser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        skip_root_model: bool = False,
         use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
+        use_enum_values_in_discriminator: bool = False,
         known_third_party: list[str] | None = None,
         custom_formatters: list[str] | None = None,
         custom_formatters_kwargs: dict[str, Any] | None = None,
@@ -173,7 +182,9 @@ class GraphQLParser(Parser):
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         super().__init__(
@@ -203,12 +214,16 @@ class GraphQLParser(Parser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             use_field_description=use_field_description,
+            use_attribute_docstrings=use_attribute_docstrings,
             use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
+            reuse_scope=reuse_scope,
+            shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,
+            use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
             use_specialized_enum=use_specialized_enum,
@@ -236,6 +251,7 @@ class GraphQLParser(Parser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            skip_root_model=skip_root_model,
             use_type_alias=use_type_alias,
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
@@ -255,7 +271,9 @@ class GraphQLParser(Parser):
             no_alias=no_alias,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
+            dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            read_only_write_only_model_type=read_only_write_only_model_type,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
@@ -310,10 +328,26 @@ class GraphQLParser(Parser):
                 self.support_graphql_types[resolved_type].append(type_)
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
-        """Create data model instance with conditional frozen parameter for DataClass."""
+        """Create data model instance with dataclass_arguments support for DataClass."""
         data_model_class = model_type or self.data_model_type
         if issubclass(data_model_class, DataClass):
-            kwargs["frozen"] = self.frozen_dataclasses
+            # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
+            # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
+            dataclass_arguments = kwargs.pop("dataclass_arguments", None)
+            if dataclass_arguments is None:
+                dataclass_arguments = self.dataclass_arguments
+            if dataclass_arguments is None:
+                # Construct from legacy flags for library API compatibility
+                dataclass_arguments = {}
+                if self.frozen_dataclasses:
+                    dataclass_arguments["frozen"] = True
+                if self.keyword_only:
+                    dataclass_arguments["kw_only"] = True
+            kwargs["dataclass_arguments"] = dataclass_arguments
+            kwargs.pop("frozen", None)
+            kwargs.pop("keyword_only", None)
+        else:
+            kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
     def _typename_field(self, name: str) -> DataModelFieldBase:
@@ -481,7 +515,9 @@ class GraphQLParser(Parser):
 
         for field_name, field in obj.fields.items():
             field_name_, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name, excludes=exclude_field_names
+                field_name,
+                excludes=exclude_field_names,
+                class_name=obj.name,
             )
             exclude_field_names.add(field_name_)
 
@@ -505,6 +541,7 @@ class GraphQLParser(Parser):
             description=obj.description,
             keyword_only=self.keyword_only,
             treat_dot_as_module=self.treat_dot_as_module,
+            dataclass_arguments=self.dataclass_arguments,
         )
         self.results.append(data_model_type)
 

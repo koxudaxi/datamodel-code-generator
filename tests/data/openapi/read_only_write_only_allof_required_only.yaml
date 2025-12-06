@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only AllOf Required Only Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    # Child references Parent which has an allOf with only 'required' (no ref, no properties)
+    Child:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Parent"
+      properties:
+        child_field:
+          type: string
+    # Parent has allOf with just 'required' - no ref, no properties
+    Parent:
+      type: object
+      allOf:
+        - required:
+            - id
+        - type: object
+          properties:
+            id:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+              readOnly: true

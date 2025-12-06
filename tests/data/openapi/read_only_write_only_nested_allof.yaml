@@ -1,0 +1,35 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only Nested AllOf Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    BaseTimestamps:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    ExtendedTimestamps:
+      allOf:
+        - $ref: "#/components/schemas/BaseTimestamps"
+        - type: object
+          properties:
+            updated_at:
+              type: string
+              format: date-time
+              readOnly: true
+    User:
+      allOf:
+        - $ref: "#/components/schemas/ExtendedTimestamps"
+        - type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            password:
+              type: string
+              writeOnly: true

@@ -1,0 +1,12 @@
+newPet:
+  post:
+    summary: New pet webhook
+    operationId: newPetWebhook
+    requestBody:
+      content:
+        application/json:
+          schema:
+            $ref: "./model.yaml#/Pet"
+    responses:
+      '200':
+        description: Success

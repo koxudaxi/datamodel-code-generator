@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  title: Test API with deep inheritance from ancestor packages
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    v0.Animal:
+      type: object
+      description: Base animal in root package
+      properties:
+        species:
+          type: string
+    v0.mammal.Dog:
+      description: Dog inheriting from Animal (2 levels up)
+      allOf:
+        - $ref: '#/components/schemas/v0.Animal'
+        - type: object
+          properties:
+            breed:
+              type: string
+    v0.mammal.canine.Puppy:
+      description: Puppy inheriting from Animal (3 levels up)
+      allOf:
+        - $ref: '#/components/schemas/v0.Animal'
+        - type: object
+          properties:
+            age_weeks:
+              type: integer

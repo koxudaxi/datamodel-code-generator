@@ -1,0 +1,43 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only Shared Base Ref Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    # Shared base that will be referenced by multiple parents
+    SharedBase:
+      type: object
+      properties:
+        shared_id:
+          type: integer
+          readOnly: true
+        shared_name:
+          type: string
+    # First parent references SharedBase
+    Parent1:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/SharedBase"
+      properties:
+        parent1_field:
+          type: string
+    # Second parent also references SharedBase
+    Parent2:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/SharedBase"
+      properties:
+        parent2_field:
+          type: string
+          writeOnly: true
+    # Child inherits from both Parent1 and Parent2
+    # When collecting fields, SharedBase path will be visited twice
+    Child:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Parent1"
+        - $ref: "#/components/schemas/Parent2"
+      properties:
+        child_field:
+          type: string

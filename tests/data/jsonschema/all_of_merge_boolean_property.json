@@ -1,0 +1,25 @@
+{
+  "$defs": {
+    "Base1": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "string" }
+          }
+        }
+      }
+    },
+    "Base2": {
+      "type": "object",
+      "properties": {
+        "data": false
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/Base1" },
+    { "$ref": "#/$defs/Base2" }
+  ]
+}

@@ -1,0 +1,18 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only URL Ref Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        created_at:
+          $ref: "https://example.com/common.yaml#/components/schemas/ReadOnlyTimestamp"
+        secret:
+          $ref: "https://example.com/common.yaml#/components/schemas/WriteOnlySecret"

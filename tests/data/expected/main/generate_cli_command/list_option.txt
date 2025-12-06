@@ -1,0 +1,2 @@
+datamodel-codegen --input schema.yaml --strict-types str int
+

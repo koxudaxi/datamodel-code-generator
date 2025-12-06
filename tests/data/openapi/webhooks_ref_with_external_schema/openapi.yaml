@@ -1,0 +1,19 @@
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: Webhook Test API
+webhooks:
+  newPet:
+    $ref: "./webhooks/pet_webhook.yaml#/newPet"
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+        message:
+          type: string

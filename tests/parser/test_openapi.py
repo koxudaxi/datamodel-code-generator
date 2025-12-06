@@ -131,7 +131,7 @@ class Pets(BaseModel):
         (
             {"properties": {"kind": {"type": "array", "items": []}}},
             """class Pets(BaseModel):
-    kind: Optional[List] = None""",
+    kind: Optional[List[Any]] = None""",
         ),
     ],
 )
@@ -175,7 +175,7 @@ class Pets(BaseModel):
                 "items": {},
             },
             """class Pets(BaseModel):
-    __root__: List""",
+    __root__: List[Any]""",
         ),
     ],
 )

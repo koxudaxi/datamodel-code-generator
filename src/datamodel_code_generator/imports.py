@@ -25,6 +25,11 @@ class Import(BaseModel):
     alias: Optional[str] = None  # noqa: UP045
     reference_path: Optional[str] = None  # noqa: UP045
 
+    @property
+    def is_future(self) -> bool:
+        """Check if this is a __future__ import."""
+        return self.from_ == "__future__"
+
     @classmethod
     @lru_cache
     def from_full_path(cls, class_path: str) -> Import:
@@ -108,6 +113,19 @@ class Imports(defaultdict[Optional[str], set[str]]):
         """Remove imports associated with a reference path."""
         if reference_path in self.reference_paths:
             self.remove(self.reference_paths[reference_path])
+
+    def extract_future(self) -> Imports:
+        """Extract and remove __future__ imports, returning them as a new Imports."""
+        future = Imports(self.use_exact)
+        future_key = "__future__"
+        if future_key in self:
+            future[future_key] = self.pop(future_key)
+            for key in list(self.counter.keys()):
+                if key[0] == future_key:
+                    future.counter[key] = self.counter.pop(key)
+            if future_key in self.alias:
+                future.alias[future_key] = self.alias.pop(future_key)
+        return future
 
 
 IMPORT_ANNOTATED = Import.from_full_path("typing.Annotated")
