@@ -59,6 +59,7 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.parser._scc import find_circular_sccs
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
@@ -340,6 +341,24 @@ def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
         # when our imported module has the same parent
         return f"{from_}{import_}", short_name
     return f"{from_}.{import_}", short_name
+
+
+def get_module_directory(module: tuple[str, ...]) -> tuple[str, ...]:
+    """Get the directory portion of a module tuple.
+
+    Note: Module tuples in module_models do NOT include .py extension.
+    The last element is either the module name (e.g., "issuing") or empty for root.
+
+    Examples:
+        ("pkg",) -> ("pkg",) - root module
+        ("pkg", "issuing") -> ("pkg",) - submodule
+        ("foo", "bar", "baz") -> ("foo", "bar") - deeply nested module
+    """
+    if not module:
+        return ()
+    if len(module) == 1:
+        return module
+    return module[:-1]
 
 
 @runtime_checkable
@@ -1799,6 +1818,167 @@ class Parser(ABC):
                 walk_data_type(field.data_type)
         return names
 
+    def __compute_internal_module_path(  # noqa: PLR6301
+        self,
+        scc_modules: set[tuple[str, ...]],
+        existing_modules: set[tuple[str, ...]],
+    ) -> tuple[str, ...]:
+        """Compute the _internal module path for an SCC."""
+        directories = [get_module_directory(m) for m in scc_modules]
+
+        if not directories:
+            return ("_internal",)
+
+        prefix = list(directories[0])
+        for directory in directories[1:]:
+            new_prefix: list[str] = []
+            for a, b in zip(prefix, directory):
+                if a == b:
+                    new_prefix.append(a)
+                else:
+                    break
+            prefix = new_prefix
+
+        base_module = ("_internal",) if not prefix else (*prefix, "_internal")
+
+        if base_module in existing_modules:
+            counter = 1
+            while True:
+                candidate = (*prefix, f"_internal_{counter}") if prefix else (f"_internal_{counter}",)
+                if candidate not in existing_modules:
+                    return candidate
+                counter += 1
+
+        return base_module
+
+    def __build_module_dependency_graph(  # noqa: PLR0912, PLR6301
+        self,
+        module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
+    ) -> dict[tuple[str, ...], set[tuple[str, ...]]]:
+        """Build a directed graph of module dependencies."""
+        path_to_module: dict[str, tuple[str, ...]] = {}
+        for module, models in module_models_list:
+            for model in models:
+                path_to_module[model.path] = module
+
+        graph: dict[tuple[str, ...], set[tuple[str, ...]]] = {}
+
+        def add_cross_module_edge(ref_path: str, source_module: tuple[str, ...]) -> None:
+            """Add edge if ref_path points to a different module."""
+            if ref_path in path_to_module:
+                target_module = path_to_module[ref_path]
+                if target_module != source_module:
+                    graph[source_module].add(target_module)
+
+        for module, models in module_models_list:
+            if module not in graph:
+                graph[module] = set()
+
+            for model in models:
+                for data_type in model.all_data_types:
+                    if data_type.reference and data_type.reference.source:
+                        add_cross_module_edge(data_type.reference.path, module)
+
+                for base_class in model.base_classes:
+                    if base_class.reference and base_class.reference.source:
+                        add_cross_module_edge(base_class.reference.path, module)
+
+        for module in list(graph):
+            if not (module and module[-1] == "__init__"):
+                continue
+            package_prefix = module[:-1]
+            for target_module in graph:
+                if target_module == module:
+                    continue
+                if target_module[: len(package_prefix)] == package_prefix:
+                    graph[module].add(target_module)
+
+        return graph
+
+    def __resolve_circular_imports(  # noqa: PLR0912, PLR0914
+        self,
+        module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
+    ) -> tuple[list[tuple[tuple[str, ...], list[DataModel]]], set[tuple[str, ...]]]:
+        """Resolve circular imports by merging SCC modules into a single _internal.py."""
+        graph = self.__build_module_dependency_graph(module_models_list)
+
+        circular_sccs = find_circular_sccs(graph)
+
+        if not circular_sccs:
+            return module_models_list, set()
+
+        def _is_root_module(node: tuple[str, ...]) -> bool:
+            return not node or node[-1] == "__init__"
+
+        min_scc_size_for_merge = 4
+        root_like_nodes = {node for node in graph if _is_root_module(node)}
+        problematic_sccs = [
+            scc for scc in circular_sccs if scc & root_like_nodes and len(scc) >= min_scc_size_for_merge
+        ]
+
+        if not problematic_sccs:
+            return module_models_list, set()
+
+        existing_modules = {module for module, _ in module_models_list}
+        internal_modules_created: set[tuple[str, ...]] = set()
+
+        result_modules: dict[tuple[str, ...], list[DataModel]] = {
+            module: list(models) for module, models in module_models_list
+        }
+
+        for scc in problematic_sccs:
+            internal_module = self.__compute_internal_module_path(scc, existing_modules | internal_modules_created)
+            internal_modules_created.add(internal_module)
+            internal_path = Path("/".join(internal_module))
+
+            all_scc_models: list[DataModel] = []
+            class_name_counts: dict[str, int] = {}
+
+            for scc_module in sorted(scc):
+                if scc_module not in result_modules:
+                    continue
+                for model in result_modules[scc_module]:
+                    all_scc_models.append(model)
+                    class_name = model.class_name
+                    class_name_counts[class_name] = class_name_counts.get(class_name, 0) + 1
+
+            class_name_seen: dict[str, int] = {}
+            internal_module_str = ".".join(internal_module)
+            for model in all_scc_models:
+                class_name = model.class_name
+                if class_name_counts[class_name] > 1:
+                    seen_count = class_name_seen.get(class_name, 0)
+                    if seen_count > 0:
+                        new_class_name = f"{class_name}_{seen_count}"
+                        model.reference.name = new_class_name
+                        model.reference.path = f"{internal_module_str}.{new_class_name}"
+                    else:
+                        model.reference.name = class_name
+                        model.reference.path = f"{internal_module_str}.{class_name}"
+                    class_name_seen[class_name] = seen_count + 1
+                else:
+                    model.reference.name = class_name
+                    model.reference.path = f"{internal_module_str}.{class_name}"
+
+                model.file_path = internal_path
+
+            for scc_module in scc:
+                if scc_module in result_modules:
+                    result_modules[scc_module] = []
+            result_modules[internal_module] = all_scc_models
+
+        new_module_models: list[tuple[tuple[str, ...], list[DataModel]]] = [
+            (internal_module, result_modules[internal_module])
+            for internal_module in sorted(internal_modules_created)
+            if internal_module in result_modules
+        ]
+
+        for module, _ in module_models_list:
+            if module not in internal_modules_created:
+                new_module_models.append((module, result_modules.get(module, [])))
+
+        return new_module_models, internal_modules_created
+
     def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
@@ -1873,6 +2053,9 @@ class Parser(ABC):
         shared_module_entry = self.__reuse_model_tree_scope(module_models, require_update_action_models)
         if shared_module_entry:
             module_models.insert(0, shared_module_entry)
+
+        # Resolve circular imports by moving models to _internal.py modules
+        module_models, _internal_modules = self.__resolve_circular_imports(module_models)
 
         class Processed(NamedTuple):
             module: tuple[str, ...]

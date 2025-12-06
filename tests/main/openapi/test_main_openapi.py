@@ -3028,3 +3028,25 @@ def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
         expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_deep_inheritance",
         input_file_type="openapi",
     )
+
+
+def test_main_openapi_circular_imports_stripe_like(output_dir: Path) -> None:
+    """Test that circular imports between root and submodules are resolved with _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_stripe_like.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_stripe_like",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_acyclic(output_dir: Path) -> None:
+    """Test that acyclic dependencies do not create _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_acyclic.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_acyclic",
+            input_file_type="openapi",
+        )

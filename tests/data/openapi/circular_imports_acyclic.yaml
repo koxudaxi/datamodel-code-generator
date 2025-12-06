@@ -1,0 +1,31 @@
+openapi: 3.0.0
+info:
+  title: Acyclic Module Dependencies Test
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Models in root (will go to __init__.py)
+    RootModel:
+      type: object
+      properties:
+        id:
+          type: string
+
+    # Models with dot notation (will go to sub.py)
+    # sub.py only references RootModel, no back-reference
+    sub.ChildModel:
+      type: object
+      properties:
+        id:
+          type: string
+        parent:
+          $ref: '#/components/schemas/RootModel'
+
+    sub.AnotherChild:
+      type: object
+      properties:
+        sibling:
+          $ref: '#/components/schemas/sub.ChildModel'
