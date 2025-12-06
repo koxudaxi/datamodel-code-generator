@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -15,6 +16,7 @@ from datamodel_code_generator.parser.base import (
     add_model_path_to_list,
     escape_characters,
     exact_import,
+    get_module_directory,
     relative,
     sort_data_models,
     to_hashable,
@@ -585,3 +587,99 @@ def test_postprocess_result_modules_single_element_no_dot() -> None:
     }
     result = Parser._Parser__postprocess_result_modules(input_data)
     assert ("file",) in result
+
+
+def test_get_module_directory_empty() -> None:
+    """Test get_module_directory with empty tuple."""
+    assert get_module_directory(()) == ()
+
+
+def test_get_module_directory_single() -> None:
+    """Test get_module_directory with single element tuple."""
+    assert get_module_directory(("pkg",)) == ("pkg",)
+
+
+def test_get_module_directory_submodule() -> None:
+    """Test get_module_directory with submodule tuple."""
+    assert get_module_directory(("pkg", "issuing")) == ("pkg",)
+
+
+def test_get_module_directory_deeply_nested() -> None:
+    """Test get_module_directory with deeply nested module."""
+    assert get_module_directory(("foo", "bar", "baz")) == ("foo", "bar")
+
+
+def test_compute_internal_module_path_name_conflict() -> None:
+    """Test __compute_internal_module_path when _internal already exists."""
+    parser = C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        base_class="Base",
+        source="",
+    )
+    scc_modules = {(), ("sub",)}
+    existing_modules = {("_internal",)}
+    result = parser._Parser__compute_internal_module_path(scc_modules, existing_modules)
+    assert result == ("_internal_1",)
+
+
+def test_compute_internal_module_path_multiple_conflicts() -> None:
+    """Test __compute_internal_module_path when _internal and _internal_1 exist."""
+    parser = C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        base_class="Base",
+        source="",
+    )
+    scc_modules = {(), ("sub",)}
+    existing_modules = {("_internal",), ("_internal_1",)}
+    result = parser._Parser__compute_internal_module_path(scc_modules, existing_modules)
+    assert result == ("_internal_2",)
+
+
+def test_build_module_dependency_graph_with_missing_ref() -> None:
+    """Test __build_module_dependency_graph when reference path is not in path_to_module."""
+    parser = C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        base_class="Base",
+        source="",
+    )
+
+    ref_source = MagicMock()
+    ref_source.source = True
+    ref_source.path = "nonexistent.Model"
+
+    data_type = MagicMock()
+    data_type.reference = ref_source
+
+    model1 = MagicMock()
+    model1.path = "pkg.Model1"
+    model1.all_data_types = [data_type]
+    model1.base_classes = []
+
+    module_models_list = [
+        (("pkg",), [model1]),
+    ]
+
+    graph = parser._Parser__build_module_dependency_graph(module_models_list)
+
+    assert graph == {("pkg",): set()}
+
+
+def test_compute_internal_module_path_with_different_prefix_break() -> None:
+    """Test __compute_internal_module_path when LCP computation hits break (different prefixes)."""
+    parser = C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        base_class="Base",
+        source="",
+    )
+    scc_modules = {("common", "a"), ("common", "b"), ("other", "x")}
+    existing_modules: set[tuple[str, ...]] = set()
+    result = parser._Parser__compute_internal_module_path(scc_modules, existing_modules)
+    assert result == ("_internal",)

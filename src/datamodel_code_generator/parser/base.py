@@ -1824,10 +1824,7 @@ class Parser(ABC):
         existing_modules: set[tuple[str, ...]],
     ) -> tuple[str, ...]:
         """Compute the _internal module path for an SCC."""
-        directories = [get_module_directory(m) for m in scc_modules]
-
-        if not directories:
-            return ("_internal",)
+        directories = [get_module_directory(m) for m in sorted(scc_modules)]
 
         prefix = list(directories[0])
         for directory in directories[1:]:
@@ -1851,7 +1848,7 @@ class Parser(ABC):
 
         return base_module
 
-    def __build_module_dependency_graph(  # noqa: PLR0912, PLR6301
+    def __build_module_dependency_graph(  # noqa: PLR6301
         self,
         module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
     ) -> dict[tuple[str, ...], set[tuple[str, ...]]]:
@@ -1871,8 +1868,7 @@ class Parser(ABC):
                     graph[source_module].add(target_module)
 
         for module, models in module_models_list:
-            if module not in graph:
-                graph[module] = set()
+            graph[module] = set()
 
             for model in models:
                 for data_type in model.all_data_types:
@@ -1882,16 +1878,6 @@ class Parser(ABC):
                 for base_class in model.base_classes:
                     if base_class.reference and base_class.reference.source:
                         add_cross_module_edge(base_class.reference.path, module)
-
-        for module in list(graph):
-            if not (module and module[-1] == "__init__"):
-                continue
-            package_prefix = module[:-1]
-            for target_module in graph:
-                if target_module == module:
-                    continue
-                if target_module[: len(package_prefix)] == package_prefix:
-                    graph[module].add(target_module)
 
         return graph
 
@@ -1935,8 +1921,6 @@ class Parser(ABC):
             class_name_counts: dict[str, int] = {}
 
             for scc_module in sorted(scc):
-                if scc_module not in result_modules:
-                    continue
                 for model in result_modules[scc_module]:
                     all_scc_models.append(model)
                     class_name = model.class_name
@@ -1963,7 +1947,7 @@ class Parser(ABC):
                 model.file_path = internal_path
 
             for scc_module in scc:
-                if scc_module in result_modules:
+                if scc_module in result_modules:  # pragma: no branch
                     result_modules[scc_module] = []
             result_modules[internal_module] = all_scc_models
 
@@ -1974,7 +1958,7 @@ class Parser(ABC):
         ]
 
         for module, _ in module_models_list:
-            if module not in internal_modules_created:
+            if module not in internal_modules_created:  # pragma: no branch
                 new_module_models.append((module, result_modules.get(module, [])))
 
         return new_module_models, internal_modules_created

@@ -1,0 +1,59 @@
+openapi: 3.0.0
+info:
+  title: Circular Import with Inheritance Test
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Base class in root module
+    BaseEntity:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+
+    # Root model that references submodule
+    RootModel:
+      type: object
+      properties:
+        id:
+          type: string
+        auth:
+          $ref: '#/components/schemas/issuing.Authorization'
+
+    # issuing.Authorization inherits from BaseEntity (creates base_class edge)
+    issuing.Authorization:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          properties:
+            amount:
+              type: integer
+            invoice:
+              $ref: '#/components/schemas/billing.Invoice'
+
+    # billing.Invoice also inherits from BaseEntity
+    billing.Invoice:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          properties:
+            total:
+              type: integer
+            session:
+              $ref: '#/components/schemas/checkout.Session'
+
+    # checkout.Session inherits from BaseEntity and references back to root
+    checkout.Session:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          properties:
+            status:
+              type: string
+            root_ref:
+              $ref: '#/components/schemas/RootModel'

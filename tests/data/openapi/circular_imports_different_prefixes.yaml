@@ -1,0 +1,44 @@
+openapi: 3.0.0
+info:
+  title: Circular Import with Different Prefixes Test
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Root model
+    Root:
+      type: object
+      properties:
+        id:
+          type: string
+        alpha_ref:
+          $ref: '#/components/schemas/alpha.sub.Model'
+
+    # alpha.sub namespace
+    alpha.sub.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        beta_ref:
+          $ref: '#/components/schemas/beta.sub.Model'
+
+    # beta.sub namespace - different prefix from alpha.sub
+    beta.sub.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        gamma_ref:
+          $ref: '#/components/schemas/gamma.sub.Model'
+
+    # gamma.sub namespace
+    gamma.sub.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        root_ref:
+          $ref: '#/components/schemas/Root'
