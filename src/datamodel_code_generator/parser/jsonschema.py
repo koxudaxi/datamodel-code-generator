@@ -498,6 +498,7 @@ class JsonSchemaParser(Parser):
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         use_one_literal_as_default: bool = False,
+        use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         use_specialized_enum: bool = True,
@@ -587,6 +588,7 @@ class JsonSchemaParser(Parser):
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,
+            use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
             use_specialized_enum=use_specialized_enum,
@@ -2295,8 +2297,7 @@ class JsonSchemaParser(Parser):
 
         # https://swagger.io/docs/specification/using-ref/
         ref = self.model_resolver.resolve_ref(object_ref)
-        if get_ref_type(object_ref) == JSONReference.LOCAL:
-            # Local Reference: $ref: '#/definitions/myElement'
+        if get_ref_type(object_ref) == JSONReference.LOCAL or get_ref_type(ref) == JSONReference.LOCAL:
             self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)
             return reference
         if self.model_resolver.is_after_load(ref):

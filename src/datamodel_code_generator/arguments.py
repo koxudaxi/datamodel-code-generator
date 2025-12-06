@@ -374,6 +374,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-enum-values-in-discriminator",
+    help="Use enum member literals in discriminator fields instead of string literals",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-standard-collections",
     help="Use standard collections for type hinting (list, dict)",
     action="store_true",

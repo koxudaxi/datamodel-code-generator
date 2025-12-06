@@ -398,6 +398,7 @@ class Config(BaseModel):
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
     use_one_literal_as_default: bool = False
+    use_enum_values_in_discriminator: bool = False
     set_default_enum_member: bool = False
     use_subclass_enum: bool = False
     use_specialized_enum: bool = True
@@ -803,6 +804,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             encoding=config.encoding,
             enum_field_as_literal=config.enum_field_as_literal,
             use_one_literal_as_default=config.use_one_literal_as_default,
+            use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
             set_default_enum_member=config.set_default_enum_member,
             use_subclass_enum=config.use_subclass_enum,
             use_specialized_enum=config.use_specialized_enum,

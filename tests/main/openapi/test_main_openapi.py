@@ -73,6 +73,51 @@ def test_main_openapi_discriminator_enum(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_openapi_discriminator_enum_use_enum_values(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator enum using enum values in literal."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator/enum_use_enum_values.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-enum-values-in-discriminator",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_enum_use_enum_values_sanitized(output_file: Path) -> None:
+    """Enum values requiring sanitization are rendered as enum members in discriminator."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "discriminator_enum_sanitized.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="discriminator/enum_use_enum_values_sanitized.py",
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--use-enum-values-in-discriminator",
+            ],
+        )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_enum_duplicate(output_file: Path) -> None:
     """Test OpenAPI generation with duplicate discriminator enum."""
     run_main_and_assert(
@@ -3018,4 +3063,24 @@ def test_main_openapi_read_only_write_only_empty_base(output_file: Path) -> None
             "--read-only-write-only-model-type",
             "all",
         ],
+    )
+
+
+def test_main_openapi_dot_notation_inheritance(output_dir: Path) -> None:
+    """Test dot notation in schema names with inheritance."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dot_notation_inheritance.yaml",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_inheritance",
+        input_file_type="openapi",
+    )
+
+
+def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
+    """Test dot notation with deep inheritance from ancestor packages (issue #2039)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dot_notation_deep_inheritance.yaml",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_deep_inheritance",
+        input_file_type="openapi",
     )
