@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    example: Optional[List] = None
+    example: Optional[List[Any]] = None

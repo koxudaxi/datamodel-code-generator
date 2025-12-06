@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import io
 import os
 import re
@@ -63,22 +64,24 @@ def inject_help(markdown_text: str, help_text: str) -> str:
 def main() -> Exit:
     """Update or validate command help in target markdown files."""
     help_text = get_help()
-    arg_parser.add_argument(
-        "--validate",
+    script_parser = argparse.ArgumentParser(description="Update command help in markdown files")
+    script_parser.add_argument(
+        "--check",
         action="store_true",
-        help="Validate the file content is up to date",
+        help="Check if the file content is up to date without modifying",
     )
-    args = arg_parser.parse_args()
-    validate: bool = args.validate
+    args = script_parser.parse_args()
+    check: bool = args.check
 
     for file_path in TARGET_MARKDOWN_FILES:
         with file_path.open("r") as f:
             markdown_text = f.read()
         new_markdown_text = inject_help(markdown_text, help_text)
-        if validate and new_markdown_text != markdown_text:
-            return Exit.ERROR
-        with file_path.open("w") as f:
-            f.write(new_markdown_text)
+        if new_markdown_text != markdown_text:
+            if check:
+                return Exit.ERROR
+            with file_path.open("w") as f:
+                f.write(new_markdown_text)
     return Exit.OK
 
 

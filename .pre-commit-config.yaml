@@ -1,3 +1,6 @@
+ci:
+  skip: [readme]
+
 repos:
 - repo: https://github.com/python-jsonschema/check-jsonschema
   rev: 0.35.0
@@ -15,7 +18,7 @@ repos:
     - id: pyproject-fmt
       args: ["--max-supported-python=3.14"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.14.6'
+  rev: 'v0.14.7'
   hooks:
   - id: ruff-format
     exclude: "^tests/data"
@@ -29,3 +32,11 @@ repos:
     additional_dependencies:
     - tomli
     exclude: "^tests/|^CODE_OF_CONDUCT.md"
+- repo: local
+  hooks:
+  - id: readme
+    name: Update README command help
+    entry: bash -c 'test -x .tox/fix/bin/python || tox run -e fix --notest -qq; .tox/fix/bin/python scripts/update_command_help_on_markdown.py'
+    language: system
+    files: ^(src/datamodel_code_generator/arguments\.py|README\.md|docs/index\.md)$
+    pass_filenames: false

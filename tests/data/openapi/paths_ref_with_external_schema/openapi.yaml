@@ -1,0 +1,19 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test API
+paths:
+  /pets:
+    $ref: "./apis/pets/index.yaml#/paths/~1pets"
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+        message:
+          type: string

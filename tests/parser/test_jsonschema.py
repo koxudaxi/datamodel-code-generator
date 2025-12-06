@@ -333,8 +333,8 @@ def test_parse_one_of_object(source_obj: dict[str, Any], generated_classes: str)
     string_on_field: Optional[str] = Field('default string', description='description')
     number: Optional[float] = 123
     number_on_field: Optional[float] = Field(123, description='description')
-    number_array: Optional[List] = [1, 2, 3]
-    string_array: Optional[List] = ['a', 'b', 'c']
+    number_array: Optional[List[Any]] = [1, 2, 3]
+    string_array: Optional[List[Any]] = ['a', 'b', 'c']
     object: Optional[Dict[str, Any]] = {'key': 'value'}""",
         )
     ],
@@ -807,3 +807,40 @@ def test_create_data_model_dataclass_arguments(
     result = parser._create_data_model(**kwargs)
     assert isinstance(result, DataClass)
     assert result.dataclass_arguments == expected
+
+
+def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
+    """Test _get_ref_body_from_url handles UNC file:// URLs correctly."""
+    parser = JsonSchemaParser("")
+    mock_load = mocker.patch(
+        "datamodel_code_generator.parser.jsonschema.load_yaml_dict_from_path",
+        return_value={"type": "object"},
+    )
+
+    result = parser._get_ref_body_from_url("file://server/share/schemas/pet.json")
+
+    assert result == {"type": "object"}
+    mock_load.assert_called_once()
+    called_path = mock_load.call_args[0][0]
+    # On Windows, UNC paths have \\server\share\ as a single "drive" part
+    # On POSIX, they're separate: /, server, share, schemas, pet.json
+    path_str = str(called_path)
+    assert "server" in path_str
+    assert "share" in path_str
+    assert called_path.parts[-2:] == ("schemas", "pet.json")
+
+
+def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
+    """Test _get_ref_body_from_url handles local file:// URLs (no netloc)."""
+    parser = JsonSchemaParser("")
+    mock_load = mocker.patch(
+        "datamodel_code_generator.parser.jsonschema.load_yaml_dict_from_path",
+        return_value={"type": "string"},
+    )
+
+    result = parser._get_ref_body_from_url("file:///home/user/schemas/pet.json")
+
+    assert result == {"type": "string"}
+    mock_load.assert_called_once()
+    called_path = mock_load.call_args[0][0]
+    assert called_path.parts[-4:] == ("home", "user", "schemas", "pet.json")

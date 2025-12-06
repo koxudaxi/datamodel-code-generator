@@ -373,6 +373,9 @@ Typing customization:
                         times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
+  --use-enum-values-in-discriminator
+                        Use enum member literals in discriminator fields instead of string
+                        literals
   --use-generic-container-types
                         Use generic container types for type hinting (typing.Sequence,
                         typing.Mapping). If `--use-standard-collections` option is set, then
@@ -435,6 +438,15 @@ Field customization:
                         docstring
 
 Model customization:
+  --all-exports-collision-strategy {error,minimal-prefix,full-prefix}
+                        Strategy for name collisions when using --all-exports-
+                        scope=recursive. ''error'': raise an error (default). ''minimal-
+                        prefix'': add module prefix only to colliding names. ''full-prefix'':
+                        add full module path prefix to colliding names.
+  --all-exports-scope {children,recursive}
+                        Generate __all__ in __init__.py with re-exports. ''children'': export
+                        from direct child modules only. ''recursive'': export from all
+                        descendant modules.
   --allow-extra-fields  Deprecated: Allow passing extra fields. This flag is deprecated. Use
                         `--extra-fields=allow` instead.
   --allow-population-by-field-name
@@ -470,6 +482,14 @@ Model customization:
                         Set name of models defined inline from the parent model
   --reuse-model         Reuse models on the field when a module has the model with the same
                         content
+  --reuse-scope {module,tree}
+                        Scope for model reuse deduplication: module (per-file, default) or
+                        tree (cross-file with shared module). Only effective when --reuse-
+                        model is set.
+  --shared-module-name SHARED_MODULE_NAME
+                        Name of the shared module for --reuse-scope=tree (default:
+                        "shared"). Use this option if your schema has a file named "shared".
+  --skip-root-model     Skip generating the model for the root schema element
   --target-python-version {3.9,3.10,3.11,3.12,3.13,3.14}
                         target python version
   --treat-dot-as-module
@@ -482,7 +502,11 @@ Model customization:
   --use-title-as-name   use titles as class names of models
 
 Template customization:
-  --aliases ALIASES     Alias mapping file
+  --aliases ALIASES     Alias mapping file (JSON) for renaming fields. Supports hierarchical
+                        formats: Flat: {''field'': ''alias''} applies to all occurrences.
+                        Scoped: {''ClassName.field'': ''alias''} applies to specific class.
+                        Priority: scoped > flat. Example: {''User.name'': ''user_name'',
+                        ''Address.name'': ''addr_name'', ''id'': ''id_''}
   --custom-file-header CUSTOM_FILE_HEADER
                         Custom file header
   --custom-file-header-path CUSTOM_FILE_HEADER_PATH
@@ -512,6 +536,10 @@ OpenAPI-only options:
                         query parameters (Only OpenAPI)
   --openapi-scopes {schemas,paths,tags,parameters,webhooks} [{schemas,paths,tags,parameters,webhooks} ...]
                         Scopes of OpenAPI model generation (default: schemas)
+  --read-only-write-only-model-type {request-response,all}
+                        Model generation for readOnly/writeOnly fields: ''request-response'' =
+                        Request/Response models only (no base model), ''all'' = Base + Request
+                        + Response models.
   --strict-nullable     Treat default field as a non-nullable field (Only OpenAPI)
   --use-operation-id-as-name
                         use operation id of OpenAPI as class names of models
@@ -519,9 +547,14 @@ OpenAPI-only options:
                         deprecated. it will be removed in future releases
 
 General options:
+  --check               Verify generated files are up-to-date without modifying them. Exits
+                        with code 1 if differences found, 0 if up-to-date. Useful for CI to
+                        ensure generated code is committed.
   --debug               show debug message (require "debug". `$ pip install ''datamodel-code-
                         generator[debug]''`)
   --disable-warnings    disable warnings
+  --generate-cli-command
+                        Generate CLI command from pyproject.toml configuration and exit
   --generate-pyproject-config
                         Generate pyproject.toml configuration from the provided CLI
                         arguments and exit

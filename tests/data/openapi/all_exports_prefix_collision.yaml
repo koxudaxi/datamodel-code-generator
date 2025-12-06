@@ -1,0 +1,22 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Prefix Collision Test
+paths: {}
+components:
+  schemas:
+    InputMessage:
+      type: object
+      properties:
+        id:
+          type: string
+    input.Message:
+      type: object
+      properties:
+        content:
+          type: string
+    output.Message:
+      type: object
+      properties:
+        result:
+          type: string

@@ -95,17 +95,7 @@ class TypedDict(DataModel):
     @property
     def all_fields(self) -> Iterator[DataModelFieldBase]:
         """Iterate over all fields including inherited ones."""
-        for base_class in self.base_classes:
-            if base_class.reference is None:  # pragma: no cover
-                continue
-            data_model = base_class.reference.source
-            if not isinstance(data_model, DataModel):  # pragma: no cover
-                continue
-
-            if isinstance(data_model, TypedDict):  # pragma: no cover
-                yield from data_model.all_fields
-
-        yield from self.fields
+        yield from self.iter_all_fields()
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render TypedDict class with appropriate syntax."""

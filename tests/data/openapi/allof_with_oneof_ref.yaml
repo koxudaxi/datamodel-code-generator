@@ -1,0 +1,64 @@
+# Test case for issue #1763
+# allOf referencing a schema with oneOf + discriminator
+
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /users:
+    post:
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPostRequest'
+      responses:
+        '200':
+          description: Success
+components:
+  schemas:
+    AdminUser:
+      type: object
+      required:
+        - userType
+        - adminLevel
+      properties:
+        userType:
+          type: string
+          enum:
+            - admin
+        adminLevel:
+          type: integer
+    RegularUser:
+      type: object
+      required:
+        - userType
+        - username
+      properties:
+        userType:
+          type: string
+          enum:
+            - regular
+        username:
+          type: string
+    User:
+      oneOf:
+        - $ref: '#/components/schemas/AdminUser'
+        - $ref: '#/components/schemas/RegularUser'
+      discriminator:
+        propertyName: userType
+        mapping:
+          admin: '#/components/schemas/AdminUser'
+          regular: '#/components/schemas/RegularUser'
+    UserPostRequest:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required:
+            - userId
+          properties:
+            userId:
+              type: string

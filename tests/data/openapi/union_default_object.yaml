@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: Union Default Object Test
+  version: 0.1.0
+servers:
+- url: http://example.com
+paths:
+  /test:
+    get:
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    Interval:
+      type: object
+      properties:
+        start:
+          type: integer
+        end:
+          type: integer
+    Container:
+      type: object
+      properties:
+        # Union[Interval, str] with dict default - should use default_factory
+        interval_or_string:
+          anyOf:
+            - $ref: '#/components/schemas/Interval'
+            - type: string
+          default:
+            start: 2009
+            end: 2019
+        # Union[Interval, str] with string default - should NOT use default_factory
+        string_or_interval:
+          anyOf:
+            - $ref: '#/components/schemas/Interval'
+            - type: string
+          default: "some string value"
+        # Union[Dict, Interval] with dict default - should NOT use default_factory (dict arm)
+        dict_or_interval:
+          anyOf:
+            - type: object
+              additionalProperties:
+                type: string
+            - $ref: '#/components/schemas/Interval'
+          default:
+            key: "value"

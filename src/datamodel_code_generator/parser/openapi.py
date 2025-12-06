@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from contextlib import nullcontext
 from enum import Enum
+from pathlib import Path
 from re import Pattern
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TypeVar, Union
 from warnings import warn
@@ -16,12 +18,15 @@ from warnings import warn
 from pydantic import Field
 
 from datamodel_code_generator import (
+    DEFAULT_SHARED_MODULE_NAME,
     DataclassArguments,
     Error,
     LiteralType,
     OpenAPIScope,
     PythonVersion,
     PythonVersionMin,
+    ReadOnlyWriteOnlyModelType,
+    ReuseScope,
     YamlValue,
     load_yaml_dict,
     snooper_to_methods,
@@ -35,7 +40,7 @@ from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaParser,
     get_model_by_path,
 )
-from datamodel_code_generator.reference import FieldNameResolver, snake_to_upper_camel
+from datamodel_code_generator.reference import FieldNameResolver, is_url, snake_to_upper_camel
 from datamodel_code_generator.types import (
     DataType,
     DataTypeManager,
@@ -46,7 +51,6 @@ from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
-    from pathlib import Path
     from urllib.parse import ParseResult
 
     from datamodel_code_generator.parser import DefaultPutDict
@@ -205,9 +209,12 @@ class OpenAPIParser(JsonSchemaParser):
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
         reuse_model: bool = False,
+        reuse_scope: ReuseScope | None = None,
+        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         use_one_literal_as_default: bool = False,
+        use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         use_specialized_enum: bool = True,
@@ -237,6 +244,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        skip_root_model: bool = False,
         use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
         remove_special_field_name_prefix: bool = False,
@@ -258,6 +266,7 @@ class OpenAPIParser(JsonSchemaParser):
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -292,9 +301,12 @@ class OpenAPIParser(JsonSchemaParser):
             use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
             reuse_model=reuse_model,
+            reuse_scope=reuse_scope,
+            shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,
+            use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
             use_specialized_enum=use_specialized_enum,
@@ -322,6 +334,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            skip_root_model=skip_root_model,
             use_type_alias=use_type_alias,
             special_field_name_prefix=special_field_name_prefix,
             remove_special_field_name_prefix=remove_special_field_name_prefix,
@@ -343,6 +356,7 @@ class OpenAPIParser(JsonSchemaParser):
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            read_only_write_only_model_type=read_only_write_only_model_type,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
@@ -385,9 +399,10 @@ class OpenAPIParser(JsonSchemaParser):
         obj: JsonSchemaObject,
         path: list[str],
         module_name: Optional[str] = None,  # noqa: UP045
+        class_name: Optional[str] = None,  # noqa: UP045
     ) -> list[DataModelFieldBase]:
         """Parse object fields, adding discriminator info for allOf polymorphism."""
-        fields = super().parse_object_fields(obj, path, module_name)
+        fields = super().parse_object_fields(obj, path, module_name, class_name=class_name)
         properties = obj.properties or {}
 
         result_fields: list[DataModelFieldBase] = []
@@ -457,6 +472,7 @@ class OpenAPIParser(JsonSchemaParser):
             if isinstance(media_obj.schema_, JsonSchemaObject):
                 data_types[media_type] = self.parse_schema(name, media_obj.schema_, [*path, media_type])
             elif media_obj.schema_ is not None:
+                self.resolve_ref(media_obj.schema_.ref)
                 data_types[media_type] = self.get_ref_data_type(media_obj.schema_.ref)
         return data_types
 
@@ -491,6 +507,7 @@ class OpenAPIParser(JsonSchemaParser):
                         [*path, str(status_code), content_type],  # pyright: ignore[reportArgumentType]
                     )
                 else:
+                    self.resolve_ref(object_schema.ref)
                     data_types[status_code][content_type] = self.get_ref_data_type(  # pyright: ignore[reportArgumentType]
                         object_schema.ref
                     )
@@ -540,7 +557,9 @@ class OpenAPIParser(JsonSchemaParser):
                 raise Exception(msg)  # noqa: TRY002
 
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name=parameter_name, excludes=exclude_field_names
+                field_name=parameter_name,
+                excludes=exclude_field_names,
+                class_name=name,
             )
             if parameter.schema_:
                 fields.append(
@@ -669,7 +688,7 @@ class OpenAPIParser(JsonSchemaParser):
                 path=[*path, "tags"],
             )
 
-    def parse_raw(self) -> None:  # noqa: PLR0912, PLR0915
+    def parse_raw(self) -> None:  # noqa: PLR0912, PLR0914, PLR0915
         """Parse OpenAPI specification including schemas, paths, and operations."""
         for source, path_parts in self._get_context_source_path_parts():  # noqa: PLR1702
             if self.validation:
@@ -718,7 +737,15 @@ class OpenAPIParser(JsonSchemaParser):
                 paths_path = [*path_parts, "#/paths"]
                 for path_name, methods_ in paths.items():
                     # Resolve path items if applicable
-                    methods = self.get_ref_model(methods_["$ref"]) if "$ref" in methods_ else methods_
+                    path_ref = methods_.get("$ref")
+                    if path_ref:
+                        methods = self.get_ref_model(path_ref)
+                        resolved_ref = self.model_resolver.resolve_ref(path_ref)
+                        ref_file = resolved_ref.split("#")[0] if "#" in resolved_ref else resolved_ref
+                        ref_base_path = Path(ref_file).parent if ref_file and not is_url(ref_file) else None
+                    else:
+                        methods = methods_
+                        ref_base_path = None
                     paths_parameters = parameters.copy()
                     if "parameters" in methods:
                         paths_parameters.extend(methods["parameters"])
@@ -727,26 +754,38 @@ class OpenAPIParser(JsonSchemaParser):
                         path = [*paths_path, relative_path_name]
                     else:  # pragma: no cover
                         path = get_special_path("root", paths_path)
-                    for operation_name, raw_operation in methods.items():
-                        if operation_name not in OPERATION_NAMES:
-                            continue
-                        if paths_parameters:
-                            if "parameters" in raw_operation:  # pragma: no cover
-                                raw_operation["parameters"].extend(paths_parameters)
-                            else:
-                                raw_operation["parameters"] = paths_parameters
-                        if security is not None and "security" not in raw_operation:
-                            raw_operation["security"] = security
-                        self.parse_operation(
-                            raw_operation,
-                            [*path, operation_name],
-                        )
+                    base_path_context = (
+                        self.model_resolver.current_base_path_context(ref_base_path) if ref_base_path else nullcontext()
+                    )
+                    with base_path_context:
+                        for operation_name, raw_operation in methods.items():
+                            if operation_name not in OPERATION_NAMES:
+                                continue
+                            if paths_parameters:
+                                if "parameters" in raw_operation:  # pragma: no cover
+                                    raw_operation["parameters"].extend(paths_parameters)
+                                else:
+                                    raw_operation["parameters"] = paths_parameters
+                            if security is not None and "security" not in raw_operation:
+                                raw_operation["security"] = security
+                            self.parse_operation(
+                                raw_operation,
+                                [*path, operation_name],
+                            )
 
             if OpenAPIScope.Webhooks in self.open_api_scopes:
                 webhooks: dict[str, dict[str, Any]] = specification.get("webhooks", {})
                 webhooks_path = [*path_parts, "#/webhooks"]
                 for webhook_name, methods_ in webhooks.items():
-                    methods = self.get_ref_model(methods_["$ref"]) if "$ref" in methods_ else methods_
+                    webhook_ref = methods_.get("$ref")
+                    if webhook_ref:
+                        methods = self.get_ref_model(webhook_ref)
+                        resolved_ref = self.model_resolver.resolve_ref(webhook_ref)
+                        ref_file = resolved_ref.split("#")[0] if "#" in resolved_ref else resolved_ref
+                        ref_base_path = Path(ref_file).parent if ref_file and not is_url(ref_file) else None
+                    else:
+                        methods = methods_
+                        ref_base_path = None
                     webhook_parameters: list[dict[str, Any]] = []
                     if "parameters" in methods:
                         webhook_parameters = [
@@ -759,20 +798,25 @@ class OpenAPIParser(JsonSchemaParser):
                         path = [*webhooks_path, relative_webhook_name]
                     else:  # pragma: no cover
                         path = get_special_path("root", webhooks_path)
-                    for operation_name, raw_operation in methods.items():
-                        if operation_name not in OPERATION_NAMES:
-                            continue
-                        if webhook_parameters:
-                            if "parameters" in raw_operation:
-                                raw_operation["parameters"].extend(webhook_parameters)
-                            else:
-                                raw_operation["parameters"] = webhook_parameters.copy()
-                        if security is not None and "security" not in raw_operation:
-                            raw_operation["security"] = security
-                        self.parse_operation(
-                            raw_operation,
-                            [*path, operation_name],
-                        )
+                    # Use base path context for external webhook references
+                    base_path_context = (
+                        self.model_resolver.current_base_path_context(ref_base_path) if ref_base_path else nullcontext()
+                    )
+                    with base_path_context:
+                        for operation_name, raw_operation in methods.items():
+                            if operation_name not in OPERATION_NAMES:
+                                continue
+                            if webhook_parameters:
+                                if "parameters" in raw_operation:
+                                    raw_operation["parameters"].extend(webhook_parameters)
+                                else:
+                                    raw_operation["parameters"] = webhook_parameters.copy()
+                            if security is not None and "security" not in raw_operation:
+                                raw_operation["security"] = security
+                            self.parse_operation(
+                                raw_operation,
+                                [*path, operation_name],
+                            )
 
         self._resolve_unparsed_json_pointer()
 

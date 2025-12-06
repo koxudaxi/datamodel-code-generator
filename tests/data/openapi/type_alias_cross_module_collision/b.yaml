@@ -1,0 +1,11 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Module B
+components:
+  schemas:
+    Item:
+      oneOf:
+        - type: array
+          items:
+            $ref: "#/components/schemas/Item"

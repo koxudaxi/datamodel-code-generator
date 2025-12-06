@@ -1,0 +1,19 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Local Collision Test
+paths: {}
+components:
+  schemas:
+    Message:
+      description: Local model in __init__.py
+      type: object
+      properties:
+        id:
+          type: string
+    child.Message:
+      description: Child model that collides with local Message
+      type: object
+      properties:
+        content:
+          type: string

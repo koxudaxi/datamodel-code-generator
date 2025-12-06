@@ -1,0 +1,19 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: No Child Test
+paths: {}
+components:
+  schemas:
+    parent.ParentModel:
+      description: Model in parent __init__.py
+      type: object
+      properties:
+        id:
+          type: string
+    parent.child.deep.DeepModel:
+      description: Model in deep nested module
+      type: object
+      properties:
+        name:
+          type: string

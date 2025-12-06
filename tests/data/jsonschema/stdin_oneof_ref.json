@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/definitions/test" }
+  ],
+  "definitions": {
+    "test": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
+    }
+  }
+}
