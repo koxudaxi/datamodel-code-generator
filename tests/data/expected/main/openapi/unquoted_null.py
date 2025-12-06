@@ -10,7 +10,7 @@ from pydantic import BaseModel, RootModel
 
 
 class Thing(BaseModel):
-    value: Optional[str] = None
+    value: Optional[str]
 
 
 class NullThing(RootModel[None]):
