@@ -40,6 +40,7 @@ from datamodel_code_generator.format import (
     PythonVersion,
     PythonVersionMin,
 )
+from datamodel_code_generator.imports import IMPORT_ANY
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
@@ -60,6 +61,7 @@ from datamodel_code_generator.parser.base import (
 )
 from datamodel_code_generator.reference import ModelType, Reference, is_url
 from datamodel_code_generator.types import (
+    ANY,
     DataType,
     DataTypeManager,
     EmptyDataType,
@@ -948,6 +950,259 @@ class JsonSchemaParser(Parser):
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
 
+    _CONSTRAINT_FIELDS: ClassVar[tuple[str, ...]] = (
+        "minLength",
+        "maxLength",
+        "pattern",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "minItems",
+        "maxItems",
+        "uniqueItems",
+    )
+
+    def _merge_primitive_schemas(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
+        """Merge multiple primitive schemas by computing the intersection of their constraints."""
+        if len(items) == 1:
+            return items[0]
+
+        base_dict: dict[str, Any] = {}
+        for item in items:
+            if item.type:
+                base_dict = item.dict(exclude_unset=True, by_alias=True)
+                break
+
+        if not base_dict:
+            base_dict = items[0].dict(exclude_unset=True, by_alias=True)
+
+        for item in items:
+            item_dict = item.dict(exclude_unset=True, by_alias=True)
+            for field in self._CONSTRAINT_FIELDS:
+                if field in item_dict and item_dict[field] is not None:
+                    if field not in base_dict or base_dict[field] is None:
+                        base_dict[field] = item_dict[field]
+                    else:
+                        base_dict[field] = JsonSchemaParser._intersect_constraint(
+                            field, base_dict[field], item_dict[field]
+                        )
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
+
+    @staticmethod
+    def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:
+        """Compute the intersection of two constraint values."""
+        if field in {"minLength", "minimum", "exclusiveMinimum", "minItems"}:
+            return max(val1, val2) if isinstance(val1, (int, float)) and isinstance(val2, (int, float)) else val1
+        if field in {"maxLength", "maximum", "exclusiveMaximum", "maxItems"}:
+            return min(val1, val2) if isinstance(val1, (int, float)) and isinstance(val2, (int, float)) else val1
+        if field == "pattern":
+            return f"(?={val1})(?={val2})" if val1 != val2 else val1
+        if field == "uniqueItems":
+            return val1 or val2
+        return val1
+
+    def _build_allof_type(  # noqa: PLR0911, PLR0912
+        self,
+        allof_items: list[JsonSchemaObject],
+        depth: int,
+        visited: frozenset[int],
+        max_depth: int,
+        max_union_elements: int,
+    ) -> DataType | None:
+        """Build a DataType from allOf schema items."""
+        if not allof_items:
+            return None
+
+        if len(allof_items) == 1:
+            item = allof_items[0]
+            if item.ref:
+                return self.get_ref_data_type(item.ref)
+            return self._build_lightweight_type(item, depth + 1, visited, max_depth, max_union_elements)
+
+        ref_items: list[JsonSchemaObject] = []
+        primitive_items: list[JsonSchemaObject] = []
+        constraint_only_items: list[JsonSchemaObject] = []
+        object_items: list[JsonSchemaObject] = []
+
+        for item in allof_items:
+            if item.ref:
+                ref_items.append(item)
+            elif item.type and item.type != "object" and not isinstance(item.type, list):
+                primitive_items.append(item)
+            elif item.properties or item.additionalProperties or item.type == "object":
+                object_items.append(item)
+            elif item.allOf or item.anyOf or item.oneOf:
+                nested_type = self._build_lightweight_type(item, depth + 1, visited, max_depth, max_union_elements)
+                if nested_type is None:
+                    return None
+                if nested_type.reference:
+                    ref_items.append(item)
+                else:
+                    primitive_items.append(item)
+            elif item.enum:
+                primitive_items.append(item)
+            elif self._has_constraints(item):
+                constraint_only_items.append(item)
+
+        if ref_items and not primitive_items and not object_items:
+            return self.get_ref_data_type(ref_items[0].ref)
+
+        if ref_items and (primitive_items or object_items or constraint_only_items):
+            ignored_count = len(primitive_items) + len(constraint_only_items)
+            if ignored_count > 0:
+                warn(
+                    f"allOf combines $ref with {ignored_count} constraint(s) that will be ignored "
+                    f"in inherited field type resolution. Consider defining constraints in the referenced schema.",
+                    stacklevel=4,
+                )
+            return self.get_ref_data_type(ref_items[0].ref)
+
+        if primitive_items and not object_items:
+            all_primitives = primitive_items + constraint_only_items
+            merged_schema = self._merge_primitive_schemas(all_primitives)
+            return self._build_lightweight_type(merged_schema, depth + 1, visited, max_depth, max_union_elements)
+
+        if object_items:
+            additional_props_types: list[DataType] = []
+
+            for obj_item in object_items:
+                if isinstance(obj_item.additionalProperties, JsonSchemaObject):
+                    ap_type = self._build_lightweight_type(
+                        obj_item.additionalProperties, depth + 1, visited, max_depth, max_union_elements
+                    )
+                    if ap_type:
+                        additional_props_types.append(ap_type)
+
+            if additional_props_types:
+                best_type = additional_props_types[0]
+                for ap_type in additional_props_types[1:]:
+                    is_better = best_type.type == ANY and ap_type.type != ANY
+                    is_better = is_better or (ap_type.reference and not best_type.reference)
+                    if is_better:
+                        best_type = ap_type
+                return self.data_type(data_types=[best_type], is_dict=True)
+
+            return self.data_type(data_types=[DataType(type=ANY, import_=IMPORT_ANY)], is_dict=True)
+
+        return None
+
+    def _has_constraints(self, schema: JsonSchemaObject) -> bool:
+        """Check if schema has any constraint fields."""
+        for field in self._CONSTRAINT_FIELDS:
+            if getattr(schema, field, None) is not None or field in schema.extras:
+                return True
+        return False
+
+    @staticmethod
+    def _count_constraints(schema: JsonSchemaObject) -> int:
+        """Count the number of constraint fields in a schema for specificity comparison."""
+        count = 0
+        for field in JsonSchemaParser._CONSTRAINT_FIELDS:
+            if getattr(schema, field, None) is not None or field in schema.extras:
+                count += 1
+        return count
+
+    def _build_lightweight_type(  # noqa: PLR0911, PLR0912
+        self,
+        schema: JsonSchemaObject,
+        depth: int = 0,
+        visited: frozenset[int] | None = None,
+        max_depth: int = 3,
+        max_union_elements: int = 5,
+    ) -> DataType | None:
+        """Build a DataType from schema without generating models."""
+        if depth > max_depth:
+            return None
+        if visited is None:
+            visited = frozenset()
+
+        schema_id = id(schema)
+        if schema_id in visited:
+            return None
+        visited |= {schema_id}
+
+        if schema.ref:
+            return self.get_ref_data_type(schema.ref)
+
+        if schema.enum:
+            return self.get_data_type(schema)
+
+        if schema.is_array and schema.items and isinstance(schema.items, JsonSchemaObject):
+            if schema.items.ref:
+                item_type = self.get_ref_data_type(schema.items.ref)
+            else:
+                item_type = self._build_lightweight_type(
+                    schema.items, depth + 1, visited, max_depth, max_union_elements
+                )
+                if item_type is None:
+                    item_type = DataType(type=ANY, import_=IMPORT_ANY)
+            return self.data_type(data_types=[item_type], is_list=True)
+
+        if schema.type and not isinstance(schema.type, list) and schema.type != "object":
+            return self.get_data_type(schema)
+        if isinstance(schema.type, list):
+            return self.get_data_type(schema)
+
+        combined_items = schema.anyOf or schema.oneOf
+        if combined_items:
+            if len(combined_items) > max_union_elements:
+                return None
+            data_types: list[DataType] = []
+            for item in combined_items:
+                if item.ref:
+                    data_types.append(self.get_ref_data_type(item.ref))
+                else:
+                    item_type = self._build_lightweight_type(item, depth + 1, visited, max_depth, max_union_elements)
+                    if item_type is None:
+                        return None
+                    data_types.append(item_type)
+            if len(data_types) == 1:
+                return data_types[0]
+            return self.data_type(data_types=data_types)
+
+        if schema.allOf:
+            return self._build_allof_type(schema.allOf, depth, visited, max_depth, max_union_elements)
+
+        if isinstance(schema.additionalProperties, JsonSchemaObject):
+            value_type = self._build_lightweight_type(
+                schema.additionalProperties, depth + 1, visited, max_depth, max_union_elements
+            )
+            if value_type is None:
+                value_type = DataType(type=ANY, import_=IMPORT_ANY)
+            return self.data_type(data_types=[value_type], is_dict=True)
+
+        if schema.properties or schema.type == "object":
+            return self.data_type(data_types=[DataType(type=ANY, import_=IMPORT_ANY)], is_dict=True)
+
+        return None
+
+    def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
+        """Get the data type for an inherited property from parent schemas."""
+        for base in base_classes:
+            if not base.path:
+                continue
+            if "#" in base.path:
+                file_part, fragment = base.path.split("#", 1)
+                ref = f"{file_part}#{fragment}" if file_part else f"#{fragment}"
+            else:
+                ref = f"#{base.path}"
+            try:
+                parent_schema = self._load_ref_schema_object(ref)
+            except Exception:  # noqa: BLE001, S112
+                continue
+            if not parent_schema.properties:
+                continue
+            prop_schema = parent_schema.properties.get(prop_name)
+            if not isinstance(prop_schema, JsonSchemaObject):
+                continue
+            result = self._build_lightweight_type(prop_schema)
+            if result is not None:
+                return result
+        return None
+
     def _schema_signature(self, prop_schema: JsonSchemaObject | bool) -> str | bool:  # noqa: FBT001, PLR6301
         """Normalize property schema for comparison across allOf items."""
         if isinstance(prop_schema, bool):
@@ -1147,7 +1402,7 @@ class JsonSchemaParser(Parser):
 
         return self.data_type(reference=reference)
 
-    def _parse_all_of_item(  # noqa: PLR0913, PLR0917
+    def _parse_all_of_item(  # noqa: PLR0912, PLR0913, PLR0917
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -1157,7 +1412,7 @@ class JsonSchemaParser(Parser):
         required: list[str],
         union_models: list[Reference],
     ) -> None:
-        for all_of_item in obj.allOf:
+        for all_of_item in obj.allOf:  # noqa: PLR1702
             if all_of_item.ref:  # $ref
                 ref_schema = self._load_ref_schema_object(all_of_item.ref)
 
@@ -1189,14 +1444,28 @@ class JsonSchemaParser(Parser):
                     if all_of_item.required:
                         required.extend(all_of_item.required)
                         field_names = {f.original_name or f.name for f in object_fields}
+                        existing_field_names = {f.original_name or f.name for f in fields}
                         for request in all_of_item.required:
-                            if request in field_names:
+                            if request in field_names or request in existing_field_names:
                                 continue
+                            if self.force_optional_for_required_fields:
+                                continue
+                            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                                request, excludes=existing_field_names, class_name=name
+                            )
+                            data_type = self._get_inherited_field_type(request, base_classes)
+                            if data_type is None:
+                                data_type = DataType(type=ANY, import_=IMPORT_ANY)
                             fields.append(
                                 self.data_model_field_type(
-                                    required=True, original_name=request, data_type=DataType()
+                                    name=field_name,
+                                    required=True,
+                                    original_name=request,
+                                    alias=alias,
+                                    data_type=data_type,
                                 )
                             )
+                            existing_field_names.update({request, field_name})
                 elif all_of_item.required:
                     required.extend(all_of_item.required)
                 self._parse_all_of_item(

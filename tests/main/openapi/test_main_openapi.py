@@ -1545,8 +1545,41 @@ def test_main_openapi_allof_with_required_inherited_fields_force_optional(output
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file="allof_with_required_inherited_fields_force_optional.py",
+        expected_file="danallof_with_required_inherited_fields_force_optional.py",
         extra_args=["--force-optional"],
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_nested_object(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes inherited nested object fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_nested_object.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_nested_object.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_complex_allof(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes complex allOf fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_complex_allof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_complex_allof.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf covering all type inheritance scenarios."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_comprehensive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_comprehensive.py",
     )
 
 

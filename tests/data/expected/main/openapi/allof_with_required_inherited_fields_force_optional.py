@@ -17,5 +17,3 @@ class ProjectedPet(BaseModel):
 class Pet(ProjectedPet):
     tag: Optional[str] = None
     opts: Optional[List[str]] = None
-    id: int
-    name: str
