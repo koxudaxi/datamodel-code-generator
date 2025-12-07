@@ -266,8 +266,6 @@ def test_url_ref_matches_local_id_no_fragment() -> None:
     """URL $ref matching a local $id should resolve to the $id's path (Issue #1747)."""
     resolver = ModelResolver()
     resolver.set_current_root([])
-    # Simulate: $defs.child has $id: "https://schemas.example.org/child"
-    # which maps to path ["#", "$defs", "child"]
     resolver.add_id("https://schemas.example.org/child", ["#", "$defs", "child"])
 
     result = resolver.resolve_ref("https://schemas.example.org/child#")
@@ -283,7 +281,6 @@ def test_url_ref_matches_local_id_with_fragment() -> None:
 
     result = resolver.resolve_ref("https://schemas.example.org/child#/properties/name")
 
-    # Should resolve to: $id path + $ref fragment
     assert result == "#/$defs/child/properties/name"
 
 
@@ -291,11 +288,9 @@ def test_url_ref_no_matching_local_id() -> None:
     """URL $ref not matching any local $id should remain as URL (Issue #1747)."""
     resolver = ModelResolver()
     resolver.set_current_root([])
-    # No $id registered for the URL
 
     result = resolver.resolve_ref("https://schemas.example.org/other#")
 
-    # Should remain as URL since no matching $id
     assert result == "https://schemas.example.org/other#"
 
 
@@ -318,8 +313,6 @@ def test_url_ref_matches_local_id_with_base_url() -> None:
 
     result = resolver.resolve_ref("https://schemas.example.org/child#")
 
-    # When base_url is set, the mapped $id path is also resolved with base_url
-    # The key point is that it maps to the local $defs path, not to the external URL
     assert result == "https://cdn.example.com/schemas/main.json#/$defs/child"
 
 
@@ -327,11 +320,8 @@ def test_url_ref_matches_local_id_preserves_empty_json_pointer_token() -> None:
     """URL $ref fragment with empty JSON Pointer token (//) should be preserved (Issue #1747)."""
     resolver = ModelResolver()
     resolver.set_current_root([])
-    # Simulate $id mapping where mapped_fragment ends with a path
     resolver.add_id("https://example.org/types", ["#", "$defs", "types"])
 
-    # JSON Pointer with empty token: //child means empty key followed by "child"
     result = resolver.resolve_ref("https://example.org/types#/items//child")
 
-    # The // should be preserved as it represents a valid empty token in JSON Pointer
     assert result == "#/$defs/types/items//child"

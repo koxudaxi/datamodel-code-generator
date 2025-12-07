@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  title: Test API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    ProjectedPet:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Pet:
+      allOf:
+        - $ref: '#/components/schemas/ProjectedPet'
+        - type: object
+          required:
+            - id
+            - name
+            - opts
+          properties:
+            tag:
+              type: string
+            opts:
+              type: array
+              items:
+                type: string
