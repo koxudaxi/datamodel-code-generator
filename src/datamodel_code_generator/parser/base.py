@@ -272,6 +272,7 @@ def relative(
     reference: str,
     *,
     reference_is_module: bool = False,
+    current_is_init: bool = False,
 ) -> tuple[str, str]:
     """Find relative module path.
 
@@ -279,11 +280,15 @@ def relative(
         current_module: Current module path (e.g., "foo.bar")
         reference: Reference path (e.g., "foo.baz.ClassName" or "foo.baz" if reference_is_module)
         reference_is_module: If True, treat reference as a module path (not module.class)
+        current_is_init: If True, treat current_module as a package __init__.py (adds depth)
 
     Returns:
         Tuple of (from_path, import_name) for constructing import statements
     """
-    current_module_path = current_module.split(".") if current_module else []
+    if current_is_init:
+        current_module_path = [*current_module.split("."), "__init__"] if current_module else ["__init__"]
+    else:
+        current_module_path = current_module.split(".") if current_module else []
 
     if reference_is_module:
         reference_path = reference.split(".") if reference else []
@@ -1859,13 +1864,9 @@ class Parser(ABC):
         Returns:
             The forwarder module content as a string
         """
-        if is_init:
-            original_str = ".".join((*original_module, "__init__")) if original_module else "__init__"
-        else:
-            original_str = ".".join(original_module) if original_module else ""
-
+        original_str = ".".join(original_module)
         internal_str = ".".join(internal_module)
-        from_dots, module_name = relative(original_str, internal_str, reference_is_module=True)
+        from_dots, module_name = relative(original_str, internal_str, reference_is_module=True, current_is_init=is_init)
         relative_import = f"{from_dots}{module_name}"
 
         imports = Imports()
