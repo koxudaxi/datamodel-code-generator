@@ -880,8 +880,10 @@ class Parser(ABC):
         imports: Imports,
         scoped_model_resolver: ModelResolver,
         init: bool,  # noqa: FBT001
+        internal_modules: set[tuple[str, ...]] | None = None,
     ) -> None:
         model_paths = {model.path for model in models}
+        internal_modules = internal_modules or set()
 
         for model in models:
             scoped_model_resolver.add([model.path], model.class_name)
@@ -914,6 +916,12 @@ class Parser(ABC):
                     ):
                         rel_path_depth = model.module_path[-1].count(".")
                         from_ = from_[rel_path_depth:]
+
+                    ref_module = tuple(data_type.full_name.split(".")[:-1])
+                    if from_ and ref_module in internal_modules:
+                        from_ = f"{from_}{import_}"
+                        import_ = data_type.reference.short_name
+                        full_path = from_, import_
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
@@ -2141,7 +2149,7 @@ class Parser(ABC):
             module_models.insert(0, shared_module_entry)
 
         # Resolve circular imports by moving models to _internal.py modules
-        module_models, _internal_modules, forwarder_map = self.__resolve_circular_imports(module_models)
+        module_models, internal_modules, forwarder_map = self.__resolve_circular_imports(module_models)
 
         class Processed(NamedTuple):
             module: tuple[str, ...]
@@ -2174,7 +2182,7 @@ class Parser(ABC):
             self.__alias_shadowed_imports(models, all_module_fields)
             self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
-            self.__change_from_import(models, imports, scoped_model_resolver, init)
+            self.__change_from_import(models, imports, scoped_model_resolver, init, internal_modules)
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)

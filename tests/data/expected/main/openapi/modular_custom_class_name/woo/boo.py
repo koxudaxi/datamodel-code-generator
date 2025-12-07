@@ -8,12 +8,12 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from .. import _internal as field_internal
 from .. import bar
+from .._internal import CustomCocoa, CustomSource
 
 
 class CustomChocolate(BaseModel):
     flavour: Optional[str] = None
-    source: Optional[field_internal.CustomSource] = None
-    cocoa: Optional[field_internal.CustomCocoa] = None
+    source: Optional[CustomSource] = None
+    cocoa: Optional[CustomCocoa] = None
     field: Optional[bar.CustomField] = None
