@@ -1465,10 +1465,7 @@ class Parser(ABC):
                 if isinstance(model_field.default, list):
                     continue
                 for data_type in model_field.data_type.all_data_types:
-                    if (
-                        data_type.reference
-                        and isinstance(data_type.reference.source, pydantic_model_v2.RootModel)
-                    ):
+                    if data_type.reference and isinstance(data_type.reference.source, pydantic_model_v2.RootModel):
                         # Use alias if available (handles import collisions)
                         type_name = data_type.alias or data_type.reference.short_name
                         model_field.default = WrappedDefault(
