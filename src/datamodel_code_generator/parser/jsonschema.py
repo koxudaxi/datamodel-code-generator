@@ -10,7 +10,7 @@ import enum as _enum
 import json
 from collections import defaultdict
 from collections.abc import Iterable
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, Union
@@ -995,13 +995,9 @@ class JsonSchemaParser(Parser):
         """Compute the intersection of two constraint values."""
         v1: float | None = None
         v2: float | None = None
-        try:
-            if val1 is not None:
-                v1 = float(val1)
-            if val2 is not None:
-                v2 = float(val2)
-        except (TypeError, ValueError):
-            pass
+        with suppress(TypeError, ValueError):
+            v1 = float(val1) if val1 is not None else None
+            v2 = float(val2) if val2 is not None else None
 
         if field in {"minLength", "minimum", "exclusiveMinimum", "minItems"}:
             if v1 is not None and v2 is not None:
