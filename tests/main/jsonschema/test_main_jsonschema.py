@@ -3214,3 +3214,70 @@ def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
             "--set-default-enum-member",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_no_annotated(output_file: Path) -> None:
+    """Test RootModel default values without --use-annotated flag.
+
+    When --use-annotated is not used, the WrappedDefault logic should be skipped
+    and default_factory should be used instead.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_no_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_branches(output_file: Path) -> None:
+    """Test RootModel default value branches.
+
+    Tests the following cases:
+    - Field with RootModel reference and default value (wrapped)
+    - Field with RootModel reference but no default (skipped)
+    - Field with list default value (skipped, not wrapped)
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_branches.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_branches.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) -> None:
+    """Test that non-RootModel references are not wrapped.
+
+    Tests the following cases:
+    - Field with RootModel reference (wrapped)
+    - Field with BaseModel reference (not wrapped)
+    - Field with primitive type (not wrapped)
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_non_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_non_root.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
