@@ -3075,7 +3075,7 @@ def test_main_openapi_circular_imports_with_inheritance(output_dir: Path) -> Non
 
 
 def test_main_openapi_circular_imports_small_cycle(output_dir: Path) -> None:
-    """Test that small cycles (below threshold) do not create _internal.py."""
+    """Test that small 2-module cycles also create _internal.py."""
     with freeze_time(TIMESTAMP):
         run_main_and_assert(
             input_path=OPEN_API_DATA_PATH / "circular_imports_small_cycle.yaml",

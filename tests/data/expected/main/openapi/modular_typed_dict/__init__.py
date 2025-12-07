@@ -2,33 +2,6 @@
 #   filename:  modular.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from __future__ import annotations
+from ._internal import DifferentTea, Error, Id, Optional, Result, Source
 
-from typing import NotRequired, TypeAlias, TypedDict
-
-from . import foo as foo_1
-from . import models
-from .nested import foo as foo_2
-
-Optional: TypeAlias = str
-
-
-Id: TypeAlias = str
-
-
-class Error(TypedDict):
-    code: int
-    message: str
-
-
-class Result(TypedDict):
-    event: NotRequired[models.Event]
-
-
-class Source(TypedDict):
-    country: NotRequired[str]
-
-
-class DifferentTea(TypedDict):
-    foo: NotRequired[foo_1.Tea]
-    nested: NotRequired[foo_2.Tea]
+__all__ = ["DifferentTea", "Error", "Id", "Optional", "Result", "Source"]

@@ -11,7 +11,7 @@ import operator
 import re
 import sys
 from abc import ABC, abstractmethod
-from collections import OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
@@ -1682,7 +1682,9 @@ class Parser(ABC):
     def _collect_exports_for_init(
         cls,
         module: tuple[str, ...],
-        processed_models: Sequence[tuple[tuple[str, ...], Sequence[DataModel], bool, Imports, ModelResolver]],
+        processed_models: Sequence[
+            tuple[tuple[str, ...], tuple[str, ...], Sequence[DataModel], bool, Imports, ModelResolver]
+        ],
         scope: AllExportsScope,
     ) -> list[tuple[str, tuple[str, ...], str]]:
         """Collect exports for __init__.py based on scope."""
@@ -1690,7 +1692,7 @@ class Parser(ABC):
         base = module[:-1] if module[-1] == "__init__.py" else module
         base_len = len(base)
 
-        for proc_module, proc_models, _, _, _ in processed_models:
+        for proc_module, _, proc_models, _, _, _ in processed_models:
             if not proc_models or proc_module == module:
                 continue
             last = proc_module[-1]
@@ -1818,6 +1820,55 @@ class Parser(ABC):
                 walk_data_type(field.data_type)
         return names
 
+    def __generate_forwarder_content(  # noqa: PLR6301
+        self,
+        original_module: tuple[str, ...],
+        internal_module: tuple[str, ...],
+        class_mappings: list[tuple[str, str]],
+        *,
+        is_init: bool = False,
+    ) -> str:
+        """Generate forwarder module content that re-exports classes from _internal.
+
+        Args:
+            original_module: The original module tuple (e.g., ("issuing",) or ())
+            internal_module: The _internal module tuple (e.g., ("_internal",))
+            class_mappings: List of (original_name, new_name) tuples, sorted by original_name
+            is_init: True if this is a package __init__.py, False for regular .py files
+
+        Returns:
+            The forwarder module content as a string
+        """
+        # Calculate relative import path from original module to internal module.
+        # For __init__.py (packages), depth is len(module) (package is inside a directory).
+        # For .py files (not packages), depth is len(module) - 1 (file is at same level as parent).
+        # Examples:
+        #   () as root __init__.py       -> depth=0, "._internal"
+        #   ("foo",) as foo/__init__.py  -> depth=1, ".._internal"
+        #   ("foo",) as foo.py           -> depth=0, "._internal"
+        #   ("foo","bar") as foo/bar.py  -> depth=1, ".._internal"
+        if not original_module:
+            relative_import = f".{internal_module[-1]}"
+        else:
+            depth = len(original_module) if is_init else len(original_module) - 1
+            dots = "." * (depth + 1)
+            relative_import = f"{dots}{internal_module[-1]}"
+
+        import_parts: list[str] = []
+        for original_name, new_name in class_mappings:
+            if original_name == new_name:
+                import_parts.append(new_name)
+            else:
+                import_parts.append(f"{new_name} as {original_name}")
+
+        import_line = f"from {relative_import} import {', '.join(import_parts)}"
+
+        all_names = [original_name for original_name, _ in class_mappings]
+        all_items = ", ".join(f'"{name}"' for name in all_names)
+        all_line = f"__all__ = [{all_items}]"
+
+        return f"{import_line}\n\n{all_line}\n"
+
     def __compute_internal_module_path(  # noqa: PLR6301
         self,
         scc_modules: set[tuple[str, ...]],
@@ -1881,29 +1932,38 @@ class Parser(ABC):
 
         return graph
 
-    def __resolve_circular_imports(  # noqa: PLR0912, PLR0914
+    def __resolve_circular_imports(  # noqa: PLR0914
         self,
         module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
-    ) -> tuple[list[tuple[tuple[str, ...], list[DataModel]]], set[tuple[str, ...]]]:
-        """Resolve circular imports by merging SCC modules into a single _internal.py."""
+    ) -> tuple[
+        list[tuple[tuple[str, ...], list[DataModel]]],
+        set[tuple[str, ...]],
+        dict[tuple[str, ...], tuple[tuple[str, ...], list[tuple[str, str]]]],
+    ]:
+        """Resolve circular imports by merging all SCCs into _internal.py modules.
+
+        Uses Tarjan's algorithm to find strongly connected components (SCCs) in the
+        module dependency graph. All modules in each SCC are merged into a single
+        _internal.py module to break import cycles. Original modules become thin
+        forwarders that re-export their classes from _internal.
+
+        Returns:
+            - Updated module_models_list with models moved to _internal modules
+            - Set of _internal modules created
+            - Forwarder map: original_module -> (internal_module, [(original_name, new_name)])
+        """
         graph = self.__build_module_dependency_graph(module_models_list)
 
         circular_sccs = find_circular_sccs(graph)
 
+        forwarder_map: dict[tuple[str, ...], tuple[tuple[str, ...], list[tuple[str, str]]]] = {}
+
         if not circular_sccs:
-            return module_models_list, set()
+            return module_models_list, set(), forwarder_map
 
-        def _is_root_module(node: tuple[str, ...]) -> bool:
-            return not node or node[-1] == "__init__"
-
-        min_scc_size_for_merge = 4
-        root_like_nodes = {node for node in graph if _is_root_module(node)}
-        problematic_sccs = [
-            scc for scc in circular_sccs if scc & root_like_nodes and len(scc) >= min_scc_size_for_merge
-        ]
-
-        if not problematic_sccs:
-            return module_models_list, set()
+        # All circular SCCs are problematic and should be merged into _internal.py
+        # to break the import cycles.
+        problematic_sccs = circular_sccs
 
         existing_modules = {module for module, _ in module_models_list}
         internal_modules_created: set[tuple[str, ...]] = set()
@@ -1918,37 +1978,41 @@ class Parser(ABC):
             internal_path = Path("/".join(internal_module))
 
             all_scc_models: list[DataModel] = []
-            class_name_counts: dict[str, int] = {}
+            model_to_original_module: dict[int, tuple[str, ...]] = {}
 
             for scc_module in sorted(scc):
                 for model in result_modules[scc_module]:
                     all_scc_models.append(model)
-                    class_name = model.class_name
-                    class_name_counts[class_name] = class_name_counts.get(class_name, 0) + 1
+                    model_to_original_module[id(model)] = scc_module
 
+            class_name_counts = Counter(model.class_name for model in all_scc_models)
             class_name_seen: dict[str, int] = {}
             internal_module_str = ".".join(internal_module)
-            for model in all_scc_models:
-                class_name = model.class_name
-                if class_name_counts[class_name] > 1:
-                    seen_count = class_name_seen.get(class_name, 0)
-                    if seen_count > 0:
-                        new_class_name = f"{class_name}_{seen_count}"
-                        model.reference.name = new_class_name
-                        model.reference.path = f"{internal_module_str}.{new_class_name}"
-                    else:
-                        model.reference.name = class_name
-                        model.reference.path = f"{internal_module_str}.{class_name}"
-                    class_name_seen[class_name] = seen_count + 1
-                else:
-                    model.reference.name = class_name
-                    model.reference.path = f"{internal_module_str}.{class_name}"
+            module_class_mappings: defaultdict[tuple[str, ...], list[tuple[str, str]]] = defaultdict(list)
 
+            for model in all_scc_models:
+                original_class_name = model.class_name
+                original_module = model_to_original_module[id(model)]
+
+                if class_name_counts[original_class_name] > 1:
+                    seen_count = class_name_seen.get(original_class_name, 0)
+                    new_class_name = f"{original_class_name}_{seen_count}" if seen_count > 0 else original_class_name
+                    class_name_seen[original_class_name] = seen_count + 1
+                else:
+                    new_class_name = original_class_name
+
+                model.reference.name = new_class_name
+                model.reference.path = f"{internal_module_str}.{new_class_name}"
                 model.file_path = internal_path
+
+                module_class_mappings[original_module].append((original_class_name, new_class_name))
 
             for scc_module in scc:
                 if scc_module in result_modules:  # pragma: no branch
                     result_modules[scc_module] = []
+                if scc_module in module_class_mappings:
+                    sorted_mappings = sorted(module_class_mappings[scc_module], key=operator.itemgetter(0))
+                    forwarder_map[scc_module] = (internal_module, sorted_mappings)
             result_modules[internal_module] = all_scc_models
 
         new_module_models: list[tuple[tuple[str, ...], list[DataModel]]] = [
@@ -1961,7 +2025,7 @@ class Parser(ABC):
             if module not in internal_modules_created:  # pragma: no branch
                 new_module_models.append((module, result_modules.get(module, [])))
 
-        return new_module_models, internal_modules_created
+        return new_module_models, internal_modules_created, forwarder_map
 
     def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
@@ -2039,10 +2103,11 @@ class Parser(ABC):
             module_models.insert(0, shared_module_entry)
 
         # Resolve circular imports by moving models to _internal.py modules
-        module_models, _internal_modules = self.__resolve_circular_imports(module_models)
+        module_models, _internal_modules, forwarder_map = self.__resolve_circular_imports(module_models)
 
         class Processed(NamedTuple):
             module: tuple[str, ...]
+            module_key: tuple[str, ...]  # Original module tuple (without file extension)
             models: list[DataModel]
             init: bool
             imports: Imports
@@ -2082,7 +2147,7 @@ class Parser(ABC):
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
 
-            processed_models.append(Processed(module, models, init, imports, scoped_model_resolver))
+            processed_models.append(Processed(module, module_, models, init, imports, scoped_model_resolver))
 
         for processed_model in processed_models:
             for model in processed_model.models:
@@ -2109,14 +2174,14 @@ class Parser(ABC):
             for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
+        for module, mod_key, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
         future_imports = self.imports.extract_future()
         future_imports_str = str(future_imports)
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
+        for module, mod_key, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
             export_imports: Imports | None = None
             export_names: list[str] = []
@@ -2164,6 +2229,14 @@ class Parser(ABC):
                         ),
                     ]
 
+            # Generate forwarder content for modules that had models moved to _internal
+            if not result and mod_key in forwarder_map:
+                internal_module, class_mappings = forwarder_map[mod_key]
+                forwarder_content = self.__generate_forwarder_content(
+                    mod_key, internal_module, class_mappings, is_init=init
+                )
+                result = [forwarder_content]
+
             if not result and not init:
                 continue
             body = "\n".join(result)
@@ -2177,7 +2250,7 @@ class Parser(ABC):
             )
 
         if all_exports_scope is not None:
-            processed_init_modules = {m for m, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
+            processed_init_modules = {m for m, _, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
             for init_module, init_result in list(results.items()):
                 if init_module[-1] != "__init__.py" or init_module in processed_init_modules or init_result.body:
                     continue

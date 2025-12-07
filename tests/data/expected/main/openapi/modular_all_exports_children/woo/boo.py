@@ -7,11 +7,12 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from .. import Source, bar, foo
+from .. import _internal as field_internal
+from .. import bar
 
 
 class Chocolate(BaseModel):
     flavour: Optional[str] = None
-    source: Optional[Source] = None
-    cocoa: Optional[foo.Cocoa] = None
+    source: Optional[field_internal.Source] = None
+    cocoa: Optional[field_internal.Cocoa] = None
     field: Optional[bar.FieldModel] = None

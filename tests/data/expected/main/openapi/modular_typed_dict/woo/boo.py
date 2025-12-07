@@ -6,11 +6,12 @@ from __future__ import annotations
 
 from typing import NotRequired, TypedDict
 
-from .. import Source, bar, foo
+from .. import _internal as field_internal
+from .. import bar
 
 
 class Chocolate(TypedDict):
     flavour: NotRequired[str]
-    source: NotRequired[Source]
-    cocoa: NotRequired[foo.Cocoa]
+    source: NotRequired[field_internal.Source]
+    cocoa: NotRequired[field_internal.Cocoa]
     field: NotRequired[bar.Field]

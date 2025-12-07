@@ -2,18 +2,6 @@
 #   filename:  circular_imports_small_cycle.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from __future__ import annotations
+from ._internal import Parent
 
-from typing import Optional
-
-from pydantic import BaseModel
-
-from . import sub
-
-
-class Parent(BaseModel):
-    id: Optional[str] = None
-    child: Optional[sub.Child] = None
-
-
-Parent.update_forward_refs()
+__all__ = ["Parent"]
