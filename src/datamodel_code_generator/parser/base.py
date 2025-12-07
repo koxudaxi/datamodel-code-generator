@@ -1899,6 +1899,61 @@ class Parser(ABC):
 
         return base_module
 
+    def __collect_scc_models(  # noqa: PLR6301
+        self,
+        scc: set[tuple[str, ...]],
+        result_modules: dict[tuple[str, ...], list[DataModel]],
+    ) -> tuple[list[DataModel], dict[int, tuple[str, ...]]]:
+        """Collect all models from SCC modules.
+
+        Returns:
+            - List of all models in the SCC
+            - Mapping from model id to its original module
+        """
+        all_models: list[DataModel] = []
+        model_to_module: dict[int, tuple[str, ...]] = {}
+        for scc_module in sorted(scc):
+            for model in result_modules[scc_module]:
+                all_models.append(model)
+                model_to_module[id(model)] = scc_module
+        return all_models, model_to_module
+
+    def __rename_and_relocate_scc_models(  # noqa: PLR6301
+        self,
+        all_scc_models: list[DataModel],
+        model_to_original_module: dict[int, tuple[str, ...]],
+        internal_module: tuple[str, ...],
+        internal_path: Path,
+    ) -> defaultdict[tuple[str, ...], list[tuple[str, str]]]:
+        """Rename duplicate classes and relocate models to internal module.
+
+        Returns:
+            Mapping from original module to list of (original_name, new_name) tuples.
+        """
+        class_name_counts = Counter(model.class_name for model in all_scc_models)
+        class_name_seen: dict[str, int] = {}
+        internal_module_str = ".".join(internal_module)
+        module_class_mappings: defaultdict[tuple[str, ...], list[tuple[str, str]]] = defaultdict(list)
+
+        for model in all_scc_models:
+            original_class_name = model.class_name
+            original_module = model_to_original_module[id(model)]
+
+            if class_name_counts[original_class_name] > 1:
+                seen_count = class_name_seen.get(original_class_name, 0)
+                new_class_name = f"{original_class_name}_{seen_count}" if seen_count > 0 else original_class_name
+                class_name_seen[original_class_name] = seen_count + 1
+            else:
+                new_class_name = original_class_name
+
+            model.reference.name = new_class_name
+            model.reference.path = f"{internal_module_str}.{new_class_name}"
+            model.file_path = internal_path
+
+            module_class_mappings[original_module].append((original_class_name, new_class_name))
+
+        return module_class_mappings
+
     def __build_module_dependency_graph(  # noqa: PLR6301
         self,
         module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
@@ -1932,7 +1987,7 @@ class Parser(ABC):
 
         return graph
 
-    def __resolve_circular_imports(  # noqa: PLR0914
+    def __resolve_circular_imports(
         self,
         module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
     ) -> tuple[
@@ -1977,40 +2032,15 @@ class Parser(ABC):
             internal_modules_created.add(internal_module)
             internal_path = Path("/".join(internal_module))
 
-            all_scc_models: list[DataModel] = []
-            model_to_original_module: dict[int, tuple[str, ...]] = {}
-
-            for scc_module in sorted(scc):
-                for model in result_modules[scc_module]:
-                    all_scc_models.append(model)
-                    model_to_original_module[id(model)] = scc_module
-
-            class_name_counts = Counter(model.class_name for model in all_scc_models)
-            class_name_seen: dict[str, int] = {}
-            internal_module_str = ".".join(internal_module)
-            module_class_mappings: defaultdict[tuple[str, ...], list[tuple[str, str]]] = defaultdict(list)
-
-            for model in all_scc_models:
-                original_class_name = model.class_name
-                original_module = model_to_original_module[id(model)]
-
-                if class_name_counts[original_class_name] > 1:
-                    seen_count = class_name_seen.get(original_class_name, 0)
-                    new_class_name = f"{original_class_name}_{seen_count}" if seen_count > 0 else original_class_name
-                    class_name_seen[original_class_name] = seen_count + 1
-                else:
-                    new_class_name = original_class_name
-
-                model.reference.name = new_class_name
-                model.reference.path = f"{internal_module_str}.{new_class_name}"
-                model.file_path = internal_path
-
-                module_class_mappings[original_module].append((original_class_name, new_class_name))
+            all_scc_models, model_to_original_module = self.__collect_scc_models(scc, result_modules)
+            module_class_mappings = self.__rename_and_relocate_scc_models(
+                all_scc_models, model_to_original_module, internal_module, internal_path
+            )
 
             for scc_module in scc:
                 if scc_module in result_modules:  # pragma: no branch
                     result_modules[scc_module] = []
-                if scc_module in module_class_mappings:
+                if scc_module in module_class_mappings:  # pragma: no branch
                     sorted_mappings = sorted(module_class_mappings[scc_module], key=operator.itemgetter(0))
                     forwarder_map[scc_module] = (internal_module, sorted_mappings)
             result_modules[internal_module] = all_scc_models
@@ -2018,7 +2048,7 @@ class Parser(ABC):
         new_module_models: list[tuple[tuple[str, ...], list[DataModel]]] = [
             (internal_module, result_modules[internal_module])
             for internal_module in sorted(internal_modules_created)
-            if internal_module in result_modules
+            if internal_module in result_modules  # pragma: no branch
         ]
 
         for module, _ in module_models_list:

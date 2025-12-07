@@ -297,6 +297,18 @@ class D(DataModel):
         return self._data
 
 
+@pytest.fixture
+def parser_fixture() -> C:
+    """Create a test parser instance for unit tests."""
+    return C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        base_class="Base",
+        source="",
+    )
+
+
 def test_additional_imports() -> None:
     """Test that additional imports are inside imports container."""
     new_parser = C(
@@ -589,66 +601,46 @@ def test_postprocess_result_modules_single_element_no_dot() -> None:
     assert ("file",) in result
 
 
-def test_get_module_directory_empty() -> None:
-    """Test get_module_directory with empty tuple."""
-    assert get_module_directory(()) == ()
+@pytest.mark.parametrize(
+    ("module", "expected"),
+    [
+        ((), ()),  # empty
+        (("pkg",), ("pkg",)),  # single
+        (("pkg", "issuing"), ("pkg",)),  # submodule
+        (("foo", "bar", "baz"), ("foo", "bar")),  # deeply nested
+    ],
+    ids=["empty", "single", "submodule", "deeply_nested"],
+)
+def test_get_module_directory(module: tuple[str, ...], expected: tuple[str, ...]) -> None:
+    """Test get_module_directory with various inputs."""
+    assert get_module_directory(module) == expected
 
 
-def test_get_module_directory_single() -> None:
-    """Test get_module_directory with single element tuple."""
-    assert get_module_directory(("pkg",)) == ("pkg",)
+@pytest.mark.parametrize(
+    ("scc_modules", "existing_modules", "expected"),
+    [
+        # name conflict: _internal already exists
+        ({(), ("sub",)}, {("_internal",)}, ("_internal_1",)),
+        # multiple conflicts: _internal and _internal_1 exist
+        ({(), ("sub",)}, {("_internal",), ("_internal_1",)}, ("_internal_2",)),
+        # different prefix break: LCP computation hits break
+        ({("common", "a"), ("common", "b"), ("other", "x")}, set(), ("_internal",)),
+    ],
+    ids=["name_conflict", "multiple_conflicts", "different_prefix_break"],
+)
+def test_compute_internal_module_path(
+    parser_fixture: C,
+    scc_modules: set[tuple[str, ...]],
+    existing_modules: set[tuple[str, ...]],
+    expected: tuple[str, ...],
+) -> None:
+    """Test __compute_internal_module_path with various conflict scenarios."""
+    result = parser_fixture._Parser__compute_internal_module_path(scc_modules, existing_modules)
+    assert result == expected
 
 
-def test_get_module_directory_submodule() -> None:
-    """Test get_module_directory with submodule tuple."""
-    assert get_module_directory(("pkg", "issuing")) == ("pkg",)
-
-
-def test_get_module_directory_deeply_nested() -> None:
-    """Test get_module_directory with deeply nested module."""
-    assert get_module_directory(("foo", "bar", "baz")) == ("foo", "bar")
-
-
-def test_compute_internal_module_path_name_conflict() -> None:
-    """Test __compute_internal_module_path when _internal already exists."""
-    parser = C(
-        data_model_type=D,
-        data_model_root_type=B,
-        data_model_field_type=DataModelFieldBase,
-        base_class="Base",
-        source="",
-    )
-    scc_modules = {(), ("sub",)}
-    existing_modules = {("_internal",)}
-    result = parser._Parser__compute_internal_module_path(scc_modules, existing_modules)
-    assert result == ("_internal_1",)
-
-
-def test_compute_internal_module_path_multiple_conflicts() -> None:
-    """Test __compute_internal_module_path when _internal and _internal_1 exist."""
-    parser = C(
-        data_model_type=D,
-        data_model_root_type=B,
-        data_model_field_type=DataModelFieldBase,
-        base_class="Base",
-        source="",
-    )
-    scc_modules = {(), ("sub",)}
-    existing_modules = {("_internal",), ("_internal_1",)}
-    result = parser._Parser__compute_internal_module_path(scc_modules, existing_modules)
-    assert result == ("_internal_2",)
-
-
-def test_build_module_dependency_graph_with_missing_ref() -> None:
+def test_build_module_dependency_graph_with_missing_ref(parser_fixture: C) -> None:
     """Test __build_module_dependency_graph when reference path is not in path_to_module."""
-    parser = C(
-        data_model_type=D,
-        data_model_root_type=B,
-        data_model_field_type=DataModelFieldBase,
-        base_class="Base",
-        source="",
-    )
-
     ref_source = MagicMock()
     ref_source.source = True
     ref_source.path = "nonexistent.Model"
@@ -665,21 +657,6 @@ def test_build_module_dependency_graph_with_missing_ref() -> None:
         (("pkg",), [model1]),
     ]
 
-    graph = parser._Parser__build_module_dependency_graph(module_models_list)
+    graph = parser_fixture._Parser__build_module_dependency_graph(module_models_list)
 
     assert graph == {("pkg",): set()}
-
-
-def test_compute_internal_module_path_with_different_prefix_break() -> None:
-    """Test __compute_internal_module_path when LCP computation hits break (different prefixes)."""
-    parser = C(
-        data_model_type=D,
-        data_model_root_type=B,
-        data_model_field_type=DataModelFieldBase,
-        base_class="Base",
-        source="",
-    )
-    scc_modules = {("common", "a"), ("common", "b"), ("other", "x")}
-    existing_modules: set[tuple[str, ...]] = set()
-    result = parser._Parser__compute_internal_module_path(scc_modules, existing_modules)
-    assert result == ("_internal",)
