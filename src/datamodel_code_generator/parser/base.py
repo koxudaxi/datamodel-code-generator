@@ -8,6 +8,7 @@ code generation.
 from __future__ import annotations
 
 import operator
+import os.path
 import re
 import sys
 from abc import ABC, abstractmethod
@@ -266,10 +267,29 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
-def relative(current_module: str, reference: str) -> tuple[str, str]:
-    """Find relative module path."""
+def relative(
+    current_module: str,
+    reference: str,
+    *,
+    reference_is_module: bool = False,
+) -> tuple[str, str]:
+    """Find relative module path.
+
+    Args:
+        current_module: Current module path (e.g., "foo.bar")
+        reference: Reference path (e.g., "foo.baz.ClassName" or "foo.baz" if reference_is_module)
+        reference_is_module: If True, treat reference as a module path (not module.class)
+
+    Returns:
+        Tuple of (from_path, import_name) for constructing import statements
+    """
     current_module_path = current_module.split(".") if current_module else []
-    *reference_path, name = reference.split(".")
+
+    if reference_is_module:
+        reference_path = reference.split(".") if reference else []
+        name = reference_path[-1] if reference_path else ""
+    else:
+        *reference_path, name = reference.split(".")
 
     if current_module_path == reference_path:
         return "", ""
@@ -1839,29 +1859,23 @@ class Parser(ABC):
         Returns:
             The forwarder module content as a string
         """
-        # Calculate relative import path from original module to internal module.
-        # For __init__.py (packages), depth is len(module) (package is inside a directory).
-        # For .py files (not packages), depth is len(module) - 1 (file is at same level as parent).
-        # Examples:
-        #   () as root __init__.py       -> depth=0, "._internal"
-        #   ("foo",) as foo/__init__.py  -> depth=1, ".._internal"
-        #   ("foo",) as foo.py           -> depth=0, "._internal"
-        #   ("foo","bar") as foo/bar.py  -> depth=1, ".._internal"
-        if not original_module:
-            relative_import = f".{internal_module[-1]}"
+        if is_init:
+            original_str = ".".join((*original_module, "__init__")) if original_module else "__init__"
         else:
-            depth = len(original_module) if is_init else len(original_module) - 1
-            dots = "." * (depth + 1)
-            relative_import = f"{dots}{internal_module[-1]}"
+            original_str = ".".join(original_module) if original_module else ""
 
-        import_parts: list[str] = []
+        internal_str = ".".join(internal_module)
+        from_dots, module_name = relative(original_str, internal_str, reference_is_module=True)
+        relative_import = f"{from_dots}{module_name}"
+
+        imports = Imports()
         for original_name, new_name in class_mappings:
             if original_name == new_name:
-                import_parts.append(new_name)
+                imports.append(Import(from_=relative_import, import_=new_name))
             else:
-                import_parts.append(f"{new_name} as {original_name}")
+                imports.append(Import(from_=relative_import, import_=new_name, alias=original_name))
 
-        import_line = f"from {relative_import} import {', '.join(import_parts)}"
+        import_line = imports.dump()
 
         all_names = [original_name for original_name, _ in class_mappings]
         all_items = ", ".join(f'"{name}"' for name in all_names)
@@ -1873,26 +1887,25 @@ class Parser(ABC):
         self,
         scc_modules: set[tuple[str, ...]],
         existing_modules: set[tuple[str, ...]],
+        *,
+        base_name: str = "_internal",
     ) -> tuple[str, ...]:
-        """Compute the _internal module path for an SCC."""
+        """Compute the internal module path for an SCC."""
         directories = [get_module_directory(m) for m in sorted(scc_modules)]
 
-        prefix = list(directories[0])
-        for directory in directories[1:]:
-            new_prefix: list[str] = []
-            for a, b in zip(prefix, directory):
-                if a == b:
-                    new_prefix.append(a)
-                else:
-                    break
-            prefix = new_prefix
+        if not directories or any(not d for d in directories):
+            prefix: tuple[str, ...] = ()
+        else:
+            path_strings = ["/".join(d) for d in directories]
+            common = os.path.commonpath(path_strings)
+            prefix = tuple(common.split("/")) if common else ()
 
-        base_module = ("_internal",) if not prefix else (*prefix, "_internal")
+        base_module = (base_name,) if not prefix else (*prefix, base_name)
 
         if base_module in existing_modules:
             counter = 1
             while True:
-                candidate = (*prefix, f"_internal_{counter}") if prefix else (f"_internal_{counter}",)
+                candidate = (*prefix, f"{base_name}_{counter}") if prefix else (f"{base_name}_{counter}",)
                 if candidate not in existing_modules:
                     return candidate
                 counter += 1
