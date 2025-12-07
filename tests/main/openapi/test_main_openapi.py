@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import platform
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,6 +30,7 @@ from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
+    LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
@@ -1570,6 +1572,89 @@ def test_main_openapi_override_required_all_of_field(output_file: Path) -> None:
         expected_file="override_required_all_of.py",
         extra_args=["--collapse-root-models"],
     )
+
+
+def test_main_openapi_allof_with_required_inherited_fields(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes inherited fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_fields.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_fields_force_optional(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf and --force-optional flag."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_fields_force_optional.py",
+        extra_args=["--force-optional"],
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_nested_object(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes inherited nested object fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_nested_object.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_nested_object.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_complex_allof(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes complex allOf fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_complex_allof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_complex_allof.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf covering all type inheritance scenarios."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_comprehensive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_comprehensive.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf edge cases for branch coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_edge_cases.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_edge_cases.py",
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_main_openapi_allof_with_required_inherited_coverage(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf coverage for edge case branches."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_coverage.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="allof_with_required_inherited_coverage.py",
+        )
+        # Verify the warning was raised for $ref combined with constraints
+        assert any("allOf combines $ref" in str(warning.message) for warning in w)
 
 
 def test_main_use_default_kwarg(output_file: Path) -> None:
