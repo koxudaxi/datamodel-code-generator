@@ -1802,15 +1802,15 @@ class Parser(ABC):
     def _build_all_exports_code(
         cls,
         resolved: dict[str, list[tuple[str, tuple[str, ...], str]]],
-    ) -> tuple[Imports, list[str]]:
-        """Build import statements and __all__ list from resolved exports."""
+    ) -> Imports:
+        """Build import statements from resolved exports."""
         export_imports = Imports()
         for export_name, items in resolved.items():
             for orig, _, short in items:
                 export_imports.append(
                     Import(from_=f".{short}", import_=orig, alias=export_name if export_name != orig else None)
                 )
-        return export_imports, sorted(resolved.keys())
+        return export_imports
 
     @classmethod
     def _collect_used_names_from_models(cls, models: list[DataModel]) -> set[str]:
@@ -1876,10 +1876,7 @@ class Parser(ABC):
             else:
                 imports.append(Import(from_=relative_import, import_=new_name, alias=original_name))
 
-        import_line = imports.dump()
-        all_line = Imports.dump_all(original_name for original_name, _ in class_mappings)
-
-        return f"{import_line}\n\n{all_line}\n"
+        return f"{imports.dump()}\n\n{imports.dump_all()}\n"
 
     def __compute_internal_module_path(  # noqa: PLR6301
         self,
@@ -2225,7 +2222,6 @@ class Parser(ABC):
         for module, mod_key, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
             export_imports: Imports | None = None
-            export_names: list[str] = []
 
             if all_exports_scope is not None and module[-1] == "__init__.py":
                 child_exports = self._collect_exports_for_init(module, processed_models, all_exports_scope)
@@ -2238,7 +2234,7 @@ class Parser(ABC):
                     resolved_exports = self._resolve_export_collisions(
                         child_exports, all_exports_collision_strategy, local_model_names
                     )
-                    export_imports, export_names = self._build_all_exports_code(resolved_exports)
+                    export_imports = self._build_all_exports_code(resolved_exports)
 
             if models:
                 if with_import:
@@ -2247,15 +2243,10 @@ class Parser(ABC):
 
                 if export_imports:
                     result += [str(export_imports), ""]
-
-                if export_names:
-                    local_exports = [
-                        m.reference.short_name
-                        for m in models
-                        if m.reference and not m.reference.short_name.startswith("_")
-                    ]
-                    all_export_names = sorted(set(export_names + local_exports))
-                    result += [Imports.dump_all(all_export_names, multiline=True) + "\n"]
+                    for m in models:
+                        if m.reference and not m.reference.short_name.startswith("_"):
+                            export_imports.add_export(m.reference.short_name)
+                    result += [export_imports.dump_all(multiline=True) + "\n"]
 
                 self.__update_type_aliases(models)
                 code = dump_templates(models)
@@ -2298,10 +2289,10 @@ class Parser(ABC):
                     init_module, processed_models, all_exports_scope
                 ):  # pragma: no branch
                     resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
-                    export_imports, export_names = self._build_all_exports_code(resolved)
+                    export_imports = self._build_all_exports_code(resolved)
                     import_parts = [s for s in [future_imports_str, str(self.imports)] if s] if with_import else []
                     parts = import_parts + (["\n"] if import_parts else [])
-                    parts += [str(export_imports), "", Imports.dump_all(export_names, multiline=True)]
+                    parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                     body = "\n".join(parts)
                     results[init_module] = Result(
                         body=code_formatter.format_code(body) if code_formatter else body,

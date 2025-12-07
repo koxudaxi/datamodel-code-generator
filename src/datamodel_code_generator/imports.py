@@ -52,6 +52,7 @@ class Imports(defaultdict[Optional[str], set[str]]):
         self.counter: dict[tuple[str | None, str], int] = defaultdict(int)
         self.reference_paths: dict[str, Import] = {}
         self.use_exact: bool = use_exact
+        self._exports: set[str] | None = None
 
     def _set_alias(self, from_: str | None, imports: set[str]) -> list[str]:
         """Apply aliases to imports and return sorted list."""
@@ -127,18 +128,25 @@ class Imports(defaultdict[Optional[str], set[str]]):
                 future.alias[future_key] = self.alias.pop(future_key)
         return future
 
-    @staticmethod
-    def dump_all(names: Iterable[str], *, multiline: bool = False) -> str:
-        """Generate __all__ declaration from export names.
+    def add_export(self, name: str) -> None:
+        """Add a name to export without importing it (for local definitions)."""
+        if self._exports is None:
+            self._exports = set()
+        self._exports.add(name)
+
+    def dump_all(self, *, multiline: bool = False) -> str:
+        """Generate __all__ declaration from imported names and added exports.
 
         Args:
-            names: Iterable of names to export
             multiline: If True, format with one name per line
 
         Returns:
             Formatted __all__ = [...] string
         """
-        name_list = list(names)
+        name_set: set[str] = (self._exports or set()).copy()
+        for from_, imports in self.items():
+            name_set.update(self.alias.get(from_, {}).get(import_) or import_ for import_ in imports)
+        name_list = sorted(name_set)
         if multiline:
             items = ",\n    ".join(f'"{name}"' for name in name_list)
             return f"__all__ = [\n    {items},\n]"
