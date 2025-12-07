@@ -107,6 +107,7 @@ class WrappedDefault:
     type_name: str
 
     def __repr__(self) -> str:
+        """Return type constructor representation, e.g., 'CountType(10)'."""
         return f"{self.type_name}({self.value!r})"
 
 
