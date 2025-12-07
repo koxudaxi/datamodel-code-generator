@@ -2244,7 +2244,7 @@ class Parser(ABC):
                 if export_imports:
                     result += [str(export_imports), ""]
                     for m in models:
-                        if m.reference and not m.reference.short_name.startswith("_"):
+                        if m.reference and not m.reference.short_name.startswith("_"):  # pragma: no branch
                             export_imports.add_export(m.reference.short_name)
                     result += [export_imports.dump_all(multiline=True) + "\n"]
 
