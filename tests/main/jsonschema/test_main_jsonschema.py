@@ -3193,14 +3193,7 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
 
 @pytest.mark.benchmark
 def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
-    """Test RootModel default values are wrapped with type constructors.
-
-    When a field references a RootModel and has a default value, the default
-    should be wrapped with the type constructor (e.g., CountType(10) instead of 10).
-    This ensures type consistency between default values and actual values.
-
-    See: https://github.com/koxudaxi/datamodel-code-generator/issues/2116
-    """
+    """Test RootModel default values are wrapped with type constructors."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
         output_path=output_file,
@@ -3218,11 +3211,7 @@ def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
 
 @pytest.mark.benchmark
 def test_main_jsonschema_root_model_default_value_no_annotated(output_file: Path) -> None:
-    """Test RootModel default values without --use-annotated flag.
-
-    When --use-annotated is not used, the WrappedDefault logic should be skipped
-    and default_factory should be used instead.
-    """
+    """Test RootModel default values without --use-annotated flag."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
         output_path=output_file,
@@ -3239,13 +3228,7 @@ def test_main_jsonschema_root_model_default_value_no_annotated(output_file: Path
 
 @pytest.mark.benchmark
 def test_main_jsonschema_root_model_default_value_branches(output_file: Path) -> None:
-    """Test RootModel default value branches.
-
-    Tests the following cases:
-    - Field with RootModel reference and default value (wrapped)
-    - Field with RootModel reference but no default (skipped)
-    - Field with list default value (skipped, not wrapped)
-    """
+    """Test RootModel default value branches."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_branches.json",
         output_path=output_file,
@@ -3262,13 +3245,7 @@ def test_main_jsonschema_root_model_default_value_branches(output_file: Path) ->
 
 @pytest.mark.benchmark
 def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) -> None:
-    """Test that non-RootModel references are not wrapped.
-
-    Tests the following cases:
-    - Field with RootModel reference (wrapped)
-    - Field with BaseModel reference (not wrapped)
-    - Field with primitive type (not wrapped)
-    """
+    """Test that non-RootModel references are not wrapped."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_non_root.json",
         output_path=output_file,
