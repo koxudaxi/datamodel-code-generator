@@ -3113,3 +3113,80 @@ def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
         expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_deep_inheritance",
         input_file_type="openapi",
     )
+
+
+def test_main_openapi_circular_imports_stripe_like(output_dir: Path) -> None:
+    """Test that circular imports between root and submodules are resolved with _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_stripe_like.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_stripe_like",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_acyclic(output_dir: Path) -> None:
+    """Test that acyclic dependencies do not create _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_acyclic.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_acyclic",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_class_conflict(output_dir: Path) -> None:
+    """Test that class name conflicts in merged _internal.py are resolved with sequential renaming."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_class_conflict.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_class_conflict",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_with_inheritance(output_dir: Path) -> None:
+    """Test that circular imports with base class inheritance are resolved."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_with_inheritance.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_with_inheritance",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_small_cycle(output_dir: Path) -> None:
+    """Test that small 2-module cycles also create _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_small_cycle.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_small_cycle",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_different_prefixes(output_dir: Path) -> None:
+    """Test circular imports with different module prefixes (tests LCP computation)."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_different_prefixes.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_different_prefixes",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_mixed_prefixes(output_dir: Path) -> None:
+    """Test circular imports with mixed common/different prefixes (tests LCP break branch)."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_mixed_prefixes.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_mixed_prefixes",
+            input_file_type="openapi",
+        )

@@ -1,0 +1,25 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: All Exports With Local Models
+paths: {}
+components:
+  schemas:
+    pkg.LocalModel:
+      description: Local model in pkg __init__.py
+      type: object
+      properties:
+        id:
+          type: string
+    pkg.AnotherLocal:
+      description: Another local model
+      type: object
+      properties:
+        name:
+          type: string
+    pkg.sub.ChildModel:
+      description: Model in child module
+      type: object
+      properties:
+        value:
+          type: integer

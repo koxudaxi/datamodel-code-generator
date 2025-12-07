@@ -2,31 +2,8 @@
 #   filename:  modular.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from __future__ import annotations
+from .._internal import List
+from .._internal import Tea_1 as Tea
+from .._internal import TeaClone
 
-from typing import Optional, Sequence
-
-from pydantic import BaseModel
-
-from .. import Id, OptionalModel
-
-
-class Tea(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea] = None
-    optional: Optional[Sequence[OptionalModel]] = None
-
-
-class TeaClone(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea] = None
-    optional: Optional[Sequence[OptionalModel]] = None
-
-
-class List(BaseModel):
-    __root__: Sequence[Tea]
-
-
-Tea.update_forward_refs()
+__all__ = ["List", "Tea", "TeaClone"]

@@ -7,29 +7,8 @@ This is a multi-line docstring used for testing.
 
 from __future__ import annotations
 
-from typing import List, Optional
+from .._internal import ListModel
+from .._internal import Tea_1 as Tea
+from .._internal import TeaClone
 
-from pydantic import BaseModel
-
-from .. import Id, OptionalModel
-
-
-class Tea(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea] = None
-    optional: Optional[List[OptionalModel]] = None
-
-
-class TeaClone(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea] = None
-    optional: Optional[List[OptionalModel]] = None
-
-
-class ListModel(BaseModel):
-    __root__: List[Tea]
-
-
-Tea.update_forward_refs()
+__all__ = ["ListModel", "Tea", "TeaClone"]
