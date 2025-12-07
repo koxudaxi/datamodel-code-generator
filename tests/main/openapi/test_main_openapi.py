@@ -30,6 +30,7 @@ from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
+    LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
@@ -1640,6 +1641,7 @@ def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_openapi_allof_with_required_inherited_coverage(output_file: Path) -> None:
     """Test OpenAPI generation with allOf coverage for edge case branches."""
     with warnings.catch_warnings(record=True) as w:

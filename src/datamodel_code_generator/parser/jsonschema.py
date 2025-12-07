@@ -978,25 +978,39 @@ class JsonSchemaParser(Parser):
                 break
 
         for item in items:
-            item_dict = item.dict(exclude_unset=True, by_alias=True)
             for field in self._CONSTRAINT_FIELDS:
-                if field in item_dict and item_dict[field] is not None:
+                value = getattr(item, field, None)
+                if value is None:
+                    value = item.extras.get(field)
+                if value is not None:
                     if field not in base_dict or base_dict[field] is None:
-                        base_dict[field] = item_dict[field]
+                        base_dict[field] = value
                     else:
-                        base_dict[field] = JsonSchemaParser._intersect_constraint(
-                            field, base_dict[field], item_dict[field]
-                        )
+                        base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
 
     @staticmethod
-    def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:
+    def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
         """Compute the intersection of two constraint values."""
+        v1: float | None = None
+        v2: float | None = None
+        try:
+            if val1 is not None:
+                v1 = float(val1)
+            if val2 is not None:
+                v2 = float(val2)
+        except (TypeError, ValueError):
+            pass
+
         if field in {"minLength", "minimum", "exclusiveMinimum", "minItems"}:
-            return max(val1, val2) if isinstance(val1, (int, float)) and isinstance(val2, (int, float)) else val1
+            if v1 is not None and v2 is not None:
+                return val1 if v1 >= v2 else val2
+            return val1  # pragma: no cover
         if field in {"maxLength", "maximum", "exclusiveMaximum", "maxItems"}:
-            return min(val1, val2) if isinstance(val1, (int, float)) and isinstance(val2, (int, float)) else val1
+            if v1 is not None and v2 is not None:
+                return val1 if v1 <= v2 else val2
+            return val1  # pragma: no cover
         if field == "pattern":
             return f"(?={val1})(?={val2})" if val1 != val2 else val1
         if field == "uniqueItems":
