@@ -1877,10 +1877,7 @@ class Parser(ABC):
                 imports.append(Import(from_=relative_import, import_=new_name, alias=original_name))
 
         import_line = imports.dump()
-
-        all_names = [original_name for original_name, _ in class_mappings]
-        all_items = ", ".join(f'"{name}"' for name in all_names)
-        all_line = f"__all__ = [{all_items}]"
+        all_line = Imports.dump_all(original_name for original_name, _ in class_mappings)
 
         return f"{import_line}\n\n{all_line}\n"
 
@@ -2258,8 +2255,7 @@ class Parser(ABC):
                         if m.reference and not m.reference.short_name.startswith("_")
                     ]
                     all_export_names = sorted(set(export_names + local_exports))
-                    all_items = ",\n    ".join(f'"{name}"' for name in all_export_names)
-                    result += [f"__all__ = [\n    {all_items},\n]\n"]
+                    result += [Imports.dump_all(all_export_names, multiline=True) + "\n"]
 
                 self.__update_type_aliases(models)
                 code = dump_templates(models)
@@ -2303,10 +2299,9 @@ class Parser(ABC):
                 ):  # pragma: no branch
                     resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
                     export_imports, export_names = self._build_all_exports_code(resolved)
-                    all_items = ",\n    ".join(f'"{name}"' for name in export_names)
                     import_parts = [s for s in [future_imports_str, str(self.imports)] if s] if with_import else []
                     parts = import_parts + (["\n"] if import_parts else [])
-                    parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
+                    parts += [str(export_imports), "", Imports.dump_all(export_names, multiline=True)]
                     body = "\n".join(parts)
                     results[init_module] = Result(
                         body=code_formatter.format_code(body) if code_formatter else body,

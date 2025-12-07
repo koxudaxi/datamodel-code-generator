@@ -127,6 +127,24 @@ class Imports(defaultdict[Optional[str], set[str]]):
                 future.alias[future_key] = self.alias.pop(future_key)
         return future
 
+    @staticmethod
+    def dump_all(names: Iterable[str], *, multiline: bool = False) -> str:
+        """Generate __all__ declaration from export names.
+
+        Args:
+            names: Iterable of names to export
+            multiline: If True, format with one name per line
+
+        Returns:
+            Formatted __all__ = [...] string
+        """
+        name_list = list(names)
+        if multiline:
+            items = ",\n    ".join(f'"{name}"' for name in name_list)
+            return f"__all__ = [\n    {items},\n]"
+        items = ", ".join(f'"{name}"' for name in name_list)
+        return f"__all__ = [{items}]"
+
 
 IMPORT_ANNOTATED = Import.from_full_path("typing.Annotated")
 IMPORT_ANY = Import.from_full_path("typing.Any")
