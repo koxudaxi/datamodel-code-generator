@@ -3189,3 +3189,28 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
         ignore_whitespace=True,
         extra_args=["--disable-timestamp"],
     )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
+    """Test RootModel default values are wrapped with type constructors.
+
+    When a field references a RootModel and has a default value, the default
+    should be wrapped with the type constructor (e.g., CountType(10) instead of 10).
+    This ensures type consistency between default values and actual values.
+
+    See: https://github.com/koxudaxi/datamodel-code-generator/issues/2116
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--set-default-enum-member",
+        ],
+    )

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "admin_state": {
+      "$ref": "#/$defs/AdminStateLeaf",
+      "default": "enable"
+    },
+    "count": {
+      "$ref": "#/$defs/CountType",
+      "default": 10
+    },
+    "name": {
+      "$ref": "#/$defs/NameType",
+      "default": "default_name"
+    }
+  },
+  "$defs": {
+    "AdminStateLeaf": {
+      "type": "string",
+      "enum": ["enable", "disable"]
+    },
+    "CountType": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "NameType": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    }
+  }
+}

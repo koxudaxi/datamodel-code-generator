@@ -55,6 +55,7 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    WrappedDefault,
 )
 from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
@@ -1446,6 +1447,36 @@ class Parser(ABC):
                             else:
                                 enum_member.alias = data_type.alias
 
+    def __wrap_root_model_default_values(
+        self,
+        models: list[DataModel],
+    ) -> None:
+        """Wrap RootModel reference default values with their type constructors."""
+        if not self.use_annotated:
+            return
+        for model in models:
+            if isinstance(model, (Enum, self.data_model_root_type)):
+                continue
+            for model_field in model.fields:
+                if model_field.default is None:
+                    continue
+                if isinstance(model_field.default, (WrappedDefault, Member)):
+                    continue
+                if isinstance(model_field.default, list):
+                    continue
+                for data_type in model_field.data_type.all_data_types:
+                    if (
+                        data_type.reference
+                        and isinstance(data_type.reference.source, pydantic_model_v2.RootModel)
+                    ):
+                        # Use alias if available (handles import collisions)
+                        type_name = data_type.alias or data_type.reference.short_name
+                        model_field.default = WrappedDefault(
+                            value=model_field.default,
+                            type_name=type_name,
+                        )
+                        break
+
     def __override_required_field(
         self,
         models: list[DataModel],
@@ -1910,6 +1941,7 @@ class Parser(ABC):
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
             self.__set_default_enum_member(models)
+            self.__wrap_root_model_default_values(models)
             self.__sort_models(models, imports)
             self.__change_field_name(models)
             self.__apply_discriminator_type(models, imports)

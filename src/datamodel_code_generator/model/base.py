@@ -10,6 +10,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
@@ -96,6 +97,17 @@ class ConstraintsBase(_BaseModel):
             **root_type_field_constraints,
             **model_field_constraints,
         })
+
+
+@dataclass(repr=False)
+class WrappedDefault:
+    """Represents a default value wrapped with its type constructor."""
+
+    value: Any
+    type_name: str
+
+    def __repr__(self) -> str:
+        return f"{self.type_name}({self.value!r})"
 
 
 class DataModelFieldBase(_BaseModel):
