@@ -952,20 +952,6 @@ class JsonSchemaParser(Parser):
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
 
-    _CONSTRAINT_FIELDS: ClassVar[tuple[str, ...]] = (
-        "minLength",
-        "maxLength",
-        "pattern",
-        "minimum",
-        "maximum",
-        "exclusiveMinimum",
-        "exclusiveMaximum",
-        "multipleOf",
-        "minItems",
-        "maxItems",
-        "uniqueItems",
-    )
-
     def _merge_primitive_schemas(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
         """Merge multiple primitive schemas by computing the intersection of their constraints."""
         if len(items) == 1:
@@ -978,7 +964,7 @@ class JsonSchemaParser(Parser):
                 break
 
         for item in items:
-            for field in self._CONSTRAINT_FIELDS:
+            for field in JsonSchemaObject.__constraint_fields__:
                 value = getattr(item, field, None)
                 if value is None:
                     value = item.extras.get(field)
@@ -1050,7 +1036,7 @@ class JsonSchemaParser(Parser):
                     primitive_items.append(item)
             elif item.enum:  # pragma: no cover
                 primitive_items.append(item)
-            elif self._has_constraints(item):
+            elif item.has_constraint:
                 constraint_only_items.append(item)
 
         if ref_items and not primitive_items and not object_items:
@@ -1100,13 +1086,6 @@ class JsonSchemaParser(Parser):
             return self.data_type(data_types=[DataType(type=ANY, import_=IMPORT_ANY)], is_dict=True)
 
         return None
-
-    def _has_constraints(self, schema: JsonSchemaObject) -> bool:
-        """Check if schema has any constraint fields."""
-        for field in self._CONSTRAINT_FIELDS:
-            if getattr(schema, field, None) is not None or field in schema.extras:
-                return True
-        return False
 
     def _build_lightweight_type(  # noqa: PLR0911, PLR0912
         self,
