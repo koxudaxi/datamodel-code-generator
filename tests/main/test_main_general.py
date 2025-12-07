@@ -814,3 +814,18 @@ def test_all_exports_scope_children_no_child_exports(output_dir: Path) -> None:
         ],
         expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_no_child",
     )
+
+
+def test_all_exports_scope_children_with_local_models(output_dir: Path) -> None:
+    """Test --all-exports-scope=children when __init__.py has both local models and child exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_with_local_models.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_with_local_models",
+    )
