@@ -172,7 +172,7 @@ class CodeFormatter:
                     settings_path = parent
                     break
             else:
-                settings_path = Path.cwd()
+                settings_path = Path.cwd()  # pragma: no cover
 
         root = black_find_project_root((settings_path,))
         path = root / "pyproject.toml"
