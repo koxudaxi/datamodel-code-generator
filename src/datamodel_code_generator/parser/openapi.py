@@ -568,7 +568,8 @@ class OpenAPIParser(JsonSchemaParser):
                 data_types[status_code]["application/json"] = DataType(type="None")
 
             for content_type, obj in content.items():
-                data_type = self._parse_schema_or_ref(name, obj.schema_, [*path, str(status_code), content_type])
+                response_path: list[str] = [*path, str(status_code), str(content_type)]
+                data_type = self._parse_schema_or_ref(name, obj.schema_, response_path)
                 if data_type:
                     data_types[status_code][content_type] = data_type  # pyright: ignore[reportArgumentType]
 

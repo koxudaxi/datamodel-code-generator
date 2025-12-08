@@ -2408,18 +2408,23 @@ class JsonSchemaParser(Parser):
                 if isinstance(value, JsonSchemaObject):
                     self._traverse_schema_objects(value, path, callback, include_one_of=include_one_of)
 
+    def _resolve_ref_callback(self, obj: JsonSchemaObject, path: list[str]) -> None:  # noqa: ARG002
+        """Resolve $ref in schema object."""
+        if obj.ref:
+            self.resolve_ref(obj.ref)
+
+    def _add_id_callback(self, obj: JsonSchemaObject, path: list[str]) -> None:
+        """Add $id to model resolver."""
+        if obj.id:
+            self.model_resolver.add_id(obj.id, path)
+
     def parse_ref(self, obj: JsonSchemaObject, path: list[str]) -> None:
         """Recursively parse all $ref references in a schema object."""
-        self._traverse_schema_objects(obj, path, lambda o, _: self.resolve_ref(o.ref) if o.ref else None)
+        self._traverse_schema_objects(obj, path, self._resolve_ref_callback)
 
     def parse_id(self, obj: JsonSchemaObject, path: list[str]) -> None:
         """Recursively parse all $id fields in a schema object."""
-        self._traverse_schema_objects(
-            obj,
-            path,
-            lambda o, p: self.model_resolver.add_id(o.id, p) if o.id else None,
-            include_one_of=False,
-        )
+        self._traverse_schema_objects(obj, path, self._add_id_callback, include_one_of=False)
 
     @contextmanager
     def root_id_context(self, root_raw: dict[str, Any]) -> Generator[None, None, None]:

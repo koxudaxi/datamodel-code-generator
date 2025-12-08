@@ -87,6 +87,8 @@ if TYPE_CHECKING:
     import builtins
     from collections.abc import Iterable, Iterator, Sequence
 
+    from pydantic_core import core_schema
+
     from datamodel_code_generator.model.base import DataModelFieldBase
 
 if PYDANTIC_V2:
@@ -133,30 +135,19 @@ class UnionIntFloat:
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         """Return Pydantic v2 core schema."""
-        from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-            [
-                core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    [core_schema.int_schema(), core_schema.float_schema()]
-                    # pyright: ignore[reportPossiblyUnboundVariable]
-                ),
-                core_schema.no_info_plain_validator_function(cls.validate),
-                # pyright: ignore[reportPossiblyUnboundVariable]
-            ]
-        )
+        from_int_schema = core_schema.chain_schema([
+            core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]),
+            core_schema.no_info_plain_validator_function(cls.validate),
+        ])
 
-        return core_schema.json_or_python_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
+        return core_schema.json_or_python_schema(
             json_schema=from_int_schema,
-            python_schema=core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                [
-                    # check if it's an instance first before doing any further work
-                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore[reportPossiblyUnboundVariable]
-                    from_int_schema,
-                ]
-            ),
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                # pyright: ignore[reportPossiblyUnboundVariable]
-                lambda instance: instance.value
-            ),
+            python_schema=core_schema.union_schema([
+                # check if it's an instance first before doing any further work
+                core_schema.is_instance_schema(UnionIntFloat),
+                from_int_schema,
+            ]),
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda instance: instance.value),
         )
 
     @classmethod
