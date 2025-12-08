@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "QuantityTrunc": {
+      "type": "string",
+      "description": "Quantity truncation setting",
+      "allOf": [
+        {
+          "$ref": "#/definitions/MassUnit"
+        }
+      ]
+    },
+    "MassUnit": {
+      "type": "string",
+      "enum": ["g", "kg", "t"]
+    }
+  }
+}

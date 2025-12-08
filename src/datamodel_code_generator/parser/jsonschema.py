@@ -1585,7 +1585,32 @@ class JsonSchemaParser(Parser):
                 and single_obj.ref_type == JSONReference.LOCAL
                 and get_model_by_path(self.raw_obj, single_obj.ref[2:].split("/")).get("enum")
             ):
-                return self.get_ref_data_type(single_obj.ref)
+                ref_data_type = self.get_ref_data_type(single_obj.ref)
+
+                full_path = self.model_resolver.join_path(path)
+                existing_ref = self.model_resolver.references.get(full_path)
+                if existing_ref is not None and not existing_ref.loaded:
+                    reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+                    field = self.data_model_field_type(
+                        name=None,
+                        data_type=ref_data_type,
+                        required=True,
+                    )
+                    data_model_root = self.data_model_root_type(
+                        reference=reference,
+                        fields=[field],
+                        custom_base_class=obj.custom_base_path or self.base_class,
+                        custom_template_dir=self.custom_template_dir,
+                        extra_template_data=self.extra_template_data,
+                        path=self.current_source_path,
+                        description=obj.description if self.use_schema_description else None,
+                        nullable=obj.type_has_null,
+                        treat_dot_as_module=self.treat_dot_as_module,
+                    )
+                    self.results.append(data_model_root)
+                    return self.data_type(reference=reference)
+
+                return ref_data_type
 
         merged_all_of_obj = self._merge_all_of_object(obj)
         if merged_all_of_obj:
