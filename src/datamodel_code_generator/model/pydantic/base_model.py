@@ -108,7 +108,8 @@ class DataModelField(DataModelFieldBase):
             return value
 
         is_float_type = any(
-            data_type.type == "float" or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
+            data_type.type == "float"
+            or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
             for data_type in self.data_type.all_data_types
         )
         if is_float_type:
