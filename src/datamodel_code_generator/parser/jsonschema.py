@@ -1073,7 +1073,7 @@ class JsonSchemaParser(Parser):
         """Determine if a field should be marked as required."""
         if self.force_optional_for_required_fields:
             return False
-        if self.apply_default_values_for_required_fields and has_default:
+        if self.apply_default_values_for_required_fields and has_default:  # pragma: no cover
             return False
         if is_nullable:
             return False

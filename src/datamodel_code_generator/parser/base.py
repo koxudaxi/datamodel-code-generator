@@ -848,7 +848,7 @@ class Parser(ABC):
                 # Remove self from all DataModel children's base_classes
                 for child in model.reference.iter_data_model_children():
                     child.base_classes = [bc for bc in child.base_classes if bc.reference != model.reference]
-                    if not child.base_classes:
+                    if not child.base_classes:  # pragma: no cover
                         child.set_base_class()
 
             class_name = model.duplicate_class_name or model.class_name

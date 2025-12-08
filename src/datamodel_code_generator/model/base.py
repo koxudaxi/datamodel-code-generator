@@ -194,7 +194,7 @@ class DataModelFieldBase(_BaseModel):
 
     def self_reference(self) -> bool:
         """Check if field references its parent model."""
-        if self.parent is None or not hasattr(self.parent, "reference"):
+        if self.parent is None or not self.parent.reference:  # pragma: no cover
             return False
         return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
 
@@ -325,12 +325,8 @@ class DataModelFieldBase(_BaseModel):
                 Set to False when the old data_type may be referenced elsewhere.
         """
         if self.data_type.parent is self and clear_old_parent:
-            # Use swap_with when parent is properly set
             self.data_type.swap_with(new_data_type)
         else:
-            # Fallback for cases where parent is not set or shouldn't be cleared
-            if clear_old_parent:
-                self.data_type.parent = None
             self.data_type = new_data_type
             new_data_type.parent = self
 

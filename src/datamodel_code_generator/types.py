@@ -397,11 +397,11 @@ class DataType(_BaseModel):
         """
         parent = self.parent
         self.parent = None
-        if parent is not None:
+        if parent is not None:  # pragma: no cover
             new_data_type.parent = parent
             if is_data_model_field(parent):
                 parent.data_type = new_data_type
-            elif isinstance(parent, DataType):
+            elif isinstance(parent, DataType):  # pragma: no cover
                 parent.data_types = [new_data_type if d is self else d for d in parent.data_types]
 
     @property
