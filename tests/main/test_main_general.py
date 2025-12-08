@@ -829,3 +829,38 @@ def test_all_exports_scope_children_with_local_models(output_dir: Path) -> None:
         ],
         expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_with_local_models",
     )
+
+
+def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
+    """Test --check uses pyproject.toml formatter settings from output path."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        """{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string", "description": "The person's first name description that is very long."}
+  }
+}""",
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )

@@ -164,6 +164,15 @@ class CodeFormatter:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if not settings_path:
             settings_path = Path.cwd()
+        elif settings_path.is_file():
+            settings_path = settings_path.parent
+        elif not settings_path.exists():
+            for parent in settings_path.parents:
+                if parent.exists():
+                    settings_path = parent
+                    break
+            else:
+                settings_path = Path.cwd()  # pragma: no cover
 
         root = black_find_project_root((settings_path,))
         path = root / "pyproject.toml"
@@ -283,6 +292,7 @@ class CodeFormatter:
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
+            cwd=self.settings_path,
         )
         return result.stdout.decode(self.encoding)
 
@@ -293,6 +303,7 @@ class CodeFormatter:
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
+            cwd=self.settings_path,
         )
         return result.stdout.decode(self.encoding)
 
