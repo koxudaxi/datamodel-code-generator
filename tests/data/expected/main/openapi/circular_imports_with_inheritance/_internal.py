@@ -8,8 +8,6 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from . import BaseEntity as BaseEntity_1
-
 
 class BaseEntity(BaseModel):
     id: Optional[str] = None
@@ -21,17 +19,17 @@ class RootModel(BaseModel):
     auth: Optional[Authorization] = None
 
 
-class Invoice(BaseEntity_1):
+class Invoice(BaseEntity):
     total: Optional[int] = None
     session: Optional[Session] = None
 
 
-class Session(BaseEntity_1):
+class Session(BaseEntity):
     status: Optional[str] = None
     root_ref: Optional[RootModel] = None
 
 
-class Authorization(BaseEntity_1):
+class Authorization(BaseEntity):
     amount: Optional[int] = None
     invoice: Optional[Invoice] = None
 
