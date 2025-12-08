@@ -1951,6 +1951,39 @@ def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_oneof_const_enum_infer_type(output_file: Path) -> None:
+    """Test oneOf with const values and inferred type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_infer_type.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_infer_type.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_bool(output_file: Path) -> None:
+    """Test oneOf with boolean const values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_bool.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_bool.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_float(output_file: Path) -> None:
+    """Test oneOf with float const values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_float.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_float.py",
+    )
+
+
 def test_main_jsonschema_json_pointer_array(output_file: Path) -> None:
     """Test JSON pointer with arrays."""
     run_main_and_assert(
