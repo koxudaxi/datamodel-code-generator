@@ -637,3 +637,308 @@ disable-warnings = true
             capsys=capsys,
             expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "excluded_options.txt",
         )
+
+
+EXPECTED_PYPROJECT_PROFILE_PATH = EXPECTED_MAIN_KR_PATH / "pyproject_profile"
+
+
+@freeze_time("2019-07-26")
+def test_pyproject_with_profile(output_file: Path, tmp_path: Path) -> None:
+    """Test loading a named profile from pyproject.toml."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.9"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles.api]
+target-python-version = "3.11"
+snake-case-field = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string"},
+    "lastName": {"type": "string"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "with_profile.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
+
+
+def test_pyproject_profile_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error when profile is not found."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.9"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text('{"type": "object"}')
+
+    output_file = tmp_path / "output.py"
+
+    with chdir(tmp_path):
+        return_code = run_main_with_args(
+            ["--input", str(input_file), "--output", str(output_file), "--profile", "nonexistent"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+        )
+        assert return_code == Exit.ERROR
+        captured = capsys.readouterr()
+        assert "Profile 'nonexistent' not found in pyproject.toml" in captured.err
+
+
+@freeze_time("2019-07-26")
+def test_ignore_pyproject_option(output_file: Path, tmp_path: Path) -> None:
+    """Test --ignore-pyproject ignores pyproject.toml configuration."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+snake-case-field = true
+enable-version-header = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string"},
+    "lastName": {"type": "string"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "ignore_pyproject.py",
+            extra_args=["--ignore-pyproject", "--disable-timestamp"],
+        )
+
+
+@freeze_time("2019-07-26")
+def test_profile_overrides_base_config_shallow_merge(output_file: Path, tmp_path: Path) -> None:
+    """Test that profile settings shallow-merge (replace) base settings for lists."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+strict-types = ["str", "int"]
+target-python-version = "3.9"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles.api]
+strict-types = ["bytes"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "data": {"type": "string", "format": "binary"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "shallow_merge.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
+
+
+def test_generate_cli_command_with_profile(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-cli-command reflects merged profile settings."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.9"
+snake-case-field = true
+
+[tool.datamodel-codegen.profiles.api]
+input = "api.yaml"
+target-python-version = "3.11"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--profile", "api", "--generate-cli-command"],
+            capsys=capsys,
+        )
+        captured = capsys.readouterr()
+        # Profile value should override base
+        assert "--target-python-version 3.11" in captured.out
+        # Base value should be inherited
+        assert "--snake-case-field" in captured.out
+        # Profile-specific value (no quotes when no spaces in value)
+        assert "--input api.yaml" in captured.out
+
+
+def test_help_shows_new_options() -> None:
+    """Test that --profile and --ignore-pyproject appear in help."""
+    from datamodel_code_generator.arguments import arg_parser  # noqa: PLC0415
+
+    help_text = arg_parser.format_help()
+    assert "--profile" in help_text
+    assert "--ignore-pyproject" in help_text
+    assert "pyproject.toml" in help_text
+
+
+def test_pyproject_profile_inherits_base_settings(output_file: Path, tmp_path: Path) -> None:
+    """Test that profile inherits settings from base config."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+snake-case-field = true
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles.api]
+target-python-version = "3.11"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "inherits_base.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
+
+
+@freeze_time("2019-07-26")
+def test_cli_args_override_profile_and_base(output_file: Path, tmp_path: Path) -> None:
+    """Test that CLI arguments take precedence over profile and base settings."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.9"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles.api]
+target-python-version = "3.10"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "cli_override.py",
+            extra_args=[
+                "--profile",
+                "api",
+                "--disable-timestamp",
+                "--target-python-version",
+                "3.11",
+                "--use-union-operator",
+            ],
+        )
+
+
+def test_ignore_pyproject_with_profile(tmp_path: Path) -> None:
+    """Test that --ignore-pyproject ignores --profile as well."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+snake-case-field = true
+
+[tool.datamodel-codegen.profiles.api]
+target-python-version = "3.11"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+    output_file = tmp_path / "output.py"
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            [
+                "--input",
+                str(input_file),
+                "--output",
+                str(output_file),
+                "--ignore-pyproject",
+                "--profile",
+                "api",
+                "--disable-timestamp",
+            ],
+        )
+        output_content = output_file.read_text()
+        assert "firstName" in output_content
+        assert "first_name" not in output_content
+
+
+def test_profile_without_pyproject_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that --profile without pyproject.toml raises an error."""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text('{"type": "object"}')
+    output_file = tmp_path / "output.py"
+
+    with chdir(tmp_path):
+        return_code = run_main_with_args(
+            ["--input", str(input_file), "--output", str(output_file), "--profile", "api"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+        )
+        assert return_code == Exit.ERROR
+        captured = capsys.readouterr()
+        assert "no [tool.datamodel-codegen] section found" in captured.err.lower()
