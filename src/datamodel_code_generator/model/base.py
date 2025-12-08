@@ -501,15 +501,6 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 yield from base_class.reference.source.iter_all_fields(visited)
         yield from self.fields
 
-    def iter_field_data_types(self) -> Iterator[tuple[DataModelFieldBase, DataType]]:
-        """Yield (field, data_type) for all fields and their nested data types."""
-        for field in self.fields:
-            yield from ((field, dt) for dt in field.data_type.all_data_types)
-
-    def deduplicate_base_classes(self) -> None:
-        """Remove duplicate base_classes by module_name.type_hint."""
-        self.base_classes = list({f"{c.module_name}.{c.type_hint}": c for c in self.base_classes}.values())
-
     def get_dedup_key(self) -> tuple[Any, ...]:
         """Generate hashable key for model deduplication."""
         from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415

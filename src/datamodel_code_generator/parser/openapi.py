@@ -447,22 +447,6 @@ class OpenAPIParser(JsonSchemaParser):
         self.resolve_ref(schema.ref)
         return self.get_ref_data_type(schema.ref)
 
-    def _resolve_parameter_references(self, parameters: list[Any]) -> list[dict[str, Any]]:
-        """Resolve $ref in parameter list."""
-        return [
-            self._get_ref_body(p["$ref"]) if isinstance(p, dict) and "$ref" in p else p
-            for p in parameters
-            if isinstance(p, dict)
-        ]
-
-    def _extract_base_path_from_ref(self, ref: str) -> Path | None:
-        """Extract base path from a reference for external file resolution."""
-        resolved_ref = self.model_resolver.resolve_ref(ref)
-        ref_file = resolved_ref.split("#")[0] if "#" in resolved_ref else resolved_ref
-        if ref_file and not is_url(ref_file):
-            return Path(ref_file).parent
-        return None
-
     def _process_path_items(  # noqa: PLR0913
         self,
         items: dict[str, dict[str, Any]],
@@ -479,7 +463,10 @@ class OpenAPIParser(JsonSchemaParser):
             item_ref = methods_.get("$ref")
             if item_ref:
                 methods = self.get_ref_model(item_ref)
-                ref_base_path = self._extract_base_path_from_ref(item_ref)
+                # Extract base path from reference for external file resolution
+                resolved_ref = self.model_resolver.resolve_ref(item_ref)
+                ref_file = resolved_ref.split("#")[0] if "#" in resolved_ref else resolved_ref
+                ref_base_path = Path(ref_file).parent if ref_file and not is_url(ref_file) else None
             else:
                 methods = methods_
                 ref_base_path = None
@@ -799,7 +786,12 @@ class OpenAPIParser(JsonSchemaParser):
                         [*path_parts, "#/components", "schemas", obj_name],
                     )
             if OpenAPIScope.Paths in self.open_api_scopes:
-                global_parameters = self._resolve_parameter_references(paths.get("parameters", []))
+                # Resolve $ref in global parameter list
+                global_parameters = [
+                    self._get_ref_body(p["$ref"]) if isinstance(p, dict) and "$ref" in p else p
+                    for p in paths.get("parameters", [])
+                    if isinstance(p, dict)
+                ]
                 self._process_path_items(paths, path_parts, "paths", global_parameters, security)
 
             if OpenAPIScope.Webhooks in self.open_api_scopes:

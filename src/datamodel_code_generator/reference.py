@@ -194,20 +194,6 @@ class Reference(_BaseModel):
             if _is_data_type(child):
                 child.replace_reference(new_reference)
 
-    def remove_from_base_classes(self) -> None:
-        """Remove self from all DataModel children's base_classes."""
-        for child in self.children:
-            if _is_data_model(child):
-                child.base_classes = [bc for bc in child.base_classes if bc.reference != self]
-                if not child.base_classes:
-                    child.set_base_class()
-
-    def deduplicate_children_base_classes(self) -> None:
-        """Deduplicate base_classes in all DataModel children."""
-        for child in self.children:
-            if _is_data_model(child):
-                child.deduplicate_base_classes()
-
 
 SINGULAR_NAME_SUFFIX: str = "Item"
 

@@ -148,8 +148,9 @@ def iter_models_field_data_types(
 ) -> Iterator[tuple[DataModel, DataModelFieldBase, DataType]]:
     """Yield (model, field, data_type) for all models, fields, and nested data types."""
     for model in models:
-        for field, data_type in model.iter_field_data_types():
-            yield model, field, data_type
+        for field in model.fields:
+            for data_type in field.data_type.all_data_types:
+                yield model, field, data_type
 
 
 ReferenceMapSet = dict[str, set[str]]
@@ -820,7 +821,7 @@ class Parser(ABC):
         models.insert(models.index(original), replacement)
         models.remove(original)
 
-    def __delete_duplicate_models(self, models: list[DataModel]) -> None:
+    def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
         model_class_names: dict[str, DataModel] = {}
         model_to_duplicate_models: defaultdict[DataModel, list[DataModel]] = defaultdict(list)
         for model in models.copy():
@@ -844,7 +845,12 @@ class Parser(ABC):
                             data_type.remove_reference()
                     continue
 
-                model.reference.remove_from_base_classes()
+                # Remove self from all DataModel children's base_classes
+                for child in model.reference.children:
+                    if isinstance(child, DataModel):
+                        child.base_classes = [bc for bc in child.base_classes if bc.reference != model.reference]
+                        if not child.base_classes:
+                            child.set_base_class()
 
             class_name = model.duplicate_class_name or model.class_name
             if class_name in model_class_names:
@@ -870,7 +876,12 @@ class Parser(ABC):
         for model, duplicate_models in model_to_duplicate_models.items():
             for duplicate_model in duplicate_models:
                 duplicate_model.reference.replace_children_references(model.reference)
-                duplicate_model.reference.deduplicate_children_base_classes()
+                # Deduplicate base_classes in all DataModel children
+                for child in duplicate_model.reference.children:
+                    if isinstance(child, DataModel):
+                        child.base_classes = list(
+                            {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
+                        )
                 models.remove(duplicate_model)
 
     @classmethod
