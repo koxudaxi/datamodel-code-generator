@@ -441,14 +441,13 @@ class JsonSchemaObject(BaseModel):
             return False
         # Fields other than ref
         other_fields = self.__fields_set__ - {"ref"}
-        # Exclude metadata-only fields
-        schema_affecting_fields = other_fields - self.__metadata_only_fields__
+        # Exclude metadata-only fields and extras (handled separately)
+        schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
         # Handle extras: only count if it contains non-metadata keys
-        if "extras" in schema_affecting_fields:
-            # Check if extras contains any schema-affecting keys
+        if self.extras:
             schema_affecting_extras = {k for k in self.extras if k not in self.__metadata_only_fields__}
-            if not schema_affecting_extras:
-                schema_affecting_fields -= {"extras"}
+            if schema_affecting_extras:
+                schema_affecting_fields |= {"extras"}
         return bool(schema_affecting_fields)
 
 
