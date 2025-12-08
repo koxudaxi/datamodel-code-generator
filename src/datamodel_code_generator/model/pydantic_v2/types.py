@@ -37,11 +37,7 @@ class PydanticV2DataType(DataType):
         if not self.use_serialize_as_any:
             return False
 
-        if not self.reference:
-            return False
-
-        if not self.reference.children:
-            return False
+        assert self.reference is not None
 
         from datamodel_code_generator.model.base import DataModel  # noqa: PLC0415
 

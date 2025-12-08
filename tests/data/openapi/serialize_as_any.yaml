@@ -32,6 +32,9 @@ components:
       type: object
       description: Container that holds user references
       properties:
+        admin_user_field:
+          $ref: '#/components/schemas/AdminUser'
+          description: Field that should not use SerializeAsAny
         user_field:
           $ref: '#/components/schemas/User'
           description: Field that should use SerializeAsAny
@@ -43,3 +46,4 @@ components:
       required:
         - user_field
         - user_list
+        - admin_user_field

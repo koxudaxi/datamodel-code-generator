@@ -18,6 +18,9 @@ class AdminUser(User):
 
 
 class Container(BaseModel):
+    admin_user_field: AdminUser = Field(
+        ..., description='Field that should not use SerializeAsAny'
+    )
     user_field: SerializeAsAny[User] = Field(
         ..., description='Field that should use SerializeAsAny'
     )
