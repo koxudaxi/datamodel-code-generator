@@ -718,6 +718,17 @@ general_options.add_argument(
     help="Generate CLI command from pyproject.toml configuration and exit",
 )
 general_options.add_argument(
+    "--ignore-pyproject",
+    action="store_true",
+    default=False,
+    help="Ignore pyproject.toml configuration",
+)
+general_options.add_argument(
+    "--profile",
+    help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
+    default=None,
+)
+general_options.add_argument(
     "--version",
     action="store_true",
     help="show version",
