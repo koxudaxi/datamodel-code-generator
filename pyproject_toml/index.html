@@ -75,6 +75,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#pyprojecttoml-configuration" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -644,6 +649,26 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pyproject.toml
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -661,6 +686,108 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#named-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named Profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#merge-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Merge Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ignoring-pyprojecttoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ignoring pyproject.toml
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -718,6 +845,99 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#named-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named Profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Priority
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#merge-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Merge Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ignoring-pyprojecttoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ignoring pyproject.toml
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -737,17 +957,86 @@
   
 
 
-  <h1>pyproject.toml</h1>
-
-<p>datamodel-code-generator has a lot of command-line options.</p>
-<p>The options are supported on <code>pyproject.toml</code>.</p>
-<p>Example <code>pyproject.toml</code>:
+<h1 id="pyprojecttoml-configuration">pyproject.toml Configuration</h1>
+<p>datamodel-code-generator can be configured using <code>pyproject.toml</code>. The tool automatically searches for <code>pyproject.toml</code> in the current directory and parent directories (stopping at the git repository root).</p>
+<h2 id="basic-usage">Basic Usage</h2>
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">field-constraints</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">strip-default-none</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.7&quot;</span>
-</span></code></pre></div></p>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;models.py&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.11&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">field-constraints</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span></code></pre></div>
+<p>All CLI options can be used in <code>pyproject.toml</code> by converting them to kebab-case (e.g., <code>--snake-case-field</code> becomes <code>snake-case-field</code>).</p>
+<h2 id="named-profiles">Named Profiles</h2>
+<p>You can define multiple named profiles for different use cases within a single project:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.9&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">[tool.datamodel-codegen.profiles.api]</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schemas/api.yaml&quot;</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models/api.py&quot;</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.11&quot;</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">[tool.datamodel-codegen.profiles.database]</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schemas/db.json&quot;</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models/db.py&quot;</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">input-file-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;jsonschema&quot;</span>
+</span></code></pre></div>
+<p>Base settings in <code>[tool.datamodel-codegen]</code> are used when no profile is specified, and also serve as defaults for profiles.</p>
+<p>Use a profile with the <code>--profile</code> option:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--profile<span class="w"> </span>api
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>datamodel-codegen<span class="w"> </span>--profile<span class="w"> </span>database
+</span></code></pre></div>
+<h2 id="configuration-priority">Configuration Priority</h2>
+<p>Settings are applied in the following priority order (highest to lowest):</p>
+<ol>
+<li><strong>CLI arguments</strong> - Always take precedence</li>
+<li><strong>Profile settings</strong> - From <code>[tool.datamodel-codegen.profiles.&lt;name&gt;]</code></li>
+<li><strong>Base settings</strong> - From <code>[tool.datamodel-codegen]</code></li>
+<li><strong>Default values</strong> - Built-in defaults</li>
+</ol>
+<h2 id="merge-rules">Merge Rules</h2>
+<p>When using profiles, settings are merged using <strong>shallow merge</strong>:</p>
+<ul>
+<li>Profile values <strong>completely replace</strong> base values (no deep merging)</li>
+<li>Settings not specified in the profile are inherited from the base configuration</li>
+<li>Lists and dictionaries are replaced entirely, not merged</li>
+</ul>
+<h3 id="example">Example</h3>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;str&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;int&quot;</span><span class="p">]</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">http-headers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Authorization: Bearer token&quot;</span><span class="p">]</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">[tool.datamodel-codegen.profiles.api]</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;bytes&quot;</span><span class="p">]</span>
+</span></code></pre></div>
+<p>When using <code>--profile api</code>:</p>
+<ul>
+<li><code>strict-types</code> becomes <code>["bytes"]</code> (completely replaces base, not merged)</li>
+<li><code>http-headers</code> is inherited from base as <code>["Authorization: Bearer token"]</code></li>
+</ul>
+<h2 id="ignoring-pyprojecttoml">Ignoring pyproject.toml</h2>
+<p>To ignore all <code>pyproject.toml</code> configuration and use only CLI arguments:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--ignore-pyproject<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py
+</span></code></pre></div>
+<h2 id="generating-configuration">Generating Configuration</h2>
+<p>Generate a <code>pyproject.toml</code> configuration section from CLI arguments:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span>--snake-case-field<span class="w"> </span>--generate-pyproject-config
+</span></code></pre></div>
+<p>Output:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;models.py&quot;</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span></code></pre></div>
+<p>Generate CLI command from existing <code>pyproject.toml</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--generate-cli-command
+</span></code></pre></div>
+<p>With a specific profile:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>datamodel-codegen<span class="w"> </span>--profile<span class="w"> </span>api<span class="w"> </span>--generate-cli-command
+</span></code></pre></div>
 
 
 
