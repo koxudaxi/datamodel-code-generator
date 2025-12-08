@@ -1883,6 +1883,39 @@ def test_main_jsonschema_object_has_one_of(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_oneof_const_enum(output_file: Path) -> None:
+    """Test oneOf with const values generates enum (issue #1925)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_nullable(output_file: Path) -> None:
+    """Test nullable oneOf with const values generates optional enum."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nullable.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_nullable.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_nested(output_file: Path) -> None:
+    """Test nested oneOf with const values in properties and array items."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_nested.py",
+    )
+
+
 def test_main_jsonschema_json_pointer_array(output_file: Path) -> None:
     """Test JSON pointer with arrays."""
     run_main_and_assert(
