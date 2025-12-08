@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "count_with_default": {
+      "$ref": "#/$defs/CountType",
+      "default": 10
+    },
+    "count_no_default": {
+      "$ref": "#/$defs/CountType"
+    },
+    "count_list_default": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CountType"
+      },
+      "default": [1, 2, 3]
+    }
+  },
+  "$defs": {
+    "CountType": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    }
+  }
+}

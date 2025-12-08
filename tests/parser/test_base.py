@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -15,6 +16,7 @@ from datamodel_code_generator.parser.base import (
     add_model_path_to_list,
     escape_characters,
     exact_import,
+    get_module_directory,
     relative,
     sort_data_models,
     to_hashable,
@@ -293,6 +295,18 @@ class D(DataModel):
     def render(self) -> str:
         """Render the data model."""
         return self._data
+
+
+@pytest.fixture
+def parser_fixture() -> C:
+    """Create a test parser instance for unit tests."""
+    return C(
+        data_model_type=D,
+        data_model_root_type=B,
+        data_model_field_type=DataModelFieldBase,
+        base_class="Base",
+        source="",
+    )
 
 
 def test_additional_imports() -> None:
@@ -585,3 +599,64 @@ def test_postprocess_result_modules_single_element_no_dot() -> None:
     }
     result = Parser._Parser__postprocess_result_modules(input_data)
     assert ("file",) in result
+
+
+@pytest.mark.parametrize(
+    ("module", "expected"),
+    [
+        ((), ()),  # empty
+        (("pkg",), ("pkg",)),  # single
+        (("pkg", "issuing"), ("pkg",)),  # submodule
+        (("foo", "bar", "baz"), ("foo", "bar")),  # deeply nested
+    ],
+    ids=["empty", "single", "submodule", "deeply_nested"],
+)
+def test_get_module_directory(module: tuple[str, ...], expected: tuple[str, ...]) -> None:
+    """Test get_module_directory with various inputs."""
+    assert get_module_directory(module) == expected
+
+
+@pytest.mark.parametrize(
+    ("scc_modules", "existing_modules", "expected"),
+    [
+        # name conflict: _internal already exists
+        ({(), ("sub",)}, {("_internal",)}, ("_internal_1",)),
+        # multiple conflicts: _internal and _internal_1 exist
+        ({(), ("sub",)}, {("_internal",), ("_internal_1",)}, ("_internal_2",)),
+        # different prefix break: LCP computation hits break
+        ({("common", "a"), ("common", "b"), ("other", "x")}, set(), ("_internal",)),
+    ],
+    ids=["name_conflict", "multiple_conflicts", "different_prefix_break"],
+)
+def test_compute_internal_module_path(
+    parser_fixture: C,
+    scc_modules: set[tuple[str, ...]],
+    existing_modules: set[tuple[str, ...]],
+    expected: tuple[str, ...],
+) -> None:
+    """Test __compute_internal_module_path with various conflict scenarios."""
+    result = parser_fixture._Parser__compute_internal_module_path(scc_modules, existing_modules)
+    assert result == expected
+
+
+def test_build_module_dependency_graph_with_missing_ref(parser_fixture: C) -> None:
+    """Test __build_module_dependency_graph when reference path is not in path_to_module."""
+    ref_source = MagicMock()
+    ref_source.source = True
+    ref_source.path = "nonexistent.Model"
+
+    data_type = MagicMock()
+    data_type.reference = ref_source
+
+    model1 = MagicMock()
+    model1.path = "pkg.Model1"
+    model1.all_data_types = [data_type]
+    model1.base_classes = []
+
+    module_models_list = [
+        (("pkg",), [model1]),
+    ]
+
+    graph = parser_fixture._Parser__build_module_dependency_graph(module_models_list)
+
+    assert graph == {("pkg",): set()}

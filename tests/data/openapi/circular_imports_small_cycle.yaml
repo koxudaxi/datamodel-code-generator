@@ -1,0 +1,27 @@
+openapi: 3.0.0
+info:
+  title: Small Circular Dependency Test (Below Threshold)
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Root model references submodule
+    Parent:
+      type: object
+      properties:
+        id:
+          type: string
+        child:
+          $ref: '#/components/schemas/sub.Child'
+
+    # sub.Child references back to root - creates 2-module cycle
+    # This WILL trigger _internal.py (all SCCs are merged)
+    sub.Child:
+      type: object
+      properties:
+        id:
+          type: string
+        parent:
+          $ref: '#/components/schemas/Parent'

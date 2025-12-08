@@ -3189,3 +3189,72 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
         ignore_whitespace=True,
         extra_args=["--disable-timestamp"],
     )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
+    """Test RootModel default values are wrapped with type constructors."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_no_annotated(output_file: Path) -> None:
+    """Test RootModel default values without --use-annotated flag."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_no_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_branches(output_file: Path) -> None:
+    """Test RootModel default value branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_branches.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_branches.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) -> None:
+    """Test that non-RootModel references are not wrapped."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_non_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_non_root.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
