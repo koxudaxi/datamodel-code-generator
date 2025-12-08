@@ -20,12 +20,12 @@ from pydantic import (
 class User(BaseModel):
     name: Optional[StrictStr] = Field(None, example='ken')
     age: Optional[StrictInt] = None
-    salary: Optional[StrictInt] = None
-    debt: Optional[StrictInt] = None
-    loan: Optional[StrictFloat] = None
-    tel: Optional[StrictStr] = None
-    height: Optional[StrictFloat] = None
-    weight: Optional[StrictFloat] = None
-    score: Optional[StrictFloat] = None
+    salary: Optional[StrictInt] = Field(None, ge=0)
+    debt: Optional[StrictInt] = Field(None, le=0)
+    loan: Optional[StrictFloat] = Field(None, le=0.0)
+    tel: Optional[StrictStr] = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
+    height: Optional[StrictFloat] = Field(None, ge=0.0)
+    weight: Optional[StrictFloat] = Field(None, ge=0.0)
+    score: Optional[StrictFloat] = Field(None, ge=1e-08)
     active: Optional[StrictBool] = None
-    photo: Optional[StrictBytes] = None
+    photo: Optional[StrictBytes] = Field(None, min_length=100)
