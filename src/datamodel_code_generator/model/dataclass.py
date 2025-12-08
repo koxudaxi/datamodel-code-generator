@@ -106,15 +106,8 @@ class DataModelField(DataModelFieldBase):
     constraints: Optional[Constraints] = None  # noqa: UP045
 
     def process_const(self) -> None:
-        """Process const field constraint."""
-        if "const" not in self.extras:
-            return
-        self.const = True
-        self.nullable = False
-        const = self.extras["const"]
-        self.data_type = self.data_type.__class__(literals=[const])
-        if not self.default:
-            self.default = const
+        """Process const field constraint using literal type."""
+        self._process_const_as_literal()
 
     @property
     def imports(self) -> tuple[Import, ...]:
@@ -123,12 +116,6 @@ class DataModelField(DataModelFieldBase):
         if field and field.startswith("field("):
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
-
-    def self_reference(self) -> bool:  # pragma: no cover
-        """Check if field references its parent dataclass."""
-        return isinstance(self.parent, DataClass) and self.parent.reference.path in {
-            d.reference.path for d in self.data_type.all_data_types if d.reference
-        }
 
     @property
     def field(self) -> str | None:
@@ -183,6 +170,7 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with datetime type mapping."""
         super().__init__(
@@ -195,6 +183,7 @@ class DataTypeManager(_DataTypeManager):
             use_pendulum,
             target_datetime_class,
             treat_dot_as_module,
+            use_serialize_as_any,
         )
 
         datetime_map = (

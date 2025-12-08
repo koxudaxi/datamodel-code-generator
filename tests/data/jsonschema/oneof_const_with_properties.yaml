@@ -1,0 +1,7 @@
+$schema: http://json-schema.org/draft-07/schema#
+title: ConstWithProps
+oneOf:
+  - const: value1
+    properties:
+      invalid: true
+  - const: value2

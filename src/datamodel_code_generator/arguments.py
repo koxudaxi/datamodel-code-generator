@@ -355,6 +355,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-serialize-as-any",
+    help="Use pydantic.SerializeAsAny for fields with types that have subtypes (Pydantic v2 only)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-generic-container-types",
     help="Use generic container types for type hinting (typing.Sequence, typing.Mapping). "
     "If `--use-standard-collections` option is set, then import from collections.abc instead of typing",
@@ -716,6 +722,17 @@ general_options.add_argument(
     action="store_true",
     default=None,
     help="Generate CLI command from pyproject.toml configuration and exit",
+)
+general_options.add_argument(
+    "--ignore-pyproject",
+    action="store_true",
+    default=False,
+    help="Ignore pyproject.toml configuration",
+)
+general_options.add_argument(
+    "--profile",
+    help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
+    default=None,
 )
 general_options.add_argument(
     "--version",

@@ -393,6 +393,9 @@ Typing customization:
                         corresponding con* constrained types.
   --use-one-literal-as-default
                         Use one literal as default value for one literal field
+  --use-serialize-as-any
+                        Use pydantic.SerializeAsAny for fields with types that have subtypes
+                        (Pydantic v2 only)
   --use-specialized-enum, --no-use-specialized-enum
                         Don''t use specialized Enum class (StrEnum, IntEnum) even if the
                         target Python version supports it
@@ -566,7 +569,10 @@ General options:
   --generate-pyproject-config
                         Generate pyproject.toml configuration from the provided CLI
                         arguments and exit
+  --ignore-pyproject    Ignore pyproject.toml configuration
   --no-color            disable colorized output
+  --profile PROFILE     Use a named profile from pyproject.toml [tool.datamodel-
+                        codegen.profiles.<name>]
   --version             show version
   -h, --help            show this help message and exit
 ```

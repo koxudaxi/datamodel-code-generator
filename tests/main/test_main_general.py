@@ -696,16 +696,23 @@ def test_all_exports_scope_children_with_docstring_header(output_dir: Path) -> N
     )
 
 
-def test_all_exports_scope_recursive_collision_error(output_dir: Path) -> None:
-    """Test --all-exports-scope=recursive raises error on collision without strategy."""
+def test_all_exports_scope_recursive_collision_avoided_by_renaming(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive avoids collision through automatic class renaming.
+
+    With circular import resolution, conflicting class names (e.g., foo.Tea and nested.foo.Tea)
+    are automatically renamed (e.g., Tea and Tea_1) in _internal.py, so no collision error occurs.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
         input_file_type="openapi",
         extra_args=["--disable-timestamp", "--all-exports-scope", "recursive"],
-        expected_exit=Exit.ERROR,
-        expected_stderr_contains="Name collision detected",
     )
+
+    # Verify both Tea and Tea_1 exist in _internal.py (collision avoided through renaming)
+    internal_content = (output_dir / "_internal.py").read_text()
+    assert "class Tea(BaseModel):" in internal_content, "Tea class should exist in _internal.py"
+    assert "class Tea_1(BaseModel):" in internal_content, "Tea_1 class should exist in _internal.py"
 
 
 def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
@@ -806,4 +813,54 @@ def test_all_exports_scope_children_no_child_exports(output_dir: Path) -> None:
             "children",
         ],
         expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_no_child",
+    )
+
+
+def test_all_exports_scope_children_with_local_models(output_dir: Path) -> None:
+    """Test --all-exports-scope=children when __init__.py has both local models and child exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_with_local_models.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_with_local_models",
+    )
+
+
+def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
+    """Test --check uses pyproject.toml formatter settings from output path."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        """{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string", "description": "The person's first name description that is very long."}
+  }
+}""",
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
     )

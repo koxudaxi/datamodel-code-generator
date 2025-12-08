@@ -844,3 +844,80 @@ def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
     mock_load.assert_called_once()
     called_path = mock_load.call_args[0][0]
     assert called_path.parts[-4:] == ("home", "user", "schemas", "pet.json")
+
+
+def test_merge_ref_with_schema_no_ref() -> None:
+    """Test _merge_ref_with_schema returns object unchanged when no $ref is present."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.parse_obj({"type": "string", "minLength": 5})
+    result = parser._merge_ref_with_schema(obj)
+    assert result is obj
+
+
+def test_has_ref_with_schema_keywords_extras_with_schema_affecting_keys() -> None:
+    """Test has_ref_with_schema_keywords when extras contains schema-affecting keys."""
+    # const is stored in extras and is schema-affecting
+    obj = JsonSchemaObject.parse_obj({
+        "$ref": "#/$defs/Base",
+        "const": "active",
+    })
+    # Verify extras contains schema-affecting key
+    assert obj.extras
+    assert "const" in obj.extras
+    assert obj.has_ref_with_schema_keywords is True
+
+
+def test_has_ref_with_schema_keywords_extras_with_metadata_only_keys() -> None:
+    """Test has_ref_with_schema_keywords when extras contains only metadata keys."""
+    # $comment is metadata-only, should not trigger merge
+    obj = JsonSchemaObject.parse_obj({
+        "$ref": "#/$defs/Base",
+        "$comment": "this is a comment",
+    })
+    # Verify extras contains only metadata key
+    assert obj.extras
+    assert "$comment" in obj.extras
+    assert obj.has_ref_with_schema_keywords is False
+
+
+def test_has_ref_with_schema_keywords_no_extras() -> None:
+    """Test has_ref_with_schema_keywords when extras is empty."""
+    # Only $ref and a schema-affecting field, no extras
+    obj = JsonSchemaObject.parse_obj({
+        "$ref": "#/$defs/Base",
+        "minLength": 10,
+    })
+    # Verify extras is empty but minLength triggers merge
+    assert not obj.extras
+    assert obj.has_ref_with_schema_keywords is True
+
+
+def test_parse_combined_schema_anyof_with_ref_and_schema_keywords() -> None:
+    """Test parse_combined_schema merges $ref with schema-affecting keywords in anyOf."""
+    parser = JsonSchemaParser("")
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "value": {
+                "anyOf": [
+                    {
+                        "$ref": "#/$defs/BaseString",
+                        "minLength": 10,
+                    },
+                    {
+                        "type": "integer",
+                    },
+                ]
+            }
+        },
+        "$defs": {
+            "BaseString": {
+                "type": "string",
+                "maxLength": 100,
+            }
+        },
+    }
+    parser.parse_raw_obj("Model", schema, [])
+    results = list(parser.results)
+    assert len(results) >= 1

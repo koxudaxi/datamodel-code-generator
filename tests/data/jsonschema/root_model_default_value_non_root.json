@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "root_model_field": {
+      "$ref": "#/$defs/CountType",
+      "default": 10
+    },
+    "non_root_model_field": {
+      "$ref": "#/$defs/PersonType",
+      "default": {"name": "John"}
+    },
+    "primitive_field": {
+      "type": "string",
+      "default": "hello"
+    }
+  },
+  "$defs": {
+    "CountType": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "PersonType": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

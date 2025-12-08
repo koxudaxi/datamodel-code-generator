@@ -67,6 +67,8 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "check",
     "generate_pyproject_config",
     "generate_cli_command",
+    "ignore_pyproject",
+    "profile",
     "version",
     "help",
     "debug",
@@ -422,6 +424,7 @@ class Config(BaseModel):
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     use_annotated: bool = False
+    use_serialize_as_any: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
@@ -469,16 +472,27 @@ class Config(BaseModel):
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
-def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
-    """Find and return the [tool.datamodel-codgen] section of the closest pyproject.toml if it exists."""
+def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
+    """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
     current_path = source
     while current_path != current_path.parent:
         if (current_path / "pyproject.toml").is_file():
             pyproject_toml = load_toml(current_path / "pyproject.toml")
             if "datamodel-codegen" in pyproject_toml.get("tool", {}):
-                pyproject_config = pyproject_toml["tool"]["datamodel-codegen"]
-                # Convert options from kebap- to snake-case
-                pyproject_config = {k.replace("-", "_"): v for k, v in pyproject_config.items()}
+                tool_config = pyproject_toml["tool"]["datamodel-codegen"]
+
+                base_config: dict[str, Any] = {k: v for k, v in tool_config.items() if k != "profiles"}
+
+                if profile:
+                    profiles = tool_config.get("profiles", {})
+                    if profile not in profiles:
+                        available = list(profiles.keys()) if profiles else "none"
+                        msg = f"Profile '{profile}' not found in pyproject.toml. Available profiles: {available}"
+                        raise Error(msg)
+                    profile_config = profiles[profile]
+                    base_config.update(profile_config)
+
+                pyproject_config = {k.replace("-", "_"): v for k, v in base_config.items()}
                 # Replace US-american spelling if present (ignore if british spelling is present)
                 if (
                     "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config
@@ -488,9 +502,15 @@ def _get_pyproject_toml_config(source: Path) -> dict[str, Any]:
 
         if (current_path / ".git").exists():
             # Stop early if we see a git repository root.
-            return {}
+            break
 
         current_path = current_path.parent
+
+    # If profile was requested but no pyproject.toml config was found, raise an error
+    if profile:
+        msg = f"Profile '{profile}' requested but no [tool.datamodel-codegen] section found in pyproject.toml"
+        raise Error(msg)
+
     return {}
 
 
@@ -648,7 +668,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(config_output)  # noqa: T201
         return Exit.OK
 
-    pyproject_config = _get_pyproject_toml_config(Path.cwd())
+    # Handle --ignore-pyproject and --profile options
+    if namespace.ignore_pyproject:
+        pyproject_config: dict[str, Any] = {}
+    else:
+        try:
+            pyproject_config = _get_pyproject_toml_config(Path.cwd(), profile=namespace.profile)
+        except Error as e:
+            print(e.message, file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
 
     if namespace.generate_cli_command:
         if not pyproject_config:
@@ -826,6 +854,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             http_headers=config.http_headers,
             http_ignore_tls=config.http_ignore_tls,
             use_annotated=config.use_annotated,
+            use_serialize_as_any=config.use_serialize_as_any,
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
@@ -851,6 +880,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             frozen_dataclasses=config.frozen_dataclasses,
             no_alias=config.no_alias,
             formatters=config.formatters,
+            settings_path=config.output if config.check else None,
             parent_scoped_naming=config.parent_scoped_naming,
             dataclass_arguments=config.dataclass_arguments,
             disable_future_imports=config.disable_future_imports,

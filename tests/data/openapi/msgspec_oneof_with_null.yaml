@@ -1,0 +1,39 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test oneOf with null
+components:
+  schemas:
+    Model:
+      type: object
+      properties:
+        required_field:
+          type: string
+        optional_oneof_with_null:
+          oneOf:
+            - type: string
+            - type: "null"
+        optional_anyof_with_null:
+          anyOf:
+            - type: string
+            - type: "null"
+        optional_field_not_nullable:
+          type: string
+        optional_oneof_with_null_and_constraint:
+          oneOf:
+            - type: string
+              maxLength: 100
+            - type: "null"
+        optional_nullable_field:
+          type: string
+          nullable: true
+        optional_nullable_with_constraint:
+          type: string
+          nullable: true
+          maxLength: 50
+        optional_nullable_with_min_length:
+          type: string
+          nullable: true
+          minLength: 5
+      required:
+        - required_field

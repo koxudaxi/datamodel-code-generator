@@ -418,6 +418,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
+    use_serialize_as_any: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
     original_field_name_delimiter: str | None = None,
     use_double_quotes: bool = False,
@@ -443,6 +444,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     frozen_dataclasses: bool = False,
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
+    settings_path: Path | None = None,
     parent_scoped_naming: bool = False,
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
@@ -656,6 +658,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
         use_annotated=use_annotated,
+        use_serialize_as_any=use_serialize_as_any,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         original_field_name_delimiter=original_field_name_delimiter,
         use_double_quotes=use_double_quotes,
@@ -690,6 +693,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     with chdir(output):
         results = parser.parse(
+            settings_path=settings_path,
             disable_future_imports=disable_future_imports,
             all_exports_scope=all_exports_scope,
             all_exports_collision_strategy=all_exports_collision_strategy,

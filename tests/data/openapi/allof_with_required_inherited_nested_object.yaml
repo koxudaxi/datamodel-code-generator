@@ -1,0 +1,67 @@
+openapi: "3.0.0"
+info:
+  title: Test API - Nested Object Inheritance
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+
+    ContactInfo:
+      type: object
+      properties:
+        email:
+          type: string
+        phone:
+          type: string
+
+    ProjectedPerson:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        contact:
+          $ref: '#/components/schemas/ContactInfo'
+        tags:
+          type: array
+          items:
+            type: string
+        priority:
+          anyOf:
+            - type: integer
+            - type: string
+
+    Person:
+      allOf:
+        - $ref: '#/components/schemas/ProjectedPerson'
+        - type: object
+          required:
+            - id
+            - name
+            - address
+            - metadata
+            - contact
+            - tags
+            - priority
+          properties:
+            nickname:
+              type: string

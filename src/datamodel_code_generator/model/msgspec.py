@@ -89,7 +89,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_FIELD)
         if self.field and "lambda: convert" in self.field:
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
-        if self.annotated:
+        if isinstance(self, DataModelField) and self.needs_meta_import:
             extra_imports.append(IMPORT_MSGSPEC_META)
         if self.extras.get("is_classvar"):
             extra_imports.append(IMPORT_CLASSVAR)
@@ -180,6 +180,19 @@ def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool)
     return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
 
 
+@lru_cache
+def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+    """Add UnsetType to a type hint without removing None."""
+    if use_union_operator:
+        return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
+    if type_.startswith(UNION_PREFIX):
+        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
+    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
+        inner_type = type_[len(OPTIONAL_PREFIX) : -1]
+        return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
+
+
 @import_extender
 class DataModelField(DataModelFieldBase):
     """Field implementation for msgspec Struct models."""
@@ -208,12 +221,6 @@ class DataModelField(DataModelFieldBase):
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}
     constraints: Optional[Constraints] = None  # noqa: UP045
 
-    def self_reference(self) -> bool:  # pragma: no cover
-        """Check if field references its parent Struct."""
-        return isinstance(self.parent, Struct) and self.parent.reference.path in {
-            d.reference.path for d in self.data_type.all_data_types if d.reference
-        }
-
     def process_const(self) -> None:
         """Process const field constraint."""
         if "const" not in self.extras:
@@ -222,7 +229,7 @@ class DataModelField(DataModelFieldBase):
         self.nullable = False
         const = self.extras["const"]
         if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover # Literal supports only str
-            self.data_type = self.data_type.__class__(literals=[const])
+            self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
 
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         """Get constraint value with appropriate numeric type."""
@@ -282,6 +289,8 @@ class DataModelField(DataModelFieldBase):
         """Return the type hint, using UnsetType for non-required non-nullable fields."""
         type_hint = super().type_hint
         if self._not_required and not self.nullable:
+            if self.data_type.is_optional:
+                return _add_unset_type(type_hint, self.data_type.use_union_operator)
             return get_neither_required_nor_nullable_type(type_hint, self.data_type.use_union_operator)
         return type_hint
 
@@ -294,14 +303,15 @@ class DataModelField(DataModelFieldBase):
         """Return whether to fall back to nullable type instead of UnsetType."""
         return not self._not_required
 
-    @property
-    def annotated(self) -> str | None:
-        """Get Annotated type hint with Meta constraints."""
-        if not self.use_annotated:  # pragma: no cover
-            return None
-
+    def _get_meta_string(self) -> str | None:
+        """Compute Meta(...) string if there are any meta constraints."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._META_FIELD_KEYS}
-        if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
+        has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
+        if (
+            self.constraints is not None
+            and not self.self_reference()
+            and not (self.data_type.strict and has_type_constraints)
+        ):
             data = {
                 **data,
                 **{
@@ -312,21 +322,56 @@ class DataModelField(DataModelFieldBase):
             }
 
         meta_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
-        if not meta_arguments:
+        return f"Meta({', '.join(meta_arguments)})" if meta_arguments else None
+
+    @property
+    def annotated(self) -> str | None:  # noqa: PLR0911
+        """Get Annotated type hint with Meta constraints.
+
+        For ClassVar fields (discriminator tag_field), ClassVar is required
+        regardless of use_annotated setting.
+        """
+        if self.extras.get("is_classvar"):
+            meta = self._get_meta_string()
+            if self.use_annotated and meta:
+                return f"ClassVar[Annotated[{self.type_hint}, {meta}]]"
+            return f"ClassVar[{self.type_hint}]"
+
+        if not self.use_annotated:  # pragma: no cover
             return None
 
-        meta = f"Meta({', '.join(meta_arguments)})"
+        meta = self._get_meta_string()
+        if not meta:
+            return None
 
-        if not self.required and not self.extras.get("is_classvar"):
-            type_hint = self.data_type.type_hint
-            annotated_type = f"Annotated[{type_hint}, {meta}]"
-            return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
+        if self.required:
+            return f"Annotated[{self.type_hint}, {meta}]"
 
-        annotated_type = f"Annotated[{self.type_hint}, {meta}]"
+        type_hint = self.data_type.type_hint
+        annotated_type = f"Annotated[{type_hint}, {meta}]"
+        if self.nullable:  # pragma: no cover
+            return annotated_type
+        if self.data_type.is_optional:  # pragma: no cover
+            return _add_unset_type(annotated_type, self.data_type.use_union_operator)
+        return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
+
+    @property
+    def needs_annotated_import(self) -> bool:
+        """Check if this field requires the Annotated import.
+
+        ClassVar fields with Meta need Annotated only when use_annotated is True.
+        ClassVar fields without Meta don't need Annotated.
+        """
+        if not self.annotated:
+            return False
         if self.extras.get("is_classvar"):
-            annotated_type = f"ClassVar[{annotated_type}]"
+            return self.use_annotated and self._get_meta_string() is not None
+        return True
 
-        return annotated_type
+    @property
+    def needs_meta_import(self) -> bool:
+        """Check if this field requires the Meta import."""
+        return self._get_meta_string() is not None
 
     def _get_default_as_struct_model(self) -> str | None:
         """Convert default value to Struct model using msgspec convert."""
@@ -373,6 +418,7 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with optional datetime type mapping."""
         super().__init__(
@@ -385,6 +431,7 @@ class DataTypeManager(_DataTypeManager):
             use_pendulum,
             target_datetime_class,
             treat_dot_as_module,
+            use_serialize_as_any,
         )
 
         datetime_map = (

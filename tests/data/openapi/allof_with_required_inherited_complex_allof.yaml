@@ -1,0 +1,69 @@
+openapi: "3.0.0"
+info:
+  title: Test API - Complex allOf Inheritance
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    StringConstraint:
+      type: string
+      minLength: 1
+
+    NumberConstraint:
+      type: number
+      minimum: 0
+
+    BaseConfig:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+
+    ExtendedConfig:
+      type: object
+      properties:
+        timeout:
+          type: integer
+
+    ProjectedItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          allOf:
+            - $ref: '#/components/schemas/StringConstraint'
+            - maxLength: 10
+        score:
+          allOf:
+            - type: number
+            - minimum: 0
+            - maximum: 100
+        config:
+          allOf:
+            - $ref: '#/components/schemas/BaseConfig'
+            - $ref: '#/components/schemas/ExtendedConfig'
+        metadata:
+          allOf:
+            - type: object
+              additionalProperties:
+                type: string
+            - type: object
+              additionalProperties:
+                minLength: 1
+
+    Item:
+      allOf:
+        - $ref: '#/components/schemas/ProjectedItem'
+        - type: object
+          required:
+            - id
+            - code
+            - score
+            - config
+            - metadata
+          properties:
+            extra:
+              type: string

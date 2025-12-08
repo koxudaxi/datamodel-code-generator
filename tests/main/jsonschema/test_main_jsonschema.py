@@ -28,6 +28,7 @@ from tests.main.conftest import (
     ALIASES_DATA_PATH,
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
     run_main_and_assert,
@@ -1384,6 +1385,30 @@ def test_main_jsonschema_subclass_enum(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_allof_enum_ref(output_file: Path) -> None:
+    """Test allOf referencing enum from another schema."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_enum_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_allof_enum_no_external_ref(output_file: Path) -> None:
+    """Test allOf referencing enum without external $ref.
+
+    This covers the case where existing_ref is None in parse_all_of,
+    so the schema is optimized to directly return the enum reference.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_enum_no_external_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
@@ -1880,6 +1905,185 @@ def test_main_jsonschema_object_has_one_of(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="object_has_one_of.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum(output_file: Path) -> None:
+    """Test oneOf with const values generates enum (issue #1925)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_nullable(output_file: Path) -> None:
+    """Test nullable oneOf with const values generates optional enum."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nullable.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_nullable.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_nested(output_file: Path) -> None:
+    """Test nested oneOf with const values in properties and array items."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_nested.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_nested_literal(output_file: Path) -> None:
+    """Test nested oneOf const with --enum-field-as-literal all."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_nested_literal.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_int(output_file: Path) -> None:
+    """Test oneOf with integer const values generates IntEnum."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_int.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_int.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_type_list(output_file: Path) -> None:
+    """Test oneOf with const values and type list (nullable)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_type_list.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_type_list.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
+    """Test oneOf with const values as Literal type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_literal.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_infer_type(output_file: Path) -> None:
+    """Test oneOf with const values and inferred type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_infer_type.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_infer_type.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_bool(output_file: Path) -> None:
+    """Test oneOf with boolean const values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_bool.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_bool.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_float(output_file: Path) -> None:
+    """Test oneOf with float const values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_float.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_float.py",
+    )
+
+
+def test_main_jsonschema_anyof_const_enum_nested(output_file: Path) -> None:
+    """Test nested anyOf with const values in properties and array items."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_const_enum_nested.py",
+    )
+
+
+def test_main_jsonschema_anyof_const_enum_nested_literal(output_file: Path) -> None:
+    """Test nested anyOf const with --enum-field-as-literal all."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_const_enum_nested_literal.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_jsonschema_oneof_const_mixed_with_ref(output_file: Path) -> None:
+    """Test oneOf with mixed const and $ref falls back to Union."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_mixed_with_ref.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_mixed_with_ref.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_with_properties(output_file: Path) -> None:
+    """Test oneOf with const and properties falls back to Union."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_with_properties.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_with_properties.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_type_list_no_null(output_file: Path) -> None:
+    """Test oneOf const with type list without null."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_type_list_no_null.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_type_list_no_null.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_object(output_file: Path) -> None:
+    """Test oneOf with object const values for type inference coverage."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_object.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_object.py",
     )
 
 
@@ -2518,6 +2722,55 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_with_type_string(output_file: Path) -> None:
+    """Test msgspec Struct generation with discriminator using type: string + const."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="discriminator_with_type_string_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_with_meta(output_file: Path) -> None:
+    """Test msgspec Struct generation with discriminator ClassVar having Meta constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_meta_msgspec.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="discriminator_with_meta_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_without_annotated(output_file: Path) -> None:
+    """Test msgspec Struct discriminator generates ClassVar even without use_annotated."""
+    generate(
+        JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
+        output=output_file,
+        output_model_type=DataModelType.MsgspecStruct,
+        target_python_version=PythonVersion.PY_310,
+        use_annotated=False,
+    )
+    assert_file_content(output_file, "discriminator_with_type_string_msgspec_no_annotated.py")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_msgspec_null_field(output_file: Path) -> None:
     """Test msgspec Struct generation with null type fields."""
     run_main_and_assert(
@@ -3140,6 +3393,17 @@ def test_main_jsonschema_collapse_root_models_with_optional(output_file: Path) -
     )
 
 
+def test_main_jsonschema_collapse_root_models_nested_reference(output_file: Path) -> None:
+    """Ensure nested references inside root models still get imported when collapsing."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_nested_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
 def test_main_jsonschema_file_url_ref(tmp_path: Path) -> None:
     """Test that file:// URL $ref is resolved correctly."""
     pet_schema = {
@@ -3220,4 +3484,161 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
         expected_output=expected,
         ignore_whitespace=True,
         extra_args=["--disable-timestamp"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
+    """Test RootModel default values are wrapped with type constructors."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_no_annotated(output_file: Path) -> None:
+    """Test RootModel default values without --use-annotated flag."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_no_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_branches(output_file: Path) -> None:
+    """Test RootModel default value branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_branches.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_branches.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) -> None:
+    """Test that non-RootModel references are not wrapped."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_non_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_non_root.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_extras_in_oneof(output_file: Path) -> None:
+    """Test that extras are preserved in oneOf/anyOf structures (Issue #2403)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras_in_oneof.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="extras_in_oneof.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-include-all-keys",
+        ],
+    )
+
+
+def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
+    """Test that $ref combined with additional keywords merges properties (Issue #2330)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_with_additional_keywords",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "ref_with_additional_keywords",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
+    """Test that 'schema' field is not renamed in TypedDict (Issue #1833)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_field_name_schema_typed_dict.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_jsonschema_reserved_field_name_dataclass(output_file: Path) -> None:
+    """Test that 'schema' field is not renamed in dataclass (Issue #1833)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_field_name_schema_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_jsonschema_reserved_field_name_pydantic(output_file: Path) -> None:
+    """Test that 'schema' field is renamed to 'schema_' with alias in Pydantic (Issue #1833)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_field_name_schema_pydantic.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.11",
+        ],
     )

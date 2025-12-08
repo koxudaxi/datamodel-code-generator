@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import platform
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,6 +31,7 @@ from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
+    LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
     TIMESTAMP,
@@ -1572,6 +1575,89 @@ def test_main_openapi_override_required_all_of_field(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_allof_with_required_inherited_fields(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes inherited fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_fields.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_fields_force_optional(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf and --force-optional flag."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_fields_force_optional.py",
+        extra_args=["--force-optional"],
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_nested_object(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes inherited nested object fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_nested_object.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_nested_object.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_complex_allof(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf where required includes complex allOf fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_complex_allof.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_complex_allof.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf covering all type inheritance scenarios."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_comprehensive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_comprehensive.py",
+    )
+
+
+def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf edge cases for branch coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_edge_cases.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_with_required_inherited_edge_cases.py",
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_main_openapi_allof_with_required_inherited_coverage(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf coverage for edge case branches."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_coverage.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="allof_with_required_inherited_coverage.py",
+        )
+        # Verify the warning was raised for $ref combined with constraints
+        assert any("allOf combines $ref" in str(warning.message) for warning in w)
+
+
 def test_main_use_default_kwarg(output_file: Path) -> None:
     """Test OpenAPI generation with use default kwarg."""
     run_main_and_assert(
@@ -2036,6 +2122,18 @@ def test_main_openapi_custom_id_pydantic_v2(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_serialize_as_any_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI generation with SerializeAsAny for types with subtypes."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "serialize_as_any.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="serialize_as_any_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-serialize-as-any"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
@@ -2293,6 +2391,39 @@ def test_main_openapi_msgspec_anyof(min_version: str, output_file: Path) -> None
     )
 
 
+@LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_oneof_with_null(output_file: Path) -> None:
+    """Test msgspec Struct generation with oneOf containing null type."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_oneof_with_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_oneof_with_null.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+        ],
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_oneof_with_null_union_operator(output_file: Path) -> None:
+    """Test msgspec Struct generation with oneOf containing null type using union operator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_oneof_with_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_oneof_with_null_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+        ],
+    )
+
+
 def test_main_openapi_referenced_default(output_file: Path) -> None:
     """Test OpenAPI generation with referenced default values."""
     run_main_and_assert(
@@ -2302,6 +2433,18 @@ def test_main_openapi_referenced_default(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="referenced_default.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_referenced_default_use_annotated(output_file: Path) -> None:
+    """Test OpenAPI generation with referenced default values using --use-annotated."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "referenced_default.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="referenced_default_use_annotated.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
     )
 
 
@@ -3027,4 +3170,151 @@ def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
         output_path=output_dir,
         expected_directory=EXPECTED_OPENAPI_PATH / "dot_notation_deep_inheritance",
         input_file_type="openapi",
+    )
+
+
+def test_main_openapi_strict_types_field_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test strict types with field constraints for pydantic v2 (issue #1884)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strict_types_field_constraints.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="strict_types_field_constraints_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--strict-types",
+            "int",
+            "float",
+            "str",
+        ],
+    )
+
+
+def test_main_openapi_strict_types_field_constraints_msgspec(output_file: Path) -> None:
+    """Test strict types with field constraints for msgspec (issue #1884)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strict_types_field_constraints.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="strict_types_field_constraints_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--field-constraints",
+            "--strict-types",
+            "int",
+            "float",
+            "str",
+        ],
+    )
+
+
+def test_main_openapi_circular_imports_stripe_like(output_dir: Path) -> None:
+    """Test that circular imports between root and submodules are resolved with _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_stripe_like.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_stripe_like",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_acyclic(output_dir: Path) -> None:
+    """Test that acyclic dependencies do not create _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_acyclic.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_acyclic",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_class_conflict(output_dir: Path) -> None:
+    """Test that class name conflicts in merged _internal.py are resolved with sequential renaming."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_class_conflict.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_class_conflict",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_with_inheritance(output_dir: Path) -> None:
+    """Test that circular imports with base class inheritance are resolved."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_with_inheritance.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_with_inheritance",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_small_cycle(output_dir: Path) -> None:
+    """Test that small 2-module cycles also create _internal.py."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_small_cycle.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_small_cycle",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_different_prefixes(output_dir: Path) -> None:
+    """Test circular imports with different module prefixes (tests LCP computation)."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_different_prefixes.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_different_prefixes",
+            input_file_type="openapi",
+        )
+
+
+def test_main_openapi_circular_imports_mixed_prefixes(output_dir: Path) -> None:
+    """Test circular imports with mixed common/different prefixes (tests LCP break branch)."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "circular_imports_mixed_prefixes.yaml",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_mixed_prefixes",
+            input_file_type="openapi",
+        )
+
+
+def test_warning_empty_schemas_with_paths(tmp_path: Path) -> None:
+    """Test warning when components/schemas is empty but paths exist."""
+    openapi_file = tmp_path / "openapi.yaml"
+    openapi_file.write_text("""
+openapi: 3.1.0
+info:
+  title: Test
+  version: '1'
+paths:
+  /test:
+    get:
+      responses:
+        200:
+          description: OK
+""")
+
+    with pytest.warns(UserWarning, match=r"No schemas found.*--openapi-scopes paths"), contextlib.suppress(Exception):
+        generate(openapi_file)
+
+
+def test_main_allof_enum_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf referencing enum from another schema."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_enum_ref.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
     )

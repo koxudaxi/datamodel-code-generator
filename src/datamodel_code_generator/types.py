@@ -28,6 +28,7 @@ from typing import (
 import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from typing_extensions import TypeIs
 
 from datamodel_code_generator.format import (
     DatetimeClassType,
@@ -89,6 +90,8 @@ if TYPE_CHECKING:
     import builtins
     from collections.abc import Iterable, Iterator, Sequence
 
+    from pydantic_core import core_schema
+
     from datamodel_code_generator.model.base import DataModelFieldBase
 
 if PYDANTIC_V2:
@@ -135,27 +138,19 @@ class UnionIntFloat:
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         """Return Pydantic v2 core schema."""
-        from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-            [
-                core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore[reportPossiblyUnboundVariable]
-                ),
-                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore[reportPossiblyUnboundVariable]
-            ]
-        )
+        from_int_schema = core_schema.chain_schema([
+            core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]),
+            core_schema.no_info_plain_validator_function(cls.validate),
+        ])
 
-        return core_schema.json_or_python_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
+        return core_schema.json_or_python_schema(
             json_schema=from_int_schema,
-            python_schema=core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                [
-                    # check if it's an instance first before doing any further work
-                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore[reportPossiblyUnboundVariable]
-                    from_int_schema,
-                ]
-            ),
-            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                lambda instance: instance.value
-            ),
+            python_schema=core_schema.union_schema([
+                # check if it's an instance first before doing any further work
+                core_schema.is_instance_schema(UnionIntFloat),
+                from_int_schema,
+            ]),
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda instance: instance.value),
         )
 
     @classmethod
@@ -263,6 +258,13 @@ def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT
     return f"{OPTIONAL_PREFIX}{type_}]"
 
 
+def is_data_model_field(obj: object) -> TypeIs[DataModelFieldBase]:
+    """Check if an object is a DataModelFieldBase instance."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: PLC0415
+
+    return isinstance(obj, DataModelFieldBase)
+
+
 @runtime_checkable
 class Modular(Protocol):
     """Protocol for objects with a module name property."""
@@ -336,6 +338,7 @@ class DataType(_BaseModel):
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
     treat_dot_as_module: bool = False
+    use_serialize_as_any: bool = False
 
     _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
@@ -389,6 +392,21 @@ class DataType(_BaseModel):
     def remove_reference(self) -> None:
         """Remove the reference from this DataType."""
         self.replace_reference(None)
+
+    def swap_with(self, new_data_type: DataType) -> None:
+        """Detach self and attach new_data_type to the same parent.
+
+        Replaces this DataType with new_data_type in the parent container.
+        Works with both field parents and nested DataType parents.
+        """
+        parent = self.parent
+        self.parent = None
+        if parent is not None:  # pragma: no cover
+            new_data_type.parent = parent
+            if is_data_model_field(parent):
+                parent.data_type = new_data_type
+            elif isinstance(parent, DataType):  # pragma: no cover
+                parent.data_types = [new_data_type if d is self else d for d in parent.data_types]
 
     @property
     def module_name(self) -> str | None:
@@ -496,6 +514,17 @@ class DataType(_BaseModel):
         if self.reference:
             self.reference.children.append(self)
 
+    def _get_wrapped_reference_type_hint(self, type_: str) -> str:  # noqa: PLR6301
+        """Wrap reference type name if needed (override in subclasses, e.g., for SerializeAsAny).
+
+        Args:
+            type_: The reference type name (e.g., "User")
+
+        Returns:
+            The potentially wrapped type name
+        """
+        return type_
+
     @property
     def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
         """Generate the Python type hint string for this DataType."""
@@ -542,6 +571,7 @@ class DataType(_BaseModel):
                 type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
             elif self.reference:
                 type_ = self.reference.short_name
+                type_ = self._get_wrapped_reference_type_hint(type_)
             else:
                 # TODO support strict Any
                 type_ = ""
@@ -655,6 +685,7 @@ class DataTypeManager(ABC):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize DataTypeManager with code generation options."""
         self.python_version = python_version
@@ -668,6 +699,7 @@ class DataTypeManager(ABC):
         self.use_pendulum: bool = use_pendulum
         self.target_datetime_class: DatetimeClassType | None = target_datetime_class
         self.treat_dot_as_module: bool = treat_dot_as_module
+        self.use_serialize_as_any: bool = use_serialize_as_any
 
         self.data_type: type[DataType] = create_model(
             "ContextDataType",
@@ -676,6 +708,7 @@ class DataTypeManager(ABC):
             use_generic_container=(bool, use_generic_container_types),
             use_union_operator=(bool, use_union_operator),
             treat_dot_as_module=(bool, treat_dot_as_module),
+            use_serialize_as_any=(bool, use_serialize_as_any),
             __base__=DataType,
         )
 

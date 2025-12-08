@@ -2,17 +2,6 @@
 #   filename:  modular.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from __future__ import annotations
+from .._internal import Cocoa, Tea
 
-from typing import NotRequired, TypedDict
-
-from .. import Id
-
-
-class Tea(TypedDict):
-    flavour: NotRequired[str]
-    id: NotRequired[Id]
-
-
-class Cocoa(TypedDict):
-    quality: NotRequired[int]
+__all__ = ["Cocoa", "Tea"]
