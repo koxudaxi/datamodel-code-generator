@@ -392,8 +392,15 @@ class JsonSchemaObject(BaseModel):
 
     @cached_property
     def type_has_null(self) -> bool:
-        """Check if the type list contains null."""
-        return isinstance(self.type, list) and "null" in self.type
+        """Check if the type list or oneOf/anyOf contains null."""
+        if isinstance(self.type, list) and "null" in self.type:
+            return True
+        for item in self.oneOf + self.anyOf:
+            if item.type == "null":
+                return True
+            if isinstance(item.type, list) and "null" in item.type:
+                return True
+        return False
 
     @cached_property
     def has_multiple_types(self) -> bool:
