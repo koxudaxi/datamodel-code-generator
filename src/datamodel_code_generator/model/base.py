@@ -518,11 +518,12 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 yield from base_class.reference.source.iter_all_fields(visited)
         yield from self.fields
 
-    def get_dedup_key(self, class_name: str | None = None) -> tuple[Any, ...]:
+    def get_dedup_key(self, class_name: str | None = None, *, use_default: bool = True) -> tuple[Any, ...]:
         """Generate hashable key for model deduplication."""
         from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
 
-        return tuple(to_hashable(v) for v in (self.render(class_name=class_name or "M"), self.imports))
+        render_class_name = class_name if class_name is not None or not use_default else "M"
+        return tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
 
     def create_reuse_model(self, base_ref: Reference) -> Self:
         """Create inherited model with empty fields pointing to base reference."""

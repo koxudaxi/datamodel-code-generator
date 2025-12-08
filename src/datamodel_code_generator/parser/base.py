@@ -854,8 +854,8 @@ class Parser(ABC):
             class_name = model.duplicate_class_name or model.class_name
             if class_name in model_class_names:
                 original_model = model_class_names[class_name]
-                if model.get_dedup_key(model.duplicate_class_name) == original_model.get_dedup_key(
-                    original_model.duplicate_class_name
+                if model.get_dedup_key(model.duplicate_class_name, use_default=False) == original_model.get_dedup_key(
+                    original_model.duplicate_class_name, use_default=False
                 ):
                     model_to_duplicate_models[original_model].append(model)
                     continue
