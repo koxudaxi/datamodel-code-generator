@@ -152,7 +152,10 @@ class DataModelField(DataModelFieldBase):
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data["alias"] = self.alias
-        if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
+        has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
+        if self.constraints is not None and not self.self_reference() and not (
+            self.data_type.strict and has_type_constraints
+        ):
             data = {
                 **data,
                 **(
