@@ -1384,6 +1384,16 @@ def test_main_jsonschema_subclass_enum(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_allof_enum_ref(output_file: Path) -> None:
+    """Test allOf referencing enum from another schema."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_enum_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
