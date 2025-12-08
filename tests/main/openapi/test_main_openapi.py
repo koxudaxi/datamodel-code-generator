@@ -3153,8 +3153,8 @@ def test_main_openapi_strict_types_field_constraints_msgspec(output_file: Path) 
             "str",
         ],
     )
-    
-    
+
+
 def test_main_openapi_circular_imports_stripe_like(output_dir: Path) -> None:
     """Test that circular imports between root and submodules are resolved with _internal.py."""
     with freeze_time(TIMESTAMP):
