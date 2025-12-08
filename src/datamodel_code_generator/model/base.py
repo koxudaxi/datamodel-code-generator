@@ -217,7 +217,7 @@ class DataModelFieldBase(_BaseModel):
 
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
-        if self.use_annotated and self.annotated:
+        if self.use_annotated and self.needs_annotated_import:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
 
@@ -268,6 +268,16 @@ class DataModelFieldBase(_BaseModel):
     def annotated(self) -> str | None:
         """Get the Annotated type hint content, if any."""
         return None
+
+    @property
+    def needs_annotated_import(self) -> bool:
+        """Check if this field requires the Annotated import."""
+        return bool(self.annotated)
+
+    @property
+    def needs_meta_import(self) -> bool:  # pragma: no cover
+        """Check if this field requires the Meta import (msgspec only)."""
+        return False
 
     @property
     def has_default_factory(self) -> bool:

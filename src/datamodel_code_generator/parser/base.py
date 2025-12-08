@@ -991,7 +991,7 @@ class Parser(ABC):
             data_type = self.data_type(literals=type_names)
         return data_type
 
-    def __apply_discriminator_type(  # noqa: PLR0912, PLR0915
+    def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
         imports: Imports,
@@ -1097,13 +1097,29 @@ class Parser(ABC):
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
                             continue
                         literals = discriminator_field.data_type.literals
-                        if len(literals) == 1 and literals[0] == (type_names[0] if type_names else None):
+                        const_value = discriminator_field.extras.get("const")
+                        expected_value = type_names[0] if type_names else None
+
+                        # Check if literals match (existing behavior)
+                        literals_match = len(literals) == 1 and literals[0] == expected_value
+                        # Check if const value matches (for msgspec with type: string + const)
+                        const_match = const_value is not None and const_value == expected_value
+
+                        if literals_match:
                             has_one_literal = True
                             if isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
                                 discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
                                 discriminator_model.add_base_class_kwarg("tag", discriminator_field.represented_default)
                                 discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
+                            break
+
+                        # For msgspec with const value but no literal (type: string + const case)
+                        if const_match and isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
+                            has_one_literal = True
+                            discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
+                            discriminator_model.add_base_class_kwarg("tag", repr(const_value))
+                            discriminator_field.extras["is_classvar"] = True
                             break
 
                         enum_source: Enum | None = None
