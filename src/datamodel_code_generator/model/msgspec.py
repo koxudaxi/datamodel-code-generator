@@ -221,12 +221,6 @@ class DataModelField(DataModelFieldBase):
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le", "multiple_of"}
     constraints: Optional[Constraints] = None  # noqa: UP045
 
-    def self_reference(self) -> bool:  # pragma: no cover
-        """Check if field references its parent Struct."""
-        return isinstance(self.parent, Struct) and self.parent.reference.path in {
-            d.reference.path for d in self.data_type.all_data_types if d.reference
-        }
-
     def process_const(self) -> None:
         """Process const field constraint."""
         if "const" not in self.extras:

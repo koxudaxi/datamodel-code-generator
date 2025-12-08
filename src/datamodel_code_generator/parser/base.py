@@ -821,7 +821,7 @@ class Parser(ABC):
         models.insert(models.index(original), replacement)
         models.remove(original)
 
-    def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
+    def __delete_duplicate_models(self, models: list[DataModel]) -> None:
         model_class_names: dict[str, DataModel] = {}
         model_to_duplicate_models: defaultdict[DataModel, list[DataModel]] = defaultdict(list)
         for model in models.copy():
@@ -846,30 +846,17 @@ class Parser(ABC):
                     continue
 
                 # Remove self from all DataModel children's base_classes
-                for child in model.reference.children:
-                    if isinstance(child, DataModel):
-                        child.base_classes = [bc for bc in child.base_classes if bc.reference != model.reference]
-                        if not child.base_classes:
-                            child.set_base_class()
+                for child in model.reference.iter_data_model_children():
+                    child.base_classes = [bc for bc in child.base_classes if bc.reference != model.reference]
+                    if not child.base_classes:
+                        child.set_base_class()
 
             class_name = model.duplicate_class_name or model.class_name
             if class_name in model_class_names:
-                model_key = tuple(
-                    to_hashable(v)
-                    for v in (
-                        model.render(class_name=model.duplicate_class_name),
-                        model.imports,
-                    )
-                )
                 original_model = model_class_names[class_name]
-                original_model_key = tuple(
-                    to_hashable(v)
-                    for v in (
-                        original_model.render(class_name=original_model.duplicate_class_name),
-                        original_model.imports,
-                    )
-                )
-                if model_key == original_model_key:
+                if model.get_dedup_key(model.duplicate_class_name) == original_model.get_dedup_key(
+                    original_model.duplicate_class_name
+                ):
                     model_to_duplicate_models[original_model].append(model)
                     continue
             model_class_names[class_name] = model
@@ -877,11 +864,10 @@ class Parser(ABC):
             for duplicate_model in duplicate_models:
                 duplicate_model.reference.replace_children_references(model.reference)
                 # Deduplicate base_classes in all DataModel children
-                for child in duplicate_model.reference.children:
-                    if isinstance(child, DataModel):
-                        child.base_classes = list(
-                            {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
-                        )
+                for child in duplicate_model.reference.iter_data_model_children():
+                    child.base_classes = list(
+                        {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
+                    )
                 models.remove(duplicate_model)
 
     @classmethod

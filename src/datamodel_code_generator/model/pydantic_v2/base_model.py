@@ -125,15 +125,8 @@ class DataModelField(DataModelFieldV1):
         return values
 
     def process_const(self) -> None:
-        """Process const field by converting it to a literal type with default value."""
-        if "const" not in self.extras:
-            return
-        self.const = True
-        self.nullable = False
-        const = self.extras["const"]
-        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
-        if not self.default:
-            self.default = const
+        """Process const field constraint using literal type."""
+        self._process_const_as_literal()
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:

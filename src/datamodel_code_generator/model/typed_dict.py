@@ -118,15 +118,8 @@ class DataModelField(DataModelFieldBase):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
 
     def process_const(self) -> None:
-        """Process const field constraint."""
-        if "const" not in self.extras:
-            return
-        self.const = True
-        self.nullable = False
-        const = self.extras["const"]
-        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
-        if not self.default:
-            self.default = const
+        """Process const field constraint using literal type."""
+        self._process_const_as_literal()
 
     @property
     def key(self) -> str:

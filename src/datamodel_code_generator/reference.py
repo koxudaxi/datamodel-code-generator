@@ -39,7 +39,7 @@ from datamodel_code_generator import Error
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping, Sequence
+    from collections.abc import Generator, Iterator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
     import inflect
@@ -193,6 +193,12 @@ class Reference(_BaseModel):
         for child in self.children[:]:
             if _is_data_type(child):
                 child.replace_reference(new_reference)
+
+    def iter_data_model_children(self) -> Iterator[DataModel]:
+        """Yield all DataModel children."""
+        for child in self.children:
+            if _is_data_model(child):
+                yield child
 
 
 SINGULAR_NAME_SUFFIX: str = "Item"

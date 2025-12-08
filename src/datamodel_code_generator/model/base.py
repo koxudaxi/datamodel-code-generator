@@ -181,6 +181,23 @@ class DataModelFieldBase(_BaseModel):
         self.required = False
         self.nullable = False
 
+    def _process_const_as_literal(self) -> None:
+        """Process const values by converting to literal type. Used by subclasses."""
+        if "const" not in self.extras:
+            return
+        const = self.extras["const"]
+        self.const = True
+        self.nullable = False
+        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
+        if not self.default:
+            self.default = const
+
+    def self_reference(self) -> bool:
+        """Check if field references its parent model."""
+        if self.parent is None or not hasattr(self.parent, "reference"):
+            return False
+        return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
+
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
         """Get the type hint string for this field, including nullability."""
@@ -501,11 +518,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 yield from base_class.reference.source.iter_all_fields(visited)
         yield from self.fields
 
-    def get_dedup_key(self) -> tuple[Any, ...]:
+    def get_dedup_key(self, class_name: str | None = None) -> tuple[Any, ...]:
         """Generate hashable key for model deduplication."""
         from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
 
-        return tuple(to_hashable(v) for v in (self.render(class_name="M"), self.imports))
+        return tuple(to_hashable(v) for v in (self.render(class_name=class_name or "M"), self.imports))
 
     def create_reuse_model(self, base_ref: Reference) -> Self:
         """Create inherited model with empty fields pointing to base reference."""
