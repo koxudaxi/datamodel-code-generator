@@ -299,6 +299,12 @@ class DataModelFieldBase(_BaseModel):
             copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
         return copied
 
+    def replace_data_type(self, new_data_type: DataType) -> None:
+        """Replace data_type and update parent relationships."""
+        self.data_type.parent = None
+        self.data_type = new_data_type
+        new_data_type.parent = self
+
 
 @lru_cache
 def get_template(template_file_path: Path) -> Template:
@@ -369,7 +375,7 @@ class BaseClassDataType(DataType):
 UNDEFINED: Any = object()
 
 
-class DataModel(TemplateBase, Nullable, ABC):
+class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
     Handles template rendering, import collection, and model relationships.
@@ -482,6 +488,42 @@ class DataModel(TemplateBase, Nullable, ABC):
             if base_class.reference and isinstance(base_class.reference.source, DataModel):
                 yield from base_class.reference.source.iter_all_fields(visited)
         yield from self.fields
+
+    def iter_field_data_types(self) -> Iterator[tuple[DataModelFieldBase, DataType]]:
+        """Yield (field, data_type) for all fields and their nested data types."""
+        for field in self.fields:
+            yield from ((field, dt) for dt in field.data_type.all_data_types)
+
+    def deduplicate_base_classes(self) -> None:
+        """Remove duplicate base_classes by module_name.type_hint."""
+        self.base_classes = list({f"{c.module_name}.{c.type_hint}": c for c in self.base_classes}.values())
+
+    def get_dedup_key(self) -> tuple[Any, ...]:
+        """Generate hashable key for model deduplication."""
+        from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
+
+        return tuple(to_hashable(v) for v in (self.render(class_name="M"), self.imports))
+
+    def create_reuse_model(self, base_ref: Reference) -> Self:
+        """Create inherited model with empty fields pointing to base reference."""
+        return self.__class__(
+            fields=[],
+            base_classes=[base_ref],
+            description=self.description,
+            reference=Reference(
+                name=self.name,
+                path=self.reference.path + "/reuse",
+            ),
+            custom_template_dir=self._custom_template_dir,
+        )
+
+    def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
+        """Replace reference children if their parent model is in models list."""
+        from datamodel_code_generator.parser.base import get_most_of_parent  # noqa: PLC0415
+
+        for child in self.reference.children[:]:
+            if isinstance(child, DataType) and get_most_of_parent(child) in models:
+                child.replace_reference(new_ref)
 
     def set_base_class(self) -> None:
         """Set up the base class for this model."""

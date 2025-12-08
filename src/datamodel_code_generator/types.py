@@ -28,6 +28,7 @@ from typing import (
 import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from typing_extensions import TypeIs
 
 from datamodel_code_generator.format import (
     DatetimeClassType,
@@ -135,9 +136,11 @@ class UnionIntFloat:
         from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
             [
                 core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore[reportPossiblyUnboundVariable]
+                    [core_schema.int_schema(), core_schema.float_schema()]
+                    # pyright: ignore[reportPossiblyUnboundVariable]
                 ),
-                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore[reportPossiblyUnboundVariable]
+                core_schema.no_info_plain_validator_function(cls.validate),
+                # pyright: ignore[reportPossiblyUnboundVariable]
             ]
         )
 
@@ -150,7 +153,8 @@ class UnionIntFloat:
                     from_int_schema,
                 ]
             ),
-            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                # pyright: ignore[reportPossiblyUnboundVariable]
                 lambda instance: instance.value
             ),
         )
@@ -258,6 +262,13 @@ def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT
     if use_union_operator:
         return f"{type_} | {NONE}"
     return f"{OPTIONAL_PREFIX}{type_}]"
+
+
+def is_data_model_field(obj: object) -> TypeIs[DataModelFieldBase]:
+    """Check if an object is a DataModelFieldBase instance."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: PLC0415
+
+    return isinstance(obj, DataModelFieldBase)
 
 
 @runtime_checkable
@@ -386,6 +397,26 @@ class DataType(_BaseModel):
     def remove_reference(self) -> None:
         """Remove the reference from this DataType."""
         self.replace_reference(None)
+
+    def replace_in_parent(self, new_data_type: DataType) -> None:
+        """Replace self with new_data_type in parent container."""
+        if self.parent is None:
+            return
+        new_data_type.parent = self.parent
+        if is_data_model_field(self.parent):
+            self.parent.data_type = new_data_type
+        elif isinstance(self.parent, DataType):
+            self.parent.data_types = [new_data_type if d is self else d for d in self.parent.data_types]
+        self.parent = None
+
+    def swap_with(self, new_data_type: DataType) -> None:
+        """Detach self and attach new_data_type to the same parent."""
+        parent = self.parent
+        self.parent = None
+        if parent is not None:
+            new_data_type.parent = parent
+            if is_data_model_field(parent):
+                parent.data_type = new_data_type
 
     @property
     def module_name(self) -> str | None:

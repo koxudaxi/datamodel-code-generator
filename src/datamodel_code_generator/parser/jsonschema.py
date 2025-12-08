@@ -938,6 +938,35 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[path]["title"] = obj.title
 
+    def _set_schema_metadata(self, path: str, obj: JsonSchemaObject) -> None:
+        """Set title and additionalProperties in extra template data."""
+        if obj.title:
+            self.extra_template_data[path]["title"] = obj.title
+        if isinstance(obj.additionalProperties, bool):
+            self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
+
+    def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
+        """Apply title as name if use_title_as_name is enabled."""
+        if self.use_title_as_name and obj.title:
+            return sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
+        return name
+
+    def _should_field_be_required(
+        self,
+        *,
+        in_required_list: bool = True,
+        has_default: bool = False,
+        is_nullable: bool = False,
+    ) -> bool:
+        """Determine if a field should be marked as required."""
+        if self.force_optional_for_required_fields:
+            return False
+        if self.apply_default_values_for_required_fields and has_default:
+            return False
+        if is_nullable:
+            return False
+        return in_required_list
+
     def _deep_merge(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         """Deep merge two dictionaries, combining nested dicts and lists."""
         result = dict1.copy()
@@ -1312,12 +1341,13 @@ class JsonSchemaParser(Parser):
             kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
-    def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0917
+    def _parse_object_common_part(  # noqa: PLR0912, PLR0913
         self,
         name: str,
         obj: JsonSchemaObject,
         path: list[str],
-        ignore_duplicate_model: bool,  # noqa: FBT001
+        *,
+        ignore_duplicate_model: bool,
         fields: list[DataModelFieldBase],
         base_classes: list[Reference],
         required: list[str],
@@ -1362,8 +1392,7 @@ class JsonSchemaParser(Parser):
                     fields.append(
                         self.data_model_field_type(required=True, original_name=required_, data_type=DataType())
                     )
-        if self.use_title_as_name and obj.title:  # pragma: no cover
-            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
+        name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
 
@@ -1508,7 +1537,15 @@ class JsonSchemaParser(Parser):
 
         merged_all_of_obj = self._merge_all_of_object(obj)
         if merged_all_of_obj:
-            return self._parse_object_common_part(name, merged_all_of_obj, path, ignore_duplicate_model, [], [], [])
+            return self._parse_object_common_part(
+                name,
+                merged_all_of_obj,
+                path,
+                ignore_duplicate_model=ignore_duplicate_model,
+                fields=[],
+                base_classes=[],
+                required=[],
+            )
         fields: list[DataModelFieldBase] = []
         base_classes: list[Reference] = []
         required: list[str] = []
@@ -1516,17 +1553,23 @@ class JsonSchemaParser(Parser):
         self._parse_all_of_item(name, obj, path, fields, base_classes, required, union_models)
         if not union_models:
             return self._parse_object_common_part(
-                name, obj, path, ignore_duplicate_model, fields, base_classes, required
+                name,
+                obj,
+                path,
+                ignore_duplicate_model=ignore_duplicate_model,
+                fields=fields,
+                base_classes=base_classes,
+                required=required,
             )
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         all_of_data_type = self._parse_object_common_part(
             name,
             obj,
             get_special_path("allOf", path),
-            ignore_duplicate_model,
-            fields,
-            base_classes,
-            required,
+            ignore_duplicate_model=ignore_duplicate_model,
+            fields=fields,
+            base_classes=base_classes,
+            required=required,
         )
         assert all_of_data_type.reference is not None
         data_type = self.data_type(
@@ -1535,10 +1578,10 @@ class JsonSchemaParser(Parser):
                     name,
                     obj,
                     get_special_path(f"union_model-{index}", path),
-                    ignore_duplicate_model,
-                    [],
-                    [union_model, all_of_data_type.reference],
-                    [],
+                    ignore_duplicate_model=ignore_duplicate_model,
+                    fields=[],
+                    base_classes=[union_model, all_of_data_type.reference],
+                    required=[],
                 )
                 for index, union_model in enumerate(union_models)
             ]
@@ -1642,8 +1685,7 @@ class JsonSchemaParser(Parser):
                 f"This argument will be removed in a future version",
                 stacklevel=2,
             )
-        if self.use_title_as_name and obj.title:
-            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
+        name = self._apply_title_as_name(name, obj)
         reference = self.model_resolver.add(
             path,
             name,
@@ -1917,8 +1959,7 @@ class JsonSchemaParser(Parser):
         original_name: str | None = None,
     ) -> DataType:
         """Parse array schema into a root model with array type."""
-        if self.use_title_as_name and obj.title:
-            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
+        name = self._apply_title_as_name(name, obj)
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
@@ -2006,12 +2047,10 @@ class JsonSchemaParser(Parser):
             required: bool = False
         else:
             required = not obj.nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
-        if self.use_title_as_name and obj.title:
-            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
+        name = self._apply_title_as_name(name, obj)
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-        self.set_title(reference.path, obj)
-        self.set_additional_properties(reference.path, obj)
+        self._set_schema_metadata(reference.path, obj)
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[
@@ -2067,8 +2106,7 @@ class JsonSchemaParser(Parser):
         required = not is_nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
 
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-        self.set_title(reference.path, obj)
-        self.set_additional_properties(reference.path, obj)
+        self._set_schema_metadata(reference.path, obj)
 
         data_model_root_type = self.data_model_root_type(
             reference=reference,
@@ -2205,8 +2243,7 @@ class JsonSchemaParser(Parser):
             self.results.append(enum)
             return self.data_type(reference=reference_)
 
-        if self.use_title_as_name and obj.title:
-            name = sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
+        name = self._apply_title_as_name(name, obj)
         reference = self.model_resolver.add(
             path,
             name,
@@ -2332,55 +2369,51 @@ class JsonSchemaParser(Parser):
         reference.loaded = True
         return reference
 
-    def parse_ref(self, obj: JsonSchemaObject, path: list[str]) -> None:  # noqa: PLR0912
-        """Recursively parse all $ref references in a schema object."""
-        if obj.ref:
-            self.resolve_ref(obj.ref)
+    def _traverse_schema_objects(  # noqa: PLR0912
+        self,
+        obj: JsonSchemaObject,
+        path: list[str],
+        callback: Callable[[JsonSchemaObject, list[str]], None],
+        *,
+        include_one_of: bool = True,
+    ) -> None:
+        """Traverse schema objects recursively and apply callback."""
+        callback(obj, path)
         if obj.items:
             if isinstance(obj.items, JsonSchemaObject):
-                self.parse_ref(obj.items, path)
+                self._traverse_schema_objects(obj.items, path, callback, include_one_of=include_one_of)
             elif isinstance(obj.items, list):
                 for item in obj.items:
-                    self.parse_ref(item, path)
+                    self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
-            self.parse_ref(obj.additionalProperties, path)
+            self._traverse_schema_objects(obj.additionalProperties, path, callback, include_one_of=include_one_of)
         if obj.patternProperties:
             for value in obj.patternProperties.values():
-                self.parse_ref(value, path)
+                self._traverse_schema_objects(value, path, callback, include_one_of=include_one_of)
         for item in obj.anyOf:
-            self.parse_ref(item, path)
+            self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         for item in obj.allOf:
-            self.parse_ref(item, path)
-        for item in obj.oneOf:
-            self.parse_ref(item, path)
+            self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
+        if include_one_of:
+            for item in obj.oneOf:
+                self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         if obj.properties:
-            for property_value in obj.properties.values():
-                if isinstance(property_value, JsonSchemaObject):
-                    self.parse_ref(property_value, path)
+            for value in obj.properties.values():
+                if isinstance(value, JsonSchemaObject):
+                    self._traverse_schema_objects(value, path, callback, include_one_of=include_one_of)
 
-    def parse_id(self, obj: JsonSchemaObject, path: list[str]) -> None:  # noqa: PLR0912
+    def parse_ref(self, obj: JsonSchemaObject, path: list[str]) -> None:
+        """Recursively parse all $ref references in a schema object."""
+        self._traverse_schema_objects(obj, path, lambda o, _: self.resolve_ref(o.ref) if o.ref else None)
+
+    def parse_id(self, obj: JsonSchemaObject, path: list[str]) -> None:
         """Recursively parse all $id fields in a schema object."""
-        if obj.id:
-            self.model_resolver.add_id(obj.id, path)
-        if obj.items:
-            if isinstance(obj.items, JsonSchemaObject):
-                self.parse_id(obj.items, path)
-            elif isinstance(obj.items, list):
-                for item in obj.items:
-                    self.parse_id(item, path)
-        if isinstance(obj.additionalProperties, JsonSchemaObject):
-            self.parse_id(obj.additionalProperties, path)
-        if obj.patternProperties:
-            for value in obj.patternProperties.values():
-                self.parse_id(value, path)
-        for item in obj.anyOf:
-            self.parse_id(item, path)
-        for item in obj.allOf:
-            self.parse_id(item, path)
-        if obj.properties:
-            for property_value in obj.properties.values():
-                if isinstance(property_value, JsonSchemaObject):
-                    self.parse_id(property_value, path)
+        self._traverse_schema_objects(
+            obj,
+            path,
+            lambda o, p: self.model_resolver.add_id(o.id, p) if o.id else None,
+            include_one_of=False,
+        )
 
     @contextmanager
     def root_id_context(self, root_raw: dict[str, Any]) -> Generator[None, None, None]:
