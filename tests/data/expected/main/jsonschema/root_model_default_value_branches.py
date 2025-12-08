@@ -14,6 +14,12 @@ class CountType(RootModel[int]):
 
 
 class Model(BaseModel):
-    count_with_default: Annotated[Optional[CountType], Field()] = CountType(10)
+    count_with_default: Annotated[
+        Optional[CountType],
+        Field(default_factory=lambda: CountType.model_validate(CountType(10))),
+    ]
     count_no_default: Optional[CountType] = None
-    count_list_default: Annotated[Optional[List[CountType]], Field()] = [1, 2, 3]
+    count_list_default: Annotated[
+        Optional[List[CountType]],
+        Field(default_factory=lambda: [CountType.model_validate(v) for v in [1, 2, 3]]),
+    ]

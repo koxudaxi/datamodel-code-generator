@@ -18,6 +18,12 @@ class PersonType(BaseModel):
 
 
 class Model(BaseModel):
-    root_model_field: Annotated[Optional[CountType], Field()] = CountType(10)
-    non_root_model_field: Annotated[Optional[PersonType], Field()] = {'name': 'John'}
+    root_model_field: Annotated[
+        Optional[CountType],
+        Field(default_factory=lambda: CountType.model_validate(CountType(10))),
+    ]
+    non_root_model_field: Annotated[
+        Optional[PersonType],
+        Field(default_factory=lambda: PersonType.model_validate({'name': 'John'})),
+    ]
     primitive_field: Optional[str] = 'hello'
