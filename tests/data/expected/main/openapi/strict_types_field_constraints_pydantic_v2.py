@@ -12,7 +12,7 @@ class Timestamp(RootModel[StrictInt]):
 
 
 class Score(RootModel[StrictFloat]):
-    root: StrictFloat = Field(..., ge=0, le=100)
+    root: StrictFloat = Field(..., ge=0.0, le=100.0)
 
 
 class Name(RootModel[StrictStr]):

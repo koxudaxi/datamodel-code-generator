@@ -22,10 +22,10 @@ class User(BaseModel):
     age: Optional[StrictInt] = None
     salary: Optional[StrictInt] = Field(None, ge=0)
     debt: Optional[StrictInt] = Field(None, le=0)
-    loan: Optional[StrictFloat] = Field(None, le=0)
+    loan: Optional[StrictFloat] = Field(None, le=0.0)
     tel: Optional[StrictStr] = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
-    height: Optional[StrictFloat] = Field(None, ge=0)
-    weight: Optional[StrictFloat] = Field(None, ge=0)
-    score: Optional[StrictFloat] = Field(None, ge=0)
+    height: Optional[StrictFloat] = Field(None, ge=0.0)
+    weight: Optional[StrictFloat] = Field(None, ge=0.0)
+    score: Optional[StrictFloat] = Field(None, ge=1e-08)
     active: Optional[StrictBool] = None
     photo: Optional[StrictBytes] = Field(None, min_length=100)
