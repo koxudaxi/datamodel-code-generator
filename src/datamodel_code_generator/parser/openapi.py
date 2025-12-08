@@ -719,7 +719,15 @@ class OpenAPIParser(JsonSchemaParser):
             self.raw_obj = specification
             self._collect_discriminator_schemas()
             schemas: dict[str, Any] = specification.get("components", {}).get("schemas", {})
+            paths: dict[str, Any] = specification.get("paths", {})
             security: list[dict[str, list[str]]] | None = specification.get("security")
+            # Warn if schemas is empty but paths exist and only Schemas scope is used
+            if not schemas and self.open_api_scopes == [OpenAPIScope.Schemas] and paths:
+                warn(
+                    "No schemas found in components/schemas. If your schemas are defined in "
+                    "external files referenced from paths, consider using --openapi-scopes paths",
+                    stacklevel=2,
+                )
             if OpenAPIScope.Schemas in self.open_api_scopes:
                 for obj_name, raw_obj in schemas.items():
                     self.parse_raw_obj(
@@ -728,7 +736,6 @@ class OpenAPIParser(JsonSchemaParser):
                         [*path_parts, "#/components", "schemas", obj_name],
                     )
             if OpenAPIScope.Paths in self.open_api_scopes:
-                paths: dict[str, Any] = specification.get("paths", {})
                 parameters: list[dict[str, Any]] = [
                     self._get_ref_body(p["$ref"]) if "$ref" in p else p
                     for p in paths.get("parameters", [])
