@@ -3,20 +3,20 @@
   "type": "object",
   "properties": {
     "refs": {
-      "$ref": "#/$defs/somerefs.Schema"
+      "$ref": "#/$defs/SomeRefs"
     }
   },
   "required": [
     "refs"
   ],
   "$defs": {
-    "somerefs.Schema": {
+    "SomeRefs": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/someref.Schema"
+        "$ref": "#/$defs/SomeRef"
       }
     },
-    "someref.Schema": {
+    "SomeRef": {
       "type": "object",
       "properties": {
         "id": {

@@ -9,9 +9,9 @@ from typing import List
 from pydantic import BaseModel
 
 
-class SomerefSchema(BaseModel):
+class SomeRef(BaseModel):
     id: str
 
 
 class Model(BaseModel):
-    refs: List[SomerefSchema]
+    refs: List[SomeRef]
