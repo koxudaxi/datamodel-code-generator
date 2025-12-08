@@ -2,25 +2,8 @@
 #   filename:  modular.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from __future__ import annotations
+from .._internal import ListModel
+from .._internal import Tea_1 as Tea
+from .._internal import TeaClone
 
-from typing import List, NotRequired, TypeAlias, TypedDict
-
-from .. import Id, Optional
-
-
-class Tea(TypedDict):
-    flavour: NotRequired[str]
-    id: NotRequired[Id]
-    self: NotRequired[Tea]
-    optional: NotRequired[List[Optional]]
-
-
-class TeaClone(TypedDict):
-    flavour: NotRequired[str]
-    id: NotRequired[Id]
-    self: NotRequired[Tea]
-    optional: NotRequired[List[Optional]]
-
-
-ListModel: TypeAlias = List[Tea]
+__all__ = ["ListModel", "Tea", "TeaClone"]

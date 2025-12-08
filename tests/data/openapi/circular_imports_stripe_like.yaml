@@ -1,0 +1,78 @@
+openapi: 3.0.0
+info:
+  title: Stripe-like Circular Import Test
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Models in root (will go to __init__.py)
+    BalanceTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: integer
+        source:
+          $ref: '#/components/schemas/issuing.Authorization'
+
+    # Models with dot notation (will go to issuing.py)
+    issuing.Authorization:
+      type: object
+      properties:
+        id:
+          type: string
+        invoice:
+          $ref: '#/components/schemas/billing.Invoice'
+        cardholder:
+          $ref: '#/components/schemas/issuing.Cardholder'
+
+    issuing.Cardholder:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    # Models in billing module
+    billing.Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+        session:
+          $ref: '#/components/schemas/checkout.Session'
+        subscription:
+          $ref: '#/components/schemas/billing.Subscription'
+
+    billing.Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        plan:
+          type: string
+
+    # Models in checkout module - completes the cycle back to root
+    checkout.Session:
+      type: object
+      properties:
+        id:
+          type: string
+        transaction:
+          $ref: '#/components/schemas/BalanceTransaction'
+        line_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/checkout.LineItem'
+
+    checkout.LineItem:
+      type: object
+      properties:
+        id:
+          type: string
+        price:
+          type: integer

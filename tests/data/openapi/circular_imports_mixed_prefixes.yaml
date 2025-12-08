@@ -1,0 +1,53 @@
+openapi: 3.0.0
+info:
+  title: Circular Import with Mixed Prefixes Test
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Root model to trigger _internal.py generation
+    Root:
+      type: object
+      properties:
+        id:
+          type: string
+        a_ref:
+          $ref: '#/components/schemas/common.a.Model'
+
+    # common.a namespace - first directory is 'common'
+    common.a.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        b_ref:
+          $ref: '#/components/schemas/common.b.Model'
+
+    # common.b namespace - shares 'common' prefix
+    common.b.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        c_ref:
+          $ref: '#/components/schemas/common.c.Model'
+
+    # common.c namespace - shares 'common' prefix
+    common.c.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        other_ref:
+          $ref: '#/components/schemas/other.x.Model'
+
+    # other.x namespace - different prefix, will trigger break in LCP
+    other.x.Model:
+      type: object
+      properties:
+        id:
+          type: string
+        root_ref:
+          $ref: '#/components/schemas/Root'
