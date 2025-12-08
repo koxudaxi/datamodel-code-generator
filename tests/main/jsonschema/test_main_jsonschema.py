@@ -2041,6 +2041,28 @@ def test_main_jsonschema_oneof_const_with_properties(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_oneof_const_enum_type_list_no_null(output_file: Path) -> None:
+    """Test oneOf const with type list without null."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_type_list_no_null.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_type_list_no_null.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_enum_object(output_file: Path) -> None:
+    """Test oneOf with object const values for type inference coverage."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_object.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_object.py",
+    )
+
+
 def test_main_jsonschema_json_pointer_array(output_file: Path) -> None:
     """Test JSON pointer with arrays."""
     run_main_and_assert(
