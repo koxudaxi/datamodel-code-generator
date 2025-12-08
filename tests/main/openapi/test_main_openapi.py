@@ -3275,3 +3275,13 @@ paths:
 
     with pytest.warns(UserWarning, match=r"No schemas found.*--openapi-scopes paths"), contextlib.suppress(Exception):
         generate(openapi_file)
+
+
+def test_main_allof_enum_ref(output_file: Path) -> None:
+    """Test OpenAPI generation with allOf referencing enum from another schema."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_enum_ref.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+    )
