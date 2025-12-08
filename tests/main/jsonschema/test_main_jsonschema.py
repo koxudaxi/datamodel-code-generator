@@ -1917,6 +1917,18 @@ def test_main_jsonschema_oneof_const_enum_nested(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_oneof_const_enum_nested_literal(output_file: Path) -> None:
+    """Test nested oneOf const with --enum-field-as-literal all."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_enum_nested_literal.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_int(output_file: Path) -> None:
     """Test oneOf with integer const values generates IntEnum."""
     run_main_and_assert(
@@ -1981,6 +1993,51 @@ def test_main_jsonschema_oneof_const_enum_float(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="oneof_const_enum_float.py",
+    )
+
+
+def test_main_jsonschema_anyof_const_enum_nested(output_file: Path) -> None:
+    """Test nested anyOf with const values in properties and array items."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_const_enum_nested.py",
+    )
+
+
+def test_main_jsonschema_anyof_const_enum_nested_literal(output_file: Path) -> None:
+    """Test nested anyOf const with --enum-field-as-literal all."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_const_enum_nested.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_const_enum_nested_literal.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_jsonschema_oneof_const_mixed_with_ref(output_file: Path) -> None:
+    """Test oneOf with mixed const and $ref falls back to Union."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_mixed_with_ref.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_mixed_with_ref.py",
+    )
+
+
+def test_main_jsonschema_oneof_const_with_properties(output_file: Path) -> None:
+    """Test oneOf with const and properties falls back to Union."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_with_properties.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_const_with_properties.py",
     )
 
 
