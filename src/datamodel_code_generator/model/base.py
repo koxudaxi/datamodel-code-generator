@@ -299,11 +299,23 @@ class DataModelFieldBase(_BaseModel):
             copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
         return copied
 
-    def replace_data_type(self, new_data_type: DataType) -> None:
-        """Replace data_type and update parent relationships."""
-        self.data_type.parent = None
-        self.data_type = new_data_type
-        new_data_type.parent = self
+    def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
+        """Replace data_type and update parent relationships.
+
+        Args:
+            new_data_type: The new DataType to set.
+            clear_old_parent: If True, clear the old data_type's parent reference.
+                Set to False when the old data_type may be referenced elsewhere.
+        """
+        if self.data_type.parent is self and clear_old_parent:
+            # Use swap_with when parent is properly set
+            self.data_type.swap_with(new_data_type)
+        else:
+            # Fallback for cases where parent is not set or shouldn't be cleared
+            if clear_old_parent:
+                self.data_type.parent = None
+            self.data_type = new_data_type
+            new_data_type.parent = self
 
 
 @lru_cache

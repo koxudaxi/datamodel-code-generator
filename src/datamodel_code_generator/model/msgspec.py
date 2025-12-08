@@ -235,7 +235,7 @@ class DataModelField(DataModelFieldBase):
         self.nullable = False
         const = self.extras["const"]
         if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover # Literal supports only str
-            self.data_type = self.data_type.__class__(literals=[const])
+            self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
 
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         """Get constraint value with appropriate numeric type."""

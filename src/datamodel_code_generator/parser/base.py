@@ -1153,10 +1153,10 @@ class Parser(ABC):
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
 
-                        new_discriminator_data_type = self._create_discriminator_data_type(
+                        discriminator_field.data_type = self._create_discriminator_data_type(
                             enum_source, type_names, discriminator_model, imports
                         )
-                        discriminator_field.replace_data_type(new_discriminator_data_type)
+                        discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
                         imports.append(discriminator_field.imports)
                         has_one_literal = True
@@ -1186,10 +1186,10 @@ class Parser(ABC):
                 data_type_.parent = new_data_type
             return new_data_type
         if data_type.data_types:  # pragma: no cover
-            for index, nested_data_type in enumerate(data_type.data_types[:]):
+            for nested_data_type in data_type.data_types[:]:
                 set_data_type = cls._create_set_from_list(nested_data_type)
                 if set_data_type:  # pragma: no cover
-                    data_type.data_types[index] = set_data_type
+                    nested_data_type.swap_with(set_data_type)
             return data_type
         return None  # pragma: no cover
 
@@ -1475,33 +1475,31 @@ class Parser(ABC):
                     if not root_type_model.reference.children:
                         unused_models.append(root_type_model)
 
-    def __set_default_enum_member(  # noqa: PLR0912
+    def __set_default_enum_member(
         self,
         models: list[DataModel],
     ) -> None:
         if not self.set_default_enum_member:
             return
-        for model in models:  # noqa: PLR1702
-            for model_field in model.fields:
-                if not model_field.default:
+        for _, model_field, data_type in iter_models_field_data_types(models):
+            if not model_field.default:
+                continue
+            if data_type.reference and isinstance(data_type.reference.source, Enum):  # pragma: no cover
+                if isinstance(model_field.default, list):
+                    enum_member: list[Member] | (Member | None) = [
+                        e for e in (data_type.reference.source.find_member(d) for d in model_field.default) if e
+                    ]
+                else:
+                    enum_member = data_type.reference.source.find_member(model_field.default)
+                if not enum_member:
                     continue
-                for data_type in model_field.data_type.all_data_types:
-                    if data_type.reference and isinstance(data_type.reference.source, Enum):  # pragma: no cover
-                        if isinstance(model_field.default, list):
-                            enum_member: list[Member] | (Member | None) = [
-                                e for e in (data_type.reference.source.find_member(d) for d in model_field.default) if e
-                            ]
-                        else:
-                            enum_member = data_type.reference.source.find_member(model_field.default)
-                        if not enum_member:
-                            continue
-                        model_field.default = enum_member
-                        if data_type.alias:
-                            if isinstance(enum_member, list):
-                                for enum_member_ in enum_member:
-                                    enum_member_.alias = data_type.alias
-                            else:
-                                enum_member.alias = data_type.alias
+                model_field.default = enum_member
+                if data_type.alias:
+                    if isinstance(enum_member, list):
+                        for enum_member_ in enum_member:
+                            enum_member_.alias = data_type.alias
+                    else:
+                        enum_member.alias = data_type.alias
 
     def __wrap_root_model_default_values(
         self,
@@ -1510,25 +1508,22 @@ class Parser(ABC):
         """Wrap RootModel reference default values with their type constructors."""
         if not self.use_annotated:
             return
-        for model in models:
+        for model, model_field, data_type in iter_models_field_data_types(models):
             if isinstance(model, (Enum, self.data_model_root_type)):
                 continue
-            for model_field in model.fields:
-                if model_field.default is None:
-                    continue
-                if isinstance(model_field.default, (WrappedDefault, Member)):
-                    continue
-                if isinstance(model_field.default, list):
-                    continue
-                for data_type in model_field.data_type.all_data_types:
-                    if data_type.reference and isinstance(data_type.reference.source, pydantic_model_v2.RootModel):
-                        # Use alias if available (handles import collisions)
-                        type_name = data_type.alias or data_type.reference.short_name
-                        model_field.default = WrappedDefault(
-                            value=model_field.default,
-                            type_name=type_name,
-                        )
-                        break
+            if model_field.default is None:
+                continue
+            if isinstance(model_field.default, (WrappedDefault, Member)):
+                continue
+            if isinstance(model_field.default, list):
+                continue
+            if data_type.reference and isinstance(data_type.reference.source, pydantic_model_v2.RootModel):
+                # Use alias if available (handles import collisions)
+                type_name = data_type.alias or data_type.reference.short_name
+                model_field.default = WrappedDefault(
+                    value=model_field.default,
+                    type_name=type_name,
+                )
 
     def __override_required_field(
         self,

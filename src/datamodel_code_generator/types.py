@@ -389,25 +389,20 @@ class DataType(_BaseModel):
         """Remove the reference from this DataType."""
         self.replace_reference(None)
 
-    def replace_in_parent(self, new_data_type: DataType) -> None:
-        """Replace self with new_data_type in parent container."""
-        if self.parent is None:
-            return
-        new_data_type.parent = self.parent
-        if is_data_model_field(self.parent):
-            self.parent.data_type = new_data_type
-        elif isinstance(self.parent, DataType):
-            self.parent.data_types = [new_data_type if d is self else d for d in self.parent.data_types]
-        self.parent = None
-
     def swap_with(self, new_data_type: DataType) -> None:
-        """Detach self and attach new_data_type to the same parent."""
+        """Detach self and attach new_data_type to the same parent.
+
+        Replaces this DataType with new_data_type in the parent container.
+        Works with both field parents and nested DataType parents.
+        """
         parent = self.parent
         self.parent = None
         if parent is not None:
             new_data_type.parent = parent
             if is_data_model_field(parent):
                 parent.data_type = new_data_type
+            elif isinstance(parent, DataType):
+                parent.data_types = [new_data_type if d is self else d for d in parent.data_types]
 
     @property
     def module_name(self) -> str | None:

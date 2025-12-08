@@ -131,7 +131,7 @@ class DataModelField(DataModelFieldV1):
         self.const = True
         self.nullable = False
         const = self.extras["const"]
-        self.data_type = self.data_type.__class__(literals=[const])
+        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
         if not self.default:
             self.default = const
 
