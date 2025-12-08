@@ -3261,6 +3261,5 @@ paths:
           description: OK
 """)
 
-    with pytest.warns(UserWarning, match=r"No schemas found.*--openapi-scopes paths"):
-        with contextlib.suppress(Exception):
-            generate(openapi_file)
+    with pytest.warns(UserWarning, match=r"No schemas found.*--openapi-scopes paths"), contextlib.suppress(Exception):
+        generate(openapi_file)
