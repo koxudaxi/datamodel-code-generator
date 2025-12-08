@@ -7,6 +7,7 @@ from pathlib import Path
 
 import black
 import pytest
+from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit
@@ -642,6 +643,10 @@ disable-warnings = true
 EXPECTED_PYPROJECT_PROFILE_PATH = EXPECTED_MAIN_KR_PATH / "pyproject_profile"
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse("23.0.0"),
+    reason="black 22.x doesn't support Python 3.11 target version",
+)
 @freeze_time("2019-07-26")
 def test_pyproject_with_profile(output_file: Path, tmp_path: Path) -> None:
     """Test loading a named profile from pyproject.toml."""
@@ -809,6 +814,10 @@ def test_help_shows_new_options() -> None:
     assert "pyproject.toml" in help_text
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse("23.0.0"),
+    reason="black 22.x doesn't support Python 3.11 target version",
+)
 def test_pyproject_profile_inherits_base_settings(output_file: Path, tmp_path: Path) -> None:
     """Test that profile inherits settings from base config."""
     pyproject_toml = """
@@ -843,6 +852,10 @@ target-python-version = "3.11"
         )
 
 
+@pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse("23.0.0"),
+    reason="black 22.x doesn't support Python 3.11 target version",
+)
 @freeze_time("2019-07-26")
 def test_cli_args_override_profile_and_base(output_file: Path, tmp_path: Path) -> None:
     """Test that CLI arguments take precedence over profile and base settings."""
