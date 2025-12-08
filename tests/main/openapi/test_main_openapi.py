@@ -2390,6 +2390,18 @@ def test_main_openapi_referenced_default(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_referenced_default_use_annotated(output_file: Path) -> None:
+    """Test OpenAPI generation with referenced default values using --use-annotated."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "referenced_default.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="referenced_default_use_annotated.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
+    )
+
+
 def test_duplicate_models(output_file: Path) -> None:
     """Test OpenAPI generation with duplicate models."""
     run_main_and_assert(

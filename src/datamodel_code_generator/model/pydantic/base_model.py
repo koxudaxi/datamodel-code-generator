@@ -68,6 +68,12 @@ class DataModelField(DataModelFieldBase):
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
     constraints: Optional[Constraints] = None  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "parse_obj"
+    _computed_default_factory: str | None = None
+
+    @property
+    def has_default_factory_in_field(self) -> bool:
+        """Check if this field has a default_factory in Field() including computed ones."""
+        return "default_factory" in self.extras or self._computed_default_factory is not None
 
     @property
     def method(self) -> str | None:
@@ -184,6 +190,8 @@ class DataModelField(DataModelFieldBase):
         else:
             default_factory = data.pop("default_factory", None)
 
+        self._computed_default_factory = default_factory
+
         field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
@@ -191,13 +199,14 @@ class DataModelField(DataModelFieldBase):
                 return "Field(...)"  # Field() is for mypy
             return ""
 
+        if default_factory:
+            field_arguments = [f"default_factory={default_factory}", *field_arguments]
+
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif self.required:
             field_arguments = ["...", *field_arguments]
-        elif default_factory:
-            field_arguments = [f"default_factory={default_factory}", *field_arguments]
-        else:
+        elif not default_factory:
             field_arguments = [f"{self.default!r}", *field_arguments]
 
         return f"Field({', '.join(field_arguments)})"
