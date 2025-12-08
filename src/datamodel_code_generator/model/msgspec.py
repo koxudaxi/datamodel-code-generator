@@ -331,7 +331,7 @@ class DataModelField(DataModelFieldBase):
         return f"Meta({', '.join(meta_arguments)})" if meta_arguments else None
 
     @property
-    def annotated(self) -> str | None:
+    def annotated(self) -> str | None:  # noqa: PLR0911
         """Get Annotated type hint with Meta constraints.
 
         For ClassVar fields (discriminator tag_field), ClassVar is required
@@ -340,28 +340,26 @@ class DataModelField(DataModelFieldBase):
         if self.extras.get("is_classvar"):
             meta = self._get_meta_string()
             if self.use_annotated and meta:
-                annotated_type = f"Annotated[{self.type_hint}, {meta}]"
-                return f"ClassVar[{annotated_type}]"
+                return f"ClassVar[Annotated[{self.type_hint}, {meta}]]"
             return f"ClassVar[{self.type_hint}]"
 
         if not self.use_annotated:  # pragma: no cover
             return None
 
         meta = self._get_meta_string()
-
         if not meta:
             return None
 
-        if not self.required:
-            type_hint = self.data_type.type_hint
-            annotated_type = f"Annotated[{type_hint}, {meta}]"
-            if self.nullable:  # pragma: no cover
-                return annotated_type
-            if self.data_type.is_optional:  # pragma: no cover
-                return _add_unset_type(annotated_type, self.data_type.use_union_operator)
-            return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
+        if self.required:
+            return f"Annotated[{self.type_hint}, {meta}]"
 
-        return f"Annotated[{self.type_hint}, {meta}]"
+        type_hint = self.data_type.type_hint
+        annotated_type = f"Annotated[{type_hint}, {meta}]"
+        if self.nullable:  # pragma: no cover
+            return annotated_type
+        if self.data_type.is_optional:  # pragma: no cover
+            return _add_unset_type(annotated_type, self.data_type.use_union_operator)
+        return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
 
     @property
     def needs_annotated_import(self) -> bool:
