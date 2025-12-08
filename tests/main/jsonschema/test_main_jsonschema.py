@@ -28,6 +28,7 @@ from tests.main.conftest import (
     ALIASES_DATA_PATH,
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
     run_main_and_assert,
@@ -3347,5 +3348,62 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
+        ],
+    )
+    
+    
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
+    """Test that 'schema' field is not renamed in TypedDict (Issue #1833)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_field_name_schema_typed_dict.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_jsonschema_reserved_field_name_dataclass(output_file: Path) -> None:
+    """Test that 'schema' field is not renamed in dataclass (Issue #1833)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_field_name_schema_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_jsonschema_reserved_field_name_pydantic(output_file: Path) -> None:
+    """Test that 'schema' field is renamed to 'schema_' with alias in Pydantic (Issue #1833)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_field_name_schema_pydantic.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.11",
         ],
     )

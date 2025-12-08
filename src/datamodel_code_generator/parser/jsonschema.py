@@ -704,7 +704,9 @@ class JsonSchemaParser(Parser):
 
         if self.data_model_field_type.can_have_extra_keys:
             self.get_field_extra_key: Callable[[str], str] = (
-                lambda key: self.model_resolver.get_valid_field_name_and_alias(key)[0]
+                lambda key: self.model_resolver.get_valid_field_name_and_alias(
+                    key, model_type=self.field_name_model_type
+                )[0]
             )
 
         else:
@@ -1530,7 +1532,10 @@ class JsonSchemaParser(Parser):
                             if self.force_optional_for_required_fields:
                                 continue
                             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                                request, excludes=existing_field_names, class_name=name
+                                request,
+                                excludes=existing_field_names,
+                                model_type=self.field_name_model_type,
+                                class_name=name,
                             )
                             data_type = self._get_inherited_field_type(request, base_classes)
                             if data_type is None:
@@ -1656,6 +1661,7 @@ class JsonSchemaParser(Parser):
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 original_field_name,
                 excludes=exclude_field_names,
+                model_type=self.field_name_model_type,
                 class_name=class_name,
             )
             modular_name = f"{module_name}.{field_name}" if module_name else field_name
