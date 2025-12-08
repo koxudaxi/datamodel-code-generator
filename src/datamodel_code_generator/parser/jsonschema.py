@@ -2182,7 +2182,7 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_root)
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912, PLR0915
+    def parse_root_type(  # noqa: PLR0912
         self,
         name: str,
         obj: JsonSchemaObject,
