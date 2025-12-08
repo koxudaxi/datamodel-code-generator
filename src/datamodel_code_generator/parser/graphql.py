@@ -520,6 +520,7 @@ class GraphQLParser(Parser):
             field_name_, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name,
                 excludes=exclude_field_names,
+                model_type=self.field_name_model_type,
                 class_name=obj.name,
             )
             exclude_field_names.add(field_name_)
