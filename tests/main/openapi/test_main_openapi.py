@@ -3242,3 +3242,26 @@ def test_main_openapi_circular_imports_mixed_prefixes(output_dir: Path) -> None:
             expected_directory=EXPECTED_OPENAPI_PATH / "circular_imports_mixed_prefixes",
             input_file_type="openapi",
         )
+
+
+def test_warning_empty_schemas_with_paths(tmp_path: Path) -> None:
+    """Test warning when components/schemas is empty but paths exist."""
+    openapi_file = tmp_path / "openapi.yaml"
+    openapi_file.write_text("""
+openapi: 3.1.0
+info:
+  title: Test
+  version: '1'
+paths:
+  /test:
+    get:
+      responses:
+        200:
+          description: OK
+""")
+
+    with pytest.warns(UserWarning, match=r"No schemas found.*--openapi-scopes paths"):
+        try:
+            generate(openapi_file)
+        except Exception:
+            pass

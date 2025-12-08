@@ -208,6 +208,7 @@ filterwarnings = [
   "ignore:^.*black doesn't support `experimental-string-processing` option for wrapping string literal in .*",
   "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
+  "ignore:^.*No schemas found in components/schemas.*",
 ]
 norecursedirs = "tests/data/*"
 verbosity_assertions = 2
