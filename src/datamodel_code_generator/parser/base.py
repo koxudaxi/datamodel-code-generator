@@ -1451,7 +1451,7 @@ class Parser(ABC):
                     else:  # pragma: no cover
                         continue
 
-                    for d in root_type_field.data_type.data_types:
+                    for d in copied_data_type.all_data_types:
                         if d.reference is None:
                             continue
                         from_, import_ = full_path = relative(model.module_name, d.full_name)
