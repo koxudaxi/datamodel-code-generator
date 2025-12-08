@@ -443,6 +443,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     frozen_dataclasses: bool = False,
     no_alias: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
+    settings_path: Path | None = None,
     parent_scoped_naming: bool = False,
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
@@ -690,6 +691,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     with chdir(output):
         results = parser.parse(
+            settings_path=settings_path,
             disable_future_imports=disable_future_imports,
             all_exports_scope=all_exports_scope,
             all_exports_collision_strategy=all_exports_collision_strategy,
