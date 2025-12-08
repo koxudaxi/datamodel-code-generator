@@ -2504,6 +2504,24 @@ def test_main_msgspec_discriminator_with_type_string(output_file: Path) -> None:
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_with_meta(output_file: Path) -> None:
+    """Test msgspec Struct generation with discriminator ClassVar having Meta constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_meta_msgspec.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="discriminator_with_meta_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_msgspec_null_field(output_file: Path) -> None:
     """Test msgspec Struct generation with null type fields."""
     run_main_and_assert(

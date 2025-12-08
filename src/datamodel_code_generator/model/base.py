@@ -275,7 +275,7 @@ class DataModelFieldBase(_BaseModel):
         return bool(self.annotated)
 
     @property
-    def needs_meta_import(self) -> bool:
+    def needs_meta_import(self) -> bool:  # pragma: no cover
         """Check if this field requires the Meta import (msgspec only)."""
         return False
 
