@@ -219,6 +219,23 @@ class JsonSchemaObject(BaseModel):
         "uniqueItems",
     }
     __extra_key__: str = SPECIAL_PATH_FORMAT.format("extras")
+    __metadata_only_fields__: set[str] = {  # noqa: RUF012
+        "title",
+        "description",
+        "id",
+        "$id",
+        "$schema",
+        "$comment",
+        "examples",
+        "example",
+        "x_enum_varnames",
+        "definitions",
+        "$defs",
+        "default",
+        "readOnly",
+        "writeOnly",
+        "deprecated",
+    }
 
     @model_validator(mode="before")
     def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:  # noqa: N805
@@ -412,6 +429,23 @@ class JsonSchemaObject(BaseModel):
             return False
         non_null_types = [t for t in self.type if t != "null"]
         return len(non_null_types) > 1
+
+    @cached_property
+    def has_ref_with_schema_keywords(self) -> bool:
+        """Check if schema has $ref combined with schema-affecting keywords.
+
+        Metadata-only keywords (title, description, etc.) are excluded
+        as they don't affect the schema structure.
+        """
+        if not self.ref:
+            return False
+        other_fields = self.__fields_set__ - {"ref"}
+        schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
+        if self.extras:
+            schema_affecting_extras = {k for k in self.extras if k not in self.__metadata_only_fields__}
+            if schema_affecting_extras:
+                schema_affecting_fields |= {"extras"}
+        return bool(schema_affecting_fields)
 
 
 @lru_cache
@@ -728,6 +762,82 @@ class JsonSchemaParser(Parser):
             self.enum_field_as_literal == LiteralType.One and len(obj.enum) == 1
         )
 
+    @classmethod
+    def _extract_const_enum_from_combined(  # noqa: PLR0912
+        cls, items: list[JsonSchemaObject], parent_type: str | list[str] | None
+    ) -> tuple[list[Any], list[str], str | None, bool] | None:
+        """Extract enum values from oneOf/anyOf const pattern."""
+        enum_values: list[Any] = []
+        varnames: list[str] = []
+        nullable = False
+        inferred_type: str | None = None
+
+        for item in items:
+            if item.type == "null" and "const" not in item.extras:
+                nullable = True
+                continue
+
+            if "const" not in item.extras:
+                return None
+
+            if item.ref or item.properties or item.oneOf or item.anyOf or item.allOf:
+                return None
+
+            const_value = item.extras["const"]
+            enum_values.append(const_value)
+
+            if item.title:
+                varnames.append(item.title)
+            else:
+                varnames.append(str(const_value))
+
+            if inferred_type is None and const_value is not None:
+                if isinstance(const_value, str):
+                    inferred_type = "string"
+                elif isinstance(const_value, bool):
+                    inferred_type = "boolean"
+                elif isinstance(const_value, int):
+                    inferred_type = "integer"
+                elif isinstance(const_value, float):
+                    inferred_type = "number"
+
+        if not enum_values:  # pragma: no cover
+            return None
+
+        final_type: str | None
+        if isinstance(parent_type, str):
+            final_type = parent_type
+        elif isinstance(parent_type, list):
+            non_null_types = [t for t in parent_type if t != "null"]
+            final_type = non_null_types[0] if non_null_types else inferred_type
+            if "null" in parent_type:
+                nullable = True
+        else:
+            final_type = inferred_type
+
+        return (enum_values, varnames, final_type, nullable)
+
+    def _create_synthetic_enum_obj(
+        self,
+        original: JsonSchemaObject,
+        enum_values: list[Any],
+        varnames: list[str],
+        enum_type: str | None,
+        nullable: bool,  # noqa: FBT001
+    ) -> JsonSchemaObject:
+        """Create a synthetic JsonSchemaObject for enum parsing."""
+        final_enum = [*enum_values, None] if nullable else enum_values
+        final_varnames = varnames if len(varnames) == len(enum_values) else []
+
+        return self.SCHEMA_OBJECT_TYPE(
+            type=enum_type,
+            enum=final_enum,
+            title=original.title,
+            description=original.description,
+            x_enum_varnames=final_varnames,
+            default=original.default if original.has_default else None,
+        )
+
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
         """Check if a field should include constraints."""
         return obj.is_array or (
@@ -995,6 +1105,25 @@ class JsonSchemaParser(Parser):
             target_schema = get_model_by_path(raw_doc, pointer)
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
+
+    def _merge_ref_with_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject:
+        """Merge $ref schema with current schema's additional keywords.
+
+        JSON Schema 2020-12 allows $ref alongside other keywords,
+        which should be merged together.
+
+        The local keywords take precedence over referenced schema.
+        """
+        if not obj.ref:
+            return obj
+
+        ref_schema = self._load_ref_schema_object(obj.ref)
+        ref_dict = ref_schema.dict(exclude_unset=True, by_alias=True)
+        current_dict = obj.dict(exclude={"ref"}, exclude_unset=True, by_alias=True)
+        merged = self._deep_merge(ref_dict, current_dict)
+        merged.pop("$ref", None)
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged)
 
     def _merge_primitive_schemas(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
         """Merge multiple primitive schemas by computing the intersection of their constraints."""
@@ -1276,9 +1405,16 @@ class JsonSchemaParser(Parser):
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
             if target_attribute.ref:
-                combined_schemas.append(target_attribute)
-                refs.append(index)
-                # TODO: support partial ref
+                if target_attribute.has_ref_with_schema_keywords:
+                    merged_attr = self._merge_ref_with_schema(target_attribute)
+                    combined_schemas.append(
+                        self.SCHEMA_OBJECT_TYPE.parse_obj(
+                            self._deep_merge(base_object, merged_attr.dict(exclude_unset=True, by_alias=True))
+                        )
+                    )
+                else:
+                    combined_schemas.append(target_attribute)
+                    refs.append(index)
             else:
                 combined_schemas.append(
                     self.SCHEMA_OBJECT_TYPE.parse_obj(
@@ -1538,7 +1674,32 @@ class JsonSchemaParser(Parser):
                 and single_obj.ref_type == JSONReference.LOCAL
                 and get_model_by_path(self.raw_obj, single_obj.ref[2:].split("/")).get("enum")
             ):
-                return self.get_ref_data_type(single_obj.ref)
+                ref_data_type = self.get_ref_data_type(single_obj.ref)
+
+                full_path = self.model_resolver.join_path(path)
+                existing_ref = self.model_resolver.references.get(full_path)
+                if existing_ref is not None and not existing_ref.loaded:
+                    reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+                    field = self.data_model_field_type(
+                        name=None,
+                        data_type=ref_data_type,
+                        required=True,
+                    )
+                    data_model_root = self.data_model_root_type(
+                        reference=reference,
+                        fields=[field],
+                        custom_base_class=obj.custom_base_path or self.base_class,
+                        custom_template_dir=self.custom_template_dir,
+                        extra_template_data=self.extra_template_data,
+                        path=self.current_source_path,
+                        description=obj.description if self.use_schema_description else None,
+                        nullable=obj.type_has_null,
+                        treat_dot_as_module=self.treat_dot_as_module,
+                    )
+                    self.results.append(data_model_root)
+                    return self.data_type(reference=reference)
+
+                return ref_data_type
 
         merged_all_of_obj = self._merge_all_of_object(obj)
         if merged_all_of_obj:
@@ -1819,6 +1980,8 @@ class JsonSchemaParser(Parser):
                 item,
                 root_type_path,
             )
+        if item.has_ref_with_schema_keywords:
+            item = self._merge_ref_with_schema(item)
         if item.ref:
             return self.get_ref_data_type(item.ref)
         if item.custom_type_path:  # pragma: no cover
@@ -1828,8 +1991,22 @@ class JsonSchemaParser(Parser):
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
         if item.anyOf:
+            const_enum_data = self._extract_const_enum_from_combined(item.anyOf, item.type)
+            if const_enum_data is not None:
+                enum_values, varnames, enum_type, nullable = const_enum_data
+                synthetic_obj = self._create_synthetic_enum_obj(item, enum_values, varnames, enum_type, nullable)
+                if self.should_parse_enum_as_literal(synthetic_obj):
+                    return self.parse_enum_as_literal(synthetic_obj)
+                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
             return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
         if item.oneOf:
+            const_enum_data = self._extract_const_enum_from_combined(item.oneOf, item.type)
+            if const_enum_data is not None:
+                enum_values, varnames, enum_type, nullable = const_enum_data
+                synthetic_obj = self._create_synthetic_enum_obj(item, enum_values, varnames, enum_type, nullable)
+                if self.should_parse_enum_as_literal(synthetic_obj):
+                    return self.parse_enum_as_literal(synthetic_obj)
+                return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
             return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
         if item.allOf:
             all_of_path = get_special_path("allOf", path)
@@ -2005,7 +2182,7 @@ class JsonSchemaParser(Parser):
         self.results.append(data_model_root)
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912
+    def parse_root_type(  # noqa: PLR0912, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -2024,18 +2201,28 @@ class JsonSchemaParser(Parser):
                 name, obj, get_special_path("array", path)
             ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
-            reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
-            if obj.anyOf:
-                data_types: list[DataType] = self.parse_any_of(name, obj, get_special_path("anyOf", path))
+            combined_items = obj.anyOf or obj.oneOf
+            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
+            if const_enum_data is not None:  # pragma: no cover
+                enum_values, varnames, enum_type, nullable = const_enum_data
+                synthetic_obj = self._create_synthetic_enum_obj(obj, enum_values, varnames, enum_type, nullable)
+                if self.should_parse_enum_as_literal(synthetic_obj):
+                    data_type = self.parse_enum_as_literal(synthetic_obj)
+                else:
+                    data_type = self.parse_enum(name, synthetic_obj, path)
             else:
-                data_types = self.parse_one_of(name, obj, get_special_path("oneOf", path))
+                reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+                if obj.anyOf:
+                    data_types: list[DataType] = self.parse_any_of(name, obj, get_special_path("anyOf", path))
+                else:
+                    data_types = self.parse_one_of(name, obj, get_special_path("oneOf", path))
 
-            if len(data_types) > 1:  # pragma: no cover
-                data_type = self.data_type(data_types=data_types)
-            elif not data_types:  # pragma: no cover
-                return EmptyDataType()
-            else:  # pragma: no cover
-                data_type = data_types[0]
+                if len(data_types) > 1:  # pragma: no cover
+                    data_type = self.data_type(data_types=data_types)
+                elif not data_types:  # pragma: no cover
+                    return EmptyDataType()
+                else:  # pragma: no cover
+                    data_type = data_types[0]
         elif obj.patternProperties:
             data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
         elif obj.enum:
@@ -2449,21 +2636,34 @@ class JsonSchemaParser(Parser):
         )
         self.parse_obj(name, obj, path)
 
-    def parse_obj(
+    def parse_obj(  # noqa: PLR0912
         self,
         name: str,
         obj: JsonSchemaObject,
         path: list[str],
     ) -> None:
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
+        if obj.has_ref_with_schema_keywords:
+            obj = self._merge_ref_with_schema(obj)
+
         if obj.is_array:
             self.parse_array(name, obj, path)
         elif obj.allOf:
             self.parse_all_of(name, obj, path)
         elif obj.oneOf or obj.anyOf:
-            data_type = self.parse_root_type(name, obj, path)
-            if isinstance(data_type, EmptyDataType) and obj.properties:
-                self.parse_object(name, obj, path)  # pragma: no cover
+            combined_items = obj.oneOf or obj.anyOf
+            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
+            if const_enum_data is not None:
+                enum_values, varnames, enum_type, nullable = const_enum_data
+                synthetic_obj = self._create_synthetic_enum_obj(obj, enum_values, varnames, enum_type, nullable)
+                if not self.should_parse_enum_as_literal(synthetic_obj):
+                    self.parse_enum(name, synthetic_obj, path)
+                else:
+                    self.parse_root_type(name, synthetic_obj, path)
+            else:
+                data_type = self.parse_root_type(name, obj, path)
+                if isinstance(data_type, EmptyDataType) and obj.properties:
+                    self.parse_object(name, obj, path)  # pragma: no cover
         elif obj.properties:
             if obj.has_multiple_types and isinstance(obj.type, list):
                 self._parse_multiple_types_with_properties(name, obj, obj.type, path)

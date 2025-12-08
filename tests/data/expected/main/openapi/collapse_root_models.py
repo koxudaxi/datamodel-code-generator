@@ -25,7 +25,7 @@ class FileRequest(BaseModel):
 
 class ImageRequest(BaseModel):
     image_hash: Optional[
-        constr(regex=r'^[a-fA-F\d]{32}$', min_length=32, max_length=32)
+        constr(regex=r'^[a-fA-F\d]{32}$', min_length=64, max_length=64)
     ] = Field(None, description='For image')
 
 
