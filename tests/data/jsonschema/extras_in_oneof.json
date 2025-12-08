@@ -1,0 +1,49 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "id": "extras_in_oneof",
+    "title": "ExtrasInOneOf",
+    "type": "object",
+    "properties": {
+        "simple_prop": {"type": "string", "x-custom": "simple_value"},
+        "oneof_prop": {
+            "x-parent-custom": "parent_value",
+            "properties": {
+                "shared_prop": {"type": "string", "x-shared": "shared_value"}
+            },
+            "oneOf": [
+                {
+                    "title": "VariantA",
+                    "type": "object",
+                    "properties": {
+                        "variant_a_prop": {"type": "string", "x-variant": "variant_a_value"}
+                    }
+                },
+                {
+                    "title": "VariantB",
+                    "type": "object",
+                    "properties": {
+                        "variant_b_prop": {"type": "integer", "x-variant": "variant_b_value"}
+                    }
+                }
+            ]
+        },
+        "anyof_prop": {
+            "anyOf": [
+                {
+                    "title": "AnyVariantA",
+                    "type": "object",
+                    "properties": {
+                        "any_a_prop": {"type": "string", "x-any": "any_a_value"}
+                    }
+                },
+                {
+                    "title": "AnyVariantB",
+                    "type": "object",
+                    "properties": {
+                        "any_b_prop": {"type": "boolean", "x-any": "any_b_value"}
+                    }
+                }
+            ]
+        }
+    }
+}

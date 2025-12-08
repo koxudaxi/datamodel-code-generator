@@ -341,14 +341,17 @@ class JsonSchemaObject(BaseModel):
             keep_untouched = (cached_property,)
             smart_casts = True
 
-    if not TYPE_CHECKING:
-
-        def __init__(self, **data: Any) -> None:
-            """Initialize JsonSchemaObject with extra fields handling."""
-            super().__init__(**data)
-            self.extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
-            if "const" in data.get(self.__extra_key__, {}):  # pragma: no cover
-                self.extras["const"] = data[self.__extra_key__]["const"]
+    def __init__(self, **data: Any) -> None:
+        """Initialize JsonSchemaObject with extra fields handling."""
+        super().__init__(**data)
+        # Restore extras from alias key (for dict -> parse_obj round-trip)
+        alias_extras = data.get(self.__extra_key__, {})
+        # Collect custom keys from raw data
+        raw_extras = {k: v for k, v in data.items() if k not in EXCLUDE_FIELD_KEYS}
+        # Merge: raw_extras takes precedence (original data is the source of truth)
+        self.extras = {**alias_extras, **raw_extras}
+        if "const" in alias_extras:  # pragma: no cover
+            self.extras["const"] = alias_extras["const"]
 
     @cached_property
     def is_object(self) -> bool:

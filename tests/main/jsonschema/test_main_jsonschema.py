@@ -3258,3 +3258,20 @@ def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) ->
             "--use-annotated",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_extras_in_oneof(output_file: Path) -> None:
+    """Test that extras are preserved in oneOf/anyOf structures (Issue #2403)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras_in_oneof.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="extras_in_oneof.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-include-all-keys",
+        ],
+    )
