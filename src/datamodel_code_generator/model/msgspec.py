@@ -180,6 +180,19 @@ def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool)
     return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
 
 
+@lru_cache
+def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+    """Add UnsetType to a type hint without removing None."""
+    if use_union_operator:
+        return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
+    if type_.startswith(UNION_PREFIX):
+        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
+    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
+        inner_type = type_[len(OPTIONAL_PREFIX) : -1]
+        return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
+
+
 @import_extender
 class DataModelField(DataModelFieldBase):
     """Field implementation for msgspec Struct models."""
@@ -281,7 +294,9 @@ class DataModelField(DataModelFieldBase):
     def type_hint(self) -> str:
         """Return the type hint, using UnsetType for non-required non-nullable fields."""
         type_hint = super().type_hint
-        if self._not_required and not self.nullable and not self.data_type.is_optional:
+        if self._not_required and not self.nullable:
+            if self.data_type.is_optional:
+                return _add_unset_type(type_hint, self.data_type.use_union_operator)
             return get_neither_required_nor_nullable_type(type_hint, self.data_type.use_union_operator)
         return type_hint
 
@@ -316,7 +331,7 @@ class DataModelField(DataModelFieldBase):
         return f"Meta({', '.join(meta_arguments)})" if meta_arguments else None
 
     @property
-    def annotated(self) -> str | None:
+    def annotated(self) -> str | None:  # noqa: PLR0911
         """Get Annotated type hint with Meta constraints.
 
         For ClassVar fields (discriminator tag_field), ClassVar is required
@@ -325,24 +340,26 @@ class DataModelField(DataModelFieldBase):
         if self.extras.get("is_classvar"):
             meta = self._get_meta_string()
             if self.use_annotated and meta:
-                annotated_type = f"Annotated[{self.type_hint}, {meta}]"
-                return f"ClassVar[{annotated_type}]"
+                return f"ClassVar[Annotated[{self.type_hint}, {meta}]]"
             return f"ClassVar[{self.type_hint}]"
 
         if not self.use_annotated:  # pragma: no cover
             return None
 
         meta = self._get_meta_string()
-
         if not meta:
             return None
 
-        if not self.required:
-            type_hint = self.data_type.type_hint
-            annotated_type = f"Annotated[{type_hint}, {meta}]"
-            return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
+        if self.required:
+            return f"Annotated[{self.type_hint}, {meta}]"
 
-        return f"Annotated[{self.type_hint}, {meta}]"
+        type_hint = self.data_type.type_hint
+        annotated_type = f"Annotated[{type_hint}, {meta}]"
+        if self.nullable:  # pragma: no cover
+            return annotated_type
+        if self.data_type.is_optional:  # pragma: no cover
+            return _add_unset_type(annotated_type, self.data_type.use_union_operator)
+        return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
 
     @property
     def needs_annotated_import(self) -> bool:

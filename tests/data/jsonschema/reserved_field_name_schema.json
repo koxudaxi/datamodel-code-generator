@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ModelWithSchemaField",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "string",
+      "description": "A field named 'schema' that should not be renamed in non-Pydantic models"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": ["schema", "name"]
+}
