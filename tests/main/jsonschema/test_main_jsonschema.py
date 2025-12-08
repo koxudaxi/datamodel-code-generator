@@ -28,6 +28,7 @@ from tests.main.conftest import (
     ALIASES_DATA_PATH,
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
     run_main_and_assert,
@@ -3327,6 +3328,7 @@ def test_main_jsonschema_extras_in_oneof(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
 def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
     """Test that 'schema' field is not renamed in TypedDict (Issue #1833)."""
     run_main_and_assert(
@@ -3345,6 +3347,7 @@ def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> No
 
 
 @pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
 def test_main_jsonschema_reserved_field_name_dataclass(output_file: Path) -> None:
     """Test that 'schema' field is not renamed in dataclass (Issue #1833)."""
     run_main_and_assert(
@@ -3363,6 +3366,7 @@ def test_main_jsonschema_reserved_field_name_dataclass(output_file: Path) -> Non
 
 
 @pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
 def test_main_jsonschema_reserved_field_name_pydantic(output_file: Path) -> None:
     """Test that 'schema' field is renamed to 'schema_' with alias in Pydantic (Issue #1833)."""
     run_main_and_assert(
