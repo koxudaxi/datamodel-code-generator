@@ -7,7 +7,9 @@ circular import patterns in generated code.
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import NamedTuple, TypeAlias
+from typing import NamedTuple
+
+from typing_extensions import TypeAlias
 
 ModulePath: TypeAlias = tuple[str, ...]
 ModuleGraph: TypeAlias = dict[ModulePath, set[ModulePath]]
