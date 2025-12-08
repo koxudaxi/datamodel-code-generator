@@ -62,6 +62,7 @@ jobs:
           TOX_ENV="${{ matrix.tox_env }}"
         fi
         tox run -vv --notest --skip-missing-interpreters false -e $TOX_ENV
+      shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run test suite
@@ -73,6 +74,7 @@ jobs:
           TOX_ENV="${{ matrix.tox_env }}"
         fi
         tox run --skip-uv-sync --skip-pkg-install -e $TOX_ENV
+      shell: bash
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
