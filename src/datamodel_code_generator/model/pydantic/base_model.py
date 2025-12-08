@@ -68,12 +68,11 @@ class DataModelField(DataModelFieldBase):
     _COMPARE_EXPRESSIONS: ClassVar[set[str]] = {"gt", "ge", "lt", "le"}
     constraints: Optional[Constraints] = None  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "parse_obj"
-    _computed_default_factory: str | None = None
 
     @property
     def has_default_factory_in_field(self) -> bool:
         """Check if this field has a default_factory in Field() including computed ones."""
-        return "default_factory" in self.extras or self._computed_default_factory is not None
+        return "default_factory" in self.extras or self.__dict__.get("_computed_default_factory") is not None
 
     @property
     def method(self) -> str | None:
@@ -190,7 +189,7 @@ class DataModelField(DataModelFieldBase):
         else:
             default_factory = data.pop("default_factory", None)
 
-        self._computed_default_factory = default_factory
+        self.__dict__["_computed_default_factory"] = default_factory
 
         field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
