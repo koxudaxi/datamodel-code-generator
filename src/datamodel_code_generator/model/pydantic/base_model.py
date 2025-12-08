@@ -107,8 +107,19 @@ class DataModelField(DataModelFieldBase):
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
 
-        if any(data_type.type == "float" for data_type in self.data_type.all_data_types):
+        is_float_type = any(
+            data_type.type == "float"
+            or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
+            for data_type in self.data_type.all_data_types
+        )
+        if is_float_type:
             return float(value)
+        str_value = str(value)
+        if "e" in str_value.lower():  # pragma: no cover
+            # Scientific notation like 1e-08 - keep as float
+            return float(value)
+        if isinstance(value, int) and not isinstance(value, bool):  # pragma: no branch
+            return value
         return int(value)
 
     def _get_default_as_pydantic_model(self) -> str | None:
@@ -152,7 +163,12 @@ class DataModelField(DataModelFieldBase):
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data["alias"] = self.alias
-        if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
+        has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
+        if (
+            self.constraints is not None
+            and not self.self_reference()
+            and not (self.data_type.strict and has_type_constraints)
+        ):
             data = {
                 **data,
                 **(

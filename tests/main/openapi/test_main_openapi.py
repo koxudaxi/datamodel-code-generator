@@ -3115,6 +3115,46 @@ def test_main_openapi_dot_notation_deep_inheritance(output_dir: Path) -> None:
     )
 
 
+def test_main_openapi_strict_types_field_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test strict types with field constraints for pydantic v2 (issue #1884)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strict_types_field_constraints.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="strict_types_field_constraints_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--strict-types",
+            "int",
+            "float",
+            "str",
+        ],
+    )
+
+
+def test_main_openapi_strict_types_field_constraints_msgspec(output_file: Path) -> None:
+    """Test strict types with field constraints for msgspec (issue #1884)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "strict_types_field_constraints.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="strict_types_field_constraints_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--field-constraints",
+            "--strict-types",
+            "int",
+            "float",
+            "str",
+        ],
+    )
+
+
 def test_main_openapi_circular_imports_stripe_like(output_dir: Path) -> None:
     """Test that circular imports between root and submodules are resolved with _internal.py."""
     with freeze_time(TIMESTAMP):
