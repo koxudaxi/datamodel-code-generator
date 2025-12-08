@@ -2522,6 +2522,19 @@ def test_main_msgspec_discriminator_with_meta(output_file: Path) -> None:
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_without_annotated(output_file: Path) -> None:
+    """Test msgspec Struct discriminator generates ClassVar even without use_annotated."""
+    generate(
+        JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
+        output=output_file,
+        output_model_type=DataModelType.MsgspecStruct,
+        target_python_version=PythonVersion.PY_310,
+        use_annotated=False,
+    )
+    assert_file_content(output_file, "discriminator_with_type_string_msgspec_no_annotated.py")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_msgspec_null_field(output_file: Path) -> None:
     """Test msgspec Struct generation with null type fields."""
     run_main_and_assert(
