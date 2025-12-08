@@ -3350,8 +3350,8 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
             "pydantic_v2.BaseModel",
         ],
     )
-    
-    
+
+
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
 def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
