@@ -2391,6 +2391,39 @@ def test_main_openapi_msgspec_anyof(min_version: str, output_file: Path) -> None
     )
 
 
+@LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_oneof_with_null(output_file: Path) -> None:
+    """Test msgspec Struct generation with oneOf containing null type."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_oneof_with_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_oneof_with_null.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+        ],
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_oneof_with_null_union_operator(output_file: Path) -> None:
+    """Test msgspec Struct generation with oneOf containing null type using union operator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_oneof_with_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_oneof_with_null_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-union-operator",
+        ],
+    )
+
+
 def test_main_openapi_referenced_default(output_file: Path) -> None:
     """Test OpenAPI generation with referenced default values."""
     run_main_and_assert(

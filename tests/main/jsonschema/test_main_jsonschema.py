@@ -3158,6 +3158,17 @@ def test_main_jsonschema_collapse_root_models_with_optional(output_file: Path) -
     )
 
 
+def test_main_jsonschema_collapse_root_models_nested_reference(output_file: Path) -> None:
+    """Ensure nested references inside root models still get imported when collapsing."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_nested_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
 def test_main_jsonschema_file_url_ref(tmp_path: Path) -> None:
     """Test that file:// URL $ref is resolved correctly."""
     pet_schema = {
