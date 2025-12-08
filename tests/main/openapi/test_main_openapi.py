@@ -1999,7 +1999,7 @@ def test_main_openapi_serialize_as_any_pydantic_v2(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="serialize_as_any_pydantic_v2.py",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-serialize-as-any"],
     )
 
 

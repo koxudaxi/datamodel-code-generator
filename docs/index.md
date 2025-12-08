@@ -382,6 +382,9 @@ Typing customization:
                         corresponding con* constrained types.
   --use-one-literal-as-default
                         Use one literal as default value for one literal field
+  --use-serialize-as-any
+                        Use pydantic.SerializeAsAny for fields with types that have subtypes
+                        (Pydantic v2 only)
   --use-specialized-enum, --no-use-specialized-enum
                         Don''t use specialized Enum class (StrEnum, IntEnum) even if the
                         target Python version supports it

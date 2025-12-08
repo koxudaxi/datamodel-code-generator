@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional
 from pydantic import Field
 from typing_extensions import Literal
 
-from datamodel_code_generator.model.base import UNDEFINED, DataModel, DataModelFieldBase
+from datamodel_code_generator.model.base import UNDEFINED, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
 )
@@ -23,10 +23,7 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
-from datamodel_code_generator.model.pydantic_v2.imports import (
-    IMPORT_CONFIG_DICT,
-    IMPORT_SERIALIZE_AS_ANY,
-)
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.util import field_validator, model_validator
 
 if TYPE_CHECKING:
@@ -165,23 +162,6 @@ class DataModelField(DataModelFieldV1):
     ) -> list[str]:
         return field_arguments
 
-    @property
-    def type_hint(self) -> str:
-        """Generate the Python type hint string for this DataType."""
-        base_type_hint = super().type_hint
-
-        if not self.data_type.reference:
-            return base_type_hint
-
-        if not self.data_type.reference.children:
-            return base_type_hint
-
-        for child in self.data_type.reference.children:
-            if isinstance(child, DataModel) and child.fields:
-                return f"SerializeAsAny[{base_type_hint}]"
-
-        return base_type_hint
-
 
 class ConfigAttribute(NamedTuple):
     """Configuration attribute mapping for ConfigDict conversion."""
@@ -204,7 +184,7 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
 
-    def __init__(  # noqa: PLR0913, PLR0912
+    def __init__(  # noqa: PLR0913
         self,
         *,
         reference: Reference,
@@ -272,16 +252,6 @@ class BaseModel(BaseModelBase):
 
             self.extra_template_data["config"] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
-
-        for field in self.fields:
-            if not field.data_type.reference:
-                continue
-            if not field.data_type.reference.children:
-                continue
-            for child in field.data_type.reference.children:
-                if isinstance(child, DataModel) and child.fields:
-                    self._additional_imports.append(IMPORT_SERIALIZE_AS_ANY)
-                    break
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
         additional_properties = self.extra_template_data.get("additionalProperties")

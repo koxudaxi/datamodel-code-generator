@@ -330,6 +330,7 @@ class DataType(_BaseModel):
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
     treat_dot_as_module: bool = False
+    use_serialize_as_any: bool = False
 
     _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
@@ -478,6 +479,17 @@ class DataType(_BaseModel):
         if self.reference:
             self.reference.children.append(self)
 
+    def _get_wrapped_reference_type_hint(self, type_: str) -> str:  # noqa: PLR6301
+        """Wrap reference type name if needed (override in subclasses, e.g., for SerializeAsAny).
+
+        Args:
+            type_: The reference type name (e.g., "User")
+
+        Returns:
+            The potentially wrapped type name
+        """
+        return type_
+
     @property
     def type_hint(self) -> str:  # noqa: PLR0912, PLR0915
         """Generate the Python type hint string for this DataType."""
@@ -517,6 +529,7 @@ class DataType(_BaseModel):
                 type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
             elif self.reference:
                 type_ = self.reference.short_name
+                type_ = self._get_wrapped_reference_type_hint(type_)
             else:
                 # TODO support strict Any
                 type_ = ""
@@ -630,6 +643,7 @@ class DataTypeManager(ABC):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize DataTypeManager with code generation options."""
         self.python_version = python_version
@@ -643,6 +657,7 @@ class DataTypeManager(ABC):
         self.use_pendulum: bool = use_pendulum
         self.target_datetime_class: DatetimeClassType | None = target_datetime_class
         self.treat_dot_as_module: bool = treat_dot_as_module
+        self.use_serialize_as_any: bool = use_serialize_as_any
 
         self.data_type: type[DataType] = create_model(
             "ContextDataType",
@@ -651,6 +666,7 @@ class DataTypeManager(ABC):
             use_generic_container=(bool, use_generic_container_types),
             use_union_operator=(bool, use_union_operator),
             treat_dot_as_module=(bool, treat_dot_as_module),
+            use_serialize_as_any=(bool, use_serialize_as_any),
             __base__=DataType,
         )
 

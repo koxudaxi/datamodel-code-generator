@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import List
+
 from pydantic import BaseModel, Field, SerializeAsAny
 
 
@@ -18,4 +20,7 @@ class AdminUser(User):
 class Container(BaseModel):
     user_field: SerializeAsAny[User] = Field(
         ..., description='Field that should use SerializeAsAny'
+    )
+    user_list: List[SerializeAsAny[User]] = Field(
+        ..., description='List of users that should use SerializeAsAny'
     )

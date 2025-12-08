@@ -34,6 +34,12 @@ components:
       properties:
         user_field:
           $ref: '#/components/schemas/User'
-          description: "Field that should use SerializeAsAny"
+          description: Field that should use SerializeAsAny
+        user_list:
+          type: array
+          description: List of users that should use SerializeAsAny
+          items:
+            $ref: '#/components/schemas/User'
       required:
         - user_field
+        - user_list

@@ -14,17 +14,99 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_AWARE_DATETIME,
     IMPORT_BASE64STR,
     IMPORT_NAIVE_DATETIME,
+    IMPORT_SERIALIZE_AS_ANY,
 )
-from datamodel_code_generator.types import DataType, StrictTypes, Types
+from datamodel_code_generator.types import (
+    DataType,
+    PythonVersion,
+    PythonVersionMin,
+    StrictTypes,
+    Types,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
+
+    from datamodel_code_generator.imports import Import
+
+
+class PydanticV2DataType(DataType):
+    """Pydantic v2-specific DataType with SerializeAsAny support."""
+
+    def _should_wrap_with_serialize_as_any(self) -> bool:
+        if not self.use_serialize_as_any:
+            return False
+
+        if not self.reference:
+            return False
+
+        if not self.reference.children:
+            return False
+
+        from datamodel_code_generator.model.base import DataModel  # noqa: PLC0415
+
+        return any(isinstance(child, DataModel) and child.fields for child in self.reference.children)
+
+    def _get_wrapped_reference_type_hint(self, type_: str) -> str:
+        if self._should_wrap_with_serialize_as_any():
+            return f"SerializeAsAny[{type_}]"
+
+        return type_
+
+    @property
+    def imports(self) -> Iterator[Import]:
+        """Yield imports including SerializeAsAny when needed."""
+        yield from super().imports
+
+        if "SerializeAsAny" in self.type_hint:
+            yield IMPORT_SERIALIZE_AS_ANY
 
 
 class DataTypeManager(_DataTypeManager):
     """Type manager for Pydantic v2 with pattern key support."""
 
     PATTERN_KEY: ClassVar[str] = "pattern"
+
+    def __init__(  # noqa: PLR0913, PLR0917
+        self,
+        python_version: PythonVersion = PythonVersionMin,
+        use_standard_collections: bool = False,  # noqa: FBT001, FBT002
+        use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
+        strict_types: Sequence[StrictTypes] | None = None,
+        use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_union_operator: bool = False,  # noqa: FBT001, FBT002
+        use_pendulum: bool = False,  # noqa: FBT001, FBT002
+        target_datetime_class: DatetimeClassType | None = None,
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
+    ) -> None:
+        """Initialize with pydantic v2-specific DataType."""
+        super().__init__(
+            python_version=python_version,
+            use_standard_collections=use_standard_collections,
+            use_generic_container_types=use_generic_container_types,
+            strict_types=strict_types,
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            use_union_operator=use_union_operator,
+            use_pendulum=use_pendulum,
+            target_datetime_class=target_datetime_class,
+            treat_dot_as_module=treat_dot_as_module,
+            use_serialize_as_any=use_serialize_as_any,
+        )
+
+        # Override the data_type with our pydantic v2 version
+        from pydantic import create_model  # noqa: PLC0415
+
+        self.data_type: type[DataType] = create_model(
+            "PydanticV2ContextDataType",
+            python_version=(PythonVersion, python_version),
+            use_standard_collections=(bool, use_standard_collections),
+            use_generic_container=(bool, use_generic_container_types),
+            use_union_operator=(bool, use_union_operator),
+            treat_dot_as_module=(bool, treat_dot_as_module),
+            use_serialize_as_any=(bool, use_serialize_as_any),
+            __base__=PydanticV2DataType,
+        )
 
     def type_map_factory(
         self,

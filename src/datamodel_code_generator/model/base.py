@@ -124,6 +124,7 @@ class DataModelFieldBase(_BaseModel):
     parent: Optional[DataModel] = None  # noqa: UP045
     extras: dict[str, Any] = Field(default_factory=dict)
     use_annotated: bool = False
+    use_serialize_as_any: bool = False
     has_default: bool = False
     use_field_description: bool = False
     use_inline_field_description: bool = False

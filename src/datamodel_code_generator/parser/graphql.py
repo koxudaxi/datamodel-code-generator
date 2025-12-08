@@ -184,6 +184,7 @@ class GraphQLParser(Parser):
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+        use_serialize_as_any: bool = False,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         super().__init__(
@@ -272,6 +273,7 @@ class GraphQLParser(Parser):
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
             read_only_write_only_model_type=read_only_write_only_model_type,
+            use_serialize_as_any=use_serialize_as_any,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
@@ -496,6 +498,7 @@ class GraphQLParser(Parser):
             alias=alias,
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
+            use_serialize_as_any=self.use_serialize_as_any,
             use_field_description=self.use_field_description,
             use_inline_field_description=self.use_inline_field_description,
             use_default_kwarg=self.use_default_kwarg,
