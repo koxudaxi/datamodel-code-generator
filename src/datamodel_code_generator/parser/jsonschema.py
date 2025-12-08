@@ -2049,10 +2049,10 @@ class JsonSchemaParser(Parser):
             data_type = self.data_type_manager.get_data_type(
                 Types.any,
             )
-        if self.force_optional_for_required_fields:
-            required: bool = False
-        else:
-            required = not obj.nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
+        required = self._should_field_be_required(
+            has_default=obj.has_default,
+            is_nullable=bool(obj.nullable),
+        )
         name = self._apply_title_as_name(name, obj)
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
@@ -2109,7 +2109,10 @@ class JsonSchemaParser(Parser):
         )
 
         is_nullable = obj.nullable or obj.type_has_null
-        required = not is_nullable and not (obj.has_default and self.apply_default_values_for_required_fields)
+        required = self._should_field_be_required(
+            has_default=obj.has_default,
+            is_nullable=bool(is_nullable),
+        )
 
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)

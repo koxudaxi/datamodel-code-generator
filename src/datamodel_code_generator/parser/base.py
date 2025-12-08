@@ -1153,10 +1153,10 @@ class Parser(ABC):
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
 
-                        discriminator_field.data_type = self._create_discriminator_data_type(
+                        new_discriminator_data_type = self._create_discriminator_data_type(
                             enum_source, type_names, discriminator_model, imports
                         )
-                        discriminator_field.data_type.parent = discriminator_field
+                        discriminator_field.replace_data_type(new_discriminator_data_type)
                         discriminator_field.required = True
                         imports.append(discriminator_field.imports)
                         has_one_literal = True
@@ -1203,9 +1203,7 @@ class Parser(ABC):
                     continue
                 set_data_type = self._create_set_from_list(model_field.data_type)
                 if set_data_type:  # pragma: no cover
-                    model_field.data_type.parent = None
-                    model_field.data_type = set_data_type
-                    set_data_type.parent = model_field
+                    model_field.replace_data_type(set_data_type)
 
     @classmethod
     def __set_reference_default_value_to_field(cls, models: list[DataModel]) -> None:
@@ -1731,19 +1729,17 @@ class Parser(ABC):
         models: list[DataModel],
         all_model_field_names: set[str],
     ) -> None:
-        for model in models:
-            for model_field in model.fields:
-                for data_type in model_field.data_type.all_data_types:
-                    if data_type and data_type.type in all_model_field_names and data_type.type == model_field.name:
-                        alias = data_type.type + "_aliased"
-                        data_type.type = alias
-                        if data_type.import_:  # pragma: no cover
-                            data_type.import_ = Import(
-                                from_=data_type.import_.from_,
-                                import_=data_type.import_.import_,
-                                alias=alias,
-                                reference_path=data_type.import_.reference_path,
-                            )
+        for _, model_field, data_type in iter_models_field_data_types(models):
+            if data_type and data_type.type in all_model_field_names and data_type.type == model_field.name:
+                alias = data_type.type + "_aliased"
+                data_type.type = alias
+                if data_type.import_:  # pragma: no cover
+                    data_type.import_ = Import(
+                        from_=data_type.import_.from_,
+                        import_=data_type.import_.import_,
+                        alias=alias,
+                        reference_path=data_type.import_.reference_path,
+                    )
 
     @classmethod
     def _collect_exports_for_init(
