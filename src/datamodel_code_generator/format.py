@@ -293,6 +293,7 @@ class CodeFormatter:
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
+            cwd=self.settings_path,
         )
         return result.stdout.decode(self.encoding)
 
@@ -303,6 +304,7 @@ class CodeFormatter:
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
+            cwd=self.settings_path,
         )
         return result.stdout.decode(self.encoding)
 
