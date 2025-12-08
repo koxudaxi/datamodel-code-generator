@@ -2391,7 +2391,7 @@ def test_main_openapi_msgspec_anyof(min_version: str, output_file: Path) -> None
     )
 
 
-@MSGSPEC_LEGACY_BLACK_SKIP
+@LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_oneof_with_null(output_file: Path) -> None:
     """Test msgspec Struct generation with oneOf containing null type."""
     run_main_and_assert(
@@ -2407,7 +2407,7 @@ def test_main_openapi_msgspec_oneof_with_null(output_file: Path) -> None:
     )
 
 
-@MSGSPEC_LEGACY_BLACK_SKIP
+@LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_oneof_with_null_union_operator(output_file: Path) -> None:
     """Test msgspec Struct generation with oneOf containing null type using union operator."""
     run_main_and_assert(
