@@ -25,20 +25,20 @@ jobs:
         os: [ubuntu-24.04, windows-latest, macos-latest]
         tox_env: ['']
         include:
-          - tox_env: py3.12-black24-parallel
-            name: py3.12-black24
-          - tox_env: py3.12-black23-parallel
-            name: py3.12-black23
-          - tox_env: py3.12-black22-parallel
-            name: py3.12-black22
-          - tox_env: py3.12-isort7-parallel
-            name: py3.12-isort7
-          - tox_env: py3.12-isort6-parallel
-            name: py3.12-isort6
-          - tox_env: py3.12-isort5-parallel
-            name: py3.12-isort5
-          - tox_env: py3.12-pydantic1-parallel
-            name: py3.12-pydantic1
+          - tox_env: py312-black24-parallel
+            name: py312-black24
+          - tox_env: py312-black23-parallel
+            name: py312-black23
+          - tox_env: py312-black22-parallel
+            name: py312-black22
+          - tox_env: py312-isort7-parallel
+            name: py312-isort7
+          - tox_env: py312-isort6-parallel
+            name: py312-isort6
+          - tox_env: py312-isort5-parallel
+            name: py312-isort5
+          - tox_env: py312-pydantic1-parallel
+            name: py312-pydantic1
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
@@ -54,18 +54,37 @@ jobs:
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
     - name: Setup Python test environment
-      run: tox run -vv --notest --skip-missing-interpreters false -e ${{ matrix.py && format('{0}-parallel', matrix.py) || matrix.tox_env }}
+      run: |
+        if [ -n "${{ matrix.py }}" ]; then
+          TOX_ENV="py${{ matrix.py }}-parallel"
+          TOX_ENV="${TOX_ENV//.}"
+        else
+          TOX_ENV="${{ matrix.tox_env }}"
+        fi
+        tox run -vv --notest --skip-missing-interpreters false -e $TOX_ENV
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Run test suite
-      run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.py && format('{0}-parallel', matrix.py) || matrix.tox_env }}
+      run: |
+        if [ -n "${{ matrix.py }}" ]; then
+          TOX_ENV="py${{ matrix.py }}-parallel"
+          TOX_ENV="${TOX_ENV//.}"
+        else
+          TOX_ENV="${{ matrix.tox_env }}"
+        fi
+        tox run --skip-uv-sync --skip-pkg-install -e $TOX_ENV
       env:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Rename coverage report file
       run: |
         import os; import sys
-        env_name = "${{ matrix.py && format('{0}-parallel', matrix.py) || matrix.tox_env }}"
-        base_name = "${{ matrix.py || matrix.tox_env }}"
+        py = "${{ matrix.py }}"
+        if py:
+            env_name = f"py{py.replace('.', '')}-parallel"
+            base_name = py
+        else:
+            env_name = "${{ matrix.tox_env }}"
+            base_name = "${{ matrix.tox_env }}"
         os.rename(f".tox/.coverage.{env_name}", f".tox/.coverage.{base_name}-${{ matrix.os }}")
       shell: python
     - name: Upload coverage data
