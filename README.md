@@ -566,7 +566,10 @@ General options:
   --generate-pyproject-config
                         Generate pyproject.toml configuration from the provided CLI
                         arguments and exit
+  --ignore-pyproject    Ignore pyproject.toml configuration
   --no-color            disable colorized output
+  --profile PROFILE     Use a named profile from pyproject.toml [tool.datamodel-
+                        codegen.profiles.<name>]
   --version             show version
   -h, --help            show this help message and exit
 ```
