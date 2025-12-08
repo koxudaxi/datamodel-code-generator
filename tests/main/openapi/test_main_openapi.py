@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import platform
 import warnings
@@ -3261,7 +3262,5 @@ paths:
 """)
 
     with pytest.warns(UserWarning, match=r"No schemas found.*--openapi-scopes paths"):
-        try:
+        with contextlib.suppress(Exception):
             generate(openapi_file)
-        except Exception:
-            pass
