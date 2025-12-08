@@ -219,6 +219,23 @@ class JsonSchemaObject(BaseModel):
         "uniqueItems",
     }
     __extra_key__: str = SPECIAL_PATH_FORMAT.format("extras")
+    __metadata_only_fields__: set[str] = {  # noqa: RUF012
+        "title",
+        "description",
+        "id",
+        "$id",
+        "$schema",
+        "$comment",
+        "examples",
+        "example",
+        "x_enum_varnames",
+        "definitions",
+        "$defs",
+        "default",
+        "readOnly",
+        "writeOnly",
+        "deprecated",
+    }
 
     @model_validator(mode="before")
     def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:  # noqa: N805
@@ -412,6 +429,23 @@ class JsonSchemaObject(BaseModel):
             return False
         non_null_types = [t for t in self.type if t != "null"]
         return len(non_null_types) > 1
+
+    @cached_property
+    def has_ref_with_schema_keywords(self) -> bool:
+        """Check if schema has $ref combined with schema-affecting keywords.
+
+        Metadata-only keywords (title, description, etc.) are excluded
+        as they don't affect the schema structure.
+        """
+        if not self.ref:
+            return False
+        other_fields = self.__fields_set__ - {"ref"}
+        schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
+        if self.extras:
+            schema_affecting_extras = {k for k in self.extras if k not in self.__metadata_only_fields__}
+            if schema_affecting_extras:
+                schema_affecting_fields |= {"extras"}
+        return bool(schema_affecting_fields)
 
 
 @lru_cache
@@ -1043,6 +1077,25 @@ class JsonSchemaParser(Parser):
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
 
+    def _merge_ref_with_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject:
+        """Merge $ref schema with current schema's additional keywords.
+
+        JSON Schema 2020-12 allows $ref alongside other keywords,
+        which should be merged together.
+
+        The local keywords take precedence over referenced schema.
+        """
+        if not obj.ref:
+            return obj
+
+        ref_schema = self._load_ref_schema_object(obj.ref)
+        ref_dict = ref_schema.dict(exclude_unset=True, by_alias=True)
+        current_dict = obj.dict(exclude={"ref"}, exclude_unset=True, by_alias=True)
+        merged = self._deep_merge(ref_dict, current_dict)
+        merged.pop("$ref", None)
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged)
+
     def _merge_primitive_schemas(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
         """Merge multiple primitive schemas by computing the intersection of their constraints."""
         if len(items) == 1:
@@ -1323,9 +1376,16 @@ class JsonSchemaParser(Parser):
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
             if target_attribute.ref:
-                combined_schemas.append(target_attribute)
-                refs.append(index)
-                # TODO: support partial ref
+                if target_attribute.has_ref_with_schema_keywords:
+                    merged_attr = self._merge_ref_with_schema(target_attribute)
+                    combined_schemas.append(
+                        self.SCHEMA_OBJECT_TYPE.parse_obj(
+                            self._deep_merge(base_object, merged_attr.dict(exclude_unset=True, by_alias=True))
+                        )
+                    )
+                else:
+                    combined_schemas.append(target_attribute)
+                    refs.append(index)
             else:
                 combined_schemas.append(
                     self.SCHEMA_OBJECT_TYPE.parse_obj(
@@ -1878,6 +1938,8 @@ class JsonSchemaParser(Parser):
                 item,
                 root_type_path,
             )
+        if item.has_ref_with_schema_keywords:
+            item = self._merge_ref_with_schema(item)
         if item.ref:
             return self.get_ref_data_type(item.ref)
         if item.custom_type_path:  # pragma: no cover
@@ -2540,6 +2602,9 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> None:
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
+        if obj.has_ref_with_schema_keywords:
+            obj = self._merge_ref_with_schema(obj)
+
         if obj.is_array:
             self.parse_array(name, obj, path)
         elif obj.allOf:

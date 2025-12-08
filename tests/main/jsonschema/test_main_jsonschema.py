@@ -3541,6 +3541,20 @@ def test_main_jsonschema_extras_in_oneof(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
+    """Test that $ref combined with additional keywords merges properties (Issue #2330)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_with_additional_keywords",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "ref_with_additional_keywords",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
 def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
