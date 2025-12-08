@@ -561,6 +561,7 @@ class OpenAPIParser(JsonSchemaParser):
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name=parameter_name,
                 excludes=exclude_field_names,
+                model_type=self.field_name_model_type,
                 class_name=name,
             )
             if parameter.schema_:
