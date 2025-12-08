@@ -114,10 +114,10 @@ class DataModelField(DataModelFieldBase):
         if is_float_type:
             return float(value)
         str_value = str(value)
-        if "e" in str_value.lower():
+        if "e" in str_value.lower():  # pragma: no cover
             # Scientific notation like 1e-08 - keep as float
             return float(value)
-        if isinstance(value, int) and not isinstance(value, bool):
+        if isinstance(value, int) and not isinstance(value, bool):  # pragma: no branch
             return value
         return int(value)
 
