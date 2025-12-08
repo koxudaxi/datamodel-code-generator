@@ -530,6 +530,7 @@ class Parser(ABC):
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
+        use_serialize_as_any: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
         original_field_name_delimiter: str | None = None,
         use_double_quotes: bool = False,
@@ -575,6 +576,7 @@ class Parser(ABC):
             use_pendulum=use_pendulum,
             target_datetime_class=target_datetime_class,
             treat_dot_as_module=treat_dot_as_module,
+            use_serialize_as_any=use_serialize_as_any,
         )
         self.data_model_type: type[DataModel] = data_model_type
         self.data_model_root_type: type[DataModel] = data_model_root_type
@@ -673,6 +675,7 @@ class Parser(ABC):
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
             raise Exception(msg)  # noqa: TRY002
+        self.use_serialize_as_any: bool = use_serialize_as_any
         self.use_non_positive_negative_number_constrained_types = use_non_positive_negative_number_constrained_types
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content

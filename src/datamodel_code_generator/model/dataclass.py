@@ -183,6 +183,7 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with datetime type mapping."""
         super().__init__(
@@ -195,6 +196,7 @@ class DataTypeManager(_DataTypeManager):
             use_pendulum,
             target_datetime_class,
             treat_dot_as_module,
+            use_serialize_as_any,
         )
 
         datetime_map = (

@@ -1,0 +1,49 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: SerializeAsAny Test
+  description: Test schema for SerializeAsAny annotation on types with subtypes
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      description: Base user model
+      properties:
+        name:
+          type: string
+          description: User's name
+      required:
+        - name
+
+    AdminUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          description: Admin user with additional permissions
+          properties:
+            admin_level:
+              type: integer
+              description: Admin permission level
+          required:
+            - admin_level
+
+    Container:
+      type: object
+      description: Container that holds user references
+      properties:
+        admin_user_field:
+          $ref: '#/components/schemas/AdminUser'
+          description: Field that should not use SerializeAsAny
+        user_field:
+          $ref: '#/components/schemas/User'
+          description: Field that should use SerializeAsAny
+        user_list:
+          type: array
+          description: List of users that should use SerializeAsAny
+          items:
+            $ref: '#/components/schemas/User'
+      required:
+        - user_field
+        - user_list
+        - admin_user_field

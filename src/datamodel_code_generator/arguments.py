@@ -355,6 +355,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-serialize-as-any",
+    help="Use pydantic.SerializeAsAny for fields with types that have subtypes (Pydantic v2 only)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-generic-container-types",
     help="Use generic container types for type hinting (typing.Sequence, typing.Mapping). "
     "If `--use-standard-collections` option is set, then import from collections.abc instead of typing",
