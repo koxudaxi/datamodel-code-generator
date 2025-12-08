@@ -373,7 +373,8 @@ class GraphQLParser(Parser):
         self,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
         final_data_type: DataType,
-        required: bool,  # noqa: FBT001
+        *,
+        required: bool,
     ) -> Any:
         if isinstance(field, graphql.GraphQLInputField):  # pragma: no cover
             if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
@@ -485,7 +486,7 @@ class GraphQLParser(Parser):
 
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
 
-        default = self._get_default(field, final_data_type, required)
+        default = self._get_default(field, final_data_type, required=required)
         extras = {} if self.default_field_extras is None else self.default_field_extras.copy()
 
         if field.description is not None:  # pragma: no cover

@@ -102,12 +102,6 @@ class DataModelField(DataModelFieldBase):
             return None
         return result
 
-    def self_reference(self) -> bool:
-        """Check if this field references its parent model."""
-        return isinstance(self.parent, BaseModelBase) and self.parent.reference.path in {
-            d.reference.path for d in self.data_type.all_data_types if d.reference
-        }
-
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value

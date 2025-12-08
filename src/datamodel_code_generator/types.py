@@ -28,6 +28,7 @@ from typing import (
 import pydantic
 from packaging import version
 from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from typing_extensions import TypeIs
 
 from datamodel_code_generator.format import (
     DatetimeClassType,
@@ -86,6 +87,8 @@ if TYPE_CHECKING:
     import builtins
     from collections.abc import Iterable, Iterator, Sequence
 
+    from pydantic_core import core_schema
+
     from datamodel_code_generator.model.base import DataModelFieldBase
 
 if PYDANTIC_V2:
@@ -132,27 +135,19 @@ class UnionIntFloat:
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         """Return Pydantic v2 core schema."""
-        from_int_schema = core_schema.chain_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-            [
-                core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    [core_schema.int_schema(), core_schema.float_schema()]  # pyright: ignore[reportPossiblyUnboundVariable]
-                ),
-                core_schema.no_info_plain_validator_function(cls.validate),  # pyright: ignore[reportPossiblyUnboundVariable]
-            ]
-        )
+        from_int_schema = core_schema.chain_schema([
+            core_schema.union_schema([core_schema.int_schema(), core_schema.float_schema()]),
+            core_schema.no_info_plain_validator_function(cls.validate),
+        ])
 
-        return core_schema.json_or_python_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
+        return core_schema.json_or_python_schema(
             json_schema=from_int_schema,
-            python_schema=core_schema.union_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                [
-                    # check if it's an instance first before doing any further work
-                    core_schema.is_instance_schema(UnionIntFloat),  # pyright: ignore[reportPossiblyUnboundVariable]
-                    from_int_schema,
-                ]
-            ),
-            serialization=core_schema.plain_serializer_function_ser_schema(  # pyright: ignore[reportPossiblyUnboundVariable]
-                lambda instance: instance.value
-            ),
+            python_schema=core_schema.union_schema([
+                # check if it's an instance first before doing any further work
+                core_schema.is_instance_schema(UnionIntFloat),
+                from_int_schema,
+            ]),
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda instance: instance.value),
         )
 
     @classmethod
@@ -258,6 +253,13 @@ def get_optional_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT
     if use_union_operator:
         return f"{type_} | {NONE}"
     return f"{OPTIONAL_PREFIX}{type_}]"
+
+
+def is_data_model_field(obj: object) -> TypeIs[DataModelFieldBase]:
+    """Check if an object is a DataModelFieldBase instance."""
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: PLC0415
+
+    return isinstance(obj, DataModelFieldBase)
 
 
 @runtime_checkable
@@ -386,6 +388,21 @@ class DataType(_BaseModel):
     def remove_reference(self) -> None:
         """Remove the reference from this DataType."""
         self.replace_reference(None)
+
+    def swap_with(self, new_data_type: DataType) -> None:
+        """Detach self and attach new_data_type to the same parent.
+
+        Replaces this DataType with new_data_type in the parent container.
+        Works with both field parents and nested DataType parents.
+        """
+        parent = self.parent
+        self.parent = None
+        if parent is not None:  # pragma: no cover
+            new_data_type.parent = parent
+            if is_data_model_field(parent):
+                parent.data_type = new_data_type
+            elif isinstance(parent, DataType):  # pragma: no cover
+                parent.data_types = [new_data_type if d is self else d for d in parent.data_types]
 
     @property
     def module_name(self) -> str | None:

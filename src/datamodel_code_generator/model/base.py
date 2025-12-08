@@ -181,6 +181,23 @@ class DataModelFieldBase(_BaseModel):
         self.required = False
         self.nullable = False
 
+    def _process_const_as_literal(self) -> None:
+        """Process const values by converting to literal type. Used by subclasses."""
+        if "const" not in self.extras:
+            return
+        const = self.extras["const"]
+        self.const = True
+        self.nullable = False
+        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
+        if not self.default:
+            self.default = const
+
+    def self_reference(self) -> bool:
+        """Check if field references its parent model."""
+        if self.parent is None or not self.parent.reference:  # pragma: no cover
+            return False
+        return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
+
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
         """Get the type hint string for this field, including nullability."""
@@ -299,6 +316,20 @@ class DataModelFieldBase(_BaseModel):
             copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
         return copied
 
+    def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
+        """Replace data_type and update parent relationships.
+
+        Args:
+            new_data_type: The new DataType to set.
+            clear_old_parent: If True, clear the old data_type's parent reference.
+                Set to False when the old data_type may be referenced elsewhere.
+        """
+        if self.data_type.parent is self and clear_old_parent:
+            self.data_type.swap_with(new_data_type)
+        else:
+            self.data_type = new_data_type
+            new_data_type.parent = self
+
 
 @lru_cache
 def get_template(template_file_path: Path) -> Template:
@@ -369,7 +400,7 @@ class BaseClassDataType(DataType):
 UNDEFINED: Any = object()
 
 
-class DataModel(TemplateBase, Nullable, ABC):
+class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
     Handles template rendering, import collection, and model relationships.
@@ -482,6 +513,34 @@ class DataModel(TemplateBase, Nullable, ABC):
             if base_class.reference and isinstance(base_class.reference.source, DataModel):
                 yield from base_class.reference.source.iter_all_fields(visited)
         yield from self.fields
+
+    def get_dedup_key(self, class_name: str | None = None, *, use_default: bool = True) -> tuple[Any, ...]:
+        """Generate hashable key for model deduplication."""
+        from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
+
+        render_class_name = class_name if class_name is not None or not use_default else "M"
+        return tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
+
+    def create_reuse_model(self, base_ref: Reference) -> Self:
+        """Create inherited model with empty fields pointing to base reference."""
+        return self.__class__(
+            fields=[],
+            base_classes=[base_ref],
+            description=self.description,
+            reference=Reference(
+                name=self.name,
+                path=self.reference.path + "/reuse",
+            ),
+            custom_template_dir=self._custom_template_dir,
+        )
+
+    def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
+        """Replace reference children if their parent model is in models list."""
+        from datamodel_code_generator.parser.base import get_most_of_parent  # noqa: PLC0415
+
+        for child in self.reference.children[:]:
+            if isinstance(child, DataType) and get_most_of_parent(child) in models:
+                child.replace_reference(new_ref)
 
     def set_base_class(self) -> None:
         """Set up the base class for this model."""
