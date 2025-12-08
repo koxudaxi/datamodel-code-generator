@@ -317,26 +317,30 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def annotated(self) -> str | None:
-        """Get Annotated type hint with Meta constraints."""
+        """Get Annotated type hint with Meta constraints.
+
+        For ClassVar fields (discriminator tag_field), ClassVar is required
+        regardless of use_annotated setting.
+        """
+        if self.extras.get("is_classvar"):
+            meta = self._get_meta_string()
+            if self.use_annotated and meta:
+                annotated_type = f"Annotated[{self.type_hint}, {meta}]"
+                return f"ClassVar[{annotated_type}]"
+            return f"ClassVar[{self.type_hint}]"
+
         if not self.use_annotated:  # pragma: no cover
             return None
 
         meta = self._get_meta_string()
 
-        if not meta and not self.extras.get("is_classvar"):
+        if not meta:
             return None
 
-        if not self.required and not self.extras.get("is_classvar"):
+        if not self.required:
             type_hint = self.data_type.type_hint
             annotated_type = f"Annotated[{type_hint}, {meta}]"
             return get_neither_required_nor_nullable_type(annotated_type, self.data_type.use_union_operator)
-
-        # Handle ClassVar case (for discriminator fields in msgspec)
-        if self.extras.get("is_classvar"):
-            if meta:
-                annotated_type = f"Annotated[{self.type_hint}, {meta}]"
-                return f"ClassVar[{annotated_type}]"
-            return f"ClassVar[{self.type_hint}]"
 
         return f"Annotated[{self.type_hint}, {meta}]"
 
@@ -344,13 +348,13 @@ class DataModelField(DataModelFieldBase):
     def needs_annotated_import(self) -> bool:
         """Check if this field requires the Annotated import.
 
-        ClassVar fields without Meta constraints don't need Annotated.
+        ClassVar fields with Meta need Annotated only when use_annotated is True.
+        ClassVar fields without Meta don't need Annotated.
         """
         if not self.annotated:
             return False
-        # ClassVar without Meta doesn't use Annotated
         if self.extras.get("is_classvar"):
-            return self._get_meta_string() is not None
+            return self.use_annotated and self._get_meta_string() is not None
         return True
 
     @property
