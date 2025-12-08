@@ -25,6 +25,11 @@ MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
     reason="msgspec.Struct formatting differs with python3.12 + black < 24",
 )
 
+LEGACY_BLACK_SKIP = pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse("24.0.0"),
+    reason="Type annotation formatting differs with black < 24",
+)
+
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
 EXPECTED_MAIN_PATH: Path = DATA_PATH / "expected" / "main"
 

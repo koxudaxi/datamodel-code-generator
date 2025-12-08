@@ -380,6 +380,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-enum-values-in-discriminator",
+    help="Use enum member literals in discriminator fields instead of string literals",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-standard-collections",
     help="Use standard collections for type hinting (list, dict)",
     action="store_true",
@@ -716,6 +722,17 @@ general_options.add_argument(
     action="store_true",
     default=None,
     help="Generate CLI command from pyproject.toml configuration and exit",
+)
+general_options.add_argument(
+    "--ignore-pyproject",
+    action="store_true",
+    default=False,
+    help="Ignore pyproject.toml configuration",
+)
+general_options.add_argument(
+    "--profile",
+    help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
+    default=None,
 )
 general_options.add_argument(
     "--version",

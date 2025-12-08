@@ -373,6 +373,9 @@ Typing customization:
                         times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
+  --use-enum-values-in-discriminator
+                        Use enum member literals in discriminator fields instead of string
+                        literals
   --use-generic-container-types
                         Use generic container types for type hinting (typing.Sequence,
                         typing.Mapping). If `--use-standard-collections` option is set, then
@@ -558,7 +561,10 @@ General options:
   --generate-pyproject-config
                         Generate pyproject.toml configuration from the provided CLI
                         arguments and exit
+  --ignore-pyproject    Ignore pyproject.toml configuration
   --no-color            disable colorized output
+  --profile PROFILE     Use a named profile from pyproject.toml [tool.datamodel-
+                        codegen.profiles.<name>]
   --version             show version
   -h, --help            show this help message and exit
 ```

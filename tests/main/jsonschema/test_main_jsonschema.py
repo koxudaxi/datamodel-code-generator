@@ -2486,6 +2486,55 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_with_type_string(output_file: Path) -> None:
+    """Test msgspec Struct generation with discriminator using type: string + const."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="discriminator_with_type_string_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_with_meta(output_file: Path) -> None:
+    """Test msgspec Struct generation with discriminator ClassVar having Meta constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_meta_msgspec.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="discriminator_with_meta_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_discriminator_without_annotated(output_file: Path) -> None:
+    """Test msgspec Struct discriminator generates ClassVar even without use_annotated."""
+    generate(
+        JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
+        output=output_file,
+        output_model_type=DataModelType.MsgspecStruct,
+        target_python_version=PythonVersion.PY_310,
+        use_annotated=False,
+    )
+    assert_file_content(output_file, "discriminator_with_type_string_msgspec_no_annotated.py")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_msgspec_null_field(output_file: Path) -> None:
     """Test msgspec Struct generation with null type fields."""
     run_main_and_assert(
@@ -3188,4 +3237,90 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
         expected_output=expected,
         ignore_whitespace=True,
         extra_args=["--disable-timestamp"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value(output_file: Path) -> None:
+    """Test RootModel default values are wrapped with type constructors."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_no_annotated(output_file: Path) -> None:
+    """Test RootModel default values without --use-annotated flag."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_no_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--set-default-enum-member",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_branches(output_file: Path) -> None:
+    """Test RootModel default value branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_branches.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_branches.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_root_model_default_value_non_root(output_file: Path) -> None:
+    """Test that non-RootModel references are not wrapped."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_default_value_non_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_value_non_root.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_jsonschema_extras_in_oneof(output_file: Path) -> None:
+    """Test that extras are preserved in oneOf/anyOf structures (Issue #2403)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras_in_oneof.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="extras_in_oneof.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-include-all-keys",
+        ],
     )

@@ -1,0 +1,224 @@
+openapi: "3.0.0"
+info:
+  title: Test API - Coverage for allOf Inheritance Edge Cases
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    # For testing _merge_primitive_schemas with constraint-only items (no type field)
+    ConstraintOnlyBase:
+      type: object
+      properties:
+        field_with_constraints:
+          minLength: 5
+          maxLength: 50
+
+    # For testing default case in _intersect_constraint (multipleOf)
+    MultipleOfBase:
+      type: object
+      properties:
+        multiple_field:
+          allOf:
+            - type: integer
+              multipleOf: 5
+            - multipleOf: 10
+
+    # For testing warning when $ref combined with primitives
+    RefWithPrimitiveBase:
+      type: object
+      properties:
+        ref_and_primitive:
+          allOf:
+            - $ref: '#/components/schemas/SimpleString'
+            - type: string
+              minLength: 1
+
+    SimpleString:
+      type: string
+
+    # For testing allOf with nested anyOf that has refs
+    NestedAnyOfWithRef:
+      type: object
+      properties:
+        nested_anyof:
+          anyOf:
+            - $ref: '#/components/schemas/SimpleString'
+            - type: integer
+
+    # For testing array items falling back to Any
+    DeepNestedArray:
+      type: object
+      properties:
+        deep_array:
+          type: array
+          items:
+            type: object
+            properties:
+              l1:
+                type: object
+                properties:
+                  l2:
+                    type: object
+                    properties:
+                      l3:
+                        type: object
+                        properties:
+                          l4:
+                            type: object
+                            properties:
+                              l5:
+                                type: string
+
+    # For testing oneOf path
+    OneOfBase:
+      type: object
+      properties:
+        oneof_field:
+          oneOf:
+            - type: string
+            - type: integer
+
+    # For testing oneOf with single item
+    SingleOneOf:
+      type: object
+      properties:
+        single_oneof:
+          oneOf:
+            - type: string
+
+    # For testing additionalProperties fallback to Any
+    AdditionalPropsDeep:
+      type: object
+      properties:
+        deep_dict:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              l1:
+                type: object
+                properties:
+                  l2:
+                    type: object
+                    properties:
+                      l3:
+                        type: object
+                        properties:
+                          l4:
+                            type: string
+
+    # For testing object with allOf containing only objects without additionalProperties
+    ObjectOnlyAllOf:
+      type: object
+      properties:
+        object_allof:
+          allOf:
+            - type: object
+              properties:
+                a:
+                  type: string
+            - type: object
+              properties:
+                b:
+                  type: integer
+
+    # For testing anyOf with more than max_union_elements
+    LargeUnion:
+      type: object
+      properties:
+        large_union:
+          anyOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - type: number
+            - type: array
+              items:
+                type: string
+            - type: object
+
+    # For _get_inherited_field_type edge cases
+    BaseWithNoProperties:
+      type: object
+
+    BaseWithBooleanProperty:
+      type: object
+      properties:
+        bool_prop:
+          type: boolean
+
+    # Child that inherits from base without properties
+    ChildOfNoProps:
+      allOf:
+        - $ref: '#/components/schemas/BaseWithNoProperties'
+        - type: object
+          required:
+            - some_field
+          properties:
+            extra:
+              type: string
+
+    # For testing nested allOf with ref that resolves to a nested type with reference
+    NestedAllOfRef:
+      type: object
+      properties:
+        nested_allof_ref:
+          allOf:
+            - allOf:
+                - $ref: '#/components/schemas/SimpleString'
+
+    # For testing nested allOf that doesn't have ref but resolves to ref
+    # This should trigger the path where nested_type.reference is True but item.ref is None
+    NestedAllOfWithoutDirectRef:
+      type: object
+      properties:
+        nested_indirect:
+          allOf:
+            - oneOf:
+                - $ref: '#/components/schemas/SimpleString'
+            - type: string
+              minLength: 1
+
+    # For testing enum items in allOf
+    EnumInAllOf:
+      type: object
+      properties:
+        enum_field:
+          allOf:
+            - enum: ["a", "b", "c"]
+            - description: "enum with description"
+
+    # Main test schema that inherits all edge cases
+    EdgeCasesCoverage:
+      allOf:
+        - $ref: '#/components/schemas/ConstraintOnlyBase'
+        - $ref: '#/components/schemas/MultipleOfBase'
+        - $ref: '#/components/schemas/RefWithPrimitiveBase'
+        - $ref: '#/components/schemas/NestedAnyOfWithRef'
+        - $ref: '#/components/schemas/DeepNestedArray'
+        - $ref: '#/components/schemas/OneOfBase'
+        - $ref: '#/components/schemas/SingleOneOf'
+        - $ref: '#/components/schemas/AdditionalPropsDeep'
+        - $ref: '#/components/schemas/ObjectOnlyAllOf'
+        - $ref: '#/components/schemas/LargeUnion'
+        - $ref: '#/components/schemas/NestedAllOfRef'
+        - $ref: '#/components/schemas/NestedAllOfWithoutDirectRef'
+        - $ref: '#/components/schemas/EnumInAllOf'
+        - type: object
+          required:
+            - field_with_constraints
+            - multiple_field
+            - ref_and_primitive
+            - nested_anyof
+            - deep_array
+            - oneof_field
+            - single_oneof
+            - deep_dict
+            - object_allof
+            - large_union
+            - nested_allof_ref
+            - nested_indirect
+            - enum_field
+          properties:
+            local_field:
+              type: string

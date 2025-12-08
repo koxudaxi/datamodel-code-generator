@@ -10,6 +10,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
@@ -96,6 +97,18 @@ class ConstraintsBase(_BaseModel):
             **root_type_field_constraints,
             **model_field_constraints,
         })
+
+
+@dataclass(repr=False)
+class WrappedDefault:
+    """Represents a default value wrapped with its type constructor."""
+
+    value: Any
+    type_name: str
+
+    def __repr__(self) -> str:
+        """Return type constructor representation, e.g., 'CountType(10)'."""
+        return f"{self.type_name}({self.value!r})"
 
 
 class DataModelFieldBase(_BaseModel):
@@ -205,7 +218,7 @@ class DataModelFieldBase(_BaseModel):
 
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
-        if self.use_annotated and self.annotated:
+        if self.use_annotated and self.needs_annotated_import:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
 
@@ -256,6 +269,16 @@ class DataModelFieldBase(_BaseModel):
     def annotated(self) -> str | None:
         """Get the Annotated type hint content, if any."""
         return None
+
+    @property
+    def needs_annotated_import(self) -> bool:
+        """Check if this field requires the Annotated import."""
+        return bool(self.annotated)
+
+    @property
+    def needs_meta_import(self) -> bool:  # pragma: no cover
+        """Check if this field requires the Meta import (msgspec only)."""
+        return False
 
     @property
     def has_default_factory(self) -> bool:
@@ -565,6 +588,12 @@ class DataModel(TemplateBase, Nullable, ABC):
     def path(self) -> str:
         """Get the full reference path for this model."""
         return self.reference.path
+
+    def set_reference_path(self, new_path: str) -> None:
+        """Set reference path and clear cached path property."""
+        self.reference.path = new_path
+        if "path" in self.__dict__:
+            del self.__dict__["path"]
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""

@@ -214,6 +214,7 @@ class OpenAPIParser(JsonSchemaParser):
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
         use_one_literal_as_default: bool = False,
+        use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         use_specialized_enum: bool = True,
@@ -306,6 +307,7 @@ class OpenAPIParser(JsonSchemaParser):
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
             use_one_literal_as_default=use_one_literal_as_default,
+            use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
             use_subclass_enum=use_subclass_enum,
             use_specialized_enum=use_specialized_enum,
@@ -720,7 +722,15 @@ class OpenAPIParser(JsonSchemaParser):
             self.raw_obj = specification
             self._collect_discriminator_schemas()
             schemas: dict[str, Any] = specification.get("components", {}).get("schemas", {})
+            paths: dict[str, Any] = specification.get("paths", {})
             security: list[dict[str, list[str]]] | None = specification.get("security")
+            # Warn if schemas is empty but paths exist and only Schemas scope is used
+            if not schemas and self.open_api_scopes == [OpenAPIScope.Schemas] and paths:
+                warn(
+                    "No schemas found in components/schemas. If your schemas are defined in "
+                    "external files referenced from paths, consider using --openapi-scopes paths",
+                    stacklevel=2,
+                )
             if OpenAPIScope.Schemas in self.open_api_scopes:
                 for obj_name, raw_obj in schemas.items():
                     self.parse_raw_obj(
@@ -729,7 +739,6 @@ class OpenAPIParser(JsonSchemaParser):
                         [*path_parts, "#/components", "schemas", obj_name],
                     )
             if OpenAPIScope.Paths in self.open_api_scopes:
-                paths: dict[str, Any] = specification.get("paths", {})
                 parameters: list[dict[str, Any]] = [
                     self._get_ref_body(p["$ref"]) if "$ref" in p else p
                     for p in paths.get("parameters", [])

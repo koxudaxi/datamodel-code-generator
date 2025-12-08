@@ -8,10 +8,11 @@ code generation.
 from __future__ import annotations
 
 import operator
+import os.path
 import re
 import sys
 from abc import ABC, abstractmethod
-from collections import OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
@@ -55,10 +56,12 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    WrappedDefault,
 )
 from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.parser._scc import find_circular_sccs
 from datamodel_code_generator.reference import ModelResolver, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
@@ -265,10 +268,34 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
-def relative(current_module: str, reference: str) -> tuple[str, str]:
-    """Find relative module path."""
-    current_module_path = current_module.split(".") if current_module else []
-    *reference_path, name = reference.split(".")
+def relative(
+    current_module: str,
+    reference: str,
+    *,
+    reference_is_module: bool = False,
+    current_is_init: bool = False,
+) -> tuple[str, str]:
+    """Find relative module path.
+
+    Args:
+        current_module: Current module path (e.g., "foo.bar")
+        reference: Reference path (e.g., "foo.baz.ClassName" or "foo.baz" if reference_is_module)
+        reference_is_module: If True, treat reference as a module path (not module.class)
+        current_is_init: If True, treat current_module as a package __init__.py (adds depth)
+
+    Returns:
+        Tuple of (from_path, import_name) for constructing import statements
+    """
+    if current_is_init:
+        current_module_path = [*current_module.split("."), "__init__"] if current_module else ["__init__"]
+    else:
+        current_module_path = current_module.split(".") if current_module else []
+
+    if reference_is_module:
+        reference_path = reference.split(".") if reference else []
+        name = reference_path[-1] if reference_path else ""
+    else:
+        *reference_path, name = reference.split(".")
 
     if current_module_path == reference_path:
         return "", ""
@@ -340,6 +367,24 @@ def exact_import(from_: str, import_: str, short_name: str) -> tuple[str, str]:
         # when our imported module has the same parent
         return f"{from_}{import_}", short_name
     return f"{from_}.{import_}", short_name
+
+
+def get_module_directory(module: tuple[str, ...]) -> tuple[str, ...]:
+    """Get the directory portion of a module tuple.
+
+    Note: Module tuples in module_models do NOT include .py extension.
+    The last element is either the module name (e.g., "issuing") or empty for root.
+
+    Examples:
+        ("pkg",) -> ("pkg",) - root module
+        ("pkg", "issuing") -> ("pkg",) - submodule
+        ("foo", "bar", "baz") -> ("foo", "bar") - deeply nested module
+    """
+    if not module:
+        return ()
+    if len(module) == 1:
+        return module
+    return module[:-1]
 
 
 @runtime_checkable
@@ -499,6 +544,7 @@ class Parser(ABC):
         capitalise_enum_members: bool = False,
         keep_model_order: bool = False,
         use_one_literal_as_default: bool = False,
+        use_enum_values_in_discriminator: bool = False,
         known_third_party: list[str] | None = None,
         custom_formatters: list[str] | None = None,
         custom_formatters_kwargs: dict[str, Any] | None = None,
@@ -639,6 +685,7 @@ class Parser(ABC):
         self.capitalise_enum_members = capitalise_enum_members
         self.keep_model_order = keep_model_order
         self.use_one_literal_as_default = use_one_literal_as_default
+        self.use_enum_values_in_discriminator = use_enum_values_in_discriminator
         self.known_third_party = known_third_party
         self.custom_formatter = custom_formatters
         self.custom_formatters_kwargs = custom_formatters_kwargs
@@ -837,8 +884,10 @@ class Parser(ABC):
         imports: Imports,
         scoped_model_resolver: ModelResolver,
         init: bool,  # noqa: FBT001
+        internal_modules: set[tuple[str, ...]] | None = None,
     ) -> None:
         model_paths = {model.path for model in models}
+        internal_modules = internal_modules or set()
 
         for model in models:
             scoped_model_resolver.add([model.path], model.class_name)
@@ -871,6 +920,12 @@ class Parser(ABC):
                     ):
                         rel_path_depth = model.module_path[-1].count(".")
                         from_ = from_[rel_path_depth:]
+
+                    ref_module = tuple(data_type.full_name.split(".")[:-1])
+                    if from_ and ref_module in internal_modules:
+                        from_ = f"{from_}{import_}"
+                        import_ = data_type.reference.short_name
+                        full_path = from_, import_
 
                 alias = scoped_model_resolver.add(full_path, import_).name
 
@@ -915,7 +970,31 @@ class Parser(ABC):
                 )
                 models.remove(model)
 
-    def __apply_discriminator_type(  # noqa: PLR0912, PLR0915
+    def _create_discriminator_data_type(
+        self,
+        enum_source: Enum | None,
+        type_names: list[str],
+        discriminator_model: DataModel,
+        imports: Imports,
+    ) -> DataType:
+        """Create a data type for discriminator field, using enum literals if available."""
+        if enum_source:
+            enum_class_name = enum_source.reference.short_name
+            enum_member_literals: list[tuple[str, str]] = []
+            for value in type_names:
+                member = enum_source.find_member(value)
+                if member and member.field.name:
+                    enum_member_literals.append((enum_class_name, member.field.name))
+                else:  # pragma: no cover
+                    enum_member_literals.append((enum_class_name, value))
+            data_type = self.data_type(enum_member_literals=enum_member_literals)
+            if enum_source.module_path != discriminator_model.module_path:  # pragma: no cover
+                imports.append(Import.from_full_path(enum_source.name))
+        else:
+            data_type = self.data_type(literals=type_names)
+        return data_type
+
+    def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
         imports: Imports,
@@ -991,12 +1070,45 @@ class Parser(ABC):
                         msg = f"Discriminator type is not found. {data_type.reference.path}"
                         raise RuntimeError(msg)
 
+                    enum_from_base: Enum | None = None
+                    if self.use_enum_values_in_discriminator:
+                        for base_class in discriminator_model.base_classes:
+                            if not base_class.reference or not base_class.reference.source:  # pragma: no cover
+                                continue
+                            base_model = base_class.reference.source
+                            if not isinstance(  # pragma: no cover
+                                base_model,
+                                (
+                                    pydantic_model.BaseModel,
+                                    pydantic_model_v2.BaseModel,
+                                    dataclass_model.DataClass,
+                                    msgspec_model.Struct,
+                                ),
+                            ):
+                                continue
+                            for base_field in base_model.fields:  # pragma: no branch
+                                if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
+                                    continue
+                                enum_from_base = base_field.data_type.find_source(Enum)
+                                if enum_from_base:  # pragma: no branch
+                                    break
+                            if enum_from_base:  # pragma: no branch
+                                break
+
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
                         if field_name not in {discriminator_field.original_name, discriminator_field.name}:
                             continue
                         literals = discriminator_field.data_type.literals
-                        if len(literals) == 1 and literals[0] == (type_names[0] if type_names else None):
+                        const_value = discriminator_field.extras.get("const")
+                        expected_value = type_names[0] if type_names else None
+
+                        # Check if literals match (existing behavior)
+                        literals_match = len(literals) == 1 and literals[0] == expected_value
+                        # Check if const value matches (for msgspec with type: string + const)
+                        const_match = const_value is not None and const_value == expected_value
+
+                        if literals_match:
                             has_one_literal = True
                             if isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
                                 discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
@@ -1004,19 +1116,40 @@ class Parser(ABC):
                                 discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
                             break
+
+                        # For msgspec with const value but no literal (type: string + const case)
+                        if const_match and isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
+                            has_one_literal = True
+                            discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
+                            discriminator_model.add_base_class_kwarg("tag", repr(const_value))
+                            discriminator_field.extras["is_classvar"] = True
+                            break
+
+                        enum_source: Enum | None = None
+                        if self.use_enum_values_in_discriminator:
+                            enum_source = (  # pragma: no cover
+                                discriminator_field.data_type.find_source(Enum) or enum_from_base
+                            )
+
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
                                 field_data_type.remove_reference()
-                        discriminator_field.data_type = self.data_type(literals=type_names)
+
+                        discriminator_field.data_type = self._create_discriminator_data_type(
+                            enum_source, type_names, discriminator_model, imports
+                        )
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
                         imports.append(discriminator_field.imports)
                         has_one_literal = True
                     if not has_one_literal:
+                        new_data_type = self._create_discriminator_data_type(
+                            enum_from_base, type_names, discriminator_model, imports
+                        )
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=field_name,
-                                data_type=self.data_type(literals=type_names),
+                                data_type=new_data_type,
                                 required=True,
                                 alias=alias,
                             )
@@ -1385,6 +1518,33 @@ class Parser(ABC):
                             else:
                                 enum_member.alias = data_type.alias
 
+    def __wrap_root_model_default_values(
+        self,
+        models: list[DataModel],
+    ) -> None:
+        """Wrap RootModel reference default values with their type constructors."""
+        if not self.use_annotated:
+            return
+        for model in models:
+            if isinstance(model, (Enum, self.data_model_root_type)):
+                continue
+            for model_field in model.fields:
+                if model_field.default is None:
+                    continue
+                if isinstance(model_field.default, (WrappedDefault, Member)):
+                    continue
+                if isinstance(model_field.default, list):
+                    continue
+                for data_type in model_field.data_type.all_data_types:
+                    if data_type.reference and isinstance(data_type.reference.source, pydantic_model_v2.RootModel):
+                        # Use alias if available (handles import collisions)
+                        type_name = data_type.alias or data_type.reference.short_name
+                        model_field.default = WrappedDefault(
+                            value=model_field.default,
+                            type_name=type_name,
+                        )
+                        break
+
     def __override_required_field(
         self,
         models: list[DataModel],
@@ -1602,7 +1762,9 @@ class Parser(ABC):
     def _collect_exports_for_init(
         cls,
         module: tuple[str, ...],
-        processed_models: Sequence[tuple[tuple[str, ...], Sequence[DataModel], bool, Imports, ModelResolver]],
+        processed_models: Sequence[
+            tuple[tuple[str, ...], tuple[str, ...], Sequence[DataModel], bool, Imports, ModelResolver]
+        ],
         scope: AllExportsScope,
     ) -> list[tuple[str, tuple[str, ...], str]]:
         """Collect exports for __init__.py based on scope."""
@@ -1610,7 +1772,7 @@ class Parser(ABC):
         base = module[:-1] if module[-1] == "__init__.py" else module
         base_len = len(base)
 
-        for proc_module, proc_models, _, _, _ in processed_models:
+        for proc_module, _, proc_models, _, _, _ in processed_models:
             if not proc_models or proc_module == module:
                 continue
             last = proc_module[-1]
@@ -1695,15 +1857,15 @@ class Parser(ABC):
     def _build_all_exports_code(
         cls,
         resolved: dict[str, list[tuple[str, tuple[str, ...], str]]],
-    ) -> tuple[Imports, list[str]]:
-        """Build import statements and __all__ list from resolved exports."""
+    ) -> Imports:
+        """Build import statements from resolved exports."""
         export_imports = Imports()
         for export_name, items in resolved.items():
             for orig, _, short in items:
                 export_imports.append(
                     Import(from_=f".{short}", import_=orig, alias=export_name if export_name != orig else None)
                 )
-        return export_imports, sorted(resolved.keys())
+        return export_imports
 
     @classmethod
     def _collect_used_names_from_models(cls, models: list[DataModel]) -> set[str]:
@@ -1737,6 +1899,236 @@ class Parser(ABC):
                 add(field.alias)
                 walk_data_type(field.data_type)
         return names
+
+    def __generate_forwarder_content(  # noqa: PLR6301
+        self,
+        original_module: tuple[str, ...],
+        internal_module: tuple[str, ...],
+        class_mappings: list[tuple[str, str]],
+        *,
+        is_init: bool = False,
+    ) -> str:
+        """Generate forwarder module content that re-exports classes from _internal.
+
+        Args:
+            original_module: The original module tuple (e.g., ("issuing",) or ())
+            internal_module: The _internal module tuple (e.g., ("_internal",))
+            class_mappings: List of (original_name, new_name) tuples, sorted by original_name
+            is_init: True if this is a package __init__.py, False for regular .py files
+
+        Returns:
+            The forwarder module content as a string
+        """
+        original_str = ".".join(original_module)
+        internal_str = ".".join(internal_module)
+        from_dots, module_name = relative(original_str, internal_str, reference_is_module=True, current_is_init=is_init)
+        relative_import = f"{from_dots}{module_name}"
+
+        imports = Imports()
+        for original_name, new_name in class_mappings:
+            if original_name == new_name:
+                imports.append(Import(from_=relative_import, import_=new_name))
+            else:
+                imports.append(Import(from_=relative_import, import_=new_name, alias=original_name))
+
+        return f"{imports.dump()}\n\n{imports.dump_all()}\n"
+
+    def __compute_internal_module_path(  # noqa: PLR6301
+        self,
+        scc_modules: set[tuple[str, ...]],
+        existing_modules: set[tuple[str, ...]],
+        *,
+        base_name: str = "_internal",
+    ) -> tuple[str, ...]:
+        """Compute the internal module path for an SCC."""
+        directories = [get_module_directory(m) for m in sorted(scc_modules)]
+
+        if not directories or any(not d for d in directories):
+            prefix: tuple[str, ...] = ()
+        else:
+            path_strings = ["/".join(d) for d in directories]
+            common = os.path.commonpath(path_strings)
+            prefix = tuple(common.split("/")) if common else ()
+
+        base_module = (base_name,) if not prefix else (*prefix, base_name)
+
+        if base_module in existing_modules:
+            counter = 1
+            while True:
+                candidate = (*prefix, f"{base_name}_{counter}") if prefix else (f"{base_name}_{counter}",)
+                if candidate not in existing_modules:
+                    return candidate
+                counter += 1
+
+        return base_module
+
+    def __collect_scc_models(  # noqa: PLR6301
+        self,
+        scc: set[tuple[str, ...]],
+        result_modules: dict[tuple[str, ...], list[DataModel]],
+    ) -> tuple[list[DataModel], dict[int, tuple[str, ...]]]:
+        """Collect all models from SCC modules.
+
+        Returns:
+            - List of all models in the SCC
+            - Mapping from model id to its original module
+        """
+        all_models: list[DataModel] = []
+        model_to_module: dict[int, tuple[str, ...]] = {}
+        for scc_module in sorted(scc):
+            for model in result_modules[scc_module]:
+                all_models.append(model)
+                model_to_module[id(model)] = scc_module
+        return all_models, model_to_module
+
+    def __rename_and_relocate_scc_models(  # noqa: PLR6301
+        self,
+        all_scc_models: list[DataModel],
+        model_to_original_module: dict[int, tuple[str, ...]],
+        internal_module: tuple[str, ...],
+        internal_path: Path,
+    ) -> tuple[defaultdict[tuple[str, ...], list[tuple[str, str]]], dict[str, str]]:
+        """Rename duplicate classes and relocate models to internal module.
+
+        Returns:
+            Tuple of:
+            - Mapping from original module to list of (original_name, new_name) tuples.
+            - Mapping from old reference paths to new reference paths.
+        """
+        class_name_counts = Counter(model.class_name for model in all_scc_models)
+        class_name_seen: dict[str, int] = {}
+        internal_module_str = ".".join(internal_module)
+        module_class_mappings: defaultdict[tuple[str, ...], list[tuple[str, str]]] = defaultdict(list)
+        path_mapping: dict[str, str] = {}
+
+        for model in all_scc_models:
+            original_class_name = model.class_name
+            original_module = model_to_original_module[id(model)]
+            old_path = model.path  # Save old path before updating
+
+            if class_name_counts[original_class_name] > 1:
+                seen_count = class_name_seen.get(original_class_name, 0)
+                new_class_name = f"{original_class_name}_{seen_count}" if seen_count > 0 else original_class_name
+                class_name_seen[original_class_name] = seen_count + 1
+            else:
+                new_class_name = original_class_name
+
+            model.reference.name = new_class_name
+            new_path = f"{internal_module_str}.{new_class_name}"
+            model.set_reference_path(new_path)
+            model.file_path = internal_path
+
+            module_class_mappings[original_module].append((original_class_name, new_class_name))
+            path_mapping[old_path] = new_path
+
+        return module_class_mappings, path_mapping
+
+    def __build_module_dependency_graph(  # noqa: PLR6301
+        self,
+        module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
+    ) -> dict[tuple[str, ...], set[tuple[str, ...]]]:
+        """Build a directed graph of module dependencies."""
+        path_to_module: dict[str, tuple[str, ...]] = {}
+        for module, models in module_models_list:
+            for model in models:
+                path_to_module[model.path] = module
+
+        graph: dict[tuple[str, ...], set[tuple[str, ...]]] = {}
+
+        def add_cross_module_edge(ref_path: str, source_module: tuple[str, ...]) -> None:
+            """Add edge if ref_path points to a different module."""
+            if ref_path in path_to_module:
+                target_module = path_to_module[ref_path]
+                if target_module != source_module:
+                    graph[source_module].add(target_module)
+
+        for module, models in module_models_list:
+            graph[module] = set()
+
+            for model in models:
+                for data_type in model.all_data_types:
+                    if data_type.reference and data_type.reference.source:
+                        add_cross_module_edge(data_type.reference.path, module)
+
+                for base_class in model.base_classes:
+                    if base_class.reference and base_class.reference.source:
+                        add_cross_module_edge(base_class.reference.path, module)
+
+        return graph
+
+    def __resolve_circular_imports(  # noqa: PLR0914
+        self,
+        module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
+    ) -> tuple[
+        list[tuple[tuple[str, ...], list[DataModel]]],
+        set[tuple[str, ...]],
+        dict[tuple[str, ...], tuple[tuple[str, ...], list[tuple[str, str]]]],
+        dict[str, str],
+    ]:
+        """Resolve circular imports by merging all SCCs into _internal.py modules.
+
+        Uses Tarjan's algorithm to find strongly connected components (SCCs) in the
+        module dependency graph. All modules in each SCC are merged into a single
+        _internal.py module to break import cycles. Original modules become thin
+        forwarders that re-export their classes from _internal.
+
+        Returns:
+            - Updated module_models_list with models moved to _internal modules
+            - Set of _internal modules created
+            - Forwarder map: original_module -> (internal_module, [(original_name, new_name)])
+            - Path mapping: old_reference_path -> new_reference_path
+        """
+        graph = self.__build_module_dependency_graph(module_models_list)
+
+        circular_sccs = find_circular_sccs(graph)
+
+        forwarder_map: dict[tuple[str, ...], tuple[tuple[str, ...], list[tuple[str, str]]]] = {}
+        all_path_mappings: dict[str, str] = {}
+
+        if not circular_sccs:
+            return module_models_list, set(), forwarder_map, all_path_mappings
+
+        # All circular SCCs are problematic and should be merged into _internal.py
+        # to break the import cycles.
+        problematic_sccs = circular_sccs
+
+        existing_modules = {module for module, _ in module_models_list}
+        internal_modules_created: set[tuple[str, ...]] = set()
+
+        result_modules: dict[tuple[str, ...], list[DataModel]] = {
+            module: list(models) for module, models in module_models_list
+        }
+
+        for scc in problematic_sccs:
+            internal_module = self.__compute_internal_module_path(scc, existing_modules | internal_modules_created)
+            internal_modules_created.add(internal_module)
+            internal_path = Path("/".join(internal_module))
+
+            all_scc_models, model_to_original_module = self.__collect_scc_models(scc, result_modules)
+            module_class_mappings, path_mapping = self.__rename_and_relocate_scc_models(
+                all_scc_models, model_to_original_module, internal_module, internal_path
+            )
+            all_path_mappings.update(path_mapping)
+
+            for scc_module in scc:
+                if scc_module in result_modules:  # pragma: no branch
+                    result_modules[scc_module] = []
+                if scc_module in module_class_mappings:  # pragma: no branch
+                    sorted_mappings = sorted(module_class_mappings[scc_module], key=operator.itemgetter(0))
+                    forwarder_map[scc_module] = (internal_module, sorted_mappings)
+            result_modules[internal_module] = all_scc_models
+
+        new_module_models: list[tuple[tuple[str, ...], list[DataModel]]] = [
+            (internal_module, result_modules[internal_module])
+            for internal_module in sorted(internal_modules_created)
+            if internal_module in result_modules  # pragma: no branch
+        ]
+
+        for module, _ in module_models_list:
+            if module not in internal_modules_created:  # pragma: no branch
+                new_module_models.append((module, result_modules.get(module, [])))
+
+        return new_module_models, internal_modules_created, forwarder_map, all_path_mappings
 
     def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
@@ -1813,8 +2205,16 @@ class Parser(ABC):
         if shared_module_entry:
             module_models.insert(0, shared_module_entry)
 
+        # Resolve circular imports by moving models to _internal.py modules
+        module_models, internal_modules, forwarder_map, path_mapping = self.__resolve_circular_imports(module_models)
+
+        # Update require_update_action_models with new paths for relocated models
+        if path_mapping:
+            require_update_action_models[:] = [path_mapping.get(path, path) for path in require_update_action_models]
+
         class Processed(NamedTuple):
             module: tuple[str, ...]
+            module_key: tuple[str, ...]  # Original module tuple (without file extension)
             models: list[DataModel]
             init: bool
             imports: Imports
@@ -1843,18 +2243,19 @@ class Parser(ABC):
             self.__alias_shadowed_imports(models, all_module_fields)
             self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
-            self.__change_from_import(models, imports, scoped_model_resolver, init)
+            self.__change_from_import(models, imports, scoped_model_resolver, init, internal_modules)
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
             self.__reuse_model(models, require_update_action_models)
             self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
             self.__set_default_enum_member(models)
+            self.__wrap_root_model_default_values(models)
             self.__sort_models(models, imports)
             self.__change_field_name(models)
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
 
-            processed_models.append(Processed(module, models, init, imports, scoped_model_resolver))
+            processed_models.append(Processed(module, module_, models, init, imports, scoped_model_resolver))
 
         for processed_model in processed_models:
             for model in processed_model.models:
@@ -1881,17 +2282,16 @@ class Parser(ABC):
             for from_, import_ in unused_imports:
                 processed_model.imports.remove(Import(from_=from_, import_=import_))
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
+        for module, mod_key, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             # process after removing unused models
             self.__change_imported_model_name(models, imports, scoped_model_resolver)
 
         future_imports = self.imports.extract_future()
         future_imports_str = str(future_imports)
 
-        for module, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
+        for module, mod_key, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             result: list[str] = []
             export_imports: Imports | None = None
-            export_names: list[str] = []
 
             if all_exports_scope is not None and module[-1] == "__init__.py":
                 child_exports = self._collect_exports_for_init(module, processed_models, all_exports_scope)
@@ -1904,7 +2304,7 @@ class Parser(ABC):
                     resolved_exports = self._resolve_export_collisions(
                         child_exports, all_exports_collision_strategy, local_model_names
                     )
-                    export_imports, export_names = self._build_all_exports_code(resolved_exports)
+                    export_imports = self._build_all_exports_code(resolved_exports)
 
             if models:
                 if with_import:
@@ -1913,16 +2313,10 @@ class Parser(ABC):
 
                 if export_imports:
                     result += [str(export_imports), ""]
-
-                if export_names:
-                    local_exports = [
-                        m.reference.short_name
-                        for m in models
-                        if m.reference and not m.reference.short_name.startswith("_")
-                    ]
-                    all_export_names = sorted(set(export_names + local_exports))
-                    all_items = ",\n    ".join(f'"{name}"' for name in all_export_names)
-                    result += [f"__all__ = [\n    {all_items},\n]\n"]
+                    for m in models:
+                        if m.reference and not m.reference.short_name.startswith("_"):  # pragma: no branch
+                            export_imports.add_export(m.reference.short_name)
+                    result += [export_imports.dump_all(multiline=True) + "\n"]
 
                 self.__update_type_aliases(models)
                 code = dump_templates(models)
@@ -1935,6 +2329,14 @@ class Parser(ABC):
                             m.reference.short_name for m in models if m.path in require_update_action_models
                         ),
                     ]
+
+            # Generate forwarder content for modules that had models moved to _internal
+            if not result and mod_key in forwarder_map:
+                internal_module, class_mappings = forwarder_map[mod_key]
+                forwarder_content = self.__generate_forwarder_content(
+                    mod_key, internal_module, class_mappings, is_init=init
+                )
+                result = [forwarder_content]
 
             if not result and not init:
                 continue
@@ -1949,7 +2351,7 @@ class Parser(ABC):
             )
 
         if all_exports_scope is not None:
-            processed_init_modules = {m for m, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
+            processed_init_modules = {m for m, _, _, _, _, _ in processed_models if m[-1] == "__init__.py"}
             for init_module, init_result in list(results.items()):
                 if init_module[-1] != "__init__.py" or init_module in processed_init_modules or init_result.body:
                     continue
@@ -1957,11 +2359,10 @@ class Parser(ABC):
                     init_module, processed_models, all_exports_scope
                 ):  # pragma: no branch
                     resolved = self._resolve_export_collisions(child_exports, all_exports_collision_strategy, set())
-                    export_imports, export_names = self._build_all_exports_code(resolved)
-                    all_items = ",\n    ".join(f'"{name}"' for name in export_names)
+                    export_imports = self._build_all_exports_code(resolved)
                     import_parts = [s for s in [future_imports_str, str(self.imports)] if s] if with_import else []
                     parts = import_parts + (["\n"] if import_parts else [])
-                    parts += [str(export_imports), "", f"__all__ = [\n    {all_items},\n]"]
+                    parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                     body = "\n".join(parts)
                     results[init_module] = Result(
                         body=code_formatter.format_code(body) if code_formatter else body,

@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "SystemMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "const": "system",
+          "default": "system"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": ["role", "content"]
+    },
+    "UserMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "const": "user",
+          "default": "user"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": ["role", "content"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "message": {
+      "discriminator": {
+        "propertyName": "role",
+        "mapping": {
+          "system": "#/$defs/SystemMessage",
+          "user": "#/$defs/UserMessage"
+        }
+      },
+      "oneOf": [
+        {"$ref": "#/$defs/SystemMessage"},
+        {"$ref": "#/$defs/UserMessage"}
+      ]
+    }
+  }
+}

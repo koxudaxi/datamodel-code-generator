@@ -1,0 +1,126 @@
+openapi: "3.0.0"
+info:
+  title: Test API - Comprehensive allOf Inheritance Coverage
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Status:
+      type: string
+      enum:
+        - active
+        - inactive
+
+    BaseType:
+      type: object
+      properties:
+        id:
+          type: integer
+
+    ProjectedEntity:
+      type: object
+      properties:
+        primitive_string:
+          type: string
+        primitive_int:
+          type: integer
+        primitive_number:
+          type: number
+        primitive_bool:
+          type: boolean
+        ref_field:
+          $ref: '#/components/schemas/BaseType'
+        enum_field:
+          $ref: '#/components/schemas/Status'
+        array_with_ref:
+          type: array
+          items:
+            $ref: '#/components/schemas/BaseType'
+        array_with_primitive:
+          type: array
+          items:
+            type: string
+        object_with_props:
+          type: object
+          properties:
+            nested:
+              type: string
+        object_with_additional:
+          type: object
+          additionalProperties:
+            type: integer
+        anyof_field:
+          anyOf:
+            - type: string
+            - type: integer
+        oneof_field:
+          oneOf:
+            - type: boolean
+            - type: number
+        allof_single_ref:
+          allOf:
+            - $ref: '#/components/schemas/BaseType'
+        allof_multiple_refs:
+          allOf:
+            - $ref: '#/components/schemas/BaseType'
+            - $ref: '#/components/schemas/BaseType'
+        allof_primitives_with_constraints:
+          allOf:
+            - type: string
+              minLength: 1
+            - minLength: 5
+              maxLength: 100
+        allof_with_pattern:
+          allOf:
+            - type: string
+              pattern: "^[a-z]+"
+            - pattern: "[0-9]$"
+        allof_with_unique:
+          allOf:
+            - type: array
+              items:
+                type: string
+            - uniqueItems: true
+        type_list:
+          type:
+            - string
+            - "null"
+        deep_nested:
+          type: object
+          properties:
+            level1:
+              type: object
+              properties:
+                level2:
+                  type: object
+                  properties:
+                    level3:
+                      type: string
+
+    Entity:
+      allOf:
+        - $ref: '#/components/schemas/ProjectedEntity'
+        - type: object
+          required:
+            - primitive_string
+            - primitive_int
+            - primitive_number
+            - primitive_bool
+            - ref_field
+            - enum_field
+            - array_with_ref
+            - array_with_primitive
+            - object_with_props
+            - object_with_additional
+            - anyof_field
+            - oneof_field
+            - allof_single_ref
+            - allof_multiple_refs
+            - allof_primitives_with_constraints
+            - allof_with_pattern
+            - allof_with_unique
+            - type_list
+            - deep_nested
+          properties:
+            extra:
+              type: string

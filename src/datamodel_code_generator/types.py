@@ -54,6 +54,7 @@ from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
 
 T = TypeVar("T")
+SourceT = TypeVar("SourceT")
 
 OPTIONAL = "Optional"
 OPTIONAL_PREFIX = f"{OPTIONAL}["
@@ -321,6 +322,7 @@ class DataType(_BaseModel):
     is_set: bool = False
     is_custom_type: bool = False
     literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
+    enum_member_literals: list[tuple[str, str]] = []  # noqa: RUF012  # [(EnumClassName, member_name), ...]
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
@@ -407,6 +409,16 @@ class DataType(_BaseModel):
             yield from data_type.all_data_types
         yield self
 
+    def find_source(self, source_type: type[SourceT]) -> SourceT | None:
+        """Find the first reference source matching the given type from all nested data types."""
+        for data_type in self.all_data_types:  # pragma: no branch
+            if not data_type.reference:  # pragma: no cover
+                continue
+            source = data_type.reference.source
+            if isinstance(source, source_type):  # pragma: no cover
+                return source
+        return None  # pragma: no cover
+
     @property
     def all_imports(self) -> Iterator[Import]:
         """Recursively yield all imports from nested DataTypes and self."""
@@ -425,7 +437,7 @@ class DataType(_BaseModel):
         imports: tuple[tuple[bool, Import], ...] = (
             (self.is_optional and not self.use_union_operator, IMPORT_OPTIONAL),
             (len(self.data_types) > 1 and not self.use_union_operator, IMPORT_UNION),
-            (bool(self.literals), IMPORT_LITERAL),
+            (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
         )
 
         if self.use_generic_container:
@@ -525,6 +537,9 @@ class DataType(_BaseModel):
                     type_ = f"{UNION_PREFIX}{UNION_DELIMITER.join(data_types)}]"
             elif len(self.data_types) == 1:
                 type_ = self.data_types[0].type_hint
+            elif self.enum_member_literals:
+                parts = [f"{enum_class}.{member}" for enum_class, member in self.enum_member_literals]
+                type_ = f"{LITERAL}[{', '.join(parts)}]"
             elif self.literals:
                 type_ = f"{LITERAL}[{', '.join(repr(literal) for literal in self.literals)}]"
             elif self.reference:

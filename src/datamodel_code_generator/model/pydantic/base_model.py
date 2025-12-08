@@ -70,6 +70,11 @@ class DataModelField(DataModelFieldBase):
     _PARSE_METHOD: ClassVar[str] = "parse_obj"
 
     @property
+    def has_default_factory_in_field(self) -> bool:
+        """Check if this field has a default_factory in Field() including computed ones."""
+        return "default_factory" in self.extras or self.__dict__.get("_computed_default_factory") is not None
+
+    @property
     def method(self) -> str | None:
         """Get the validation method name."""
         return self.validator
@@ -107,8 +112,19 @@ class DataModelField(DataModelFieldBase):
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
 
-        if any(data_type.type == "float" for data_type in self.data_type.all_data_types):
+        is_float_type = any(
+            data_type.type == "float"
+            or (data_type.strict and data_type.import_ and "Float" in data_type.import_.import_)
+            for data_type in self.data_type.all_data_types
+        )
+        if is_float_type:
             return float(value)
+        str_value = str(value)
+        if "e" in str_value.lower():  # pragma: no cover
+            # Scientific notation like 1e-08 - keep as float
+            return float(value)
+        if isinstance(value, int) and not isinstance(value, bool):  # pragma: no branch
+            return value
         return int(value)
 
     def _get_default_as_pydantic_model(self) -> str | None:
@@ -152,7 +168,12 @@ class DataModelField(DataModelFieldBase):
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data["alias"] = self.alias
-        if self.constraints is not None and not self.self_reference() and not self.data_type.strict:
+        has_type_constraints = self.data_type.kwargs is not None and len(self.data_type.kwargs) > 0
+        if (
+            self.constraints is not None
+            and not self.self_reference()
+            and not (self.data_type.strict and has_type_constraints)
+        ):
             data = {
                 **data,
                 **(
@@ -184,6 +205,8 @@ class DataModelField(DataModelFieldBase):
         else:
             default_factory = data.pop("default_factory", None)
 
+        self.__dict__["_computed_default_factory"] = default_factory
+
         field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
@@ -191,13 +214,14 @@ class DataModelField(DataModelFieldBase):
                 return "Field(...)"  # Field() is for mypy
             return ""
 
+        if default_factory:
+            field_arguments = [f"default_factory={default_factory}", *field_arguments]
+
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
         elif self.required:
             field_arguments = ["...", *field_arguments]
-        elif default_factory:
-            field_arguments = [f"default_factory={default_factory}", *field_arguments]
-        else:
+        elif not default_factory:
             field_arguments = [f"{self.default!r}", *field_arguments]
 
         return f"Field({', '.join(field_arguments)})"
