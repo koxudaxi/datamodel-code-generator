@@ -1,0 +1,19 @@
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+title: Config
+properties:
+  mode:
+    title: Mode
+    type: string
+    anyOf:
+      - title: fast
+        const: fast
+      - title: slow
+        const: slow
+  modes:
+    type: array
+    items:
+      type: string
+      anyOf:
+        - const: a
+        - const: b
