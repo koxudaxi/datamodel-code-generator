@@ -731,9 +731,6 @@ class JsonSchemaParser(Parser):
         cls, items: list[JsonSchemaObject], parent_type: str | list[str] | None
     ) -> tuple[list[Any], list[str], str | None, bool] | None:
         """Extract enum values from oneOf/anyOf const pattern."""
-        if not items:
-            return None
-
         enum_values: list[Any] = []
         varnames: list[str] = []
         nullable = False
@@ -768,7 +765,7 @@ class JsonSchemaParser(Parser):
                 elif isinstance(const_value, float):
                     inferred_type = "number"
 
-        if not enum_values:
+        if not enum_values:  # pragma: no cover
             return None
 
         final_type: str | None
