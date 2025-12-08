@@ -62,7 +62,7 @@ from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._scc import find_circular_sccs
-from datamodel_code_generator.reference import ModelResolver, Reference
+from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 if TYPE_CHECKING:
@@ -704,6 +704,21 @@ class Parser(ABC):
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = read_only_write_only_model_type
 
+    @property
+    def field_name_model_type(self) -> ModelType:
+        """Get the ModelType for field name validation based on data_model_type.
+
+        Returns ModelType.PYDANTIC for Pydantic models (which have reserved attributes
+        like 'schema', 'model_fields', etc.), and ModelType.CLASS for other model types
+        (TypedDict, dataclass, msgspec) which don't have such constraints.
+        """
+        if issubclass(
+            self.data_model_type,
+            (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+        ):
+            return ModelType.PYDANTIC
+        return ModelType.CLASS
+
     @staticmethod
     def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
         """Parse type mappings from CLI format to internal format.
@@ -1008,7 +1023,9 @@ class Parser(ABC):
                 property_name = discriminator.get("propertyName")
                 if not property_name:  # pragma: no cover
                     continue
-                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(field_name=property_name)
+                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                    field_name=property_name, model_type=self.field_name_model_type
+                )
                 discriminator["propertyName"] = field_name
                 mapping = discriminator.get("mapping", {})
                 for data_type in field.data_type.data_types:
