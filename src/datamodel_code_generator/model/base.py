@@ -588,6 +588,12 @@ class DataModel(TemplateBase, Nullable, ABC):
         """Get the full reference path for this model."""
         return self.reference.path
 
+    def set_reference_path(self, new_path: str) -> None:
+        """Set reference path and clear cached path property."""
+        self.reference.path = new_path
+        if "path" in self.__dict__:
+            del self.__dict__["path"]
+
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
         return self._render(

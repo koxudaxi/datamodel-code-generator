@@ -62,3 +62,4 @@ class ListModel(BaseModel):
 
 
 Tea_1.update_forward_refs()
+TeaClone.update_forward_refs()

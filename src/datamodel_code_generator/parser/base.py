@@ -1984,20 +1984,24 @@ class Parser(ABC):
         model_to_original_module: dict[int, tuple[str, ...]],
         internal_module: tuple[str, ...],
         internal_path: Path,
-    ) -> defaultdict[tuple[str, ...], list[tuple[str, str]]]:
+    ) -> tuple[defaultdict[tuple[str, ...], list[tuple[str, str]]], dict[str, str]]:
         """Rename duplicate classes and relocate models to internal module.
 
         Returns:
-            Mapping from original module to list of (original_name, new_name) tuples.
+            Tuple of:
+            - Mapping from original module to list of (original_name, new_name) tuples.
+            - Mapping from old reference paths to new reference paths.
         """
         class_name_counts = Counter(model.class_name for model in all_scc_models)
         class_name_seen: dict[str, int] = {}
         internal_module_str = ".".join(internal_module)
         module_class_mappings: defaultdict[tuple[str, ...], list[tuple[str, str]]] = defaultdict(list)
+        path_mapping: dict[str, str] = {}
 
         for model in all_scc_models:
             original_class_name = model.class_name
             original_module = model_to_original_module[id(model)]
+            old_path = model.path  # Save old path before updating
 
             if class_name_counts[original_class_name] > 1:
                 seen_count = class_name_seen.get(original_class_name, 0)
@@ -2007,12 +2011,14 @@ class Parser(ABC):
                 new_class_name = original_class_name
 
             model.reference.name = new_class_name
-            model.reference.path = f"{internal_module_str}.{new_class_name}"
+            new_path = f"{internal_module_str}.{new_class_name}"
+            model.set_reference_path(new_path)
             model.file_path = internal_path
 
             module_class_mappings[original_module].append((original_class_name, new_class_name))
+            path_mapping[old_path] = new_path
 
-        return module_class_mappings
+        return module_class_mappings, path_mapping
 
     def __build_module_dependency_graph(  # noqa: PLR6301
         self,
@@ -2047,13 +2053,14 @@ class Parser(ABC):
 
         return graph
 
-    def __resolve_circular_imports(
+    def __resolve_circular_imports(  # noqa: PLR0914
         self,
         module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
     ) -> tuple[
         list[tuple[tuple[str, ...], list[DataModel]]],
         set[tuple[str, ...]],
         dict[tuple[str, ...], tuple[tuple[str, ...], list[tuple[str, str]]]],
+        dict[str, str],
     ]:
         """Resolve circular imports by merging all SCCs into _internal.py modules.
 
@@ -2066,15 +2073,17 @@ class Parser(ABC):
             - Updated module_models_list with models moved to _internal modules
             - Set of _internal modules created
             - Forwarder map: original_module -> (internal_module, [(original_name, new_name)])
+            - Path mapping: old_reference_path -> new_reference_path
         """
         graph = self.__build_module_dependency_graph(module_models_list)
 
         circular_sccs = find_circular_sccs(graph)
 
         forwarder_map: dict[tuple[str, ...], tuple[tuple[str, ...], list[tuple[str, str]]]] = {}
+        all_path_mappings: dict[str, str] = {}
 
         if not circular_sccs:
-            return module_models_list, set(), forwarder_map
+            return module_models_list, set(), forwarder_map, all_path_mappings
 
         # All circular SCCs are problematic and should be merged into _internal.py
         # to break the import cycles.
@@ -2093,9 +2102,10 @@ class Parser(ABC):
             internal_path = Path("/".join(internal_module))
 
             all_scc_models, model_to_original_module = self.__collect_scc_models(scc, result_modules)
-            module_class_mappings = self.__rename_and_relocate_scc_models(
+            module_class_mappings, path_mapping = self.__rename_and_relocate_scc_models(
                 all_scc_models, model_to_original_module, internal_module, internal_path
             )
+            all_path_mappings.update(path_mapping)
 
             for scc_module in scc:
                 if scc_module in result_modules:  # pragma: no branch
@@ -2115,7 +2125,7 @@ class Parser(ABC):
             if module not in internal_modules_created:  # pragma: no branch
                 new_module_models.append((module, result_modules.get(module, [])))
 
-        return new_module_models, internal_modules_created, forwarder_map
+        return new_module_models, internal_modules_created, forwarder_map, all_path_mappings
 
     def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
@@ -2193,7 +2203,11 @@ class Parser(ABC):
             module_models.insert(0, shared_module_entry)
 
         # Resolve circular imports by moving models to _internal.py modules
-        module_models, internal_modules, forwarder_map = self.__resolve_circular_imports(module_models)
+        module_models, internal_modules, forwarder_map, path_mapping = self.__resolve_circular_imports(module_models)
+
+        # Update require_update_action_models with new paths for relocated models
+        if path_mapping:
+            require_update_action_models[:] = [path_mapping.get(path, path) for path in require_update_action_models]
 
         class Processed(NamedTuple):
             module: tuple[str, ...]
