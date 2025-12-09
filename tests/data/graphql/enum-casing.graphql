@@ -1,0 +1,8 @@
+enum camelCaseEnum {
+  foo
+  bar
+}
+
+type EnumRef {
+  baz: camelCaseEnum!
+}
