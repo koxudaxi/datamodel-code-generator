@@ -22,11 +22,10 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 """
 
 
-class CamelCaseEnum(Enum):
-    bar = 'bar'
+class Lowercase(Enum):
     foo = 'foo'
 
 
 class EnumRef(BaseModel):
-    baz: CamelCaseEnum
+    bar: Lowercase
     typename__: Optional[Literal['EnumRef']] = Field('EnumRef', alias='__typename')

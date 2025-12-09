@@ -1,8 +1,7 @@
-enum camelCaseEnum {
+enum lowercase {
   foo
-  bar
 }
 
 type EnumRef {
-  baz: camelCaseEnum!
+  bar: lowercase!
 }
