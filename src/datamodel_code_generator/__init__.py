@@ -779,7 +779,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 if header_after:
                     content = header_before + "\n" + extracted_future + "\n\n" + header_after
                 else:
-                    content = header_before + "\n\n\n" + extracted_future
+                    content = header_before + "\n\n" + extracted_future
                 print(content, file=file)
                 print(file=file)
                 print(body_without_future.rstrip(), file=file)
