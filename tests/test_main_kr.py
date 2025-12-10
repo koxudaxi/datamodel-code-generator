@@ -955,3 +955,20 @@ def test_profile_without_pyproject_errors(tmp_path: Path, capsys: pytest.Capture
         assert return_code == Exit.ERROR
         captured = capsys.readouterr()
         assert "no [tool.datamodel-codegen] section found" in captured.err.lower()
+
+
+@freeze_time("2019-07-26")
+def test_allof_with_description_generates_class_not_alias(output_file: Path) -> None:
+    """Test that allOf with description generates class definition, not alias."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_with_description_only.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_allof_with_description_only" / "output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-schema-description",
+        ],
+    )
