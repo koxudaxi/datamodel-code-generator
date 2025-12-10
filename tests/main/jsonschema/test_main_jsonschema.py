@@ -259,12 +259,12 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "null_and_array.py",
+            "pydantic.BaseModel",
+            "null_and_array.py",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "null_and_array_v2.py",
+            "pydantic_v2.BaseModel",
+            "null_and_array_v2.py",
         ),
     ],
 )
@@ -296,24 +296,24 @@ def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> No
     ("output_model", "expected_output", "option"),
     [
         (
-                "pydantic.BaseModel",
-                "complicated_enum_default_member.py",
-                "--set-default-enum-member",
+            "pydantic.BaseModel",
+            "complicated_enum_default_member.py",
+            "--set-default-enum-member",
         ),
         (
-                "dataclasses.dataclass",
-                "complicated_enum_default_member_dataclass.py",
-                "--set-default-enum-member",
+            "dataclasses.dataclass",
+            "complicated_enum_default_member_dataclass.py",
+            "--set-default-enum-member",
         ),
         (
-                "dataclasses.dataclass",
-                "complicated_enum_default_member_dataclass.py",
-                None,
+            "dataclasses.dataclass",
+            "complicated_enum_default_member_dataclass.py",
+            None,
         ),
     ],
 )
 def test_main_complicated_enum_default_member(
-        output_model: str, expected_output: str, option: str | None, output_file: Path
+    output_model: str, expected_output: str, option: str | None, output_file: Path
 ) -> None:
     """Test complicated enum with default member."""
     extra_args = [a for a in [option, "--output-model", output_model] if a]
@@ -694,12 +694,12 @@ def test_main_similar_nested_array(output_file: Path) -> None:
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "require_referenced_field",
+            "pydantic.BaseModel",
+            "require_referenced_field",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "require_referenced_field_pydantic_v2",
+            "pydantic_v2.BaseModel",
+            "require_referenced_field_pydantic_v2",
         ),
     ],
 )
@@ -722,12 +722,12 @@ def test_main_require_referenced_field(output_model: str, expected_output: str, 
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "require_referenced_field",
+            "pydantic.BaseModel",
+            "require_referenced_field",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "require_referenced_field_naivedatetime",
+            "pydantic_v2.BaseModel",
+            "require_referenced_field_naivedatetime",
         ),
     ],
 )
@@ -750,16 +750,16 @@ def test_main_require_referenced_field_naive_datetime(output_model: str, expecte
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "require_referenced_field",
+            "pydantic.BaseModel",
+            "require_referenced_field",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "require_referenced_field_pydantic_v2",
+            "pydantic_v2.BaseModel",
+            "require_referenced_field_pydantic_v2",
         ),
         (
-                "msgspec.Struct",
-                "require_referenced_field_msgspec",
+            "msgspec.Struct",
+            "require_referenced_field_msgspec",
         ),
     ],
 )
@@ -1077,7 +1077,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
 
     def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:
         path = url_to_path.get(url)
-        if path is None:  # pragma: no cover
+        if path is None:
             raise ValueError(f"Unexpected URL: {url}")
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
@@ -1164,37 +1164,37 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
 
 @pytest.mark.parametrize(
     (
-            "headers_arguments",
-            "headers_requests",
-            "query_parameters_arguments",
-            "query_parameters_requests",
-            "http_ignore_tls",
+        "headers_arguments",
+        "headers_requests",
+        "query_parameters_arguments",
+        "query_parameters_requests",
+        "http_ignore_tls",
     ),
     [
         (
-                ("Authorization: Basic dXNlcjpwYXNz",),
-                [("Authorization", "Basic dXNlcjpwYXNz")],
-                ("key=value",),
-                [("key", "value")],
-                False,
+            ("Authorization: Basic dXNlcjpwYXNz",),
+            [("Authorization", "Basic dXNlcjpwYXNz")],
+            ("key=value",),
+            [("key", "value")],
+            False,
         ),
         (
-                ("Authorization: Basic dXNlcjpwYXNz", "X-API-key: abcefg"),
-                [("Authorization", "Basic dXNlcjpwYXNz"), ("X-API-key", "abcefg")],
-                ("key=value", "newkey=newvalue"),
-                [("key", "value"), ("newkey", "newvalue")],
-                True,
+            ("Authorization: Basic dXNlcjpwYXNz", "X-API-key: abcefg"),
+            [("Authorization", "Basic dXNlcjpwYXNz"), ("X-API-key", "abcefg")],
+            ("key=value", "newkey=newvalue"),
+            [("key", "value"), ("newkey", "newvalue")],
+            True,
         ),
     ],
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
-        mocker: MockerFixture,
-        headers_arguments: tuple[str, str],
-        headers_requests: list[tuple[str, str]],
-        query_parameters_arguments: tuple[str, ...],
-        query_parameters_requests: list[tuple[str, str]],
-        http_ignore_tls: bool,
-        tmp_path: Path,
+    mocker: MockerFixture,
+    headers_arguments: tuple[str, str],
+    headers_requests: list[tuple[str, str]],
+    query_parameters_arguments: tuple[str, ...],
+    query_parameters_requests: list[tuple[str, str]],
+    http_ignore_tls: bool,
+    tmp_path: Path,
 ) -> None:
     """Test HTTP JSON Schema with headers, query params, and TLS ignore."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
@@ -1539,14 +1539,14 @@ def test_main_jsonschema_combine_one_of_object(output_file: Path) -> None:
         (None, "pydantic.BaseModel", "combine_any_of_object.py"),
         (None, "pydantic_v2.BaseModel", "combine_any_of_object_v2.py"),
         (
-                "left_to_right",
-                "pydantic_v2.BaseModel",
-                "combine_any_of_object_left_to_right.py",
+            "left_to_right",
+            "pydantic_v2.BaseModel",
+            "combine_any_of_object_left_to_right.py",
         ),
     ],
 )
 def test_main_jsonschema_combine_any_of_object(
-        union_mode: str | None, output_model: str, expected_output: str, output_file: Path
+    union_mode: str | None, output_model: str, expected_output: str, output_file: Path
 ) -> None:
     """Test combining anyOf with objects."""
     extra_args = ["--output-model", output_model]
@@ -1568,8 +1568,8 @@ def test_main_jsonschema_combine_any_of_object(
     [
         (["--output-model", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
         (
-                ["--output-model", "pydantic_v2.BaseModel", "--keep-model-order"],
-                "jsonschema_root_model_ordering_keep_model_order.py",
+            ["--output-model", "pydantic_v2.BaseModel", "--keep-model-order"],
+            "jsonschema_root_model_ordering_keep_model_order.py",
         ),
     ],
 )
@@ -1602,17 +1602,17 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "field_extras_field_include_all_keys.py",
+            "pydantic.BaseModel",
+            "field_extras_field_include_all_keys.py",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "field_extras_field_include_all_keys_v2.py",
+            "pydantic_v2.BaseModel",
+            "field_extras_field_include_all_keys_v2.py",
         ),
     ],
 )
 def test_main_jsonschema_field_extras_field_include_all_keys(
-        output_model: str, expected_output: str, output_file: Path
+    output_model: str, expected_output: str, output_file: Path
 ) -> None:
     """Test field extras including all keys."""
     run_main_and_assert(
@@ -1635,17 +1635,17 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "field_extras_field_extra_keys.py",
+            "pydantic.BaseModel",
+            "field_extras_field_extra_keys.py",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "field_extras_field_extra_keys_v2.py",
+            "pydantic_v2.BaseModel",
+            "field_extras_field_extra_keys_v2.py",
         ),
     ],
 )
 def test_main_jsonschema_field_extras_field_extra_keys(
-        output_model: str, expected_output: str, output_file: Path
+    output_model: str, expected_output: str, output_file: Path
 ) -> None:
     """Test field extras with extra keys."""
     run_main_and_assert(
@@ -1670,12 +1670,12 @@ def test_main_jsonschema_field_extras_field_extra_keys(
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "field_extras.py",
+            "pydantic.BaseModel",
+            "field_extras.py",
         ),
         (
-                "pydantic_v2.BaseModel",
-                "field_extras_v2.py",
+            "pydantic_v2.BaseModel",
+            "field_extras_v2.py",
         ),
     ],
 )
@@ -2384,12 +2384,12 @@ def test_main_dataclass_const(output_file: Path) -> None:
     ("output_model", "expected_output"),
     [
         (
-                "pydantic_v2.BaseModel",
-                "discriminator_literals.py",
+            "pydantic_v2.BaseModel",
+            "discriminator_literals.py",
         ),
         (
-                "msgspec.Struct",
-                "discriminator_literals_msgspec.py",
+            "msgspec.Struct",
+            "discriminator_literals_msgspec.py",
         ),
     ],
 )
@@ -2398,7 +2398,7 @@ def test_main_dataclass_const(output_file: Path) -> None:
     reason="Installed black doesn't support the new style",
 )
 def test_main_jsonschema_discriminator_literals(
-        output_model: str, expected_output: str, min_version: str, output_file: Path
+    output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test discriminator with literal types."""
     run_main_and_assert(
@@ -2431,8 +2431,8 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
     ("output_model", "expected_output"),
     [
         (
-                "pydantic_v2.BaseModel",
-                "discriminator_with_external_reference.py",
+            "pydantic_v2.BaseModel",
+            "discriminator_with_external_reference.py",
         ),
         pytest.param(
             "msgspec.Struct",
@@ -2442,7 +2442,7 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
     ],
 )
 def test_main_jsonschema_external_discriminator(
-        output_model: str, expected_output: str, min_version: str, output_file: Path
+    output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
     """Test external discriminator references."""
     run_main_and_assert(
@@ -2459,8 +2459,8 @@ def test_main_jsonschema_external_discriminator(
     ("output_model", "expected_output"),
     [
         (
-                "pydantic.BaseModel",
-                "discriminator_with_external_references_folder",
+            "pydantic.BaseModel",
+            "discriminator_with_external_references_folder",
         ),
         pytest.param(
             "msgspec.Struct",
@@ -2470,7 +2470,7 @@ def test_main_jsonschema_external_discriminator(
     ],
 )
 def test_main_jsonschema_external_discriminator_folder(
-        output_model: str, expected_output: str, min_version: str, output_dir: Path
+    output_model: str, expected_output: str, min_version: str, output_dir: Path
 ) -> None:
     """Test external discriminator in folder structure."""
     run_main_and_assert(
@@ -2642,12 +2642,12 @@ def test_main_imports_correct(output_dir: Path) -> None:
     ("output_model", "expected_output"),
     [
         (
-                "pydantic_v2.BaseModel",
-                "duration_pydantic_v2.py",
+            "pydantic_v2.BaseModel",
+            "duration_pydantic_v2.py",
         ),
         (
-                "msgspec.Struct",
-                "duration_msgspec.py",
+            "msgspec.Struct",
+            "duration_msgspec.py",
         ),
     ],
 )
@@ -2843,12 +2843,12 @@ def test_main_alias_import_alias(output_dir: Path) -> None:
     ("output_model", "expected_output"),
     [
         (
-                "pydantic_v2.BaseModel",
-                "field_has_same_name_v2.py",
+            "pydantic_v2.BaseModel",
+            "field_has_same_name_v2.py",
         ),
         (
-                "pydantic.BaseModel",
-                "field_has_same_name.py",
+            "pydantic.BaseModel",
+            "field_has_same_name.py",
         ),
     ],
 )
@@ -2964,34 +2964,34 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
     ("extra_fields", "output_model", "expected_output"),
     [
         (
-                "allow",
-                "pydantic.BaseModel",
-                "extra_fields_allow.py",
+            "allow",
+            "pydantic.BaseModel",
+            "extra_fields_allow.py",
         ),
         (
-                "forbid",
-                "pydantic.BaseModel",
-                "extra_fields_forbid.py",
+            "forbid",
+            "pydantic.BaseModel",
+            "extra_fields_forbid.py",
         ),
         (
-                "ignore",
-                "pydantic.BaseModel",
-                "extra_fields_ignore.py",
+            "ignore",
+            "pydantic.BaseModel",
+            "extra_fields_ignore.py",
         ),
         (
-                "allow",
-                "pydantic_v2.BaseModel",
-                "extra_fields_v2_allow.py",
+            "allow",
+            "pydantic_v2.BaseModel",
+            "extra_fields_v2_allow.py",
         ),
         (
-                "forbid",
-                "pydantic_v2.BaseModel",
-                "extra_fields_v2_forbid.py",
+            "forbid",
+            "pydantic_v2.BaseModel",
+            "extra_fields_v2_forbid.py",
         ),
         (
-                "ignore",
-                "pydantic_v2.BaseModel",
-                "extra_fields_v2_ignore.py",
+            "ignore",
+            "pydantic_v2.BaseModel",
+            "extra_fields_v2_ignore.py",
         ),
     ],
 )
