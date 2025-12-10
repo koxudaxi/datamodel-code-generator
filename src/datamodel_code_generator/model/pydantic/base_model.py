@@ -154,6 +154,9 @@ class DataModelField(DataModelFieldBase):
         if self.const:
             data["const"] = True
 
+        if self.use_frozen_field and self.read_only:
+            data["allow_mutation"] = False
+
     def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
 
@@ -294,7 +297,7 @@ class BaseModel(BaseModelBase):
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0912, PLR0913
         self,
         *,
         reference: Reference,
@@ -348,6 +351,12 @@ class BaseModel(BaseModelBase):
         for config_attribute in "allow_population_by_field_name", "allow_mutation":
             if config_attribute in self.extra_template_data:
                 config_parameters[config_attribute] = self.extra_template_data[config_attribute]
+
+        if "validate_assignment" not in config_parameters and any(
+            field.use_frozen_field and field.read_only for field in self.fields
+        ):
+            config_parameters["validate_assignment"] = True
+
         for data_type in self.all_data_types:
             if data_type.is_custom_type:  # pragma: no cover
                 config_parameters["arbitrary_types_allowed"] = True

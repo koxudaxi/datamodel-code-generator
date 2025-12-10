@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "type": "object",
+  "required": ["id", "name", "password"],
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Server-generated ID",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string",
+      "description": "User password",
+      "writeOnly": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true
+    }
+  }
+}

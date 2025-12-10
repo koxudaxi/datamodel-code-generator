@@ -35,6 +35,7 @@ class Config(_BaseModel):
     allow_mutation: Optional[bool] = None  # noqa: UP045
     arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
     orm_mode: Optional[bool] = None  # noqa: UP045
+    validate_assignment: Optional[bool] = None  # noqa: UP045
 
 
 __all__ = [

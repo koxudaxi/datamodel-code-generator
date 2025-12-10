@@ -151,6 +151,7 @@ class DataModelFieldBase(_BaseModel):
     type_has_null: Optional[bool] = None  # noqa: UP045
     read_only: bool = False
     write_only: bool = False
+    use_frozen_field: bool = False
 
     if not TYPE_CHECKING:
         if not PYDANTIC_V2:

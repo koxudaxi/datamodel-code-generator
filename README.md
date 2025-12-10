@@ -444,6 +444,8 @@ Field customization:
                         default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-frozen-field    Use Field(frozen=True) for readOnly fields (Pydantic v2) or
+                        Field(allow_mutation=False) (Pydantic v1)
   --use-inline-field-description
                         Use schema description to populate field docstring as inline
                         docstring

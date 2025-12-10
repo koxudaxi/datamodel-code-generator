@@ -589,6 +589,7 @@ class JsonSchemaParser(Parser):
         keyword_only: bool = False,
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
+        use_frozen_field: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
@@ -680,6 +681,7 @@ class JsonSchemaParser(Parser):
             keyword_only=keyword_only,
             frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,
+            use_frozen_field=use_frozen_field,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
@@ -1011,6 +1013,7 @@ class JsonSchemaParser(Parser):
             type_has_null=field.type_has_null,
             read_only=self._resolve_field_flag(field, "readOnly"),
             write_only=self._resolve_field_flag(field, "writeOnly"),
+            use_frozen_field=self.use_frozen_field,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
