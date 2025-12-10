@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "NullableString": {
+      "type": ["string", "null"]
+    },
+    "NonNullableString": {
+      "type": "string"
+    },
+    "NullOnly": {
+      "type": "null"
+    }
+  },
+  "type": "object",
+  "required": ["nullableRef", "nonNullableRef", "nullOnlyRef"],
+  "properties": {
+    "nullableRef": {
+      "$ref": "#/definitions/NullableString"
+    },
+    "nonNullableRef": {
+      "$ref": "#/definitions/NonNullableString"
+    },
+    "nullOnlyRef": {
+      "$ref": "#/definitions/NullOnly"
+    }
+  }
+}
