@@ -940,16 +940,11 @@ class Parser(ABC):
                     ref_module = tuple(data_type.full_name.split(".")[:-1])
 
                     is_module_class_collision = (
-                        ref_module
-                        and import_ == data_type.reference.short_name
-                        and ref_module[-1] == import_
+                        ref_module and import_ == data_type.reference.short_name and ref_module[-1] == import_
                     )
 
                     if from_ and (ref_module in internal_modules or is_module_class_collision):
-                        if from_.endswith("."):
-                            from_ = f"{from_}{import_}"
-                        else:
-                            from_ = f"{from_}.{import_}"
+                        from_ = f"{from_}{import_}" if from_.endswith(".") else f"{from_}.{import_}"
                         import_ = data_type.reference.short_name
                         full_path = from_, import_
 

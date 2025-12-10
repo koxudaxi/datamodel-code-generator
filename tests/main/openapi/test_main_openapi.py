@@ -3360,8 +3360,8 @@ def test_main_openapi_module_class_name_collision_deep_pydantic_v2(output_dir: P
             "paths",
         ],
     )
-    
-    
+
+
 def test_main_nested_package_enum_default(output_dir: Path) -> None:
     """Test enum default values use short names in same module with nested package paths."""
     with freeze_time(TIMESTAMP):
