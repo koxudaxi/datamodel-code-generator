@@ -1,0 +1,17 @@
+openapi: "3.0.0"
+info:
+  title: Test API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    MyModel:
+      type: object
+      description: A model that has a description.
+      properties:
+        name:
+          type: string
+    MyOtherModel:
+      allOf:
+        - $ref: "#/components/schemas/MyModel"
+      description: Another model that should also have a description.
