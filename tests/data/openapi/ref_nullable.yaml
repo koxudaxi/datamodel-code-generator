@@ -1,0 +1,28 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    NullableChild:
+      nullable: true
+      type: object
+      properties:
+        name:
+          type: string
+    NonNullableChild:
+      type: object
+      properties:
+        name:
+          type: string
+    Parent:
+      type: object
+      required:
+        - nullableChild
+        - nonNullableChild
+      properties:
+        nullableChild:
+          $ref: "#/components/schemas/NullableChild"
+        nonNullableChild:
+          $ref: "#/components/schemas/NonNullableChild"

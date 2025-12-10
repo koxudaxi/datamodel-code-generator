@@ -1081,6 +1081,18 @@ def test_main_openapi_nullable_strict_nullable(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_ref_nullable_strict_nullable(output_file: Path) -> None:
+    """Test that nullable attribute from $ref schema is propagated."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "ref_nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_strict_nullable.py",
+        extra_args=["--strict-nullable", "--use-union-operator"],
+    )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

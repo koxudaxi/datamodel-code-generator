@@ -1038,7 +1038,11 @@ class JsonSchemaParser(Parser):
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string."""
         reference = self.model_resolver.add_ref(ref)
-        return self.data_type(reference=reference)
+        ref_schema = self._load_ref_schema_object(ref)
+        is_optional = (
+            ref_schema.type_has_null or ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable)
+        )
+        return self.data_type(reference=reference, is_optional=is_optional)
 
     def set_additional_properties(self, path: str, obj: JsonSchemaObject) -> None:
         """Set additional properties flag in extra template data."""
