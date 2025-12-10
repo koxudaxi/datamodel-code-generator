@@ -325,3 +325,34 @@ def test_url_ref_matches_local_id_preserves_empty_json_pointer_token() -> None:
     result = resolver.resolve_ref("https://example.org/types#/items//child")
 
     assert result == "#/$defs/types/items//child"
+
+
+def test_resolve_ref_local_fragment_with_base_url_and_current_root() -> None:
+    """Local fragment refs should resolve to current_root when it's set, even with base_url (Issue #1798)."""
+    resolver = ModelResolver(base_url="https://raw.githubusercontent.com/user/repo/schema.json")
+    resolver.set_root_id("https://cveproject.github.io/schema/schema.json")
+    resolver.set_current_root(["https://raw.githubusercontent.com/user/repo/schema.json"])
+
+    result = resolver.resolve_ref("#/definitions/Foo")
+
+    assert result == "https://raw.githubusercontent.com/user/repo/schema.json#/definitions/Foo"
+
+
+def test_resolve_ref_local_fragment_with_different_host_base_url_and_root_id() -> None:
+    """Local fragment refs should resolve correctly when base_url and root_id have different hosts (Issue #1798)."""
+    resolver = ModelResolver(base_url="https://raw.githubusercontent.com/user/repo/schema.json")
+    resolver.set_root_id("https://cveproject.github.io/schema/schema.json")
+    resolver.set_current_root(["https://raw.githubusercontent.com/user/repo/schema.json"])
+
+    result = resolver.resolve_ref("#/definitions/product/properties/url")
+
+    assert result == "https://raw.githubusercontent.com/user/repo/schema.json#/definitions/product/properties/url"
+
+
+def test_resolve_ref_local_fragment_without_current_root_falls_back_to_url() -> None:
+    """Local fragment refs without current_root should fall back to URL resolution (Issue #1798)."""
+    resolver = ModelResolver(base_url="https://example.com/schemas/main.json")
+
+    result = resolver.resolve_ref("#/definitions/Foo")
+
+    assert result == "https://example.com/schemas/main.json#/definitions/Foo"

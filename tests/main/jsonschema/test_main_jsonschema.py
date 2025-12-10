@@ -3622,3 +3622,59 @@ def test_main_jsonschema_reserved_field_name_pydantic(output_file: Path) -> None
             "3.11",
         ],
     )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_bundled_schema_with_id_local_file(output_file: Path) -> None:
+    """Test bundled schema with $id using local file input (Issue #1798)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="bundled_schema_with_id.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Path) -> None:
+    """Test bundled schema with $id using URL input produces same output as local file."""
+    schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
+
+    mock_response = mocker.Mock()
+    mock_response.text = schema_path.read_text()
+
+    httpx_get_mock = mocker.patch(
+        "httpx.get",
+        return_value=mock_response,
+    )
+
+    run_main_url_and_assert(
+        url="https://cdn.example.com/schemas/bundled_schema_with_id.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="bundled_schema_with_id.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        transform=lambda s: s.replace(
+            "#   filename:  https://cdn.example.com/schemas/bundled_schema_with_id.json",
+            "#   filename:  bundled_schema_with_id.json",
+        ),
+    )
+
+    httpx_get_mock.assert_called_once_with(
+        "https://cdn.example.com/schemas/bundled_schema_with_id.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=None,
+    )
