@@ -32,14 +32,14 @@ class Lowercase(Enum):
     foo = 'foo'
 
 
-class Ref(BaseModel):
-    bar: Lowercase
-    baz: Lowercasetype
-    typename__: Optional[Literal['Ref']] = Field('Ref', alias='__typename')
-
-
 class Lowercasetype(BaseModel):
     foo: Int
     typename__: Optional[Literal['lowercasetype']] = Field(
         'lowercasetype', alias='__typename'
     )
+
+
+class Ref(BaseModel):
+    bar: Lowercase
+    baz: Lowercasetype
+    typename__: Optional[Literal['Ref']] = Field('Ref', alias='__typename')

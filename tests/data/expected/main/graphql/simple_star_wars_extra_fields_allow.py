@@ -171,3 +171,7 @@ class Vehicle(BaseModel):
     pilots_ids: List[ID]
     vehicle_class: Optional[String] = None
     typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
+
+
+Film.update_forward_refs()
+Person.update_forward_refs()
