@@ -732,6 +732,20 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             file=sys.stderr,
         )
 
+    if (
+        config.use_specialized_enum
+        and namespace.use_specialized_enum is not False  # CLI didn't disable it
+        and (namespace.use_specialized_enum is True or pyproject_config.get("use_specialized_enum") is True)
+        and not config.target_python_version.has_strenum
+    ):
+        print(  # noqa: T201
+            f"Error: --use-specialized-enum requires --target-python-version 3.11 or later.\n"
+            f"Current target version: {config.target_python_version.value}\n"
+            f"StrEnum is only available in Python 3.11+.",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
     extra_template_data: defaultdict[str, dict[str, Any]] | None
     if config.extra_template_data is None:
         extra_template_data = None
