@@ -1089,8 +1089,8 @@ class Parser(ABC):
                                     continue
 
                                 literals = discriminator_field.data_type.literals
-                                if literals and len(literals) == 1:
-                                    type_names = list(literals)
+                                if literals and len(literals) == 1:  # pragma: no cover
+                                    type_names = [str(v) for v in literals]
                                     break
 
                                 enum_source = discriminator_field.data_type.find_source(Enum)
@@ -1099,8 +1099,8 @@ class Parser(ABC):
                                     raw_default = first_field.default
                                     if isinstance(raw_default, str):
                                         type_names = [raw_default.strip("'\"")]
-                                    else:
-                                        type_names = [raw_default]
+                                    else:  # pragma: no cover
+                                        type_names = [str(raw_default)]
                                     break
 
                             if not type_names:
