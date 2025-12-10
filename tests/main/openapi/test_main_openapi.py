@@ -3318,3 +3318,45 @@ def test_main_allof_enum_ref(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
     )
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse("2.0.0"),
+    reason="Require Pydantic version 2.0.0 or later",
+)
+def test_main_openapi_module_class_name_collision_pydantic_v2(output_dir: Path) -> None:
+    """Test Issue #1994: module and class name collision (e.g., A.A schema)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "module_class_name_collision" / "openapi.json",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "module_class_name_collision",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--openapi-scopes",
+            "schemas",
+            "--openapi-scopes",
+            "paths",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse("2.0.0"),
+    reason="Require Pydantic version 2.0.0 or later",
+)
+def test_main_openapi_module_class_name_collision_deep_pydantic_v2(output_dir: Path) -> None:
+    """Test Issue #1994: deep module collision (e.g., A.B.B schema)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "module_class_name_collision_deep" / "openapi.json",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "module_class_name_collision_deep",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--openapi-scopes",
+            "schemas",
+            "--openapi-scopes",
+            "paths",
+        ],
+    )
