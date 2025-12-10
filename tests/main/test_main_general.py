@@ -5,6 +5,7 @@ from __future__ import annotations
 from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
+import black
 import pytest
 
 from datamodel_code_generator import (
@@ -888,6 +889,10 @@ def test_use_specialized_enum_requires_python_311(
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support StrEnum formatting",
+)
 def test_use_specialized_enum_with_python_311_ok(output_file: Path) -> None:
     """Test --use-specialized-enum works with --target-python-version 3.11."""
     run_main_and_assert(
