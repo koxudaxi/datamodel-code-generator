@@ -389,8 +389,8 @@ Typing customization:
                         Use pydantic.SerializeAsAny for fields with types that have subtypes
                         (Pydantic v2 only)
   --use-specialized-enum, --no-use-specialized-enum
-                        Don''t use specialized Enum class (StrEnum, IntEnum) even if the
-                        target Python version supports it
+                        Use specialized Enum class (StrEnum, IntEnum). Requires --target-
+                        python-version 3.11+
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
   --use-subclass-enum   Define generic Enum class as subclass with field type when enum has

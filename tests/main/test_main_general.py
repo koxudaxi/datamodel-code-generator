@@ -5,6 +5,7 @@ from __future__ import annotations
 from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
+import black
 import pytest
 
 from datamodel_code_generator import (
@@ -864,3 +865,88 @@ def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
         extra_args=["--disable-timestamp", "--check"],
         expected_exit=Exit.OK,
     )
+
+
+def test_use_specialized_enum_requires_python_311(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --use-specialized-enum requires --target-python-version 3.11+."""
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        '{"type": "string", "enum": ["A", "B"]}',
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        extra_args=["--use-specialized-enum"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--use-specialized-enum requires --target-python-version 3.11 or later",
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support StrEnum formatting",
+)
+def test_use_specialized_enum_with_python_311_ok(output_file: Path) -> None:
+    """Test --use-specialized-enum works with --target-python-version 3.11."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--use-specialized-enum", "--target-python-version", "3.11"],
+        assert_func=assert_file_content,
+        expected_file="use_specialized_enum_py311.py",
+    )
+
+
+def test_use_specialized_enum_pyproject_requires_python_311(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test use_specialized_enum in pyproject.toml requires target_python_version 3.11+."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text(
+        "[tool.datamodel-codegen]\nuse_specialized_enum = true\n",
+        encoding="utf-8",
+    )
+
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        '{"type": "string", "enum": ["A", "B"]}',
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_json,
+            output_path=tmp_path / "output.py",
+            input_file_type="jsonschema",
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="--use-specialized-enum requires --target-python-version 3.11 or later",
+        )
+
+
+def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp_path: Path) -> None:
+    """Test --no-use-specialized-enum CLI can override pyproject.toml use_specialized_enum=true."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text(
+        "[tool.datamodel-codegen]\nuse_specialized_enum = true\n",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--no-use-specialized-enum"],
+            assert_func=assert_file_content,
+            expected_file="no_use_specialized_enum.py",
+        )

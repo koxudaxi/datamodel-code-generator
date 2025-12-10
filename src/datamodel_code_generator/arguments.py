@@ -399,7 +399,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-specialized-enum",
-    help="Don't use specialized Enum class (StrEnum, IntEnum) even if the target Python version supports it",
+    help="Use specialized Enum class (StrEnum, IntEnum). Requires --target-python-version 3.11+",
     action=BooleanOptionalAction,
     default=None,
 )
