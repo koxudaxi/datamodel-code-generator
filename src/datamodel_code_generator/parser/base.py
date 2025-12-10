@@ -1086,7 +1086,27 @@ class Parser(ABC):
                                 for base_class in discriminator_model.base_classes:
                                     check_paths(base_class.reference, mapping)  # pyright: ignore[reportArgumentType]
                         else:
-                            type_names = [discriminator_model.path.split("/")[-1]]
+                            for discriminator_field in discriminator_model.fields:
+                                if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                                    continue
+
+                                literals = discriminator_field.data_type.literals
+                                if literals and len(literals) == 1:  # pragma: no cover
+                                    type_names = [str(v) for v in literals]
+                                    break
+
+                                enum_source = discriminator_field.data_type.find_source(Enum)
+                                if enum_source and len(enum_source.fields) == 1:
+                                    first_field = enum_source.fields[0]
+                                    raw_default = first_field.default
+                                    if isinstance(raw_default, str):
+                                        type_names = [raw_default.strip("'\"")]
+                                    else:  # pragma: no cover
+                                        type_names = [str(raw_default)]
+                                    break
+
+                            if not type_names:
+                                type_names = [discriminator_model.path.split("/")[-1]]
 
                     if not type_names:  # pragma: no cover
                         msg = f"Discriminator type is not found. {data_type.reference.path}"
