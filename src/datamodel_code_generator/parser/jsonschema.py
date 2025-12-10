@@ -1365,7 +1365,15 @@ class JsonSchemaParser(Parser):
         return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
-        """Merge allOf items when they share object properties to avoid duplicate models."""
+        """Merge allOf items when they share object properties to avoid duplicate models.
+
+        Skip merging when there is exactly one $ref (inheritance with property overrides).
+        Continue merging when multiple $refs share properties to avoid duplicate fields.
+        """
+        ref_count = sum(1 for item in obj.allOf if item.ref)
+        if ref_count == 1:
+            return None
+
         resolved_items: list[JsonSchemaObject] = []
         property_signatures: dict[str, set[str | bool]] = {}
         for item in obj.allOf:
