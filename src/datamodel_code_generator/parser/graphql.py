@@ -327,7 +327,7 @@ class GraphQLParser(Parser):
                 # TODO: need a special method for each graph type
                 self.references[type_.name] = Reference(
                     path=f"{paths!s}/{resolved_type.value}/{type_.name}",
-                    name=type_.name,
+                    name=self.model_resolver.get_class_name(type_.name, unique=True).name,
                     original_name=type_.name,
                 )
 
@@ -486,6 +486,8 @@ class GraphQLParser(Parser):
             data_type.reference = self.references[obj.name]
 
         obj = graphql.assert_named_type(obj)
+        if data_type.reference is None:
+            data_type.reference = self.references.get(obj.name)
         if data_type.reference is None:
             data_type.type = obj.name
 
