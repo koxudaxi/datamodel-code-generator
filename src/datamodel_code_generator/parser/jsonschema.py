@@ -1040,9 +1040,7 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add_ref(ref)
         ref_schema = self._load_ref_schema_object(ref)
         is_optional = (
-            ref_schema.type_has_null
-            or ref_schema.type == "null"
-            or (self.strict_nullable and ref_schema.nullable)
+            ref_schema.type_has_null or ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable)
         )
         return self.data_type(reference=reference, is_optional=is_optional)
 
