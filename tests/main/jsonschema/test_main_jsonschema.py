@@ -3705,3 +3705,73 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
         follow_redirects=True,
         params=None,
     )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field_pydantic_v2(output_file: Path) -> None:
+    """Test --use-frozen-field with Pydantic v2 generates Field(frozen=True) for readOnly fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_frozen_field_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-frozen-field",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_use_frozen_field_pydantic_v1(output_file: Path) -> None:
+    """Test --use-frozen-field with Pydantic v1 generates Field(allow_mutation=False) for readOnly fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_frozen_field_v1.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic.BaseModel",
+            "--use-frozen-field",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
+    """Test --use-frozen-field with no readOnly fields produces no frozen fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "user.json",  # Has no readOnly fields
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_frozen_field_no_readonly.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-frozen-field",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_use_frozen_field_dataclass(output_file: Path) -> None:
+    """Test --use-frozen-field with dataclass silently ignores (no error, no frozen)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_frozen_field_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-frozen-field",
+        ],
+    )

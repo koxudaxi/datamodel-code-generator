@@ -449,6 +449,7 @@ class Config(BaseModel):
     frozen_dataclasses: bool = False
     dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
     no_alias: bool = False
+    use_frozen_field: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
@@ -879,6 +880,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             keyword_only=config.keyword_only,
             frozen_dataclasses=config.frozen_dataclasses,
             no_alias=config.no_alias,
+            use_frozen_field=config.use_frozen_field,
             formatters=config.formatters,
             settings_path=config.output if config.check else None,
             parent_scoped_naming=config.parent_scoped_naming,

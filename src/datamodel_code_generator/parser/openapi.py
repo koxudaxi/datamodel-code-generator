@@ -268,6 +268,7 @@ class OpenAPIParser(JsonSchemaParser):
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+        use_frozen_field: bool = False,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -359,6 +360,7 @@ class OpenAPIParser(JsonSchemaParser):
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
             read_only_write_only_model_type=read_only_write_only_model_type,
+            use_frozen_field=use_frozen_field,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
