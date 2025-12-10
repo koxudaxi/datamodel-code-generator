@@ -585,7 +585,7 @@ class ModelResolver:  # noqa: PLR0904
         else:
             if "#" not in joined_path:
                 joined_path += "#"
-            elif joined_path[0] == "#" and not self.base_url:
+            elif joined_path[0] == "#" and self.current_root:
                 joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
             file_path, fragment = joined_path.split("#", 1)
