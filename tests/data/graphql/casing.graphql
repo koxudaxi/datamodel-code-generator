@@ -1,0 +1,12 @@
+enum lowercase {
+  foo
+}
+
+type lowercasetype {
+  foo: Int!
+}
+
+type Ref {
+  bar: lowercase!
+  baz: lowercasetype!
+}
