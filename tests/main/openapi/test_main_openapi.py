@@ -3318,3 +3318,18 @@ def test_main_allof_enum_ref(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
     )
+
+
+def test_main_nested_package_enum_default(output_dir: Path) -> None:
+    """Test enum default values use short names in same module with nested package paths."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "nested_package_enum_default.json",
+            output_path=output_dir,
+            expected_directory=EXPECTED_OPENAPI_PATH / "nested_package_enum_default",
+            extra_args=[
+                "--output-model-type",
+                "dataclasses.dataclass",
+                "--set-default-enum-member",
+            ],
+        )
