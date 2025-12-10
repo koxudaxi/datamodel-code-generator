@@ -1078,7 +1078,8 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:
         path = url_to_path.get(url)
         if path is None:
-            raise ValueError(f"Unexpected URL: {url}")
+            msg = f"Unexpected URL: {url}"
+            raise ValueError(msg)
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
         return mock
@@ -1214,7 +1215,8 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
     def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:
         path = url_to_path.get(url)
         if path is None:
-            raise ValueError(f"Unexpected URL: {url}")
+            msg = f"Unexpected URL: {url}"
+            raise ValueError(msg)
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
         return mock
