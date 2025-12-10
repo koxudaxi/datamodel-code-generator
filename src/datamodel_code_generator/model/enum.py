@@ -156,4 +156,4 @@ class Member:
 
     def __repr__(self) -> str:
         """Return string representation of enum member."""
-        return f"{self.alias or self.enum.name}.{self.field.name}"
+        return f"{self.alias or self.enum.class_name}.{self.field.name}"

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/person.schema.json",
+  "title": "Person",
+  "$defs": {
+    "Thing": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "name"]
+    }
+  },
+  "type": "object",
+  "allOf": [
+    { "$ref": "#/$defs/Thing" }
+  ],
+  "properties": {
+    "type": { "default": "playground:Person" },
+    "name": { "minLength": 2 },
+    "age": { "type": "integer" }
+  }
+}

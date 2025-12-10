@@ -482,7 +482,8 @@ class GraphQLParser(Parser):
             data_type.reference = self.references[obj.name]
 
         obj = graphql.assert_named_type(obj)
-        data_type.type = obj.name
+        if data_type.reference is None:
+            data_type.type = obj.name
 
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
 

@@ -1,0 +1,42 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Test API",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "io.example.api.v1.Resolution": {
+        "type": "string",
+        "enum": ["Required", "Optional"],
+        "default": "Required"
+      },
+      "io.example.api.v1.Policy": {
+        "type": "string",
+        "enum": ["Allow", "Deny"],
+        "default": "Allow"
+      },
+      "io.example.api.v1.BucketSpec": {
+        "type": "object",
+        "properties": {
+          "resolution": {
+            "allOf": [
+              {"$ref": "#/components/schemas/io.example.api.v1.Resolution"}
+            ],
+            "default": "Required"
+          },
+          "policy": {
+            "allOf": [
+              {"$ref": "#/components/schemas/io.example.api.v1.Policy"}
+            ],
+            "default": "Allow"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
