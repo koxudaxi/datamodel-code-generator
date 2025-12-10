@@ -1075,7 +1075,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
         f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
     }
 
-    def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:
+    def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         if path is None:
             raise ValueError(f"Unexpected URL: {url}")
@@ -1211,7 +1211,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
         f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
     }
 
-    def get_mock_response(url: str, **kwargs: Any) -> mocker.Mock:
+    def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         if path is None:
             raise ValueError(f"Unexpected URL: {url}")
