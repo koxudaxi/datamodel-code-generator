@@ -333,7 +333,8 @@ class JsonSchemaObject(BaseModel):
     required: list[str] = []  # noqa: RUF012
     ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
     nullable: Optional[bool] = False  # noqa: UP045
-    x_enum_varnames: list[str] = Field(default=[], alias="x-enum-varnames")
+    x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
+    x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
     description: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
     example: Any = None
@@ -2390,14 +2391,19 @@ class JsonSchemaParser(Parser):
 
         exclude_field_names: set[str] = set()
 
+        enum_names = obj.x_enum_varnames or obj.x_enum_names
+
         for i, enum_part in enumerate(enum_times):
             if obj.type == "string" or isinstance(enum_part, str):
                 default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
-                field_name = obj.x_enum_varnames[i] if obj.x_enum_varnames else str(enum_part)
+                if enum_names and i < len(enum_names) and enum_names[i]:
+                    field_name = enum_names[i]
+                else:
+                    field_name = str(enum_part)
             else:
                 default = enum_part
-                if obj.x_enum_varnames:
-                    field_name = obj.x_enum_varnames[i]
+                if enum_names and i < len(enum_names) and enum_names[i]:
+                    field_name = enum_names[i]
                 elif isinstance(enum_part, dict):
                     field_name = self._get_field_name_from_dict_enum(enum_part, i)
                 else:
