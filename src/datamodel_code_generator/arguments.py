@@ -355,6 +355,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-serialize-as-any",
+    help="Use pydantic.SerializeAsAny for fields with types that have subtypes (Pydantic v2 only)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-generic-container-types",
     help="Use generic container types for type hinting (typing.Sequence, typing.Mapping). "
     "If `--use-standard-collections` option is set, then import from collections.abc instead of typing",
@@ -393,7 +399,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-specialized-enum",
-    help="Don't use specialized Enum class (StrEnum, IntEnum) even if the target Python version supports it",
+    help="Use specialized Enum class (StrEnum, IntEnum). Requires --target-python-version 3.11+",
     action=BooleanOptionalAction,
     default=None,
 )
@@ -539,6 +545,12 @@ field_options.add_argument(
     "--no-alias",
     help="""Do not add a field alias. E.g., if --snake-case-field is used along with a base class, which has an
             alias_generator""",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
+    "--use-frozen-field",
+    help="Use Field(frozen=True) for readOnly fields (Pydantic v2) or Field(allow_mutation=False) (Pydantic v1)",
     action="store_true",
     default=None,
 )
@@ -716,6 +728,17 @@ general_options.add_argument(
     action="store_true",
     default=None,
     help="Generate CLI command from pyproject.toml configuration and exit",
+)
+general_options.add_argument(
+    "--ignore-pyproject",
+    action="store_true",
+    default=False,
+    help="Ignore pyproject.toml configuration",
+)
+general_options.add_argument(
+    "--profile",
+    help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
+    default=None,
 )
 general_options.add_argument(
     "--version",

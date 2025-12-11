@@ -418,6 +418,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
+    use_serialize_as_any: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
     original_field_name_delimiter: str | None = None,
     use_double_quotes: bool = False,
@@ -442,7 +443,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     keyword_only: bool = False,
     frozen_dataclasses: bool = False,
     no_alias: bool = False,
+    use_frozen_field: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
+    settings_path: Path | None = None,
     parent_scoped_naming: bool = False,
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
@@ -656,6 +659,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
         use_annotated=use_annotated,
+        use_serialize_as_any=use_serialize_as_any,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
         original_field_name_delimiter=original_field_name_delimiter,
         use_double_quotes=use_double_quotes,
@@ -679,6 +683,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         keyword_only=keyword_only,
         frozen_dataclasses=frozen_dataclasses,
         no_alias=no_alias,
+        use_frozen_field=use_frozen_field,
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
@@ -690,6 +695,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     with chdir(output):
         results = parser.parse(
+            settings_path=settings_path,
             disable_future_imports=disable_future_imports,
             all_exports_scope=all_exports_scope,
             all_exports_collision_strategy=all_exports_collision_strategy,
@@ -775,7 +781,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 if header_after:
                     content = header_before + "\n" + extracted_future + "\n\n" + header_after
                 else:
-                    content = header_before + "\n\n\n" + extracted_future
+                    content = header_before + "\n\n" + extracted_future
                 print(content, file=file)
                 print(file=file)
                 print(body_without_future.rstrip(), file=file)

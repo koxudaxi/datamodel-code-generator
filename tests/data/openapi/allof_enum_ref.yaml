@@ -1,0 +1,23 @@
+openapi: 3.0.1
+info:
+  title: Test API
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    CreateOrderByEstimateRequest:
+      type: object
+      properties:
+        quantity_trunc:
+          $ref: '#/components/schemas/QuantityTrunc'
+    QuantityTrunc:
+      type: string
+      description: Quantity truncation setting
+      allOf:
+        - $ref: '#/components/schemas/MassUnit'
+    MassUnit:
+      type: string
+      enum:
+        - g
+        - kg
+        - t

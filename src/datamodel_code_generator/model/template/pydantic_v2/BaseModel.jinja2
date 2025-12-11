@@ -1,4 +1,4 @@
-{% if base_class != "BaseModel" and "," not in base_class and not fields and not config -%}
+{% if base_class != "BaseModel" and "," not in base_class and not fields and not config and not description -%}
 
 {# if this is just going to be `class Foo(Bar): pass`, then might as well just make Foo
 an alias for Bar: every pydantic model class consumes considerable memory. #}
@@ -32,7 +32,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- else %}
     {{ field.name }}: {{ field.type_hint }}
     {%- endif %}
-    {%- if not field.required and (field.represented_default != 'None' or not field.strip_default_none or field.data_type.is_optional)
+    {%- if not field.has_default_factory_in_field and not field.required and (field.represented_default != 'None' or not field.strip_default_none or field.data_type.is_optional)
             %} = {{ field.represented_default }}
     {%- endif -%}
     {%- endif %}

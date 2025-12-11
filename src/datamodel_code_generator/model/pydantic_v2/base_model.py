@@ -125,15 +125,8 @@ class DataModelField(DataModelFieldV1):
         return values
 
     def process_const(self) -> None:
-        """Process const field by converting it to a literal type with default value."""
-        if "const" not in self.extras:
-            return
-        self.const = True
-        self.nullable = False
-        const = self.extras["const"]
-        self.data_type = self.data_type.__class__(literals=[const])
-        if not self.default:
-            self.default = const
+        """Process const field constraint using literal type."""
+        self._process_const_as_literal()
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
@@ -142,6 +135,9 @@ class DataModelField(DataModelFieldV1):
 
         # unique_items is not supported in pydantic 2.0
         data.pop("unique_items", None)
+
+        if self.use_frozen_field and self.read_only:
+            data["frozen"] = True
 
         if "union_mode" in data:
             if self.data_type.is_union:

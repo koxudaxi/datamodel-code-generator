@@ -136,8 +136,9 @@ y = 2
     )
 
 
-def test_format_code_ruff_format_formatter() -> None:
+def test_format_code_ruff_format_formatter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test ruff format formatter."""
+    monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersionMin,
         formatters=[Formatter.RUFF_FORMAT],
@@ -147,11 +148,14 @@ def test_format_code_ruff_format_formatter() -> None:
         formatted_code = formatter.format_code("input")
 
     assert formatted_code == "output"
-    mock_run.assert_called_once_with(("ruff", "format", "-"), input=b"input", capture_output=True, check=False)
+    mock_run.assert_called_once_with(
+        ("ruff", "format", "-"), input=b"input", capture_output=True, check=False, cwd=str(tmp_path)
+    )
 
 
-def test_format_code_ruff_check_formatter() -> None:
+def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test ruff check formatter with auto-fix."""
+    monkeypatch.chdir(tmp_path)
     formatter = CodeFormatter(
         PythonVersionMin,
         formatters=[Formatter.RUFF_CHECK],
@@ -161,4 +165,40 @@ def test_format_code_ruff_check_formatter() -> None:
         formatted_code = formatter.format_code("input")
 
     assert formatted_code == "output"
-    mock_run.assert_called_once_with(("ruff", "check", "--fix", "-"), input=b"input", capture_output=True, check=False)
+    mock_run.assert_called_once_with(
+        ("ruff", "check", "--fix", "-"), input=b"input", capture_output=True, check=False, cwd=str(tmp_path)
+    )
+
+
+def test_settings_path_with_existing_file(tmp_path: Path) -> None:
+    """Test settings_path with existing file uses parent directory."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+    existing_file = tmp_path / "existing.py"
+    existing_file.write_text("", encoding="utf-8")
+
+    formatter = CodeFormatter(PythonVersionMin, settings_path=existing_file)
+
+    assert formatter.settings_path == str(tmp_path)
+
+
+def test_settings_path_with_nonexistent_file(tmp_path: Path) -> None:
+    """Test settings_path with nonexistent file uses existing parent."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+    nonexistent_file = tmp_path / "nonexistent.py"
+
+    formatter = CodeFormatter(PythonVersionMin, settings_path=nonexistent_file)
+
+    assert formatter.settings_path == str(tmp_path)
+
+
+def test_settings_path_with_deeply_nested_nonexistent_path(tmp_path: Path) -> None:
+    """Test settings_path with deeply nested nonexistent path finds existing ancestor."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+    nested_path = tmp_path / "a" / "b" / "c" / "nonexistent.py"
+
+    formatter = CodeFormatter(PythonVersionMin, settings_path=nested_path)
+
+    assert formatter.settings_path == str(tmp_path)

@@ -1,0 +1,41 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Test API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/b": {
+      "get": {
+        "operationId": "getB",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/A.B.B"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "A.B.B": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

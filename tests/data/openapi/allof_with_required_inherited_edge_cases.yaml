@@ -1,0 +1,116 @@
+openapi: "3.0.0"
+info:
+  title: Test API - Edge Cases for allOf Inheritance
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    BaseRef:
+      type: object
+      properties:
+        id:
+          type: integer
+
+    StatusEnum:
+      type: string
+      enum:
+        - active
+        - inactive
+
+    ProjectedEdgeCases:
+      type: object
+      properties:
+        single_allof_primitive:
+          allOf:
+            - type: string
+        single_allof_ref:
+          allOf:
+            - $ref: '#/components/schemas/BaseRef'
+        allof_with_enum:
+          allOf:
+            - $ref: '#/components/schemas/StatusEnum'
+            - description: "enum with description"
+        allof_nested_anyof:
+          allOf:
+            - anyOf:
+                - type: string
+                - type: integer
+            - description: "nested anyOf"
+        allof_constraint_only:
+          allOf:
+            - minLength: 1
+            - maxLength: 100
+        allof_max_constraints:
+          allOf:
+            - type: integer
+              maximum: 100
+            - maximum: 50
+        allof_unique_items:
+          allOf:
+            - type: array
+              items:
+                type: string
+              uniqueItems: true
+            - uniqueItems: false
+        object_without_additional:
+          type: object
+          properties:
+            nested:
+              type: string
+        object_only_type:
+          type: object
+        multiple_additional_props:
+          allOf:
+            - type: object
+              additionalProperties:
+                type: string
+            - type: object
+              additionalProperties:
+                $ref: '#/components/schemas/BaseRef'
+        depth_limit_test:
+          type: object
+          properties:
+            l1:
+              type: object
+              properties:
+                l2:
+                  type: object
+                  properties:
+                    l3:
+                      type: object
+                      properties:
+                        l4:
+                          type: string
+        cycle_detection:
+          $ref: '#/components/schemas/BaseRef'
+        type_list_field:
+          type:
+            - string
+            - integer
+        allof_multiple_refs_only:
+          allOf:
+            - $ref: '#/components/schemas/BaseRef'
+            - $ref: '#/components/schemas/BaseRef'
+
+    EdgeCases:
+      allOf:
+        - $ref: '#/components/schemas/ProjectedEdgeCases'
+        - type: object
+          required:
+            - single_allof_primitive
+            - single_allof_ref
+            - allof_with_enum
+            - allof_nested_anyof
+            - allof_constraint_only
+            - allof_max_constraints
+            - allof_unique_items
+            - object_without_additional
+            - object_only_type
+            - multiple_additional_props
+            - depth_limit_test
+            - cycle_detection
+            - type_list_field
+            - allof_multiple_refs_only
+          properties:
+            extra:
+              type: string

@@ -1,0 +1,68 @@
+openapi: 3.0.0
+info:
+  title: Circular Import with Class Name Conflicts Test
+  version: 1.0.0
+
+paths: {}
+
+components:
+  schemas:
+    # Root module has Item class
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        sub_item:
+          $ref: '#/components/schemas/issuing.Authorization'
+
+    # issuing module also has Item class - will be renamed to Item_1
+    issuing.Item:
+      type: object
+      properties:
+        id:
+          type: string
+
+    issuing.Authorization:
+      type: object
+      properties:
+        id:
+          type: string
+        item:
+          $ref: '#/components/schemas/issuing.Item'
+        invoice:
+          $ref: '#/components/schemas/billing.Invoice'
+
+    # billing module also has Item class - will be renamed to Item_2
+    billing.Item:
+      type: object
+      properties:
+        id:
+          type: string
+
+    billing.Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+        billing_item:
+          $ref: '#/components/schemas/billing.Item'
+        session:
+          $ref: '#/components/schemas/checkout.Session'
+
+    # checkout module also has Item class - will be renamed to Item_3
+    checkout.Item:
+      type: object
+      properties:
+        id:
+          type: string
+
+    checkout.Session:
+      type: object
+      properties:
+        id:
+          type: string
+        checkout_item:
+          $ref: '#/components/schemas/checkout.Item'
+        root_item:
+          $ref: '#/components/schemas/Item'

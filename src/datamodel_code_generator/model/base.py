@@ -10,6 +10,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
@@ -98,6 +99,18 @@ class ConstraintsBase(_BaseModel):
         })
 
 
+@dataclass(repr=False)
+class WrappedDefault:
+    """Represents a default value wrapped with its type constructor."""
+
+    value: Any
+    type_name: str
+
+    def __repr__(self) -> str:
+        """Return type constructor representation, e.g., 'CountType(10)'."""
+        return f"{self.type_name}({self.value!r})"
+
+
 class DataModelFieldBase(_BaseModel):
     """Base class for model field representation and rendering."""
 
@@ -124,6 +137,7 @@ class DataModelFieldBase(_BaseModel):
     parent: Optional[DataModel] = None  # noqa: UP045
     extras: dict[str, Any] = Field(default_factory=dict)
     use_annotated: bool = False
+    use_serialize_as_any: bool = False
     has_default: bool = False
     use_field_description: bool = False
     use_inline_field_description: bool = False
@@ -137,6 +151,7 @@ class DataModelFieldBase(_BaseModel):
     type_has_null: Optional[bool] = None  # noqa: UP045
     read_only: bool = False
     write_only: bool = False
+    use_frozen_field: bool = False
 
     if not TYPE_CHECKING:
         if not PYDANTIC_V2:
@@ -166,6 +181,23 @@ class DataModelFieldBase(_BaseModel):
         self.const = True
         self.required = False
         self.nullable = False
+
+    def _process_const_as_literal(self) -> None:
+        """Process const values by converting to literal type. Used by subclasses."""
+        if "const" not in self.extras:
+            return
+        const = self.extras["const"]
+        self.const = True
+        self.nullable = False
+        self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
+        if not self.default:
+            self.default = const
+
+    def self_reference(self) -> bool:
+        """Check if field references its parent model."""
+        if self.parent is None or not self.parent.reference:  # pragma: no cover
+            return False
+        return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
 
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
@@ -204,7 +236,7 @@ class DataModelFieldBase(_BaseModel):
 
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
-        if self.use_annotated and self.annotated:
+        if self.use_annotated and self.needs_annotated_import:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
 
@@ -257,6 +289,16 @@ class DataModelFieldBase(_BaseModel):
         return None
 
     @property
+    def needs_annotated_import(self) -> bool:
+        """Check if this field requires the Annotated import."""
+        return bool(self.annotated)
+
+    @property
+    def needs_meta_import(self) -> bool:  # pragma: no cover
+        """Check if this field requires the Meta import (msgspec only)."""
+        return False
+
+    @property
     def has_default_factory(self) -> bool:
         """Check if this field has a default_factory."""
         return "default_factory" in self.extras
@@ -274,6 +316,20 @@ class DataModelFieldBase(_BaseModel):
         if self.data_type.data_types:
             copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
         return copied
+
+    def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
+        """Replace data_type and update parent relationships.
+
+        Args:
+            new_data_type: The new DataType to set.
+            clear_old_parent: If True, clear the old data_type's parent reference.
+                Set to False when the old data_type may be referenced elsewhere.
+        """
+        if self.data_type.parent is self and clear_old_parent:
+            self.data_type.swap_with(new_data_type)
+        else:
+            self.data_type = new_data_type
+            new_data_type.parent = self
 
 
 @lru_cache
@@ -345,7 +401,7 @@ class BaseClassDataType(DataType):
 UNDEFINED: Any = object()
 
 
-class DataModel(TemplateBase, Nullable, ABC):
+class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
     Handles template rendering, import collection, and model relationships.
@@ -459,6 +515,34 @@ class DataModel(TemplateBase, Nullable, ABC):
                 yield from base_class.reference.source.iter_all_fields(visited)
         yield from self.fields
 
+    def get_dedup_key(self, class_name: str | None = None, *, use_default: bool = True) -> tuple[Any, ...]:
+        """Generate hashable key for model deduplication."""
+        from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
+
+        render_class_name = class_name if class_name is not None or not use_default else "M"
+        return tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
+
+    def create_reuse_model(self, base_ref: Reference) -> Self:
+        """Create inherited model with empty fields pointing to base reference."""
+        return self.__class__(
+            fields=[],
+            base_classes=[base_ref],
+            description=self.description,
+            reference=Reference(
+                name=self.name,
+                path=self.reference.path + "/reuse",
+            ),
+            custom_template_dir=self._custom_template_dir,
+        )
+
+    def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
+        """Replace reference children if their parent model is in models list."""
+        from datamodel_code_generator.parser.base import get_most_of_parent  # noqa: PLC0415
+
+        for child in self.reference.children[:]:
+            if isinstance(child, DataType) and get_most_of_parent(child) in models:
+                child.replace_reference(new_ref)
+
     def set_base_class(self) -> None:
         """Set up the base class for this model."""
         base_class = self.custom_base_class or self.BASE_CLASS
@@ -564,6 +648,12 @@ class DataModel(TemplateBase, Nullable, ABC):
     def path(self) -> str:
         """Get the full reference path for this model."""
         return self.reference.path
+
+    def set_reference_path(self, new_path: str) -> None:
+        """Set reference path and clear cached path property."""
+        self.reference.path = new_path
+        if "path" in self.__dict__:
+            del self.__dict__["path"]
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""

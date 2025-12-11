@@ -175,6 +175,7 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize the DataTypeManager with Pydantic v1 type mappings."""
         super().__init__(
@@ -187,6 +188,7 @@ class DataTypeManager(_DataTypeManager):
             use_pendulum,
             target_datetime_class,
             treat_dot_as_module,
+            use_serialize_as_any,
         )
 
         self.type_map: dict[Types, DataType] = self.type_map_factory(

@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.org/schemas/bundled.json",
+  "title": "Bundled Schema",
+  "description": "A bundled schema with $id that differs from fetch URL (Issue #1798)",
+  "type": "object",
+  "properties": {
+    "user": {
+      "$ref": "#/definitions/user"
+    },
+    "pet": {
+      "$ref": "#/definitions/pet"
+    }
+  },
+  "definitions": {
+    "user": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "pet": {
+          "$ref": "#/definitions/pet"
+        }
+      },
+      "required": ["name"]
+    },
+    "pet": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "species": {
+          "$ref": "#/definitions/species"
+        }
+      },
+      "required": ["name", "species"]
+    },
+    "species": {
+      "type": "string",
+      "enum": ["dog", "cat", "bird"]
+    }
+  }
+}

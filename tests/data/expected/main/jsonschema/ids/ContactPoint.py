@@ -4,15 +4,18 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
-from . import type as type_1
+
+class Type(Enum):
+    ContactPoint = 'ContactPoint'
 
 
 class Schema(BaseModel):
-    type: type_1.Schema
+    type: Type
     contactType: Optional[str] = None
     email: EmailStr
     telephone: Optional[str] = None

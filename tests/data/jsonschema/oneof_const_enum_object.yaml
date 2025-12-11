@@ -1,0 +1,7 @@
+$schema: http://json-schema.org/draft-07/schema#
+title: ObjectConst
+oneOf:
+  - const:
+      key: value1
+  - const:
+      key: value2

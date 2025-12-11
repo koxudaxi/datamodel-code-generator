@@ -33,16 +33,34 @@ from urllib.parse import ParseResult, urlparse
 import pydantic
 from packaging import version
 from pydantic import BaseModel, Field
+from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping, Sequence
+    from collections.abc import Generator, Iterator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
     import inflect
     from pydantic.typing import DictStrAny
+
+    from datamodel_code_generator.model.base import DataModel
+    from datamodel_code_generator.types import DataType
+
+
+def _is_data_type(value: object) -> TypeIs[DataType]:
+    """Check if value is a DataType instance."""
+    from datamodel_code_generator.types import DataType as DataType_  # noqa: PLC0415
+
+    return isinstance(value, DataType_)
+
+
+def _is_data_model(value: object) -> TypeIs[DataModel]:
+    """Check if value is a DataModel instance."""
+    from datamodel_code_generator.model.base import DataModel as DataModel_  # noqa: PLC0415
+
+    return isinstance(value, DataModel_)
 
 
 @runtime_checkable
@@ -169,6 +187,18 @@ class Reference(_BaseModel):
     def short_name(self) -> str:
         """Return the last component of the dotted name."""
         return self.name.rsplit(".", 1)[-1]
+
+    def replace_children_references(self, new_reference: Reference) -> None:
+        """Replace all DataType children's reference with new_reference."""
+        for child in self.children[:]:
+            if _is_data_type(child):
+                child.replace_reference(new_reference)
+
+    def iter_data_model_children(self) -> Iterator[DataModel]:
+        """Yield all DataModel children."""
+        for child in self.children:
+            if _is_data_model(child):
+                yield child
 
 
 SINGULAR_NAME_SUFFIX: str = "Item"
@@ -555,7 +585,7 @@ class ModelResolver:  # noqa: PLR0904
         else:
             if "#" not in joined_path:
                 joined_path += "#"
-            elif joined_path[0] == "#" and not self.base_url:
+            elif joined_path[0] == "#" and self.current_root:
                 joined_path = f"{'/'.join(self.current_root)}{joined_path}"
 
             file_path, fragment = joined_path.split("#", 1)

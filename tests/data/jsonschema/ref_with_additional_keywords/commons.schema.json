@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/commons.schema.json",
+  "title": "Commons",
+  "description": "Commons objects",
+  "$defs": {
+    "defaultArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100
+    }
+  }
+}

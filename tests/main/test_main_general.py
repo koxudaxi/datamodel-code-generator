@@ -5,6 +5,7 @@ from __future__ import annotations
 from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
+import black
 import pytest
 
 from datamodel_code_generator import (
@@ -696,16 +697,23 @@ def test_all_exports_scope_children_with_docstring_header(output_dir: Path) -> N
     )
 
 
-def test_all_exports_scope_recursive_collision_error(output_dir: Path) -> None:
-    """Test --all-exports-scope=recursive raises error on collision without strategy."""
+def test_all_exports_scope_recursive_collision_avoided_by_renaming(output_dir: Path) -> None:
+    """Test --all-exports-scope=recursive avoids collision through automatic class renaming.
+
+    With circular import resolution, conflicting class names (e.g., foo.Tea and nested.foo.Tea)
+    are automatically renamed (e.g., Tea and Tea_1) in _internal.py, so no collision error occurs.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
         input_file_type="openapi",
         extra_args=["--disable-timestamp", "--all-exports-scope", "recursive"],
-        expected_exit=Exit.ERROR,
-        expected_stderr_contains="Name collision detected",
     )
+
+    # Verify both Tea and Tea_1 exist in _internal.py (collision avoided through renaming)
+    internal_content = (output_dir / "_internal.py").read_text()
+    assert "class Tea(BaseModel):" in internal_content, "Tea class should exist in _internal.py"
+    assert "class Tea_1(BaseModel):" in internal_content, "Tea_1 class should exist in _internal.py"
 
 
 def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
@@ -807,3 +815,138 @@ def test_all_exports_scope_children_no_child_exports(output_dir: Path) -> None:
         ],
         expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_no_child",
     )
+
+
+def test_all_exports_scope_children_with_local_models(output_dir: Path) -> None:
+    """Test --all-exports-scope=children when __init__.py has both local models and child exports."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_with_local_models.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_with_local_models",
+    )
+
+
+def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
+    """Test --check uses pyproject.toml formatter settings from output path."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
+
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        """{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string", "description": "The person's first name description that is very long."}
+  }
+}""",
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+    )
+
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--check"],
+        expected_exit=Exit.OK,
+    )
+
+
+def test_use_specialized_enum_requires_python_311(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --use-specialized-enum requires --target-python-version 3.11+."""
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        '{"type": "string", "enum": ["A", "B"]}',
+        encoding="utf-8",
+    )
+
+    run_main_and_assert(
+        input_path=input_json,
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        extra_args=["--use-specialized-enum"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--use-specialized-enum requires --target-python-version 3.11 or later",
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support StrEnum formatting",
+)
+def test_use_specialized_enum_with_python_311_ok(output_file: Path) -> None:
+    """Test --use-specialized-enum works with --target-python-version 3.11."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--use-specialized-enum", "--target-python-version", "3.11"],
+        assert_func=assert_file_content,
+        expected_file="use_specialized_enum_py311.py",
+    )
+
+
+def test_use_specialized_enum_pyproject_requires_python_311(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test use_specialized_enum in pyproject.toml requires target_python_version 3.11+."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text(
+        "[tool.datamodel-codegen]\nuse_specialized_enum = true\n",
+        encoding="utf-8",
+    )
+
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        '{"type": "string", "enum": ["A", "B"]}',
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_json,
+            output_path=tmp_path / "output.py",
+            input_file_type="jsonschema",
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="--use-specialized-enum requires --target-python-version 3.11 or later",
+        )
+
+
+def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp_path: Path) -> None:
+    """Test --no-use-specialized-enum CLI can override pyproject.toml use_specialized_enum=true."""
+    pyproject_toml = tmp_path / "pyproject.toml"
+    pyproject_toml.write_text(
+        "[tool.datamodel-codegen]\nuse_specialized_enum = true\n",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "string_enum.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--no-use-specialized-enum"],
+            assert_func=assert_file_content,
+            expected_file="no_use_specialized_enum.py",
+        )

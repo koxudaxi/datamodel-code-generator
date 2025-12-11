@@ -385,9 +385,12 @@ Typing customization:
                         corresponding con* constrained types.
   --use-one-literal-as-default
                         Use one literal as default value for one literal field
+  --use-serialize-as-any
+                        Use pydantic.SerializeAsAny for fields with types that have subtypes
+                        (Pydantic v2 only)
   --use-specialized-enum, --no-use-specialized-enum
-                        Don''t use specialized Enum class (StrEnum, IntEnum) even if the
-                        target Python version supports it
+                        Use specialized Enum class (StrEnum, IntEnum). Requires --target-
+                        python-version 3.11+
   --use-standard-collections
                         Use standard collections for type hinting (list, dict)
   --use-subclass-enum   Define generic Enum class as subclass with field type when enum has
@@ -433,6 +436,8 @@ Field customization:
                         default values.
   --use-field-description
                         Use schema description to populate field docstring
+  --use-frozen-field    Use Field(frozen=True) for readOnly fields (Pydantic v2) or
+                        Field(allow_mutation=False) (Pydantic v1)
   --use-inline-field-description
                         Use schema description to populate field docstring as inline
                         docstring
@@ -558,7 +563,10 @@ General options:
   --generate-pyproject-config
                         Generate pyproject.toml configuration from the provided CLI
                         arguments and exit
+  --ignore-pyproject    Ignore pyproject.toml configuration
   --no-color            disable colorized output
+  --profile PROFILE     Use a named profile from pyproject.toml [tool.datamodel-
+                        codegen.profiles.<name>]
   --version             show version
   -h, --help            show this help message and exit
 ```
