@@ -2396,10 +2396,7 @@ class JsonSchemaParser(Parser):
         for i, enum_part in enumerate(enum_times):
             if obj.type == "string" or isinstance(enum_part, str):
                 default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
-                if enum_names and i < len(enum_names) and enum_names[i]:
-                    field_name = enum_names[i]
-                else:
-                    field_name = str(enum_part)
+                field_name = enum_names[i] if enum_names and i < len(enum_names) and enum_names[i] else str(enum_part)
             else:
                 default = enum_part
                 if enum_names and i < len(enum_names) and enum_names[i]:
