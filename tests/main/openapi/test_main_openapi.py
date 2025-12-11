@@ -3463,3 +3463,14 @@ def test_main_nested_package_enum_default(output_dir: Path) -> None:
                 "--set-default-enum-member",
             ],
         )
+
+
+def test_main_openapi_x_enum_names(output_file: Path) -> None:
+    """Test OpenAPI generation with x-enumNames extension (NSwag/NJsonSchema style)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_enum_names.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_enum_names.py",
+    )
