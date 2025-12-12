@@ -1719,6 +1719,17 @@ def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: P
     )
 
 
+def test_main_openapi_allof_partial_override_inherited_types(output_file: Path) -> None:
+    """Test OpenAPI allOf partial overrides inherit parent field types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_inherited_types.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_inherited_types.py",
+    )
+
+
 def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
     """Test OpenAPI generation with allOf edge cases for branch coverage."""
     run_main_and_assert(

@@ -1519,6 +1519,24 @@ class JsonSchemaParser(Parser):
                     class_name=name,
                 )
             )
+        if base_classes:
+            for field in fields:
+                current_type = field.data_type
+                field_name = field.original_name or field.name
+                if current_type and current_type.type == ANY and field_name:
+                    inherited_type = self._get_inherited_field_type(field_name, base_classes)
+                    if inherited_type is not None:
+                        if PYDANTIC_V2:
+                            new_type = inherited_type.model_copy(deep=True)
+                        else:
+                            new_type = inherited_type.copy(deep=True)
+                        new_type.is_optional = new_type.is_optional or current_type.is_optional
+                        new_type.is_dict = new_type.is_dict or current_type.is_dict
+                        new_type.is_list = new_type.is_list or current_type.is_list
+                        new_type.is_set = new_type.is_set or current_type.is_set
+                        if new_type.kwargs is None and current_type.kwargs is not None:  # pragma: no cover
+                            new_type.kwargs = current_type.kwargs
+                        field.data_type = new_type
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
