@@ -1522,8 +1522,9 @@ class JsonSchemaParser(Parser):
         if base_classes:
             for field in fields:
                 current_type = field.data_type
-                if current_type and current_type.type == ANY:
-                    inherited_type = self._get_inherited_field_type(field.original_name or field.name, base_classes)
+                field_name = field.original_name or field.name
+                if current_type and current_type.type == ANY and field_name:
+                    inherited_type = self._get_inherited_field_type(field_name, base_classes)
                     if inherited_type is not None:
                         if PYDANTIC_V2:
                             new_type = inherited_type.model_copy(deep=True)
