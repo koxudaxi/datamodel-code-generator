@@ -25,13 +25,5 @@ class NameType(RootModel[str]):
 
 class Model(BaseModel):
     admin_state: Optional[AdminStateLeaf] = AdminStateLeaf.enable
-    count: Annotated[
-        Optional[CountType],
-        Field(default_factory=lambda: CountType.model_validate(CountType(10))),
-    ]
-    name: Annotated[
-        Optional[NameType],
-        Field(
-            default_factory=lambda: NameType.model_validate(NameType('default_name'))
-        ),
-    ]
+    count: Optional[CountType] = CountType(10)
+    name: Optional[NameType] = NameType('default_name')

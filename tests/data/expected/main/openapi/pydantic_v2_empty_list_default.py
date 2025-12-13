@@ -14,6 +14,4 @@ class Container(BaseModel):
 
 
 class PodSpec(BaseModel):
-    containers: Optional[List[Container]] = Field(
-        default_factory=lambda: [Container.model_validate(v) for v in []]
-    )
+    containers: Optional[List[Container]] = Field(default_factory=list)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, RootModel, conint, constr
+from pydantic import BaseModel, RootModel, conint, constr
 
 
 class AdminStateLeaf(Enum):
@@ -25,9 +25,5 @@ class NameType(RootModel[constr(min_length=1, max_length=50)]):
 
 class Model(BaseModel):
     admin_state: Optional[AdminStateLeaf] = AdminStateLeaf.enable
-    count: Optional[CountType] = Field(
-        default_factory=lambda: CountType.model_validate(10)
-    )
-    name: Optional[NameType] = Field(
-        default_factory=lambda: NameType.model_validate('default_name')
-    )
+    count: Optional[CountType] = 10
+    name: Optional[NameType] = 'default_name'
