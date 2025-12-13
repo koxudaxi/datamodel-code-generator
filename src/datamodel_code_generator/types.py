@@ -48,6 +48,7 @@ from datamodel_code_generator.imports import (
     IMPORT_OPTIONAL,
     IMPORT_SEQUENCE,
     IMPORT_SET,
+    IMPORT_TUPLE,
     IMPORT_UNION,
     Import,
 )
@@ -78,6 +79,8 @@ LIST = "List"
 STANDARD_DICT = "dict"
 STANDARD_LIST = "list"
 STANDARD_SET = "set"
+TUPLE = "Tuple"
+STANDARD_TUPLE = "tuple"
 STR = "str"
 
 NOT_REQUIRED = "NotRequired"
@@ -322,6 +325,7 @@ class DataType(_BaseModel):
     is_dict: bool = False
     is_list: bool = False
     is_set: bool = False
+    is_tuple: bool = False
     is_custom_type: bool = False
     literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
     enum_member_literals: list[tuple[str, str]] = []  # noqa: RUF012  # [(EnumClassName, member_name), ...]
@@ -479,6 +483,8 @@ class DataType(_BaseModel):
                 (self.is_set, IMPORT_SET),
                 (self.is_dict, IMPORT_DICT),
             )
+        if self.is_tuple and not self.use_standard_collections:
+            imports = (*imports, (True, IMPORT_TUPLE))
 
         # Yield imports based on conditions
         for field, import_ in imports:
@@ -524,7 +530,11 @@ class DataType(_BaseModel):
         """Generate the Python type hint string for this DataType."""
         type_: str | None = self.alias or self.type
         if not type_:
-            if self.is_union:
+            if self.is_tuple:
+                tuple_type = STANDARD_TUPLE if self.use_standard_collections else TUPLE
+                inner_types = [item.type_hint or ANY for item in self.data_types]
+                type_ = f"{tuple_type}[{', '.join(inner_types)}]" if inner_types else f"{tuple_type}[()]"
+            elif self.is_union:
                 data_types: list[str] = []
                 for data_type in self.data_types:
                     data_type_type = data_type.type_hint
