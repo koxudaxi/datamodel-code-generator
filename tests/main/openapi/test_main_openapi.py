@@ -333,6 +333,30 @@ def test_target_python_version(output_file: Path) -> None:
     )
 
 
+def test_target_python_version_313_has_future_annotations(output_file: Path) -> None:
+    """Test that Python 3.13 target includes future annotations import."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            extra_args=["--target-python-version", "3.13"],
+        )
+
+
+def test_target_python_version_314_no_future_annotations(output_file: Path) -> None:
+    """Test that Python 3.14 target omits future annotations import (PEP 649)."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            extra_args=["--target-python-version", "3.14"],
+        )
+
+
 @pytest.mark.benchmark
 def test_main_modular(output_dir: Path) -> None:
     """Test main function on modular file."""
