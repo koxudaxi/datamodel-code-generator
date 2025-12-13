@@ -89,6 +89,23 @@ def test_main_type_alias_forward_ref_keep_model_order(output_file: Path) -> None
     )
 
 
+@pytest.mark.benchmark
+def test_main_keep_model_order_field_references(output_file: Path) -> None:
+    """Test field references are considered when keeping model order."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--keep-model-order",
+            "--disable-future-imports",
+            "--target-python-version",
+            "3.13",
+        ],
+    )
+
+
 @pytest.mark.skip(reason="pytest-xdist does not support the test")
 def test_main_without_arguments() -> None:
     """Test main function without arguments raises SystemExit."""
