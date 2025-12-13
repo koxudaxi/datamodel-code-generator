@@ -197,7 +197,7 @@ class DataModelField(DataModelFieldBase):
 
         if self.required:
             default_factory = None
-        elif self.default and "default_factory" not in data:
+        elif self.default is not UNDEFINED and self.default is not None and "default_factory" not in data:
             default_factory = self._get_default_as_pydantic_model()
         else:
             default_factory = data.pop("default_factory", None)

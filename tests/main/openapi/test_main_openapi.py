@@ -1889,6 +1889,62 @@ def test_main_openapi_union_default_object(output_model: str, expected_output: s
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_dict_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_dict_default.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_empty_dict_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with empty dict default values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "empty_dict_default.yaml",
+        output_path=output_file,
+        expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_list_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_list_default.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with empty list default values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "empty_list_default.yaml",
+        output_path=output_file,
+        expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+    )
+
+
 def test_main_dataclass(output_file: Path) -> None:
     """Test OpenAPI generation with dataclass output."""
     run_main_and_assert(
