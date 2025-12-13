@@ -15,4 +15,7 @@ class ModelSettingB(RootModel[float]):
 
 class Model(BaseModel):
     settingA: Annotated[Optional[float], Field(ge=0.0, le=10.0)] = 5
-    settingB: Optional[ModelSettingB] = ModelSettingB(5)
+    settingB: Annotated[
+        Optional[ModelSettingB],
+        Field(default_factory=lambda: ModelSettingB.model_validate(ModelSettingB(5))),
+    ]

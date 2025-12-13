@@ -34,7 +34,7 @@ class FamilyPets(BaseModel):
 
 
 class Person(BaseModel):
-    id: Optional[ID] = 'abc'
+    id: Optional[ID] = Field(default_factory=lambda: ID.parse_obj('abc'))
     user: Optional[Pet] = None
     firstName: Optional[str] = Field(None, description="The person's first name.")
     team: Optional[TeamType] = 'Department'

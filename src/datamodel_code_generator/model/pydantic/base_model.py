@@ -141,14 +141,11 @@ class DataModelField(DataModelFieldBase):
                         f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
                     )
             elif data_type.reference and isinstance(data_type.reference.source, BaseModelBase):
-                if not isinstance(self.default, (dict, list)):
-                    continue
-                if (
-                    self.data_type.is_union
-                    and isinstance(self.default, dict)
-                    and any(dt.is_dict for dt in self.data_type.data_types)
-                ):
-                    continue
+                if self.data_type.is_union:
+                    if not isinstance(self.default, (dict, list)):
+                        continue
+                    if isinstance(self.default, dict) and any(dt.is_dict for dt in self.data_type.data_types):
+                        continue
                 return (
                     f"lambda :{data_type.alias or data_type.reference.source.class_name}."
                     f"{self._PARSE_METHOD}({self.default!r})"

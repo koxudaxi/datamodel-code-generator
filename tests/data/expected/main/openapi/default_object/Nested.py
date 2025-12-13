@@ -25,4 +25,6 @@ class Bar(BaseModel):
             for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
         ]
     )
-    nested_foo: Optional[Foo] = 'default foo'
+    nested_foo: Optional[Foo] = Field(
+        default_factory=lambda: Foo.parse_obj('default foo')
+    )
