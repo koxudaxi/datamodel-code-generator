@@ -1640,7 +1640,7 @@ class Parser(ABC):
         self,
         models: list[DataModel],
     ) -> None:
-        if self.data_model_type != pydantic_model_v2.BaseModel:
+        if not issubclass(self.data_model_type, pydantic_model_v2.BaseModel):
             return
         for model in models:
             if "Enum" in model.base_class:

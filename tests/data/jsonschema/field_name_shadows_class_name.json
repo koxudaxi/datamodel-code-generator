@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Elem": {
+      "type": "object",
+      "properties": {
+        "temp": {
+          "type": "string"
+        }
+      },
+      "required": ["temp"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "Elem": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Elem"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}
