@@ -3775,3 +3775,18 @@ def test_main_use_frozen_field_dataclass(output_file: Path) -> None:
             "--use-frozen-field",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_field_name_shadows_class_name(output_file: Path) -> None:
+    """Test field name shadowing class name is renamed with alias for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_name_shadows_class_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
