@@ -30,6 +30,8 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
+    BLACK_PY313_SKIP,
+    BLACK_PY314_SKIP,
     DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -333,6 +335,7 @@ def test_target_python_version(output_file: Path) -> None:
     )
 
 
+@BLACK_PY313_SKIP
 def test_target_python_version_313_has_future_annotations(output_file: Path) -> None:
     """Test that Python 3.13 target includes future annotations import."""
     with freeze_time(TIMESTAMP):
@@ -345,6 +348,7 @@ def test_target_python_version_313_has_future_annotations(output_file: Path) -> 
         )
 
 
+@BLACK_PY314_SKIP
 def test_target_python_version_314_no_future_annotations(output_file: Path) -> None:
     """Test that Python 3.14 target omits future annotations import (PEP 649)."""
     with freeze_time(TIMESTAMP):
