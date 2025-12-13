@@ -374,6 +374,13 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-decimal-for-multiple-of",
+    help="Use condecimal instead of confloat for float/number fields with multipleOf constraint "
+    "(Pydantic only). Avoids floating-point precision issues in validation.",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-one-literal-as-default",
     help="Use one literal as default value for one literal field",
     action="store_true",

@@ -426,6 +426,7 @@ class Config(BaseModel):
     use_annotated: bool = False
     use_serialize_as_any: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
+    use_decimal_for_multiple_of: bool = False
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
@@ -871,6 +872,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_annotated=config.use_annotated,
             use_serialize_as_any=config.use_serialize_as_any,
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
             collapse_root_models=config.collapse_root_models,

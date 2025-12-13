@@ -347,6 +347,49 @@ def test_get_data_decimal_type(types: Types, params: dict[str, Any], data_type: 
 @pytest.mark.parametrize(
     ("types", "params", "data_type"),
     [
+        (
+            Types.float,
+            {"multipleOf": 0.1},
+            {
+                "type": "condecimal",
+                "is_func": True,
+                "kwargs": {"multiple_of": Decimal("0.1")},
+                "import_": IMPORT_CONDECIMAL,
+            },
+        ),
+        (
+            Types.float,
+            {"multipleOf": 0.1, "minimum": 0, "maximum": 100},
+            {
+                "type": "condecimal",
+                "is_func": True,
+                "kwargs": {"multiple_of": Decimal("0.1"), "ge": Decimal(0), "le": Decimal(100)},
+                "import_": IMPORT_CONDECIMAL,
+            },
+        ),
+        (
+            Types.number,
+            {"multipleOf": 0.01, "exclusiveMinimum": 0},
+            {
+                "type": "condecimal",
+                "is_func": True,
+                "kwargs": {"multiple_of": Decimal("0.01"), "gt": Decimal(0)},
+                "import_": IMPORT_CONDECIMAL,
+            },
+        ),
+    ],
+)
+def test_get_data_float_type_with_use_decimal_for_multiple_of(
+    types: Types, params: dict[str, Any], data_type: dict[str, Any]
+) -> None:
+    """Test float type uses condecimal when use_decimal_for_multiple_of is True."""
+    data_type_manager = DataTypeManager(use_decimal_for_multiple_of=True)
+    assert data_type_manager.get_data_float_type(types, **params) == data_type_manager.data_type(**data_type)
+
+
+@pytest.mark.parametrize(
+    ("types", "params", "data_type"),
+    [
         (Types.string, {}, {"type": "str"}),
         (
             Types.string,
