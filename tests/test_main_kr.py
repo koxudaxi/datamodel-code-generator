@@ -16,6 +16,7 @@ from tests.main.conftest import run_main_and_assert, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
+JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
@@ -971,4 +972,17 @@ def test_allof_with_description_generates_class_not_alias(output_file: Path) -> 
             "pydantic_v2.BaseModel",
             "--use-schema-description",
         ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_use_decimal_for_multiple_of(output_file: Path) -> None:
+    """Test --use-decimal-for-multiple-of generates condecimal for multipleOf fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_decimal_for_multiple_of.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_decimal_for_multiple_of" / "output.py",
+        extra_args=["--use-decimal-for-multiple-of"],
     )
