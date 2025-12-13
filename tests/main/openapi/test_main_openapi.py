@@ -2136,6 +2136,25 @@ def test_main_openapi_nullable_31(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_nullable_required_annotated(output_file: Path) -> None:
+    """Test OpenAPI generation with nullable required fields using annotations."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable_required_annotated.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="nullable_required_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--strict-nullable",
+            "--use-annotated",
+            "--use-union-operator",
+            "--snake-case-field",
+        ],
+    )
+
+
 def test_main_custom_file_header_path(output_file: Path) -> None:
     """Test OpenAPI generation with custom file header path."""
     run_main_and_assert(
