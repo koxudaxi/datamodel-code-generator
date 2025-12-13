@@ -381,6 +381,10 @@ Typing customization:
                         times.
   --use-annotated       Use typing.Annotated for Field(). Also, `--field-constraints` option
                         will be enabled.
+  --use-decimal-for-multiple-of
+                        Use condecimal instead of confloat for float/number fields with
+                        multipleOf constraint (Pydantic only). Avoids floating-point
+                        precision issues in validation.
   --use-enum-values-in-discriminator
                         Use enum member literals in discriminator fields instead of string
                         literals

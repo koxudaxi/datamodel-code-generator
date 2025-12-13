@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "price": {
+      "type": "number",
+      "multipleOf": 0.01,
+      "minimum": 0,
+      "maximum": 99999.99
+    },
+    "quantity": {
+      "type": "number",
+      "multipleOf": 0.1
+    },
+    "rate": {
+      "type": "number",
+      "multipleOf": 0.001,
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 1
+    },
+    "simple_float": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    }
+  }
+}
