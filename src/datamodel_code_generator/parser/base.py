@@ -158,7 +158,7 @@ def _build_keep_model_order_components(
 ) -> _KeepModelOrderComponents:
     graph: ClassGraph = {(name,): {(dep,) for dep in deps} for name, deps in all_deps.items()}
     sccs = strongly_connected_components(graph)
-    components: Components = [sorted((node[0] for node in scc), key=order_index.get) for scc in sccs]
+    components: Components = [sorted((node[0] for node in scc), key=order_index.__getitem__) for scc in sccs]
     components.sort(key=lambda members: min(order_index[n] for n in members))
     comp_of: ComponentOf = {name: i for i, members in enumerate(components) for name in members}
     return _KeepModelOrderComponents(components=components, comp_of=comp_of)

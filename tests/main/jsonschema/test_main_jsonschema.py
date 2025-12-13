@@ -101,7 +101,7 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
             "--keep-model-order",
             "--disable-future-imports",
             "--target-python-version",
-            "3.13",
+            "3.10",
         ],
     )
 
