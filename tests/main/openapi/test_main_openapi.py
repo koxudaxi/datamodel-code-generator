@@ -3569,3 +3569,16 @@ def test_main_openapi_x_enum_names(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="x_enum_names.py",
     )
+
+
+def test_main_enum_builtin_conflict(output_file: Path) -> None:
+    """Test enum member names that conflict with str methods get underscore suffix."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "enum_builtin_conflict.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="enum_builtin_conflict.py",
+            extra_args=["--use-subclass-enum"],
+        )
