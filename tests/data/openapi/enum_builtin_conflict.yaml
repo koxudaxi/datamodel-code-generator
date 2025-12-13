@@ -1,0 +1,14 @@
+openapi: "3.0.0"
+info:
+  title: Test API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    StringMethodEnum:
+      type: string
+      enum:
+        - count
+        - index
+        - format
+        - normal_value

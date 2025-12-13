@@ -358,7 +358,40 @@ class PydanticFieldNameResolver(FieldNameResolver):
 
 
 class EnumFieldNameResolver(FieldNameResolver):
-    """Field name resolver for enum members with special handling for 'mro'."""
+    """Field name resolver for enum members with special handling for reserved names.
+
+    When using --use-subclass-enum, enums inherit from types like str or int.
+    Member names that conflict with methods of these types cause type checker errors.
+    This class detects and handles such conflicts by adding underscore suffixes.
+
+    The _BUILTIN_TYPE_ATTRIBUTES set is intentionally static (not using hasattr)
+    to avoid runtime Python version differences affecting code generation.
+    Based on Python 3.8-3.14 method names (union of all versions for safety).
+    Note: 'mro' is handled explicitly in get_valid_name for backward compatibility.
+    """
+
+    _BUILTIN_TYPE_ATTRIBUTES: ClassVar[frozenset[str]] = frozenset({
+        "as_integer_ratio", "bit_count", "bit_length", "capitalize", "casefold",
+        "center", "conjugate", "count", "decode", "denominator", "encode",
+        "endswith", "expandtabs", "find", "format", "format_map", "from_bytes",
+        "from_number", "fromhex", "hex", "imag", "index", "isalnum", "isalpha",
+        "isascii", "isdecimal", "isdigit", "isidentifier", "islower", "isnumeric",
+        "isprintable", "isspace", "istitle", "isupper", "is_integer", "join",
+        "ljust", "lower", "lstrip", "maketrans", "numerator", "partition", "real",
+        "removeprefix", "removesuffix", "replace", "rfind", "rindex", "rjust",
+        "rpartition", "rsplit", "rstrip", "split", "splitlines", "startswith",
+        "strip", "swapcase", "title", "to_bytes", "translate", "upper", "zfill",
+    })
+
+    @classmethod
+    def _validate_field_name(cls, field_name: str) -> bool:
+        """Check field name doesn't conflict with subclass enum base type attributes.
+
+        When using --use-subclass-enum, enums inherit from types like str or int.
+        Member names that conflict with methods of these types (e.g., 'count' for str)
+        cause type checker errors. This method detects such conflicts.
+        """
+        return field_name not in cls._BUILTIN_TYPE_ATTRIBUTES
 
     def get_valid_name(
         self,
