@@ -24,6 +24,16 @@ def test_python_version() -> None:
     _ = PythonVersion("{}.{}".format(*sys.version_info[:2]))
 
 
+def test_python_version_has_native_deferred_annotations() -> None:
+    """Test that has_native_deferred_annotations returns correct values for each Python version."""
+    assert not PythonVersion.PY_39.has_native_deferred_annotations
+    assert not PythonVersion.PY_310.has_native_deferred_annotations
+    assert not PythonVersion.PY_311.has_native_deferred_annotations
+    assert not PythonVersion.PY_312.has_native_deferred_annotations
+    assert not PythonVersion.PY_313.has_native_deferred_annotations
+    assert PythonVersion.PY_314.has_native_deferred_annotations
+
+
 @pytest.mark.parametrize(
     ("skip_string_normalization", "expected_output"),
     [
