@@ -30,6 +30,18 @@ LEGACY_BLACK_SKIP = pytest.mark.skipif(
     reason="Type annotation formatting differs with black < 24",
 )
 
+from datamodel_code_generator.format import PythonVersion, is_supported_in_black  # noqa: E402
+
+BLACK_PY313_SKIP = pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_313),
+    reason=f"Installed black ({black.__version__}) doesn't support Python 3.13",
+)
+
+BLACK_PY314_SKIP = pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_314),
+    reason=f"Installed black ({black.__version__}) doesn't support Python 3.14",
+)
+
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
 EXPECTED_MAIN_PATH: Path = DATA_PATH / "expected" / "main"
 

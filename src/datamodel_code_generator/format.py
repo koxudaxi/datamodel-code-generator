@@ -75,6 +75,16 @@ class PythonVersion(Enum):
     def _is_py_312_or_later(self) -> bool:  # pragma: no cover
         return self.value not in {self.PY_39.value, self.PY_310.value, self.PY_311.value}
 
+    @cached_property
+    def _is_py_314_or_later(self) -> bool:
+        return self.value not in {
+            self.PY_39.value,
+            self.PY_310.value,
+            self.PY_311.value,
+            self.PY_312.value,
+            self.PY_313.value,
+        }
+
     @property
     def has_union_operator(self) -> bool:  # pragma: no cover
         """Check if Python version supports the union operator (|)."""
@@ -99,6 +109,11 @@ class PythonVersion(Enum):
     def has_type_statement(self) -> bool:
         """Check if Python version supports type statements."""
         return self._is_py_312_or_later
+
+    @property
+    def has_native_deferred_annotations(self) -> bool:
+        """Check if Python version has native deferred annotations (Python 3.14+)."""
+        return self._is_py_314_or_later
 
     @property
     def has_strenum(self) -> bool:

@@ -2146,7 +2146,11 @@ class Parser(ABC):
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
 
-        if with_import and not disable_future_imports:
+        if (
+            with_import
+            and not disable_future_imports
+            and not self.target_python_version.has_native_deferred_annotations
+        ):
             self.imports.append(IMPORT_ANNOTATIONS)
 
         if format_:
