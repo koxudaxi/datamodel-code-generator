@@ -19,4 +19,6 @@ class Container(Struct):
         default_factory=lambda: convert({'start': 2009, 'end': 2019}, type=Interval)
     )
     string_or_interval: Union[Interval, str, UnsetType] = 'some string value'
-    dict_or_interval: Union[Dict[str, str], Interval, UnsetType] = {'key': 'value'}
+    dict_or_interval: Union[Dict[str, str], Interval, UnsetType] = field(
+        default_factory=lambda: {'key': 'value'}
+    )

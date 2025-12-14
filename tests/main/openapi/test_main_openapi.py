@@ -1935,6 +1935,10 @@ def test_main_openapi_union_default_object(output_model: str, expected_output: s
             "pydantic_v2.BaseModel",
             "pydantic_v2_empty_dict_default.py",
         ),
+        (
+            "msgspec.Struct",
+            "msgspec_empty_dict_default.py",
+        ),
     ],
 )
 @pytest.mark.skipif(
