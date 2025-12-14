@@ -127,6 +127,77 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("target_python_version", "keep_model_order", "disable_future_imports"),
+    [
+        ("3.10", False, False),
+        ("3.10", False, True),
+        ("3.10", True, False),
+        ("3.10", True, True),
+        ("3.11", True, False),
+        ("3.11", True, True),
+        ("3.12", True, False),
+        ("3.12", True, True),
+        ("3.13", True, False),
+        ("3.13", True, True),
+        ("3.14", True, False),
+        ("3.14", True, True),
+    ],
+)
+def test_main_keep_model_order_matrix_keep_model_order_field_references(
+    output_file: Path,
+    target_python_version: str,
+    keep_model_order: bool,
+    disable_future_imports: bool,
+) -> None:
+    """E2E matrix for keep_model_order vs deferred annotations.
+
+    When deferred annotations are enabled (default), field references should not
+    force reordering (to avoid meaningless churn). When disabled, ordering must
+    satisfy runtime dependency requirements.
+    """
+    target_version = PythonVersion(target_python_version)
+    if not is_supported_in_black(target_version):
+        pytest.skip(f"Installed black ({black.__version__}) doesn't support Python {target_python_version}")
+
+    args = [
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--target-python-version",
+        target_python_version,
+        "--formatters",
+        "isort",
+    ]
+    if keep_model_order:
+        args.append("--keep-model-order")
+    if disable_future_imports:
+        args.append("--disable-future-imports")
+
+    run_main_with_args(args)
+    code = output_file.read_text(encoding="utf-8")
+    compile(code, str(output_file), "exec")
+
+    if not keep_model_order:
+        return
+
+    metadata_index = code.index("class Metadata")
+    description_type_index = code.index("class DescriptionType")
+    use_deferred_annotations_for_target = target_version.has_native_deferred_annotations or not disable_future_imports
+    if use_deferred_annotations_for_target:
+        assert description_type_index < metadata_index
+    else:
+        assert metadata_index < description_type_index
+
+    # For targets without native deferred annotations, validate runtime safety
+    # under the current interpreter by executing the generated module.
+    if not target_version.has_native_deferred_annotations:
+        exec(compile(code, str(output_file), "exec"), {})
+
+
 @pytest.mark.benchmark
 def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
     """Test rebuild call propagation from base class to inheritors."""

@@ -12,4 +12,4 @@ A: TypeAlias = list["B"]
 B: TypeAlias = list[A]
 
 
-Model: TypeAlias = A
+Model: TypeAlias = A | B
