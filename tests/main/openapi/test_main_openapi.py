@@ -2417,6 +2417,28 @@ def test_main_openapi_discriminator_one_literal_as_default_dataclass(output_file
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_openapi_discriminator_one_literal_as_default_dataclass_py310(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator one literal as default for dataclass with Python 3.10+."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default_py310.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-one-literal-as-default",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_keyword_only_dataclass(output_file: Path) -> None:
     """Test OpenAPI generation with keyword-only dataclass."""
     run_main_and_assert(
