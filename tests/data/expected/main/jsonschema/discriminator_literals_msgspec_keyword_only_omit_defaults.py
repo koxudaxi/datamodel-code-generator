@@ -4,21 +4,17 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Union
+from typing import Annotated, Union
 
 from msgspec import Meta, Struct, UnsetType
 
 
 class Type1(Struct, omit_defaults=True, kw_only=True, tag_field='type_', tag='a'):
-    type_: ClassVar[Annotated[Union[Literal['a'], UnsetType], Meta(title='Type ')]] = (
-        'a'
-    )
+    pass
 
 
 class Type2(Struct, omit_defaults=True, kw_only=True, tag_field='type_', tag='b'):
-    type_: ClassVar[Annotated[Union[Literal['b'], UnsetType], Meta(title='Type ')]] = (
-        'b'
-    )
+    pass
 
 
 class UnrelatedType(Struct, omit_defaults=True, kw_only=True):

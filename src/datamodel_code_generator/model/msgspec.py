@@ -22,7 +22,6 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
-    IMPORT_CLASSVAR,
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
     IMPORT_MSGSPEC_META,
@@ -82,6 +81,8 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
 
     @wraps(original_imports.fget)  # pyright: ignore[reportArgumentType]
     def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
+        if self.extras.get("is_classvar"):
+            return ()
         extra_imports = []
         field = self.field
         # TODO: Improve field detection
@@ -91,8 +92,6 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if isinstance(self, DataModelField) and self.needs_meta_import:
             extra_imports.append(IMPORT_MSGSPEC_META)
-        if self.extras.get("is_classvar"):
-            extra_imports.append(IMPORT_CLASSVAR)
         if not self.required and not self.nullable:
             extra_imports.append(IMPORT_MSGSPEC_UNSETTYPE)
             if not self.data_type.use_union_operator:
