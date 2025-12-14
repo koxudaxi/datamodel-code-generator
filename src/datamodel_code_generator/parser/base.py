@@ -2028,6 +2028,8 @@ class Parser(ABC):
             for import_ in model.imports:
                 add(import_.alias or import_.import_.split(".")[-1])
             for field in model.fields:
+                if field.extras.get("is_classvar"):
+                    continue
                 add(field.name)
                 add(field.alias)
                 walk_data_type(field.data_type)
@@ -2489,7 +2491,9 @@ class Parser(ABC):
                 )
             ]
             for from_, import_ in unused_imports:
-                processed_model.imports.remove(Import(from_=from_, import_=import_))
+                import_obj = Import(from_=from_, import_=import_)
+                while processed_model.imports.counter.get((from_, import_), 0) > 0:
+                    processed_model.imports.remove(import_obj)
 
         for module, mod_key, models, init, imports, scoped_model_resolver in processed_models:  # noqa: B007
             # process after removing unused models

@@ -4,18 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Union
+from typing import Union
 
-from msgspec import UNSET, Meta, Struct, UnsetType
+from msgspec import UNSET, Struct, UnsetType
 
 
 class SystemMessage(Struct, tag_field='role', tag='system'):
-    role: ClassVar[Annotated[Literal['system'], Meta(title='Message Role')]]
     content: str
 
 
 class UserMessage(Struct, tag_field='role', tag='user'):
-    role: ClassVar[Annotated[Literal['user'], Meta(title='Message Role')]]
     content: str
 
 
