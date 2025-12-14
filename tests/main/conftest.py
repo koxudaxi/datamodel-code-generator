@@ -362,18 +362,32 @@ def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> 
     return None
 
 
+def _parse_target_version(extra_arguments: Sequence[str] | None) -> tuple[int, int] | None:
+    """Parse target Python version from arguments."""
+    if (target_version := _get_argument_value(extra_arguments, "--target-python-version")) is None:
+        return None
+    try:
+        return tuple(int(part) for part in target_version.split("."))  # type: ignore[return-value]
+    except ValueError:
+        return None
+
+
+def _should_skip_compile(extra_arguments: Sequence[str] | None) -> bool:
+    """Check if compile should be skipped when target version > runtime version."""
+    if (target_version := _parse_target_version(extra_arguments)) is None:
+        return False
+    return target_version > sys.version_info[:2]
+
+
 def _should_skip_exec(extra_arguments: Sequence[str] | None) -> bool:
     """Check if exec should be skipped based on model type, pydantic version, and Python version."""
     output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
     is_pydantic_v1 = output_model_type is None or output_model_type == "pydantic.BaseModel"
     if (is_pydantic_v1 and PYDANTIC_V2) or (output_model_type == "pydantic_v2.BaseModel" and not PYDANTIC_V2):
         return True
-    if (target_version := _get_argument_value(extra_arguments, "--target-python-version")) is None:
+    if (target_version := _parse_target_version(extra_arguments)) is None:
         return True
-    try:
-        if tuple(int(part) for part in target_version.split(".")) != sys.version_info[:2]:
-            return True
-    except ValueError:
+    if target_version != sys.version_info[:2]:
         return True
     if _get_argument_value(extra_arguments, "--base-class") is not None:
         return True
@@ -382,6 +396,8 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None) -> bool:
 
 def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | None = None) -> None:
     """Validate generated Python files by compiling/executing them."""
+    if _should_skip_compile(extra_arguments):
+        return
     should_exec = not _should_skip_exec(extra_arguments)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
