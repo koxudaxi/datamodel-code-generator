@@ -184,7 +184,11 @@ def _build_keep_model_order_component_order(
     order_index: OrderIndex,
 ) -> list[ComponentId]:
     comp_key = [min(order_index[n] for n in members) for members in components]
-    return stable_toposort(list(range(len(components))), comp_edges, key=lambda cid: comp_key[cid])
+    return stable_toposort(
+        list(range(len(components))),
+        comp_edges,
+        key=lambda component_id: comp_key[component_id],
+    )
 
 
 def _build_keep_model_ordered_names(
@@ -194,8 +198,8 @@ def _build_keep_model_ordered_names(
     order_index: OrderIndex,
 ) -> list[ModelName]:
     ordered_names: list[ModelName] = []
-    for cid in ordered_comp_ids:
-        members = components[cid]
+    for component_id in ordered_comp_ids:
+        members = components[component_id]
         if len(members) > 1:
             strong_edges: dict[ModelName, set[ModelName]] = {n: set() for n in members}
             for n in members:
@@ -2278,9 +2282,7 @@ class Parser(ABC):
             and required_paths_in_module
             and self.dump_resolve_reference_action is pydantic_model_v2.dump_resolve_reference_action
         ):
-            module_positions = {
-                m.reference.short_name: i for i, m in enumerate(models) if m.reference and m.reference.short_name
-            }
+            module_positions = {m.reference.short_name: i for i, m in enumerate(models) if m.reference}
             module_model_names = set(module_positions)
 
             forward_needed: set[str] = set()
@@ -2288,9 +2290,7 @@ class Parser(ABC):
                 if model.path not in required_paths_in_module or not model.reference:
                     continue
                 name = model.reference.short_name
-                pos = module_positions.get(name)
-                if pos is None:
-                    continue
+                pos = module_positions[name]
                 refs = {
                     t.reference.short_name
                     for f in model.fields

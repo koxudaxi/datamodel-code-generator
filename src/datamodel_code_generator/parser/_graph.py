@@ -24,33 +24,31 @@ def stable_toposort(
     The `edges` mapping is an adjacency list where `edges[u]` contains all `v`
     such that `u -> v` (i.e., `u` must come before `v`).
 
-    If a cycle is detected, this function falls back to `sorted(nodes, key=key)`
-    for determinism.
+    If a cycle is detected, any remaining nodes are appended in `key` order for
+    determinism.
     """
     node_set = set(nodes)
     indegree: dict[TNode, int] = dict.fromkeys(nodes, 0)
     outgoing: dict[TNode, set[TNode]] = {n: set() for n in nodes}
 
-    for src, dests in edges.items():
-        if src not in node_set:
-            continue
-        for dst in dests:
-            if dst not in node_set or dst in outgoing[src]:
-                continue
-            outgoing[src].add(dst)
-            indegree[dst] += 1
+    for source, destinations in edges.items():
+        if source in node_set:
+            for destination in destinations:
+                if destination in node_set and destination not in outgoing[source]:
+                    outgoing[source].add(destination)
+                    indegree[destination] += 1
 
-    ready = sorted([n for n in nodes if indegree[n] == 0], key=key)
+    ready = sorted([node for node in nodes if indegree[node] == 0], key=key)
     result: list[TNode] = []
     while ready:
-        n = ready.pop(0)
-        result.append(n)
-        for m in sorted(outgoing[n], key=key):
-            indegree[m] -= 1
-            if indegree[m] == 0:
-                ready.append(m)
+        node = ready.pop(0)
+        result.append(node)
+        for neighbor in sorted(outgoing[node], key=key):
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                ready.append(neighbor)
         ready.sort(key=key)
 
-    if len(result) != len(nodes):  # cycle fallback
-        return sorted(nodes, key=key)
+    remaining = sorted([node for node in nodes if node not in result], key=key)
+    result.extend(remaining)
     return result

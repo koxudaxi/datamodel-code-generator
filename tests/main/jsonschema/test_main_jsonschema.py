@@ -106,6 +106,41 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     )
 
 
+@pytest.mark.benchmark
+def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
+    """Test rebuild call propagation from base class to inheritors."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_model_rebuild_inheritance.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--keep-model-order",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_keep_model_order_scc_inheritance(output_file: Path) -> None:
+    """Test SCC ordering when field refs create a cycle but inheritance provides a strong edge."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_scc_inheritance.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--keep-model-order",
+            "--disable-future-imports",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.skip(reason="pytest-xdist does not support the test")
 def test_main_without_arguments() -> None:
     """Test main function without arguments raises SystemExit."""
