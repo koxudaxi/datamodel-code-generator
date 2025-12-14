@@ -18,6 +18,7 @@ from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
+from warnings import warn
 
 from pydantic import BaseModel
 from typing_extensions import TypeAlias
@@ -1798,6 +1799,65 @@ class Parser(ABC):
                 if model_field.nullable is not True:  # pragma: no cover
                     model_field.nullable = False
 
+    def __fix_dataclass_field_ordering(self, models: list[DataModel]) -> None:
+        """Fix field ordering for dataclasses with inheritance after defaults are set."""
+        for model in models:
+            if (inherited := self.__get_dataclass_inherited_info(model)) is None:
+                continue
+            inherited_names, has_default = inherited
+            if not has_default or not any(self.__is_new_required_field(f, inherited_names) for f in model.fields):
+                continue
+
+            if self.target_python_version.has_kw_only_dataclass:
+                for field in model.fields:
+                    if self.__is_new_required_field(field, inherited_names):
+                        field.extras["kw_only"] = True
+            else:
+                warn(
+                    f"Dataclass '{model.class_name}' has a field ordering conflict due to inheritance. "
+                    f"An inherited field has a default value, but new required fields are added. "
+                    f"This will cause a TypeError at runtime. Consider using --target-python-version 3.10 "
+                    f"or higher to enable automatic field(kw_only=True) fix.",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+            model.fields = sorted(model.fields, key=dataclass_model.has_field_assignment)
+
+    @classmethod
+    def __get_dataclass_inherited_info(cls, model: DataModel) -> tuple[set[str], bool] | None:
+        """Get inherited field names and whether any has default. Returns None if not applicable."""
+        if not isinstance(model, dataclass_model.DataClass):
+            return None
+        if not model.base_classes or model.dataclass_arguments.get("kw_only"):
+            return None
+
+        inherited_names: set[str] = set()
+        has_default = False
+        for base in model.base_classes:
+            if not base.reference or not isinstance(base.reference.source, DataModel):
+                continue  # pragma: no cover
+            for f in base.reference.source.iter_all_fields():
+                if not f.name or f.extras.get("init") is False:
+                    continue  # pragma: no cover
+                inherited_names.add(f.name)
+                if dataclass_model.has_field_assignment(f):
+                    has_default = True
+
+        for f in model.fields:
+            if f.name not in inherited_names or f.extras.get("init") is False:
+                continue
+            if dataclass_model.has_field_assignment(f):  # pragma: no branch
+                has_default = True
+        return (inherited_names, has_default) if inherited_names else None
+
+    def __is_new_required_field(self, field: DataModelFieldBase, inherited: set[str]) -> bool:  # noqa: PLR6301
+        """Check if field is a new required init field."""
+        return (
+            field.name not in inherited
+            and field.extras.get("init") is not False
+            and not dataclass_model.has_field_assignment(field)
+        )
+
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
         """Update type aliases to properly handle forward references per PEP 484."""
@@ -2471,6 +2531,7 @@ class Parser(ABC):
             self.__change_field_name(models)
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
+            self.__fix_dataclass_field_ordering(models)
 
             processed_models.append(Processed(module, module_, models, init, imports, scoped_model_resolver))
 

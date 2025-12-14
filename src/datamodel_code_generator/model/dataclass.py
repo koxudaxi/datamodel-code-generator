@@ -31,7 +31,8 @@ if TYPE_CHECKING:
     from datamodel_code_generator.reference import Reference
 
 
-def _has_field_assignment(field: DataModelFieldBase) -> bool:
+def has_field_assignment(field: DataModelFieldBase) -> bool:
+    """Check if a dataclass field has a default value or field() assignment."""
     return bool(field.field) or not (
         field.required or (field.represented_default == "None" and field.strip_default_none)
     )
@@ -66,7 +67,7 @@ class DataClass(DataModel):
         """Initialize dataclass with fields sorted by field assignment requirement."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=_has_field_assignment),
+            fields=sorted(fields, key=has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
