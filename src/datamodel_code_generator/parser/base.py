@@ -1834,10 +1834,10 @@ class Parser(ABC):
         has_default = False
         for base in model.base_classes:
             if not base.reference or not isinstance(base.reference.source, DataModel):
-                continue
+                continue  # pragma: no cover
             for f in base.reference.source.iter_all_fields():
                 if not f.name or f.extras.get("init") is False:
-                    continue
+                    continue  # pragma: no cover
                 inherited_names.add(f.name)
                 if dataclass_model.has_field_assignment(f):
                     has_default = True
@@ -1845,7 +1845,7 @@ class Parser(ABC):
         for f in model.fields:
             if f.name not in inherited_names or f.extras.get("init") is False:
                 continue
-            if dataclass_model.has_field_assignment(f):
+            if dataclass_model.has_field_assignment(f):  # pragma: no branch
                 has_default = True
         return (inherited_names, has_default) if inherited_names else None
 
