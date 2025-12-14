@@ -403,13 +403,11 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
         if should_exec:
-            _import_package(output_path, extra_arguments)
+            _import_package(output_path)
 
 
-def _import_package(output_path: Path, extra_arguments: Sequence[str] | None = None) -> None:  # noqa: PLR0912
+def _import_package(output_path: Path) -> None:  # noqa: PLR0912
     """Import generated packages to validate they can be loaded."""
-    if _should_skip_exec(extra_arguments):  # pragma: no cover
-        return
     if (output_path / "__init__.py").exists():  # pragma: no cover
         packages = [(output_path.parent, output_path.name)]
     else:

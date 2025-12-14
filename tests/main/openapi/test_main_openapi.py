@@ -455,7 +455,7 @@ def test_main_openapi_extra_template_data_config(
             extra_args=[
                 "--extra-template-data",
                 str(OPEN_API_DATA_PATH / "extra_data.json"),
-                "--output-model",
+                "--output-model-type",
                 output_model,
             ],
             expected_stderr=inferred_message.format("openapi") + "\n",
@@ -701,7 +701,7 @@ def test_main_with_aliases(output_model: str, expected_output: str, output_file:
             str(OPEN_API_DATA_PATH / "aliases.json"),
             "--target-python",
             "3.9",
-            "--output-model",
+            "--output-model-type",
             output_model,
         ],
     )
@@ -1030,7 +1030,7 @@ def test_main_openapi_aware_datetime(
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-datetime-class", date_type, "--output-model", output_model],
+        extra_args=["--output-datetime-class", date_type, "--output-model-type", output_model],
     )
 
 
@@ -1055,7 +1055,7 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, output_f
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -1459,7 +1459,7 @@ def test_main_use_annotated_with_field_constraints(
             "--use-annotated",
             "--target-python-version",
             min_version,
-            "--output-model",
+            "--output-model-type",
             output_model,
         ],
     )
@@ -1604,7 +1604,7 @@ def test_main_openapi_const(output_model: str, expected_output: str, output_file
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -1641,7 +1641,7 @@ def test_main_openapi_const_field(output_model: str, expected_output: str, outpu
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model, "--collapse-root-models"],
+        extra_args=["--output-model-type", output_model, "--collapse-root-models"],
     )
 
 
@@ -1881,7 +1881,7 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
         output_path=tmp_path,
         expected_directory=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model", output_model, "--target-python-version", "3.9"],
+        extra_args=["--output-model-type", output_model, "--target-python-version", "3.9"],
     )
 
 
@@ -1913,7 +1913,14 @@ def test_main_openapi_union_default_object(output_model: str, expected_output: s
         output_path=output_file,
         expected_file=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.9",
+            "--openapi-scopes",
+            "schemas",
+        ],
     )
 
 
@@ -1941,7 +1948,14 @@ def test_main_openapi_empty_dict_default(output_model: str, expected_output: str
         output_path=output_file,
         expected_file=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.9",
+            "--openapi-scopes",
+            "schemas",
+        ],
     )
 
 
@@ -1969,7 +1983,14 @@ def test_main_openapi_empty_list_default(output_model: str, expected_output: str
         output_path=output_file,
         expected_file=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.9",
+            "--openapi-scopes",
+            "schemas",
+        ],
     )
 
 
