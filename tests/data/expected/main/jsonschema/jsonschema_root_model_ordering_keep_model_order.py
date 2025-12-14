@@ -24,6 +24,10 @@ class Dog(BaseModel):
     friends: Optional[List[Friends]] = Field(default_factory=list, title='Friends')
 
 
+class Animals(RootModel[Union[Dog, Cat, Bird]]):
+    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
+
+
 class Friends(RootModel[Union[Dog, Cat, Bird]]):
     root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
 
@@ -32,11 +36,6 @@ class Zoo(BaseModel):
     animals: Optional[List[Animals]] = Field(default_factory=list, title='Animals')
 
 
-class Animals(RootModel[Union[Dog, Cat, Bird]]):
-    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
-
-
 Bird.model_rebuild()
 Cat.model_rebuild()
 Dog.model_rebuild()
-Zoo.model_rebuild()

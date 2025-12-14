@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol,
 from urllib.parse import ParseResult
 
 from pydantic import BaseModel
+from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -61,7 +62,8 @@ from datamodel_code_generator.model.base import (
 from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.parser._scc import find_circular_sccs
+from datamodel_code_generator.parser._graph import stable_toposort
+from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
@@ -79,6 +81,164 @@ class HashableComparable(Hashable, Protocol):
     def __le__(self, value: Any, /) -> bool: ...  # noqa: D105
     def __gt__(self, value: Any, /) -> bool: ...  # noqa: D105
     def __ge__(self, value: Any, /) -> bool: ...  # noqa: D105
+
+
+ModelName: TypeAlias = str
+ModelNames: TypeAlias = set[ModelName]
+ModelDeps: TypeAlias = dict[ModelName, set[ModelName]]
+OrderIndex: TypeAlias = dict[ModelName, int]
+
+ComponentId: TypeAlias = int
+Components: TypeAlias = list[list[ModelName]]
+ComponentOf: TypeAlias = dict[ModelName, ComponentId]
+ComponentEdges: TypeAlias = dict[ComponentId, set[ComponentId]]
+
+ClassNode: TypeAlias = tuple[ModelName, ...]
+ClassGraph: TypeAlias = dict[ClassNode, set[ClassNode]]
+
+
+class _KeepModelOrderDeps(NamedTuple):
+    strong: ModelDeps
+    all: ModelDeps
+
+
+class _KeepModelOrderComponents(NamedTuple):
+    components: Components
+    comp_of: ComponentOf
+
+
+def _collect_keep_model_order_deps(
+    model: DataModel,
+    *,
+    model_names: ModelNames,
+    imported: ModelNames,
+    use_deferred_annotations: bool,
+) -> tuple[set[ModelName], set[ModelName]]:
+    """Collect (strong_deps, all_deps) used by keep_model_order sorting.
+
+    - strong_deps: base class references (within-module, non-imported)
+    - all_deps: base class refs + (optionally) field refs (within-module, non-imported)
+    """
+    class_name = model.class_name
+    base_class_refs = {b.reference.short_name for b in model.base_classes if b.reference}
+    field_refs = {t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference}
+
+    if use_deferred_annotations and not isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
+        field_refs = set()
+
+    strong = {r for r in base_class_refs if r in model_names and r not in imported and r != class_name}
+    deps = {r for r in (base_class_refs | field_refs) if r in model_names and r not in imported and r != class_name}
+    return strong, deps
+
+
+def _build_keep_model_order_dependency_maps(
+    models: list[DataModel],
+    *,
+    model_names: ModelNames,
+    imported: ModelNames,
+    use_deferred_annotations: bool,
+) -> _KeepModelOrderDeps:
+    strong_deps: ModelDeps = {}
+    all_deps: ModelDeps = {}
+    for model in models:
+        strong, deps = _collect_keep_model_order_deps(
+            model,
+            model_names=model_names,
+            imported=imported,
+            use_deferred_annotations=use_deferred_annotations,
+        )
+        strong_deps[model.class_name] = strong
+        all_deps[model.class_name] = deps
+    return _KeepModelOrderDeps(strong=strong_deps, all=all_deps)
+
+
+def _build_keep_model_order_components(
+    all_deps: ModelDeps,
+    order_index: OrderIndex,
+) -> _KeepModelOrderComponents:
+    graph: ClassGraph = {(name,): {(dep,) for dep in deps} for name, deps in all_deps.items()}
+    sccs = strongly_connected_components(graph)
+    components: Components = [sorted((node[0] for node in scc), key=order_index.__getitem__) for scc in sccs]
+    components.sort(key=lambda members: min(order_index[n] for n in members))
+    comp_of: ComponentOf = {name: i for i, members in enumerate(components) for name in members}
+    return _KeepModelOrderComponents(components=components, comp_of=comp_of)
+
+
+def _build_keep_model_order_component_edges(
+    all_deps: ModelDeps,
+    comp_of: ComponentOf,
+    num_components: int,
+) -> ComponentEdges:
+    comp_edges: ComponentEdges = {i: set() for i in range(num_components)}
+    for name, deps in all_deps.items():
+        name_comp = comp_of[name]
+        for dep in deps:
+            if (dep_comp := comp_of[dep]) != name_comp:
+                comp_edges[dep_comp].add(name_comp)
+    return comp_edges
+
+
+def _build_keep_model_order_component_order(
+    components: Components,
+    comp_edges: ComponentEdges,
+    order_index: OrderIndex,
+) -> list[ComponentId]:
+    comp_key = [min(order_index[n] for n in members) for members in components]
+    return stable_toposort(
+        list(range(len(components))),
+        comp_edges,
+        key=lambda component_id: comp_key[component_id],
+    )
+
+
+def _build_keep_model_ordered_names(
+    ordered_comp_ids: list[ComponentId],
+    components: Components,
+    strong_deps: ModelDeps,
+    order_index: OrderIndex,
+) -> list[ModelName]:
+    ordered_names: list[ModelName] = []
+    for component_id in ordered_comp_ids:
+        members = components[component_id]
+        if len(members) > 1:
+            strong_edges: dict[ModelName, set[ModelName]] = {n: set() for n in members}
+            member_set = set(members)
+            for base in members:
+                derived_members = {member for member in members if base in strong_deps.get(member, set()) & member_set}
+                strong_edges[base].update(derived_members)
+            members = stable_toposort(members, strong_edges, key=order_index.__getitem__)
+        ordered_names.extend(members)
+    return ordered_names
+
+
+def _reorder_models_keep_model_order(
+    models: list[DataModel],
+    imports: Imports,
+    *,
+    use_deferred_annotations: bool,
+) -> None:
+    """Reorder models deterministically based on their dependencies.
+
+    Starts from class_name order and only moves models when required to satisfy dependencies.
+    Cycles are kept as SCC groups; within each SCC, base-class dependencies are prioritized.
+    """
+    models.sort(key=lambda x: x.class_name)
+    imported: ModelNames = {i for v in imports.values() for i in v}
+    model_by_name = {m.class_name: m for m in models}
+    model_names: ModelNames = set(model_by_name)
+    order_index: OrderIndex = {m.class_name: i for i, m in enumerate(models)}
+
+    deps = _build_keep_model_order_dependency_maps(
+        models,
+        model_names=model_names,
+        imported=imported,
+        use_deferred_annotations=use_deferred_annotations,
+    )
+    comps = _build_keep_model_order_components(deps.all, order_index)
+    comp_edges = _build_keep_model_order_component_edges(deps.all, comps.comp_of, len(comps.components))
+    ordered_comp_ids = _build_keep_model_order_component_order(comps.components, comp_edges, order_index)
+    ordered_names = _build_keep_model_ordered_names(ordered_comp_ids, comps.components, deps.strong, order_index)
+    models[:] = [model_by_name[name] for name in ordered_names]
 
 
 SPECIAL_PATH_FORMAT: str = "#-datamodel-code-generator-#-{}-#-special-#"
@@ -1597,44 +1757,13 @@ class Parser(ABC):
         self,
         models: list[DataModel],
         imports: Imports,
+        *,
+        use_deferred_annotations: bool,
     ) -> None:
         if not self.keep_model_order:
             return
 
-        models.sort(key=lambda x: x.class_name)
-
-        imported = {i for v in imports.values() for i in v}
-        model_class_name_refs: dict[DataModel, tuple[str, set[str]]] = {}
-        for model in models:
-            class_name = model.class_name
-            base_class_refs = {b.type_hint for b in model.base_classes if b.reference}
-            if base_class_refs:
-                refs = base_class_refs - {class_name}
-            elif isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
-                refs = {
-                    t.reference.short_name for f in model.fields for t in f.data_type.all_data_types if t.reference
-                } - {class_name}
-            else:
-                refs = set()
-            model_class_name_refs[model] = (class_name, refs)
-
-        changed: bool = True
-        max_passes = len(models) * len(models) if models else 0
-        while changed:
-            changed = False
-            resolved = imported.copy()
-            for i in range(len(models) - 1):
-                model = models[i]
-                class_name, refs = model_class_name_refs[model]
-                if not refs - resolved:
-                    resolved.add(class_name)
-                    continue
-                models[i], models[i + 1] = models[i + 1], model
-                changed = True
-            if max_passes:  # pragma: no branch
-                max_passes -= 1
-                if max_passes <= 0:  # pragma: no cover
-                    break
+        _reorder_models_keep_model_order(models, imports, use_deferred_annotations=use_deferred_annotations)
 
     def __change_field_name(
         self,
@@ -2134,6 +2263,65 @@ class Parser(ABC):
 
         return new_module_models, internal_modules_created, forwarder_map, all_path_mappings
 
+    def __get_resolve_reference_action_parts(
+        self,
+        models: list[DataModel],
+        require_update_action_models: list[str],
+        *,
+        use_deferred_annotations: bool,
+    ) -> list[str]:
+        """Return the trailing rebuild/update calls for the given module's models."""
+        if self.dump_resolve_reference_action is None:
+            return []
+
+        require_update_action_model_paths = set(require_update_action_models)
+        required_paths_in_module = {m.path for m in models if m.path in require_update_action_model_paths}
+
+        if (
+            use_deferred_annotations
+            and required_paths_in_module
+            and self.dump_resolve_reference_action is pydantic_model_v2.dump_resolve_reference_action
+        ):
+            module_positions = {m.reference.short_name: i for i, m in enumerate(models) if m.reference}
+            module_model_names = set(module_positions)
+
+            forward_needed: set[str] = set()
+            for model in models:
+                if model.path not in required_paths_in_module or not model.reference:
+                    continue
+                name = model.reference.short_name
+                pos = module_positions[name]
+                refs = {
+                    t.reference.short_name
+                    for f in model.fields
+                    for t in f.data_type.all_data_types
+                    if t.reference and t.reference.short_name in module_model_names
+                }
+                if name in refs or any(module_positions.get(r, -1) > pos for r in refs):
+                    forward_needed.add(model.path)
+
+            # Propagate requirement through inheritance.
+            changed = True
+            required_filtered = set(forward_needed)
+            while changed:
+                changed = False
+                for model in models:
+                    if not model.reference or model.path in required_filtered:
+                        continue
+                    base_paths = {b.reference.path for b in model.base_classes if b.reference}
+                    if base_paths & required_filtered:
+                        required_filtered.add(model.path)
+                        changed = True
+
+            required_paths_in_module = required_filtered
+
+        return [
+            "\n",
+            self.dump_resolve_reference_action(
+                m.reference.short_name for m in models if m.reference and m.path in required_paths_in_module
+            ),
+        ]
+
     def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
@@ -2145,6 +2333,10 @@ class Parser(ABC):
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
+
+        use_deferred_annotations = bool(
+            self.target_python_version.has_native_deferred_annotations or (with_import and not disable_future_imports)
+        )
 
         if (
             with_import
@@ -2260,7 +2452,14 @@ class Parser(ABC):
             self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
             self.__set_default_enum_member(models)
             self.__wrap_root_model_default_values(models)
-            self.__sort_models(models, imports)
+            self.__sort_models(
+                models,
+                imports,
+                use_deferred_annotations=bool(
+                    self.target_python_version.has_native_deferred_annotations
+                    or (with_import and not disable_future_imports)
+                ),
+            )
             self.__change_field_name(models)
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
@@ -2332,13 +2531,11 @@ class Parser(ABC):
                 code = dump_templates(models)
                 result += [code]
 
-                if self.dump_resolve_reference_action is not None:
-                    result += [
-                        "\n",
-                        self.dump_resolve_reference_action(
-                            m.reference.short_name for m in models if m.path in require_update_action_models
-                        ),
-                    ]
+                result += self.__get_resolve_reference_action_parts(
+                    models,
+                    require_update_action_models,
+                    use_deferred_annotations=use_deferred_annotations,
+                )
 
             # Generate forwarder content for modules that had models moved to _internal
             if not result and mod_key in forwarder_map:
