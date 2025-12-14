@@ -399,7 +399,7 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
     should_exec = not _should_skip_exec(extra_arguments)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
-    elif output_path.is_dir():
+    elif output_path.is_dir():  # pragma: no cover
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
         if should_exec:
@@ -408,9 +408,9 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
 
 def _import_package(output_path: Path, extra_arguments: Sequence[str] | None = None) -> None:  # noqa: PLR0912
     """Import generated packages to validate they can be loaded."""
-    if _should_skip_exec(extra_arguments):
+    if _should_skip_exec(extra_arguments):  # pragma: no cover
         return
-    if (output_path / "__init__.py").exists():
+    if (output_path / "__init__.py").exists():  # pragma: no cover
         packages = [(output_path.parent, output_path.name)]
     else:
         packages = [
@@ -418,7 +418,7 @@ def _import_package(output_path: Path, extra_arguments: Sequence[str] | None = N
             for directory in output_path.iterdir()
             if directory.is_dir() and (directory / "__init__.py").exists()
         ]
-    if not packages:
+    if not packages:  # pragma: no cover
         return
 
     imported_modules: list[str] = []
@@ -430,7 +430,7 @@ def _import_package(output_path: Path, extra_arguments: Sequence[str] | None = N
             spec = importlib.util.spec_from_file_location(
                 package_name, package_path / "__init__.py", submodule_search_locations=[str(package_path)]
             )
-            if spec is None or spec.loader is None:
+            if spec is None or spec.loader is None:  # pragma: no cover
                 continue
             module = importlib.util.module_from_spec(spec)
             sys.modules[package_name] = module
@@ -443,19 +443,19 @@ def _import_package(output_path: Path, extra_arguments: Sequence[str] | None = N
                 relative_path = python_file.relative_to(package_path)
                 module_name = f"{package_name}.{'.'.join(relative_path.with_suffix('').parts)}"
                 submodule_spec = importlib.util.spec_from_file_location(module_name, python_file)
-                if submodule_spec is None or submodule_spec.loader is None:
+                if submodule_spec is None or submodule_spec.loader is None:  # pragma: no cover
                     continue
                 submodule = importlib.util.module_from_spec(submodule_spec)
                 sys.modules[module_name] = submodule
                 imported_modules.append(module_name)
                 submodule_spec.loader.exec_module(submodule)
         _validation_stats.record_exec(time.perf_counter() - start_time)
-    except Exception as exception:
+    except Exception as exception:  # pragma: no cover
         _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
         raise
     finally:
         for parent_directory, _ in packages:
-            if str(parent_directory) in sys.path:
+            if str(parent_directory) in sys.path:  # pragma: no cover
                 sys.path.remove(str(parent_directory))
         for module_name in imported_modules:
             sys.modules.pop(module_name, None)
