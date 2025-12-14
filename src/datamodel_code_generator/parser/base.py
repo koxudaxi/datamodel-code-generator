@@ -1823,7 +1823,8 @@ class Parser(ABC):
                 )
             model.fields = sorted(model.fields, key=dataclass_model.has_field_assignment)
 
-    def __get_dataclass_inherited_info(self, model: DataModel) -> tuple[set[str], bool] | None:
+    @classmethod
+    def __get_dataclass_inherited_info(cls, model: DataModel) -> tuple[set[str], bool] | None:
         """Get inherited field names and whether any has default. Returns None if not applicable."""
         if not isinstance(model, dataclass_model.DataClass):
             return None
