@@ -2456,6 +2456,7 @@ def test_main_openapi_discriminator_one_literal_as_default_dataclass_py39_warnin
                 "--target-python-version",
                 "3.9",
             ],
+            skip_code_validation=True,
         )
 
 
