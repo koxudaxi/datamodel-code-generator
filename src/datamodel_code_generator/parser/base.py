@@ -2426,9 +2426,15 @@ class Parser(ABC):
             imports = module_to_import[module_] = Imports(self.use_exact_imports)
             init = False
             if module_:
-                parent = (*module_[:-1], "__init__.py")
-                if parent not in results:
-                    results[parent] = Result(body="")
+                if len(module_) == 1:
+                    parent = ("__init__.py",)
+                    if parent not in results:
+                        results[parent] = Result(body="")
+                else:
+                    for i in range(1, len(module_)):
+                        parent = (*module_[:i], "__init__.py")
+                        if parent not in results:
+                            results[parent] = Result(body="")
                 if (*module_, "__init__.py") in results:
                     module = (*module_, "__init__.py")
                     init = True
