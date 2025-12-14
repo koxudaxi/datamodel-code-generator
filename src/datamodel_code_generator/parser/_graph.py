@@ -31,12 +31,12 @@ def stable_toposort(
     indegree: dict[TNode, int] = dict.fromkeys(nodes, 0)
     outgoing: dict[TNode, set[TNode]] = {n: set() for n in nodes}
 
-    for source, destinations in edges.items():
-        if source in node_set:
-            for destination in destinations:
-                if destination in node_set and destination not in outgoing[source]:
-                    outgoing[source].add(destination)
-                    indegree[destination] += 1
+    for source in node_set & edges.keys():
+        destinations = edges[source]
+        new_destinations = destinations & node_set - outgoing[source]
+        outgoing[source].update(new_destinations)
+        for destination in new_destinations:
+            indegree[destination] += 1
 
     ready = sorted([node for node in nodes if indegree[node] == 0], key=key)
     result: list[TNode] = []
