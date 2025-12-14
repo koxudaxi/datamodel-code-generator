@@ -274,6 +274,13 @@ class DataModelField(DataModelFieldBase):
                 data.pop("default")
                 data["default_factory"] = default_factory
 
+        if "default" in data and isinstance(data["default"], (list, dict, set)) and "default_factory" not in data:
+            default_value = data.pop("default")
+            if default_value:
+                data["default_factory"] = f"lambda: {default_value!r}"
+            else:
+                data["default_factory"] = type(default_value).__name__
+
         if not data:
             return ""
 
