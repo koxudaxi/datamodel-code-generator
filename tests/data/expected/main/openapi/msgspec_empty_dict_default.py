@@ -15,4 +15,4 @@ class ObjectMeta(Struct):
 
 
 class PodSpec(Struct):
-    metadata: Union[ObjectMeta, UnsetType] = field(default_factory=lambda: {})
+    metadata: Union[ObjectMeta, UnsetType] = field(default_factory=dict)
