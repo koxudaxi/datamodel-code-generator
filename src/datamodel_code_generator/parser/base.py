@@ -202,10 +202,10 @@ def _build_keep_model_ordered_names(
         members = components[component_id]
         if len(members) > 1:
             strong_edges: dict[ModelName, set[ModelName]] = {n: set() for n in members}
-            for n in members:
-                for base in strong_deps.get(n, set()):
-                    if base in strong_edges:
-                        strong_edges[base].add(n)
+            member_set = set(members)
+            for base in members:
+                derived_members = {member for member in members if base in strong_deps.get(member, set()) & member_set}
+                strong_edges[base].update(derived_members)
             members = stable_toposort(members, strong_edges, key=order_index.__getitem__)
         ordered_names.extend(members)
     return ordered_names

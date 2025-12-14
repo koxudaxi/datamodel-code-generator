@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "A": {
+      "title": "A",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/B"
+      }
+    },
+    "B": {
+      "title": "B",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/A"
+      }
+    }
+  },
+  "$ref": "#/$defs/A"
+}
