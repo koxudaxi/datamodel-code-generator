@@ -399,7 +399,7 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
     should_exec = not _should_skip_exec(extra_arguments)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
-    elif output_path.is_dir():  # pragma: no cover
+    elif output_path.is_dir():
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
         if should_exec:
@@ -408,7 +408,7 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
 
 def _import_package(output_path: Path) -> None:  # noqa: PLR0912
     """Import generated packages to validate they can be loaded."""
-    if (output_path / "__init__.py").exists():  # pragma: no cover
+    if (output_path / "__init__.py").exists():
         packages = [(output_path.parent, output_path.name)]
     else:
         packages = [
@@ -453,7 +453,7 @@ def _import_package(output_path: Path) -> None:  # noqa: PLR0912
         raise
     finally:
         for parent_directory, _ in packages:
-            if str(parent_directory) in sys.path:  # pragma: no cover
+            if str(parent_directory) in sys.path:
                 sys.path.remove(str(parent_directory))
         for module_name in imported_modules:
             sys.modules.pop(module_name, None)
