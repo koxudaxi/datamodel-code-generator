@@ -39,7 +39,7 @@ class CodeValidationStats:
         self.exec_count += 1
         self.exec_time += elapsed
 
-    def record_error(self, file_path: str, error: str) -> None:
+    def record_error(self, file_path: str, error: str) -> None:  # pragma: no cover
         """Record a validation error."""
         self.errors.append((file_path, error))
 
@@ -47,7 +47,7 @@ class CodeValidationStats:
 _validation_stats = CodeValidationStats()
 
 
-def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001  # pragma: no cover
     """Print code validation summary at the end of test run."""
     if _validation_stats.compile_count > 0:
         terminalreporter.write_sep("=", "Code Validation Summary")
@@ -432,9 +432,9 @@ def validate_generated_code(
             start = time.perf_counter()
             exec(compiled, {})
             _validation_stats.record_exec(time.perf_counter() - start)
-    except SyntaxError as e:
+    except SyntaxError as e:  # pragma: no cover
         _validation_stats.record_error(file_path, f"SyntaxError: {e}")
         raise
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         _validation_stats.record_error(file_path, f"{type(e).__name__}: {e}")
         raise

@@ -368,7 +368,7 @@ def _parse_target_version(extra_arguments: Sequence[str] | None) -> tuple[int, i
         return None
     try:
         return tuple(int(part) for part in target_version.split("."))  # type: ignore[return-value]
-    except ValueError:
+    except ValueError:  # pragma: no cover
         return None
 
 
@@ -389,9 +389,7 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None) -> bool:
         return True
     if target_version != sys.version_info[:2]:
         return True
-    if _get_argument_value(extra_arguments, "--base-class") is not None:
-        return True
-    return extra_arguments is not None and "--use-attribute-docstrings" in extra_arguments
+    return _get_argument_value(extra_arguments, "--base-class") is not None
 
 
 def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | None = None) -> None:
