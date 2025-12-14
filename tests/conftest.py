@@ -5,6 +5,7 @@ from __future__ import annotations
 import difflib
 import inspect
 import sys
+import time
 from typing import TYPE_CHECKING, Any, Protocol
 
 import pytest
@@ -15,6 +16,55 @@ from datamodel_code_generator import MIN_VERSION
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+
+class CodeValidationStats:
+    """Track code validation statistics."""
+
+    def __init__(self) -> None:
+        """Initialize statistics counters."""
+        self.compile_count = 0
+        self.compile_time = 0.0
+        self.exec_count = 0
+        self.exec_time = 0.0
+        self.errors: list[tuple[str, str]] = []
+
+    def record_compile(self, elapsed: float) -> None:
+        """Record a compile operation."""
+        self.compile_count += 1
+        self.compile_time += elapsed
+
+    def record_exec(self, elapsed: float) -> None:
+        """Record an exec operation."""
+        self.exec_count += 1
+        self.exec_time += elapsed
+
+    def record_error(self, file_path: str, error: str) -> None:
+        """Record a validation error."""
+        self.errors.append((file_path, error))
+
+
+_validation_stats = CodeValidationStats()
+
+
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001
+    """Print code validation summary at the end of test run."""
+    if _validation_stats.compile_count > 0:
+        terminalreporter.write_sep("=", "Code Validation Summary")
+        terminalreporter.write_line(
+            f"Compiled {_validation_stats.compile_count} files in {_validation_stats.compile_time:.3f}s "
+            f"(avg: {_validation_stats.compile_time / _validation_stats.compile_count * 1000:.2f}ms)"
+        )
+        if _validation_stats.exec_count > 0:
+            terminalreporter.write_line(
+                f"Executed {_validation_stats.exec_count} files in {_validation_stats.exec_time:.3f}s "
+                f"(avg: {_validation_stats.exec_time / _validation_stats.exec_count * 1000:.2f}ms)"
+            )
+        if _validation_stats.errors:
+            terminalreporter.write_line(f"\nValidation errors: {len(_validation_stats.errors)}")
+            for file_path, error in _validation_stats.errors:
+                terminalreporter.write_line(f"  {file_path}: {error}")
+
 
 if sys.version_info >= (3, 10):
     from datetime import datetime, timezone
@@ -358,3 +408,33 @@ def _preload_heavy_modules() -> None:
     import isort  # noqa: PLC0415, F401
 
     import datamodel_code_generator  # noqa: PLC0415, F401
+
+
+def validate_generated_code(
+    code: str,
+    file_path: str,
+    *,
+    do_exec: bool = False,
+) -> None:
+    """Validate generated code by compiling and optionally executing it.
+
+    Args:
+        code: The generated Python code to validate.
+        file_path: Path to the file (for error reporting).
+        do_exec: Whether to execute the code after compiling (default: False).
+    """
+    try:
+        start = time.perf_counter()
+        compiled = compile(code, file_path, "exec")
+        _validation_stats.record_compile(time.perf_counter() - start)
+
+        if do_exec:
+            start = time.perf_counter()
+            exec(compiled, {})
+            _validation_stats.record_exec(time.perf_counter() - start)
+    except SyntaxError as e:
+        _validation_stats.record_error(file_path, f"SyntaxError: {e}")
+        raise
+    except Exception as e:
+        _validation_stats.record_error(file_path, f"{type(e).__name__}: {e}")
+        raise

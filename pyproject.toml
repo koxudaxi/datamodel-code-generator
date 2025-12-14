@@ -80,6 +80,7 @@ dev = [
 test = [
   "freezegun; python_version<'3.10'",
   "inline-snapshot>=0.31.1",
+  "msgspec>=0.18",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -144,6 +145,7 @@ conflicts = [
   [
     { group = "pydantic1" },
     { group = "pkg-meta" },
+    { group = "dev" },
   ],
 ]
 

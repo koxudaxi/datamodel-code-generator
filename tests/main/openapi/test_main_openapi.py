@@ -2267,6 +2267,7 @@ def test_main_custom_file_header_invalid_syntax(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="custom_file_header_invalid_syntax.py",
         extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_invalid_syntax.txt")],
+        skip_code_validation=True,
     )
 
 
