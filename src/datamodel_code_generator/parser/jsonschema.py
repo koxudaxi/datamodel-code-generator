@@ -1344,6 +1344,27 @@ class JsonSchemaParser(Parser):
 
         return None
 
+    def _is_list_with_any_item_type(self, data_type: DataType | None) -> bool:  # noqa: PLR6301
+        """Return True when data_type represents List[Any] (including nested lists)."""
+        if not data_type:  # pragma: no cover
+            return False
+
+        candidate = data_type
+        if not candidate.is_list and len(candidate.data_types) == 1 and candidate.data_types[0].is_list:
+            candidate = candidate.data_types[0]
+
+        if not candidate.is_list or len(candidate.data_types) != 1:
+            return False
+
+        item_type = candidate.data_types[0]
+        while len(item_type.data_types) == 1:
+            inner = item_type.data_types[0]
+            if (not item_type.is_list and inner.is_list) or item_type.is_list:
+                item_type = inner
+            else:
+                break
+        return item_type.type == ANY
+
     def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
         """Get the data type for an inherited property from parent schemas."""
         for base in base_classes:
@@ -1497,7 +1518,7 @@ class JsonSchemaParser(Parser):
             kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
-    def _parse_object_common_part(  # noqa: PLR0912, PLR0913
+    def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -1539,6 +1560,37 @@ class JsonSchemaParser(Parser):
                         if new_type.kwargs is None and current_type.kwargs is not None:  # pragma: no cover
                             new_type.kwargs = current_type.kwargs
                         field.data_type = new_type
+                # Handle List[Any] case: inherit item type from parent if items have Any type
+                elif field_name and self._is_list_with_any_item_type(current_type):
+                    inherited_type = self._get_inherited_field_type(field_name, base_classes)
+                    if inherited_type is None or not inherited_type.is_list or not inherited_type.data_types:
+                        continue
+
+                    new_type = inherited_type.model_copy(deep=True) if PYDANTIC_V2 else inherited_type.copy(deep=True)
+
+                    # Preserve modifiers coming from the overriding schema.
+                    if current_type is not None:  # pragma: no branch
+                        new_type.is_optional = new_type.is_optional or current_type.is_optional
+                        new_type.is_dict = new_type.is_dict or current_type.is_dict
+                        new_type.is_list = new_type.is_list or current_type.is_list
+                        new_type.is_set = new_type.is_set or current_type.is_set
+                        if new_type.kwargs is None and current_type.kwargs is not None:  # pragma: no cover
+                            new_type.kwargs = current_type.kwargs
+
+                    # Some code paths represent the list type inside an outer container.
+                    is_wrapped = (
+                        current_type is not None
+                        and not current_type.is_list
+                        and len(current_type.data_types) == 1
+                        and current_type.data_types[0].is_list
+                    )
+                    if is_wrapped:
+                        wrapper = current_type.model_copy(deep=True) if PYDANTIC_V2 else current_type.copy(deep=True)
+                        wrapper.data_types[0] = new_type
+                        field.data_type = wrapper
+                        continue
+
+                    field.data_type = new_type  # pragma: no cover
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001

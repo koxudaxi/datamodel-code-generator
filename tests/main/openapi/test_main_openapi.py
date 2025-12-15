@@ -1758,6 +1758,72 @@ def test_main_openapi_allof_partial_override_inherited_types(output_file: Path) 
     )
 
 
+def test_main_openapi_allof_partial_override_array_items(output_file: Path) -> None:
+    """Test OpenAPI allOf partial overrides inherit parent array item types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_array_items.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_array_items.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_array_items_no_parent(output_file: Path) -> None:
+    """Test OpenAPI allOf with array field not present in parent schema."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_array_items_no_parent.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_array_items_no_parent.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_non_array_field(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with non-array fields for coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_non_array_field.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_non_array_field.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_nested_array_items(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with nested arrays for coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_nested_array_items.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_nested_array_items.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_deeply_nested_array(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with 3-level nested arrays for while loop coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_deeply_nested_array.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_deeply_nested_array.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_simple_list_any(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with simple List[Any] - while loop NOT entered."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_simple_list_any.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_simple_list_any.py",
+    )
+
+
 def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
     """Test OpenAPI generation with allOf edge cases for branch coverage."""
     run_main_and_assert(

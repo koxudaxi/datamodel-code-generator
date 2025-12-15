@@ -1,0 +1,28 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        matrix:
+          type: array
+          default:
+            - - a
+              - b
+          items:
+            type: array
+            items:
+              type: string
+    Person:
+      allOf:
+        - $ref: "#/components/schemas/Thing"
+        - type: object
+          properties:
+            matrix:
+              default:
+                - - c
+                  - d
+              items:
+                title: A row
+                items:
+                  title: A cell

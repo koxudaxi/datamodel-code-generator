@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  title: Test Simple List[Any]
+  version: "1.0.0"
+components:
+  schemas:
+    Parent:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+    Child:
+      allOf:
+        - $ref: "#/components/schemas/Parent"
+        - type: object
+          properties:
+            items:
+              items:
+                title: An item
