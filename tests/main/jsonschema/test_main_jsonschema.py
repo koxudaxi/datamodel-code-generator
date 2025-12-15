@@ -270,7 +270,7 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
         assert_func=assert_file_content,
         expected_file="general.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "pydantic.BaseModel",
             "--dataclass-arguments",
             '{"slots": true, "order": true}',
@@ -291,7 +291,7 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
         assert_func=assert_file_content,
         expected_file="general_dataclass_frozen_kw_only.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "dataclasses.dataclass",
             "--frozen",
             "--keyword-only",
@@ -403,7 +403,7 @@ def test_main_null_and_array(output_model: str, expected_output: str, output_fil
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -443,7 +443,7 @@ def test_main_complicated_enum_default_member(
     output_model: str, expected_output: str, option: str | None, output_file: Path
 ) -> None:
     """Test complicated enum with default member."""
-    extra_args = [a for a in [option, "--output-model", output_model] if a]
+    extra_args = [a for a in [option, "--output-model-type", output_model] if a]
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "complicated_enum.json",
         output_path=output_file,
@@ -1672,7 +1672,7 @@ def test_main_jsonschema_combine_any_of_object(
     union_mode: str | None, output_model: str, expected_output: str, output_file: Path
 ) -> None:
     """Test combining anyOf with objects."""
-    extra_args = ["--output-model", output_model]
+    extra_args = ["--output-model-type", output_model]
     if union_mode is not None:
         extra_args.extend(["--union-mode", union_mode])
     run_main_and_assert(
@@ -1689,9 +1689,9 @@ def test_main_jsonschema_combine_any_of_object(
 @pytest.mark.parametrize(
     ("extra_args", "expected_file"),
     [
-        (["--output-model", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
+        (["--output-model-type", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
         (
-            ["--output-model", "pydantic_v2.BaseModel", "--keep-model-order"],
+            ["--output-model-type", "pydantic_v2.BaseModel", "--keep-model-order"],
             "jsonschema_root_model_ordering_keep_model_order.py",
         ),
     ],
@@ -1745,7 +1745,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             output_model,
             "--field-include-all-keys",
             "--field-extra-keys-without-x-prefix",
@@ -1778,7 +1778,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             output_model,
             "--field-extra-keys",
             "key2",
@@ -1810,7 +1810,7 @@ def test_main_jsonschema_field_extras(output_model: str, expected_output: str, o
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 

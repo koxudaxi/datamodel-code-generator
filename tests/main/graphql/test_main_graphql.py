@@ -39,7 +39,7 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
         input_file_type="graphql",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -323,7 +323,7 @@ def test_main_graphql_dataclass_arguments(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="simple_star_wars_dataclass_arguments.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "dataclasses.dataclass",
             "--dataclass-arguments",
             '{"slots": true, "order": true}',
@@ -347,7 +347,7 @@ def test_main_graphql_dataclass_arguments_with_pydantic(output_file: Path) -> No
         assert_func=assert_file_content,
         expected_file="simple_star_wars.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "pydantic.BaseModel",
             "--dataclass-arguments",
             '{"slots": true, "order": true}',
@@ -372,7 +372,7 @@ def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="simple_star_wars_dataclass_frozen_kw_only.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "dataclasses.dataclass",
             "--frozen",
             "--keyword-only",
