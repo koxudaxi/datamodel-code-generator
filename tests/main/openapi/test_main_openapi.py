@@ -1813,6 +1813,17 @@ def test_main_openapi_allof_partial_override_deeply_nested_array(output_file: Pa
     )
 
 
+def test_main_openapi_allof_partial_override_simple_list_any(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with simple List[Any] - while loop NOT entered."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_simple_list_any.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_simple_list_any.py",
+    )
+
+
 def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
     """Test OpenAPI generation with allOf edge cases for branch coverage."""
     run_main_and_assert(

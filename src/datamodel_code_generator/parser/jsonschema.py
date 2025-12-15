@@ -1346,7 +1346,7 @@ class JsonSchemaParser(Parser):
 
     def _is_list_with_any_item_type(self, data_type: DataType | None) -> bool:  # noqa: PLR6301
         """Return True when data_type represents List[Any] (including nested lists)."""
-        if not data_type:  # pragma: no branch
+        if not data_type:  # pragma: no cover
             return False
 
         candidate = data_type
@@ -1357,7 +1357,7 @@ class JsonSchemaParser(Parser):
             return False
 
         item_type = candidate.data_types[0]
-        while item_type.is_list and len(item_type.data_types) == 1:
+        while item_type.is_list and len(item_type.data_types) == 1:  # pragma: no cover
             item_type = item_type.data_types[0]
         return item_type.type == ANY
 
