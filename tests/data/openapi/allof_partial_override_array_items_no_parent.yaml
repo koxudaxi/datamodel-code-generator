@@ -1,0 +1,19 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        name:
+          type: string
+    Person:
+      allOf:
+        - $ref: "#/components/schemas/Thing"
+        - type: object
+          properties:
+            tags:
+              type: array
+              default:
+                - tag1
+              items:
+                title: A tag entry
