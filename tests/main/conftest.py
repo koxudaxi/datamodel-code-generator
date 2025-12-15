@@ -402,21 +402,21 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
     elif output_path.is_dir():
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
-        if should_exec:
+        if should_exec:  # pragma: no cover
             _import_package(output_path)
 
 
-def _import_package(output_path: Path) -> None:  # noqa: PLR0912
+def _import_package(output_path: Path) -> None:  # pragma: no cover  # noqa: PLR0912
     """Import generated packages to validate they can be loaded."""
     if (output_path / "__init__.py").exists():
         packages = [(output_path.parent, output_path.name)]
-    else:  # pragma: no cover
+    else:
         packages = [
             (output_path, directory.name)
             for directory in output_path.iterdir()
             if directory.is_dir() and (directory / "__init__.py").exists()
         ]
-    if not packages:  # pragma: no cover
+    if not packages:
         return
 
     imported_modules: list[str] = []
@@ -428,7 +428,7 @@ def _import_package(output_path: Path) -> None:  # noqa: PLR0912
             spec = importlib.util.spec_from_file_location(
                 package_name, package_path / "__init__.py", submodule_search_locations=[str(package_path)]
             )
-            if spec is None or spec.loader is None:  # pragma: no cover
+            if spec is None or spec.loader is None:
                 continue
             module = importlib.util.module_from_spec(spec)
             sys.modules[package_name] = module
@@ -441,14 +441,14 @@ def _import_package(output_path: Path) -> None:  # noqa: PLR0912
                 relative_path = python_file.relative_to(package_path)
                 module_name = f"{package_name}.{'.'.join(relative_path.with_suffix('').parts)}"
                 submodule_spec = importlib.util.spec_from_file_location(module_name, python_file)
-                if submodule_spec is None or submodule_spec.loader is None:  # pragma: no cover
+                if submodule_spec is None or submodule_spec.loader is None:
                     continue
                 submodule = importlib.util.module_from_spec(submodule_spec)
                 sys.modules[module_name] = submodule
                 imported_modules.append(module_name)
                 submodule_spec.loader.exec_module(submodule)
         _validation_stats.record_exec(time.perf_counter() - start_time)
-    except Exception as exception:  # pragma: no cover
+    except Exception as exception:
         _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
         raise
     finally:

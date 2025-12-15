@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import json
 import platform
-import sys
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -3610,8 +3609,6 @@ def test_main_openapi_module_class_name_collision_pydantic_v2(output_dir: Path) 
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--target-python-version",
-            f"{sys.version_info[0]}.{sys.version_info[1]}",
             "--openapi-scopes",
             "schemas",
             "--openapi-scopes",
