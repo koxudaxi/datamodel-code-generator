@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -14,4 +14,4 @@ class Thing(BaseModel):
 
 
 class Person(Thing):
-    matrix: Optional[List[List[Any]]] = [['c', 'd']]
+    matrix: Optional[List[List[str]]] = [['c', 'd']]

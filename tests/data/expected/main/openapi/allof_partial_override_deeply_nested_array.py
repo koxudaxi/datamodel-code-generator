@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -14,4 +14,4 @@ class Thing(BaseModel):
 
 
 class Person(Thing):
-    cube: Optional[List[List[List[Any]]]] = [[['b']]]
+    cube: Optional[List[List[List[str]]]] = [[['b']]]

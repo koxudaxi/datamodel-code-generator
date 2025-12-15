@@ -1357,8 +1357,12 @@ class JsonSchemaParser(Parser):
             return False
 
         item_type = candidate.data_types[0]
-        while item_type.is_list and len(item_type.data_types) == 1:  # pragma: no cover
-            item_type = item_type.data_types[0]
+        while len(item_type.data_types) == 1:
+            inner = item_type.data_types[0]
+            if (not item_type.is_list and inner.is_list) or item_type.is_list:
+                item_type = inner
+            else:
+                break
         return item_type.type == ANY
 
     def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
