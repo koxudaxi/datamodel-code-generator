@@ -32,6 +32,18 @@ class Lowercase(Enum):
     foo = 'foo'
 
 
+class Conflict(BaseModel):
+    Bar: Int
+    bar: String
+    typename__: Optional[Literal['Conflict']] = Field('Conflict', alias='__typename')
+
+
+class ConflictModel(BaseModel):
+    Foo: Int
+    foo: String
+    typename__: Optional[Literal['conflict']] = Field('conflict', alias='__typename')
+
+
 class Lowercasetype(BaseModel):
     foo: Int
     typename__: Optional[Literal['lowercasetype']] = Field(
@@ -42,4 +54,6 @@ class Lowercasetype(BaseModel):
 class Ref(BaseModel):
     bar: Lowercase
     baz: Lowercasetype
+    eggs: Conflict
+    spam: ConflictModel
     typename__: Optional[Literal['Ref']] = Field('Ref', alias='__typename')
