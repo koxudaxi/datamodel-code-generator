@@ -327,7 +327,7 @@ class GraphQLParser(Parser):
                 # TODO: need a special method for each graph type
                 self.references[type_.name] = Reference(
                     path=f"{paths!s}/{resolved_type.value}/{type_.name}",
-                    name=self.model_resolver.get_class_name(type_.name, unique=True).name,
+                    name=self.model_resolver.get_class_name(type_.name, unique=False).name,
                     original_name=type_.name,
                 )
 
