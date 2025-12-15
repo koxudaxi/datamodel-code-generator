@@ -399,7 +399,7 @@ def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | N
     should_exec = not _should_skip_exec(extra_arguments)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
-    elif output_path.is_dir():
+    elif output_path.is_dir():  # pragma: no cover
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
         if should_exec:  # pragma: no cover
