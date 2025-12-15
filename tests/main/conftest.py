@@ -410,7 +410,7 @@ def _import_package(output_path: Path) -> None:  # noqa: PLR0912
     """Import generated packages to validate they can be loaded."""
     if (output_path / "__init__.py").exists():
         packages = [(output_path.parent, output_path.name)]
-    else:
+    else:  # pragma: no cover
         packages = [
             (output_path, directory.name)
             for directory in output_path.iterdir()
