@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import platform
+import sys
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -3600,7 +3601,7 @@ def test_main_allof_enum_ref(output_file: Path) -> None:
     version.parse(pydantic.VERSION) < version.parse("2.0.0"),
     reason="Require Pydantic version 2.0.0 or later",
 )
-def test_main_openapi_module_class_name_collision_pydantic_v2(min_version: str, output_dir: Path) -> None:
+def test_main_openapi_module_class_name_collision_pydantic_v2(output_dir: Path) -> None:
     """Test Issue #1994: module and class name collision (e.g., A.A schema)."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "module_class_name_collision" / "openapi.json",
@@ -3610,7 +3611,7 @@ def test_main_openapi_module_class_name_collision_pydantic_v2(min_version: str, 
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--target-python-version",
-            min_version,
+            f"{sys.version_info[0]}.{sys.version_info[1]}",
             "--openapi-scopes",
             "schemas",
             "--openapi-scopes",
