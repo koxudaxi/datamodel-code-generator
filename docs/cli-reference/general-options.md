@@ -39,7 +39,7 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -609,7 +609,7 @@ Use 'recursive' to include all descendant exports with collision handling.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0

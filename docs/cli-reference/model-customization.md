@@ -49,7 +49,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -450,7 +450,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -866,7 +866,7 @@ The `--base-class` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -1218,7 +1218,7 @@ model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: '3.0.2'
     components:
       schemas:
@@ -1366,7 +1366,7 @@ control over dataclass generation.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     type Person {
         id: ID!
         name: String!
@@ -1695,7 +1695,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -2111,7 +2111,7 @@ The `--force-optional` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -2634,7 +2634,7 @@ argument errors.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     type Person {
         id: ID!
         name: String!
@@ -3032,7 +3032,7 @@ appears in different contexts within an OpenAPI specification.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -3465,7 +3465,7 @@ The `--strict-nullable` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: 3.0.3
     info:
       version: 1.0.0
@@ -3698,7 +3698,7 @@ default to None.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -4244,7 +4244,7 @@ default values.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     type A {
         field: String!
         optionalField: String
@@ -4379,7 +4379,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -4683,7 +4683,7 @@ polymorphic types and inheritance hierarchies.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -4789,7 +4789,7 @@ type, providing better type safety and IDE support.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     "Employee shift status"
     enum EmployeeShiftStatus {
       "not on shift"

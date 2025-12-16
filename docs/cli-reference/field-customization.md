@@ -44,7 +44,7 @@ providing fine-grained control over generated names independent of schema defini
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -516,7 +516,7 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     type Person {
         id: ID!
         name: String!
@@ -859,7 +859,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -2054,7 +2054,7 @@ The `--use-enum-values-in-discriminator` flag configures the code generation beh
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     components:
       schemas:
@@ -2255,7 +2255,7 @@ documentation without using Field() wrappers.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -2544,7 +2544,7 @@ useful for preserving documentation from your schema in the generated code.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0

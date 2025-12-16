@@ -17,9 +17,9 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--encoding`](base-options.md#encoding) | Specify character encoding for input and output files. |
-| [`--input`](base-options.md#input) | Specify input schema file and output Python file paths. |
+| [`--input`](base-options.md#input) | Specify the input schema file path. |
 | [`--input-file-type`](base-options.md#input-file-type) | Specify the input file type for code generation. |
-| [`--output`](base-options.md#output) | Specify input schema file and output Python file paths. |
+| [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
 
 ### Typing Customization
@@ -194,7 +194,7 @@ All options sorted alphabetically:
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration file.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
-- [`--input`](base-options.md#input) - Specify input schema file and output Python file paths.
+- [`--input`](base-options.md#input) - Specify the input schema file path.
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep model definition order as specified in schema.
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
@@ -202,7 +202,7 @@ All options sorted alphabetically:
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
 - [`--openapi-scopes`](openapi-only-options.md#openapi-scopes) - Specify OpenAPI scopes to generate (schemas, paths, paramete...
 - [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) - Specify delimiter for original field names when using snake-...
-- [`--output`](base-options.md#output) - Specify input schema file and output Python file paths.
+- [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
 - [`--output-model-type`](model-customization.md#output-model-type) - Specify the output model type (pydantic, dataclass, typeddic...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...

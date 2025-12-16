@@ -41,7 +41,7 @@ is useful when using custom types defined in external modules (e.g.,
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     scalar Date
     
     "DateTime (ISO8601, example: 2020-01-01T10:11:12+00:00)"
@@ -203,7 +203,7 @@ to be inserted at the top of generated Python files.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -481,7 +481,7 @@ formatting rules beyond what black/isort provide.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     scalar Long
     
     type A {
@@ -615,7 +615,7 @@ to the templates.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -881,7 +881,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -1295,7 +1295,7 @@ The `--enable-version-header` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -1572,7 +1572,7 @@ model settings like Config classes, enabling customization beyond standard optio
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0

@@ -42,7 +42,7 @@ all metadata from parents.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       title: Test materialize allOf defaults
@@ -184,7 +184,7 @@ concise type hints and avoids creating Enum classes when not needed.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     $schema: http://json-schema.org/draft-07/schema#
     type: object
     title: Config
@@ -247,7 +247,7 @@ Python 3.11+, falling back to standard Enum classes instead.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     "Employee shift status"
     enum EmployeeShiftStatus {
       "not on shift"
@@ -330,7 +330,7 @@ or 'datetime' for standard Python datetime objects.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     components:
       schemas:
@@ -565,7 +565,7 @@ Test GraphQL annotated types with standard collections and union operator.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     type A {
         field: String!
         optionalField: String
@@ -1274,7 +1274,7 @@ syntax. This feature is experimental.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     scalar SimpleString
     
     type Person {
@@ -1376,7 +1376,7 @@ Test GraphQL annotated types with standard collections and union operator.
 
 ??? example "Input Schema"
 
-    ```json
+    ```graphql
     type A {
         field: String!
         optionalField: String
@@ -1445,7 +1445,7 @@ to true, enforcing uniqueness at the type level.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0

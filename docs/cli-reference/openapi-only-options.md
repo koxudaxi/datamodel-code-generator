@@ -31,7 +31,7 @@ models that include both path and query parameters.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -121,7 +121,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -580,7 +580,7 @@ validation for API requests and responses without a shared base model.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       title: Read Only Write Only Test API
@@ -656,7 +656,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0
@@ -936,7 +936,7 @@ The `--validation` flag configures the code generation behavior.
 
 ??? example "Input Schema"
 
-    ```json
+    ```yaml
     openapi: "3.0.0"
     info:
       version: 1.0.0

@@ -5,9 +5,9 @@
 | Option | Description |
 |--------|-------------|
 | [`--encoding`](#encoding) | Specify character encoding for input and output files. |
-| [`--input`](#input) | Specify input schema file and output Python file paths. |
+| [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
-| [`--output`](#output) | Specify input schema file and output Python file paths. |
+| [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
 ---
@@ -72,12 +72,11 @@ Default is utf-8.
 
 ## `--input` {#input}
 
-Specify input schema file and output Python file paths.
+Specify the input schema file path.
 
 The `--input` flag specifies the path to the schema file (JSON Schema,
-OpenAPI, GraphQL, etc.). The `--output` flag specifies the destination
-path for the generated Python code. If `--output` is omitted, the
-generated code is written to stdout.
+OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
+schemas. Required unless using `--url` to fetch schema from a URL.
 
 !!! tip "Usage"
 
@@ -182,12 +181,12 @@ json, yaml, csv, graphql.
 
 ## `--output` {#output}
 
-Specify input schema file and output Python file paths.
+Specify the destination path for generated Python code.
 
-The `--input` flag specifies the path to the schema file (JSON Schema,
-OpenAPI, GraphQL, etc.). The `--output` flag specifies the destination
-path for the generated Python code. If `--output` is omitted, the
-generated code is written to stdout.
+The `--output` flag specifies where to write the generated Python code.
+It can be either a file path (single-file output) or a directory path
+(multi-file output for modular schemas). If omitted, the generated code
+is written to stdout.
 
 !!! tip "Usage"
 
