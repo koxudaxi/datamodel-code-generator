@@ -1,0 +1,31 @@
+openapi: "3.0.0"
+info:
+  title: Test allOf with multiple parents having same property
+  version: "1.0.0"
+components:
+  schemas:
+    Parent1:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+    Parent2:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 5
+        age:
+          type: integer
+          minimum: 0
+    Child:
+      allOf:
+        - $ref: "#/components/schemas/Parent1"
+        - $ref: "#/components/schemas/Parent2"
+        - type: object
+          properties:
+            name:
+              maxLength: 100
+            age:
+              maximum: 150

@@ -1891,6 +1891,28 @@ def test_main_openapi_allof_parent_no_properties(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_allof_parent_bool_property(output_file: Path) -> None:
+    """Test OpenAPI allOf with parent having bool property schema (true/false)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_parent_bool_property.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_parent_bool_property.py",
+    )
+
+
+def test_main_openapi_allof_multiple_parents_same_property(output_file: Path) -> None:
+    """Test OpenAPI allOf with multiple parents having the same property."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_multiple_parents_same_property.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_multiple_parents_same_property.py",
+    )
+
+
 def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
     """Test OpenAPI generation with allOf edge cases for branch coverage."""
     run_main_and_assert(
