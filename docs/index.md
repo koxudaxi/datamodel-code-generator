@@ -354,6 +354,12 @@ Options:
   --url URL             Input file URL. `--input` is ignored when `--url` is used
 
 Typing customization:
+  --allof-merge-mode {constraints,all,none}
+                        Mode for field merging in allOf schemas. ''constraints'': merge only
+                        constraints (minItems, maxItems, pattern, etc.) from parent
+                        (default). ''all'': merge constraints plus annotations (default,
+                        examples) from parent. ''none'': do not merge any fields from parent
+                        properties.
   --base-class BASE_CLASS
                         Base Class (default: pydantic.BaseModel)
   --disable-future-imports
