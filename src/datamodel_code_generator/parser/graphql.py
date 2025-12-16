@@ -484,7 +484,7 @@ class GraphQLParser(Parser):
         obj = graphql.assert_named_type(obj)
         if obj.name in self.references:
             data_type.reference = self.references[obj.name]
-        else:
+        else:  # pragma: no cover
             # Only happens for Query and Mutation root types
             data_type.type = obj.name
 
