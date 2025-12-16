@@ -1,4 +1,4 @@
-"""Update command help text in markdown documentation files."""  # noqa: INP001
+"""Update command help text in markdown documentation files."""
 
 from __future__ import annotations
 
