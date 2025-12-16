@@ -1857,6 +1857,40 @@ def test_main_openapi_allof_merge_mode_all(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_allof_merge_mode_none(output_file: Path) -> None:
+    """Test OpenAPI allOf with --allof-merge-mode none does not merge parent constraints."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_merge_mode_none.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_merge_mode_none.py",
+        extra_args=["--allof-merge-mode", "none"],
+    )
+
+
+def test_main_openapi_allof_property_bool_schema(output_file: Path) -> None:
+    """Test OpenAPI allOf with bool property schema (e.g., `allowed: true`)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_property_bool_schema.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_property_bool_schema.py",
+    )
+
+
+def test_main_openapi_allof_parent_no_properties(output_file: Path) -> None:
+    """Test OpenAPI allOf with parent schema having no properties."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_parent_no_properties.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_parent_no_properties.py",
+    )
+
+
 def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
     """Test OpenAPI generation with allOf edge cases for branch coverage."""
     run_main_and_assert(

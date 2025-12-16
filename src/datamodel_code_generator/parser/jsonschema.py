@@ -1397,7 +1397,7 @@ class JsonSchemaParser(Parser):
         for ref in parent_refs:
             try:
                 parent_schema = self._load_ref_schema_object(ref)
-            except Exception:  # noqa: BLE001, S112
+            except Exception:  # pragma: no cover  # noqa: BLE001, S112
                 continue
             if parent_schema.properties:
                 for prop_name, prop_schema in parent_schema.properties.items():
