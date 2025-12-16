@@ -1,0 +1,33 @@
+openapi: "3.0.0"
+info:
+  title: Test API - Unique Items Default as Set
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    TestModel:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          default:
+            - tag1
+            - tag2
+        empty_tags:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          default: []
+        numbers:
+          type: array
+          items:
+            type: integer
+          uniqueItems: true
+          default:
+            - 1
+            - 2
+            - 3

@@ -150,8 +150,13 @@ class DataModelField(DataModelFieldBase):
         if len(data) == 1 and "default" in data:
             default = data["default"]
 
-            if isinstance(default, (list, dict)):
-                return f"field(default_factory=lambda :{default!r})"
+            if isinstance(default, (list, dict, set)):
+                if default:
+                    from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+                    default_repr = repr_set_sorted(default) if isinstance(default, set) else repr(default)
+                    return f"field(default_factory=lambda: {default_repr})"
+                return f"field(default_factory={type(default).__name__})"
             return repr(default)
         kwargs = [f"{k}={v if k == 'default_factory' else repr(v)}" for k, v in data.items()]
         return f"field({', '.join(kwargs)})"
