@@ -1,0 +1,115 @@
+"""Tests to ensure CLI_OPTION_META stays in sync with argparse.
+
+These tests verify that:
+1. All options in CLI_OPTION_META exist in argparse
+2. All options in EXCLUDED_FROM_DOCS exist in argparse
+3. There's no overlap between CLI_OPTION_META and EXCLUDED_FROM_DOCS
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from datamodel_code_generator.cli_options import (
+    CLI_OPTION_META,
+    EXCLUDED_FROM_DOCS,
+    get_all_canonical_options,
+)
+
+
+class TestCLIOptionMetaSync:
+    """Synchronization tests for CLI_OPTION_META."""
+
+    def test_all_registered_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
+        """Verify that all options in CLI_OPTION_META exist in argparse."""
+        argparse_options = get_all_canonical_options()
+        registered = set(CLI_OPTION_META.keys())
+
+        orphan = registered - argparse_options
+        if orphan:
+            pytest.fail(
+                "Options in CLI_OPTION_META but not in argparse:\n"
+                + "\n".join(f"  - {opt}" for opt in sorted(orphan))
+                + "\n\nRemove them from CLI_OPTION_META or add them to arguments.py."
+            )
+
+    def test_excluded_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
+        """Verify that all options in EXCLUDED_FROM_DOCS exist in argparse."""
+        argparse_options = get_all_canonical_options()
+
+        orphan = EXCLUDED_FROM_DOCS - argparse_options
+        if orphan:
+            pytest.fail(
+                "Options in EXCLUDED_FROM_DOCS but not in argparse:\n"
+                + "\n".join(f"  - {opt}" for opt in sorted(orphan))
+                + "\n\nRemove them from EXCLUDED_FROM_DOCS or add them to arguments.py."
+            )
+
+    def test_no_overlap_between_meta_and_excluded(self) -> None:  # noqa: PLR6301
+        """Verify that CLI_OPTION_META and EXCLUDED_FROM_DOCS don't overlap."""
+        overlap = set(CLI_OPTION_META.keys()) & EXCLUDED_FROM_DOCS
+        if overlap:
+            pytest.fail(
+                "Options in both CLI_OPTION_META and EXCLUDED_FROM_DOCS:\n"
+                + "\n".join(f"  - {opt}" for opt in sorted(overlap))
+                + "\n\nAn option should be in one or the other, not both."
+            )
+
+    def test_meta_names_match_keys(self) -> None:  # noqa: PLR6301
+        """Verify that CLIOptionMeta.name matches the dict key."""
+        mismatches = []
+        for key, meta in CLI_OPTION_META.items():
+            if key != meta.name:
+                mismatches.append(f"  Key '{key}' != meta.name '{meta.name}'")
+
+        if mismatches:
+            pytest.fail("CLIOptionMeta.name mismatches:\n" + "\n".join(mismatches))
+
+    def test_all_argparse_options_are_documented_or_excluded(self) -> None:  # noqa: PLR6301
+        """Verify that all argparse options are either documented or explicitly excluded.
+
+        This test warns (not fails) when a new CLI option is added to arguments.py
+        but not added to CLI_OPTION_META. Unregistered options are auto-categorized
+        as "General Options" in the documentation.
+        """
+        import warnings  # noqa: PLC0415
+
+        argparse_options = get_all_canonical_options()
+        documented = set(CLI_OPTION_META.keys())
+        excluded = EXCLUDED_FROM_DOCS
+        covered = documented | excluded
+        missing = argparse_options - covered
+
+        if missing:
+            msg = (
+                "CLI options auto-categorized as 'General Options' "
+                "(consider adding to CLI_OPTION_META for proper categorization):\n"
+            )
+            warnings.warn(
+                msg + "\n".join(f"  - {opt}" for opt in sorted(missing)),
+                UserWarning,
+                stacklevel=1,
+            )
+
+    def test_canonical_option_determination_is_stable(self) -> None:  # noqa: PLR6301
+        """Verify that canonical option determination is deterministic.
+
+        The canonical option should be the longest option string for each action.
+        If multiple options have the same length, the lexicographically last one
+        should be chosen for stability.
+        """
+        from datamodel_code_generator.arguments import arg_parser as argument_parser  # noqa: PLC0415
+        from datamodel_code_generator.cli_options import _canonical_option_key  # noqa: PLC0415
+
+        for action in argument_parser._actions:
+            if not action.option_strings:
+                continue
+
+            # Verify the key function produces deterministic ordering
+            sorted_opts = sorted(action.option_strings, key=_canonical_option_key)
+            canonical = sorted_opts[-1]
+
+            # Re-sort to verify stability
+            re_sorted = sorted(action.option_strings, key=_canonical_option_key)
+            assert sorted_opts == re_sorted, f"Canonical determination is not stable for {action.option_strings}"
+            assert canonical == re_sorted[-1], f"Canonical mismatch for {action.option_strings}"

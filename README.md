@@ -329,6 +329,8 @@ This method needs the [http extra option](#http-extra-option)
 
 ## All Command Options
 
+> 📖 **For detailed documentation with examples, see the [CLI Reference](https://koxudaxi.github.io/datamodel-code-generator/cli-reference/).**
+
 The `datamodel-codegen` command:
 
 <!-- start command help -->

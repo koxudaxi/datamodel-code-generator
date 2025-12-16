@@ -1,0 +1,43 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: API with Path Parameters
+paths:
+  /users/{userId}/posts/{postId}:
+    get:
+      summary: Get a specific post by user
+      operationId: getUserPost
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeComments
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+components:
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string

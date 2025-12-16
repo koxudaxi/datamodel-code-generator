@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "first-name": {
+      "type": "string"
+    },
+    "last-name": {
+      "type": "string"
+    },
+    "email_address": {
+      "type": "string"
+    }
+  },
+  "required": ["first-name", "last-name"]
+}

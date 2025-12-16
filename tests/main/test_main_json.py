@@ -28,8 +28,19 @@ if TYPE_CHECKING:
 assert_file_content = create_assert_file_content(EXPECTED_JSON_PATH)
 
 
+@pytest.mark.cli_doc(
+    options=["--input-file-type"],
+    input_schema="json/pet.json",
+    cli_args=["--input-file-type", "json"],
+    golden_output="json/general.py",
+)
 def test_main_json(output_file: Path) -> None:
-    """Test JSON input file code generation."""
+    """Specify the input file type for code generation.
+
+    The `--input-file-type` flag explicitly sets the input format when it cannot
+    be auto-detected from the file extension. Supported types: openapi, jsonschema,
+    json, yaml, csv, graphql.
+    """
     run_main_and_assert(
         input_path=JSON_DATA_PATH / "pet.json",
         output_path=output_file,

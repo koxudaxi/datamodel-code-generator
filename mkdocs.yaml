@@ -2,12 +2,25 @@ site_name: datamodel-code-generator
 site_description: This code generator creates pydantic model from an openapi file and others.
 
 theme:
-    name: 'material'
-    palette:
-      primary: 'light blue'
-      accent: 'light blue'
-    analytics:
-      gtag: 275257853
+  name: material
+  icon:
+    annotation: material/arrow-right-circle
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - search.share
+    - toc.follow
+  palette:
+    primary: light blue
+    accent: light blue
+  analytics:
+    gtag: 275257853
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -17,29 +30,49 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
 
 repo_name: koxudaxi/datamodel-code-generator
 repo_url: https://github.com/koxudaxi/datamodel-code-generator
 site_url: https://koxudaxi.github.io/datamodel-code-generator
 
 nav:
-    - Overview: index.md
-    - Support data types: supported-data-types.md
-    - Usage:
-      - What is the difference between pydantic v1 and v2 output model: what_is_the_difference_between_v1_and_v2.md
-      - Generate from OpenAPI: openapi.md
-      - Generate from JSON Schema: jsonschema.md
-      - Generate from JSON Data: jsondata.md
-      - Generate from GraphQL Schema: graphql.md
-      - Custom template: custom_template.md
-      - Custom formatters: custom-formatters.md
-      - Using as module: using_as_module.md
-      - Formatting: formatting.md
-      - Field Constraints: field-constraints.md
-      - Root Models and Type Aliases: root-model-and-type-alias.md
-      - pyproject.toml: pyproject_toml.md
-    - Development-Contributing: development-contributing.md
+  - Overview: index.md
+  - CLI Reference:
+    - Overview: cli-reference/index.md
+    - Base Options: cli-reference/base-options.md
+    - Model Customization: cli-reference/model-customization.md
+    - Field Customization: cli-reference/field-customization.md
+    - Typing Customization: cli-reference/typing-customization.md
+    - Template Customization: cli-reference/template-customization.md
+    - OpenAPI Options: cli-reference/openapi-only-options.md
+    - General Options: cli-reference/general-options.md
+    - Quick Reference: cli-reference/quick-reference.md
+  - Support data types: supported-data-types.md
+  - Usage:
+    - What is the difference between pydantic v1 and v2 output model: what_is_the_difference_between_v1_and_v2.md
+    - Generate from OpenAPI: openapi.md
+    - Generate from JSON Schema: jsonschema.md
+    - Generate from JSON Data: jsondata.md
+    - Generate from GraphQL Schema: graphql.md
+    - Custom template: custom_template.md
+    - Custom formatters: custom-formatters.md
+    - Using as module: using_as_module.md
+    - Formatting: formatting.md
+    - Field Constraints: field-constraints.md
+    - Root Models and Type Aliases: root-model-and-type-alias.md
+    - pyproject.toml: pyproject_toml.md
+  - Development-Contributing: development-contributing.md
 
 plugins:
   - search

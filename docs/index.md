@@ -322,6 +322,8 @@ This method needs the [http extra option](#http-extra-option)
 
 ## All Command Options
 
+**[See detailed CLI Reference →](cli-reference/index.md)**
+
 The `datamodel-codegen` command:
 <!-- start command help -->
 ```bash
@@ -582,7 +584,7 @@ General options:
 ```
 <!-- end command help -->
 
-<a href="./supported-data-types.md" style="font-size: 2em; ">Click here to see supported input formats</a>
+**[See supported input formats →](supported-data-types.md)**
 
 ## Related projects
 ### fastapi-code-generator
