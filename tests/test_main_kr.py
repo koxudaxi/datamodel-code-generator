@@ -1333,6 +1333,7 @@ def test_custom_formatters_kwargs_option(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=["--custom-formatters-kwargs", str(JSON_SCHEMA_DATA_PATH / "formatter_kwargs.json")],
     )
 
 

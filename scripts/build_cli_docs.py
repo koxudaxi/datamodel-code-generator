@@ -561,6 +561,9 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
         errors += 1
 
     if check:
+        if errors:
+            print(f"Generation errors occurred: {errors}", file=sys.stderr)  # noqa: T201
+            return 1
         if mismatches:
             for m in mismatches:
                 print(f"Mismatch: {m}", file=sys.stderr)  # noqa: T201
