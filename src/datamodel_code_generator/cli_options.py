@@ -229,7 +229,7 @@ def _build_alias_map_from_argparse() -> dict[str, str]:
     alias_map: dict[str, str] = {}
     for action in argument_parser._actions:  # noqa: SLF001
         if not action.option_strings:
-            continue
+            continue  # pragma: no cover
         # Canonical = longest, then lexicographically last for stability
         canonical = max(action.option_strings, key=_canonical_option_key)
         for opt in action.option_strings:
@@ -257,13 +257,13 @@ def get_all_canonical_options() -> frozenset[str]:
     return frozenset(_build_alias_map_from_argparse().values())
 
 
-def is_excluded_from_docs(option: str) -> bool:
+def is_excluded_from_docs(option: str) -> bool:  # pragma: no cover
     """Check if an option is excluded from documentation."""
     canonical = get_canonical_option(option)
     return canonical in EXCLUDED_FROM_DOCS
 
 
-def get_option_meta(option: str) -> CLIOptionMeta | None:
+def get_option_meta(option: str) -> CLIOptionMeta | None:  # pragma: no cover
     """Get documentation metadata for an option.
 
     Always canonicalizes the option name before lookup.

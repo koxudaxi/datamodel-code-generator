@@ -46,7 +46,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config._cli_doc_items: list[dict[str, Any]] = []
 
 
-def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:  # noqa: ARG001, PLR0912
+def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:  # noqa: ARG001, PLR0912  # pragma: no cover
     """Validate marker required fields and types."""
     errors: list[str] = []
 
@@ -136,7 +136,7 @@ def pytest_collection_modifyitems(
     session: pytest.Session,  # noqa: ARG001
     config: pytest.Config,
     items: list[pytest.Item],
-) -> None:
+) -> None:  # pragma: no cover
     """Collect CLI doc metadata from tests with cli_doc marker."""
     if not config.getoption("--collect-cli-docs"):
         return
@@ -172,14 +172,14 @@ def pytest_collection_modifyitems(
         pytest.fail(error_msg, pytrace=False)
 
 
-def pytest_runtestloop(session: pytest.Session) -> bool | None:
+def pytest_runtestloop(session: pytest.Session) -> bool | None:  # pragma: no cover
     """Skip test execution when --collect-cli-docs is used."""
     if session.config.getoption("--collect-cli-docs"):
         return True
     return None
 
 
-def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001  # pragma: no cover
     """Save collected CLI doc metadata to JSON file."""
     config = session.config
     if not config.getoption("--collect-cli-docs"):

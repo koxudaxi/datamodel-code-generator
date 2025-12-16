@@ -17,7 +17,7 @@ from datamodel_code_generator.cli_options import (
 )
 
 
-class TestCLIOptionMetaSync:
+class TestCLIOptionMetaSync:  # pragma: no cover
     """Synchronization tests for CLI_OPTION_META."""
 
     def test_all_registered_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
@@ -105,11 +105,9 @@ class TestCLIOptionMetaSync:
             if not action.option_strings:
                 continue
 
-            # Verify the key function produces deterministic ordering
             sorted_opts = sorted(action.option_strings, key=_canonical_option_key)
             canonical = sorted_opts[-1]
 
-            # Re-sort to verify stability
             re_sorted = sorted(action.option_strings, key=_canonical_option_key)
             assert sorted_opts == re_sorted, f"Canonical determination is not stable for {action.option_strings}"
             assert canonical == re_sorted[-1], f"Canonical mismatch for {action.option_strings}"

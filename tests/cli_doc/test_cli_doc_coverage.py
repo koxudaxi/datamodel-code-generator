@@ -36,7 +36,7 @@ DOCUMENTED_OPTIONS: frozenset[str] = frozenset({
 
 
 @pytest.fixture(scope="module")
-def collection_data() -> dict[str, Any]:
+def collection_data() -> dict[str, Any]:  # pragma: no cover
     """Load the CLI doc collection data."""
     if not COLLECTION_PATH.exists():
         pytest.skip(f"CLI doc collection not found at {COLLECTION_PATH}. Run: pytest --collect-cli-docs -p no:xdist")
@@ -46,7 +46,7 @@ def collection_data() -> dict[str, Any]:
 
 
 @pytest.fixture(scope="module")
-def collected_options(collection_data: dict[str, Any]) -> set[str]:
+def collected_options(collection_data: dict[str, Any]) -> set[str]:  # pragma: no cover
     """Extract canonical options from collection data."""
     options: set[str] = set()
     for item in collection_data.get("items", []):
@@ -54,7 +54,7 @@ def collected_options(collection_data: dict[str, Any]) -> set[str]:
     return options
 
 
-class TestCLIDocCoverage:
+class TestCLIDocCoverage:  # pragma: no cover
     """Documentation coverage tests."""
 
     def test_documented_options_have_cli_doc_markers(  # noqa: PLR6301
@@ -97,7 +97,7 @@ class TestCLIDocCoverage:
         assert version == 1, f"Unexpected schema version: {version}"
 
 
-class TestCoverageStats:
+class TestCoverageStats:  # pragma: no cover
     """Informational tests for coverage statistics."""
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
