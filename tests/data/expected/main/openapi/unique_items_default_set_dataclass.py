@@ -11,5 +11,5 @@ from typing import Optional, Set
 @dataclass
 class TestModel:
     tags: Optional[Set[str]] = field(default_factory=lambda: {'tag1', 'tag2'})
-    empty_tags: Optional[Set[str]] = field(default_factory=lambda: set())
+    empty_tags: Optional[Set[str]] = field(default_factory=set)
     numbers: Optional[Set[int]] = field(default_factory=lambda: {1, 2, 3})
