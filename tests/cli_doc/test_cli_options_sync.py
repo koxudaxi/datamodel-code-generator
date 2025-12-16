@@ -8,11 +8,15 @@ These tests verify that:
 
 from __future__ import annotations
 
+import warnings
+
 import pytest
 
+from datamodel_code_generator.arguments import arg_parser as argument_parser
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     EXCLUDED_FROM_DOCS,
+    _canonical_option_key,
     get_all_canonical_options,
     get_canonical_option,
 )
@@ -81,8 +85,6 @@ class TestCLIOptionMetaSync:  # pragma: no cover
         but not added to CLI_OPTION_META. Unregistered options are auto-categorized
         as "General Options" in the documentation.
         """
-        import warnings  # noqa: PLC0415
-
         argparse_options = get_all_canonical_options()
         documented = set(CLI_OPTION_META.keys())
         excluded = EXCLUDED_FROM_DOCS
@@ -107,9 +109,6 @@ class TestCLIOptionMetaSync:  # pragma: no cover
         If multiple options have the same length, the lexicographically last one
         should be chosen for stability.
         """
-        from datamodel_code_generator.arguments import arg_parser as argument_parser  # noqa: PLC0415
-        from datamodel_code_generator.cli_options import _canonical_option_key  # noqa: PLC0415
-
         for action in argument_parser._actions:
             if not action.option_strings:
                 continue

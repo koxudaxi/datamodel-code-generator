@@ -542,14 +542,16 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
             md = generate_category_page(category, options)
             output_path = DOCS_OUTPUT / f"{slugify(category.value)}.md"
             write_or_check(output_path, md, f"{output_path.name} ({len(options)} options)")
-        except (OSError, ValueError, KeyError):
+        except (OSError, ValueError, KeyError) as e:
+            print(f"Error generating {category.value}: {e}", file=sys.stderr)  # noqa: T201
             errors += 1
 
     try:
         md = generate_index_page(categories)
         output_path = DOCS_OUTPUT / "index.md"
         write_or_check(output_path, md, "index.md")
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError) as e:
+        print(f"Error generating index.md: {e}", file=sys.stderr)  # noqa: T201
         errors += 1
 
     try:
@@ -557,7 +559,8 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
         output_path = DOCS_OUTPUT / "quick-reference.md"
         total_options = sum(len(opts) for opts in categories.values())
         write_or_check(output_path, md, f"quick-reference.md ({total_options} options)")
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError) as e:
+        print(f"Error generating quick-reference.md: {e}", file=sys.stderr)  # noqa: T201
         errors += 1
 
     if check:
