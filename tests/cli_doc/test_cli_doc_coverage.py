@@ -107,8 +107,6 @@ class TestCoverageStats:
         """Display documentation coverage statistics."""
         all_options = get_all_canonical_options()
         documentable = all_options - EXCLUDED_FROM_DOCS
-
-        collected_options & documentable
         undocumented = documentable - collected_options
 
         for _opt in sorted(undocumented):
