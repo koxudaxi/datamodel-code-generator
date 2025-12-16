@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from argparse import Namespace
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import black
 import pydantic
@@ -11,7 +12,8 @@ import pytest
 from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
-from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import run_main_and_assert, run_main_with_args
 
@@ -856,8 +858,6 @@ target-python-version = "3.11"
 
 def test_help_shows_new_options() -> None:
     """Test that --profile and --ignore-pyproject appear in help."""
-    from datamodel_code_generator.arguments import arg_parser  # noqa: PLC0415
-
     help_text = arg_parser.format_help()
     assert "--profile" in help_text
     assert "--ignore-pyproject" in help_text
@@ -1189,14 +1189,10 @@ def test_url_with_http_headers(mocker: pytest.MonkeyPatch, output_file: Path) ->
     useful for authentication (e.g., Bearer tokens) or custom API requirements.
     Format: `HeaderName:HeaderValue`.
     """
-    from unittest.mock import Mock  # noqa: PLC0415
-
     mock_response = Mock()
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     mocker.patch("httpx.get", return_value=mock_response)
-
-    from datamodel_code_generator.__main__ import main  # noqa: PLC0415
 
     return_code = main([
         "--url",
@@ -1350,14 +1346,10 @@ def test_http_ignore_tls(output_file: Path) -> None:
     when fetching schemas from HTTPS URLs. This is useful for development
     environments with self-signed certificates. Not recommended for production.
     """
-    from unittest.mock import Mock, patch  # noqa: PLC0415
-
     mock_response = Mock()
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
-        from datamodel_code_generator.__main__ import main  # noqa: PLC0415
-
         return_code = main([
             "--url",
             "https://api.example.com/schema.json",
@@ -1389,14 +1381,10 @@ def test_http_query_parameters(output_file: Path) -> None:
     or format parameters. Format: `key=value`. Multiple parameters can be
     specified: `--http-query-parameters version=v2 format=json`.
     """
-    from unittest.mock import Mock, patch  # noqa: PLC0415
-
     mock_response = Mock()
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
-        from datamodel_code_generator.__main__ import main  # noqa: PLC0415
-
         return_code = main([
             "--url",
             "https://api.example.com/schema.json",

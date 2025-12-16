@@ -14,7 +14,16 @@ from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     EXCLUDED_FROM_DOCS,
     get_all_canonical_options,
+    get_canonical_option,
 )
+
+
+def test_get_canonical_option() -> None:
+    """Test that get_canonical_option normalizes option aliases."""
+    assert get_canonical_option("--help") == "--help"
+    assert get_canonical_option("-h") == "--help"
+    assert get_canonical_option("--input") == "--input"
+    assert get_canonical_option("--unknown-option") == "--unknown-option"
 
 
 class TestCLIOptionMetaSync:  # pragma: no cover
