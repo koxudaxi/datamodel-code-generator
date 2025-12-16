@@ -1390,6 +1390,15 @@ class Parser(ABC):
                     continue
                 set_data_type = self._create_set_from_list(model_field.data_type)
                 if set_data_type:  # pragma: no cover
+                    # Check if default list elements are hashable before converting type
+                    if isinstance(model_field.default, list):
+                        try:
+                            converted_default = set(model_field.default)
+                        except TypeError:
+                            # Elements are not hashable (e.g., contains dicts)
+                            # Skip both type and default conversion to keep consistency
+                            continue
+                        model_field.default = converted_default
                     model_field.replace_data_type(set_data_type)
 
     @classmethod

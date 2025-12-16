@@ -277,7 +277,10 @@ class DataModelField(DataModelFieldBase):
         if "default" in data and isinstance(data["default"], (list, dict, set)) and "default_factory" not in data:
             default_value = data.pop("default")
             if default_value:
-                data["default_factory"] = f"lambda: {default_value!r}"
+                from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+                default_repr = repr_set_sorted(default_value) if isinstance(default_value, set) else repr(default_value)
+                data["default_factory"] = f"lambda: {default_repr}"
             else:
                 data["default_factory"] = type(default_value).__name__
 
