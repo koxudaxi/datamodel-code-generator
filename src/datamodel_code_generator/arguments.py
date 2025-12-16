@@ -18,6 +18,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfMergeMode,
     DataclassArguments,
     DataModelType,
     InputFileType,
@@ -420,6 +421,15 @@ typing_options.add_argument(
     "--use-unique-items-as-set",
     help="define field type as `set` when the field attribute has `uniqueItems`",
     action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--allof-merge-mode",
+    help="Mode for field merging in allOf schemas. "
+    "'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). "
+    "'all': merge constraints plus annotations (default, examples) from parent. "
+    "'none': do not merge any fields from parent properties.",
+    choices=[m.value for m in AllOfMergeMode],
     default=None,
 )
 typing_options.add_argument(

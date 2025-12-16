@@ -24,6 +24,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfMergeMode,
     DataclassArguments,
     DataModelType,
     Error,
@@ -421,6 +422,7 @@ class Config(BaseModel):
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
+    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     use_annotated: bool = False
@@ -867,6 +869,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_title_as_name=config.use_title_as_name,
             use_operation_id_as_name=config.use_operation_id_as_name,
             use_unique_items_as_set=config.use_unique_items_as_set,
+            allof_merge_mode=config.allof_merge_mode,
             http_headers=config.http_headers,
             http_ignore_tls=config.http_ignore_tls,
             use_annotated=config.use_annotated,
