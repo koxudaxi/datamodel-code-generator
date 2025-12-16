@@ -1824,6 +1824,39 @@ def test_main_openapi_allof_partial_override_simple_list_any(output_file: Path) 
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        ("pydantic.BaseModel", "allof_partial_override_unique_items.py"),
+        ("pydantic_v2.BaseModel", "allof_partial_override_unique_items_pydantic_v2.py"),
+    ],
+)
+def test_main_openapi_allof_partial_override_unique_items(
+    output_model: str, expected_output: str, output_file: Path
+) -> None:
+    """Test OpenAPI allOf partial override inherits uniqueItems from parent."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_unique_items.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--use-unique-items-as-set", "--output-model-type", output_model],
+    )
+
+
+def test_main_openapi_allof_merge_mode_all(output_file: Path) -> None:
+    """Test OpenAPI allOf with --allof-merge-mode all merges parent defaults."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_materialize_defaults.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_materialize_defaults.py",
+        extra_args=["--allof-merge-mode", "all"],
+    )
+
+
 def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path) -> None:
     """Test OpenAPI generation with allOf edge cases for branch coverage."""
     run_main_and_assert(

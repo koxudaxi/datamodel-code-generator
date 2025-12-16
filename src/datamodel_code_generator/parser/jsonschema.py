@@ -23,6 +23,7 @@ from pydantic import (
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllOfMergeMode,
     DataclassArguments,
     InvalidClassNameError,
     ReadOnlyWriteOnlyModelType,
@@ -562,6 +563,7 @@ class JsonSchemaParser(Parser):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
@@ -655,6 +657,7 @@ class JsonSchemaParser(Parser):
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
             use_unique_items_as_set=use_unique_items_as_set,
+            allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
@@ -1365,6 +1368,71 @@ class JsonSchemaParser(Parser):
                 break
         return item_type.type == ANY
 
+    def _merge_property_schemas(self, parent_dict: dict[str, Any], child_dict: dict[str, Any]) -> dict[str, Any]:
+        """Merge parent and child property schemas for allOf."""
+        if self.allof_merge_mode == AllOfMergeMode.NoMerge:
+            return child_dict.copy()
+
+        non_merged_fields: set[str] = set()
+        if self.allof_merge_mode == AllOfMergeMode.Constraints:
+            non_merged_fields = {"default", "examples", "example"}
+
+        result = {}
+        for key, value in parent_dict.items():
+            if key not in non_merged_fields:
+                result[key] = value
+
+        for key, value in child_dict.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._merge_property_schemas(result[key], value)
+            else:
+                result[key] = value
+        return result
+
+    def _merge_properties_with_parent_constraints(
+        self, child_obj: JsonSchemaObject, parent_refs: list[str]
+    ) -> JsonSchemaObject:
+        """Merge child properties with parent property constraints for allOf inheritance."""
+        if not child_obj.properties:
+            return child_obj
+
+        parent_properties: dict[str, JsonSchemaObject] = {}
+        for ref in parent_refs:
+            try:
+                parent_schema = self._load_ref_schema_object(ref)
+            except Exception:  # noqa: BLE001, S112
+                continue
+            if parent_schema.properties:
+                for prop_name, prop_schema in parent_schema.properties.items():
+                    if isinstance(prop_schema, JsonSchemaObject) and prop_name not in parent_properties:
+                        parent_properties[prop_name] = prop_schema
+
+        if not parent_properties:
+            return child_obj
+
+        merged_properties: dict[str, JsonSchemaObject | bool] = {}
+        for prop_name, child_prop in child_obj.properties.items():
+            if not isinstance(child_prop, JsonSchemaObject):
+                merged_properties[prop_name] = child_prop
+                continue
+
+            parent_prop = parent_properties.get(prop_name)
+            if parent_prop is None:
+                merged_properties[prop_name] = child_prop
+                continue
+
+            parent_dict = parent_prop.dict(exclude_unset=True, by_alias=True)
+            child_dict = child_prop.dict(exclude_unset=True, by_alias=True)
+            merged_dict = self._merge_property_schemas(parent_dict, child_dict)
+            merged_properties[prop_name] = self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+
+        merged_obj_dict = child_obj.dict(exclude_unset=True, by_alias=True)
+        merged_obj_dict["properties"] = {
+            k: v.dict(exclude_unset=True, by_alias=True) if isinstance(v, JsonSchemaObject) else v
+            for k, v in merged_properties.items()
+        }
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_obj_dict)
+
     def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
         """Get the data type for an inherited property from parent schemas."""
         for base in base_classes:
@@ -1662,6 +1730,8 @@ class JsonSchemaParser(Parser):
         required: list[str],
         union_models: list[Reference],
     ) -> None:
+        parent_refs = [item.ref for item in obj.allOf if item.ref]
+
         for all_of_item in obj.allOf:  # noqa: PLR1702
             if all_of_item.ref:  # $ref
                 ref_schema = self._load_ref_schema_object(all_of_item.ref)
@@ -1681,9 +1751,11 @@ class JsonSchemaParser(Parser):
                     if ref.path not in {b.path for b in base_classes}:
                         base_classes.append(ref)
             else:
+                # Merge child properties with parent constraints before processing
+                merged_item = self._merge_properties_with_parent_constraints(all_of_item, parent_refs)
                 module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
                 object_fields = self.parse_object_fields(
-                    all_of_item,
+                    merged_item,
                     path,
                     module_name,
                     class_name=name,

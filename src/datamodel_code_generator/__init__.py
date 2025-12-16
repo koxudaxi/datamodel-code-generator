@@ -270,6 +270,19 @@ class AllExportsCollisionStrategy(Enum):
     FullPrefix = "full-prefix"
 
 
+class AllOfMergeMode(Enum):
+    """Mode for field merging in allOf schemas.
+
+    constraints: Merge only constraint fields (minItems, maxItems, pattern, etc.) from parent.
+    all: Merge constraints plus annotation fields (default, examples) from parent.
+    none: Do not merge any fields from parent properties.
+    """
+
+    Constraints = "constraints"
+    All = "all"
+    NoMerge = "none"
+
+
 class GraphQLScope(Enum):
     """Scopes for GraphQL model generation."""
 
@@ -415,6 +428,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
+    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
@@ -657,6 +671,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_title_as_name=use_title_as_name,
         use_operation_id_as_name=use_operation_id_as_name,
         use_unique_items_as_set=use_unique_items_as_set,
+        allof_merge_mode=allof_merge_mode,
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
         use_annotated=use_annotated,
