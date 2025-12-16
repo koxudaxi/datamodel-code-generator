@@ -481,14 +481,11 @@ class GraphQLParser(Parser):
             obj = graphql.assert_wrapping_type(obj)
             obj = obj.of_type
 
-        if graphql.is_enum_type(obj):
-            obj = graphql.assert_enum_type(obj)
-            data_type.reference = self.references[obj.name]
-
         obj = graphql.assert_named_type(obj)
-        if data_type.reference is None:
-            data_type.reference = self.references.get(obj.name)
-        if data_type.reference is None:
+        if obj.name in self.references:
+            data_type.reference = self.references[obj.name]
+        else:
+            # Only happens for Query and Mutation root types
             data_type.type = obj.name
 
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
