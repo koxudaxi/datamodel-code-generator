@@ -1419,7 +1419,7 @@ Format: `HeaderName:HeaderValue`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers Authorization:Bearer token # (1)!
+    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--http-headers` - the option documented here
@@ -1608,18 +1608,10 @@ testing without project configuration.
     ```json
     {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Pet",
       "type": "object",
       "properties": {
-        "id": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        },
-        "tag": {
-          "type": "string"
-        }
+        "firstName": {"type": "string"},
+        "lastName": {"type": "string"}
       }
     }
     ```
@@ -1654,12 +1646,12 @@ testing without project configuration.
         
         from typing import Optional
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class Model(BaseModel):
-            firstName: Optional[str] = None
-            lastName: Optional[str] = None
+            first_name: Optional[str] = Field(None, alias='firstName')
+            last_name: Optional[str] = Field(None, alias='lastName')
         ```
 
 ---

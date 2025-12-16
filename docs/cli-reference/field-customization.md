@@ -391,7 +391,7 @@ naming conventions for constants.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --capitalise-enum-members # (1)!
+    datamodel-codegen --input schema.json --capitalize-enum-members # (1)!
     ```
 
     1. :material-arrow-left: `--capitalize-enum-members` - the option documented here
@@ -1618,7 +1618,7 @@ snake_case conversion.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --snake-case-field --original-field-name-delimiter   # (1)!
+    datamodel-codegen --input schema.json --snake-case-field --original-field-name-delimiter " " # (1)!
     ```
 
     1. :material-arrow-left: `--original-field-name-delimiter` - the option documented here

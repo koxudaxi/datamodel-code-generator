@@ -116,7 +116,7 @@ headers, or other metadata to generated files.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --custom-file-header # Copyright 2024 MyCompany # (1)!
+    datamodel-codegen --input schema.json --custom-file-header "# Copyright 2024 MyCompany" # (1)!
     ```
 
     1. :material-arrow-left: `--custom-file-header` - the option documented here

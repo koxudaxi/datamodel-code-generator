@@ -1359,7 +1359,7 @@ control over dataclass generation.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments {"slots": true, "order": true} # (1)!
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments "{"slots": true, "order": true}" # (1)!
     ```
 
     1. :material-arrow-left: `--dataclass-arguments` - the option documented here

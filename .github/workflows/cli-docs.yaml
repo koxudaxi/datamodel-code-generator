@@ -20,34 +20,15 @@ permissions:
   contents: write
 
 jobs:
-  check-cli-docs:
-    name: cli-docs
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e cli-docs
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Collect CLI doc metadata
-        run: .tox/cli-docs/bin/pytest --collect-cli-docs -p no:xdist -q
-      - name: Check CLI docs are up to date
-        run: .tox/cli-docs/bin/python scripts/build_cli_docs.py --check
-
   update-cli-docs:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.PAT }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
       - name: Install tox
