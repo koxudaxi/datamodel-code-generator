@@ -1213,19 +1213,42 @@ def test_url_with_http_headers(mocker: pytest.MonkeyPatch, output_file: Path) ->
 
 
 @pytest.mark.cli_doc(
-    options=["--input", "--output"],
+    options=["--input"],
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--input", "pet_simple.json", "--output", "output.py"],
     golden_output="main_kr/input_output/output.py",
 )
 @freeze_time("2019-07-26")
-def test_input_output_options(output_file: Path) -> None:
-    """Specify input schema file and output Python file paths.
+def test_input_option(output_file: Path) -> None:
+    """Specify the input schema file path.
 
     The `--input` flag specifies the path to the schema file (JSON Schema,
-    OpenAPI, GraphQL, etc.). The `--output` flag specifies the destination
-    path for the generated Python code. If `--output` is omitted, the
-    generated code is written to stdout.
+    OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
+    schemas. Required unless using `--url` to fetch schema from a URL.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--output"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--input", "pet_simple.json", "--output", "output.py"],
+    golden_output="main_kr/input_output/output.py",
+)
+@freeze_time("2019-07-26")
+def test_output_option(output_file: Path) -> None:
+    """Specify the destination path for generated Python code.
+
+    The `--output` flag specifies where to write the generated Python code.
+    It can be either a file path (single-file output) or a directory path
+    (multi-file output for modular schemas). If omitted, the generated code
+    is written to stdout.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",

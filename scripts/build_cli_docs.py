@@ -31,9 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import operator
 
 from datamodel_code_generator.cli_options import (
-    EXCLUDED_FROM_DOCS,
     OptionCategory,
-    get_all_canonical_options,
     get_canonical_option,
     get_option_meta,
     is_excluded_from_docs,
@@ -208,7 +206,14 @@ def generate_option_section(option: str, primary: dict[str, Any]) -> str:  # noq
             schema_content = safe_read_file(
                 DATA_PATH, kwargs["input_schema"], file_types=("*.json", "*.yaml", "*.yml", "*.graphql")
             )
-            md += "    ```json\n"
+            schema_path = kwargs["input_schema"].lower()
+            if schema_path.endswith((".yaml", ".yml")):
+                lang = "yaml"
+            elif schema_path.endswith(".graphql"):
+                lang = "graphql"
+            else:
+                lang = "json"
+            md += f"    ```{lang}\n"
             for line in schema_content.strip().split("\n"):
                 md += f"    {line}\n"
             md += "    ```\n\n"
@@ -459,7 +464,7 @@ def collect_cli_docs() -> int:
     return 0
 
 
-def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0914, PLR0915
+def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
     """Build CLI documentation from collection data.
 
     Args:
@@ -474,7 +479,7 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0914, PLR091
 
     schema_version = collection.get("schema_version", 0)
     if schema_version != 1:
-        pass
+        print(f"Warning: Unexpected schema version {schema_version}, expected 1", file=sys.stderr)  # noqa: T201
 
     items = collection.get("items", [])
     if not items:
@@ -493,23 +498,14 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0914, PLR091
             elif item["marker_kwargs"].get("primary", False):
                 options_map[canonical] = item
 
-    all_argparse_options = get_all_canonical_options()
-    documented_options = set(options_map.keys())
-    undocumented = all_argparse_options - documented_options - EXCLUDED_FROM_DOCS
-
-    if undocumented:
-        for _opt in sorted(undocumented):
-            pass
-
     categories: dict[OptionCategory, dict[str, Any]] = defaultdict(dict)
-    uncategorized: dict[str, Any] = {}
 
     for option, primary in options_map.items():
         meta = get_option_meta(option)
         if meta:
             categories[meta.category][option] = primary
         else:
-            uncategorized[option] = primary
+            categories[OptionCategory.GENERAL][option] = primary
 
     if not check:
         DOCS_OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -546,9 +542,6 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0914, PLR091
         except (OSError, ValueError, KeyError):
             errors += 1
 
-    if uncategorized:
-        pass
-
     try:
         md = generate_index_page(categories)
         output_path = DOCS_OUTPUT / "index.md"
@@ -566,12 +559,12 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0914, PLR091
 
     if check:
         if mismatches:
-            for _m in mismatches:
-                pass
+            for m in mismatches:
+                print(f"Mismatch: {m}", file=sys.stderr)  # noqa: T201
             return 1
         return 0
     if errors:
-        pass
+        print(f"Errors occurred: {errors}", file=sys.stderr)  # noqa: T201
     return 1 if errors else 0
 
 

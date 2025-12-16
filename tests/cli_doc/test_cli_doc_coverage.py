@@ -109,13 +109,17 @@ class TestCoverageStats:  # pragma: no cover
         documentable = all_options - EXCLUDED_FROM_DOCS
         undocumented = documentable - collected_options
 
-        for _opt in sorted(undocumented):
-            pass
+        print(f"\nUndocumented options ({len(undocumented)}):")  # noqa: T201
+        for opt in sorted(undocumented):
+            print(f"  {opt}")  # noqa: T201
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
     def test_show_documented_options(  # noqa: PLR6301
         self, collected_options: set[str]
     ) -> None:
         """Display currently documented options."""
+        print(f"\nDocumented options ({len(collected_options)}):")  # noqa: T201
         for opt in sorted(collected_options):
-            CLI_OPTION_META.get(opt)
+            meta = CLI_OPTION_META.get(opt)
+            category = meta.category.value if meta else "General Options"
+            print(f"  {opt} ({category})")  # noqa: T201
