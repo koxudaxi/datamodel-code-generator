@@ -14,4 +14,4 @@ class Thing(BaseModel):
 
 
 class Person(Thing):
-    tags: Optional[Set[str]] = Field(['tag2'], unique_items=True)
+    tags: Optional[Set[str]] = Field({'tag2'}, unique_items=True)

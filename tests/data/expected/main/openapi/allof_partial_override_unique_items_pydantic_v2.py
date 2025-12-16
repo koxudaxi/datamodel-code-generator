@@ -14,4 +14,4 @@ class Thing(BaseModel):
 
 
 class Person(Thing):
-    tags: Optional[Set[str]] = ['tag2']
+    tags: Optional[Set[str]] = {'tag2'}
