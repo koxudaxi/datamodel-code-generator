@@ -4067,7 +4067,7 @@ The `--union-mode` flag configures the code generation behavior.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --union-mode left_to_right # (1)!
+    datamodel-codegen --input schema.json --union-mode left_to_right --output-model-type pydantic_v2.BaseModel # (1)!
     ```
 
     1. :material-arrow-left: `--union-mode` - the option documented here
@@ -4129,13 +4129,13 @@ The `--union-mode` flag configures the code generation behavior.
     
     from typing import Optional, Union
     
-    from pydantic import BaseModel, Extra, Field
+    from pydantic import BaseModel, ConfigDict, Field, RootModel
     
     
     class MySchema1(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         AddressLine1: str
         AddressLine2: Optional[str] = None
         City: Optional[str] = None
@@ -4144,9 +4144,9 @@ The `--union-mode` flag configures the code generation behavior.
     
     
     class MySchema2(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         AddressLine1: str
         AddressLine2: Optional[str] = None
         City: Optional[str] = None
@@ -4160,19 +4160,18 @@ The `--union-mode` flag configures the code generation behavior.
     
     
     class MySchema3(US):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         AddressLine1: str
         AddressLine2: Optional[str] = None
         City: Optional[str] = None
     
     
-    class MySchema(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
-        __root__: Union[MySchema1, MySchema2, MySchema3] = Field(..., title='My schema')
+    class MySchema(RootModel[Union[MySchema1, MySchema2, MySchema3]]):
+        root: Union[MySchema1, MySchema2, MySchema3] = Field(
+            ..., title='My schema', union_mode='left_to_right'
+        )
     ```
 
 ---

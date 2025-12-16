@@ -441,7 +441,7 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --empty-enum-field-name empty_ # (1)!
+    datamodel-codegen --input schema.json --empty-enum-field-name empty # (1)!
     ```
 
     1. :material-arrow-left: `--empty-enum-field-name` - the option documented here
@@ -1911,7 +1911,7 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --special-field-name-prefix special_ # (1)!
+    datamodel-codegen --input schema.json --special-field-name-prefix special # (1)!
     ```
 
     1. :material-arrow-left: `--special-field-name-prefix` - the option documented here

@@ -1250,6 +1250,7 @@ def test_main_jsonschema_pattern(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="pattern.py",
+        extra_args=["--disable-timestamp"],
     )
 
 
@@ -1671,7 +1672,7 @@ def test_main_jsonschema_special_enum(output_file: Path) -> None:
 @pytest.mark.cli_doc(
     options=["--special-field-name-prefix"],
     input_schema="jsonschema/special_enum.json",
-    cli_args=["--special-field-name-prefix", "special_"],
+    cli_args=["--special-field-name-prefix", "special"],
     golden_output="jsonschema/special_enum_special_field_name_prefix.py",
 )
 def test_main_jsonschema_special_enum_special_field_name_prefix(output_file: Path) -> None:
@@ -1793,7 +1794,7 @@ def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
 @pytest.mark.cli_doc(
     options=["--empty-enum-field-name"],
     input_schema="jsonschema/special_enum.json",
-    cli_args=["--empty-enum-field-name", "empty_"],
+    cli_args=["--empty-enum-field-name", "empty"],
     golden_output="jsonschema/special_enum_empty_enum_field_name.py",
 )
 def test_main_jsonschema_special_enum_empty_enum_field_name(output_file: Path) -> None:
@@ -1875,8 +1876,8 @@ def test_main_jsonschema_combine_one_of_object(output_file: Path) -> None:
 @pytest.mark.cli_doc(
     options=["--union-mode"],
     input_schema="jsonschema/combine_any_of_object.json",
-    cli_args=["--union-mode", "left_to_right"],
-    golden_output="jsonschema/combine_any_of_object.py",
+    cli_args=["--union-mode", "left_to_right", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/combine_any_of_object_left_to_right.py",
 )
 def test_main_jsonschema_combine_any_of_object(
     union_mode: str | None, output_model: str, expected_output: str, output_file: Path
