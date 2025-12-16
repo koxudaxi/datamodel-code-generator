@@ -1377,10 +1377,7 @@ class JsonSchemaParser(Parser):
         if self.allof_merge_mode == AllOfMergeMode.Constraints:
             non_merged_fields = {"default", "examples", "example"}
 
-        result = {}
-        for key, value in parent_dict.items():
-            if key not in non_merged_fields:
-                result[key] = value
+        result = {key: value for key, value in parent_dict.items() if key not in non_merged_fields}
 
         for key, value in child_dict.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
