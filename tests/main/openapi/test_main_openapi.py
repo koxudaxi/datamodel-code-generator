@@ -3741,3 +3741,24 @@ def test_main_enum_builtin_conflict(output_file: Path) -> None:
             expected_file="enum_builtin_conflict.py",
             extra_args=["--use-subclass-enum"],
         )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        ("pydantic.BaseModel", "unique_items_default_set_pydantic.py"),
+        ("pydantic_v2.BaseModel", "unique_items_default_set_pydantic_v2.py"),
+        ("dataclasses.dataclass", "unique_items_default_set_dataclass.py"),
+        ("msgspec.Struct", "unique_items_default_set_msgspec.py"),
+    ],
+)
+def test_main_unique_items_default_set(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test --use-unique-items-as-set converts list defaults to set literals."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "unique_items_default_set.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model, "--use-unique-items-as-set"],
+    )

@@ -221,7 +221,10 @@ class DataModelField(DataModelFieldBase):
         elif self.required:
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
-            field_arguments = [f"{self.default!r}", *field_arguments]
+            from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+            default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            field_arguments = [default_repr, *field_arguments]
 
         return f"Field({', '.join(field_arguments)})"
 
