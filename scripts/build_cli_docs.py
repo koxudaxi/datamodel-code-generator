@@ -143,7 +143,10 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
     while i < len(cli_args):
         arg = cli_args[i]
         if arg.startswith("-") and i + 1 < len(cli_args) and not cli_args[i + 1].startswith("-"):
-            formatted.append(f"{arg} {cli_args[i + 1]}")
+            value = cli_args[i + 1]
+            if " " in value or not value:
+                value = f'"{value}"'
+            formatted.append(f"{arg} {value}")
             i += 2
         else:
             formatted.append(arg)

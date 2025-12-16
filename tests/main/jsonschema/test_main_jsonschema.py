@@ -884,7 +884,7 @@ def test_main_json_reuse_enum(output_file: Path) -> None:
 @pytest.mark.cli_doc(
     options=["--capitalize-enum-members"],
     input_schema="jsonschema/many_case_enum.json",
-    cli_args=["--capitalise-enum-members"],
+    cli_args=["--capitalize-enum-members"],
     golden_output="jsonschema/json_capitalise_enum_members.py",
     related_options=["--snake-case-field"],
 )

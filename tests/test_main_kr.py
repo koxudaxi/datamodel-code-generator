@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from argparse import Namespace
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import black
@@ -16,6 +17,9 @@ from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import run_main_and_assert, run_main_with_args
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -1181,7 +1185,7 @@ def test_custom_file_header(output_file: Path) -> None:
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_url_with_http_headers(mocker: pytest.MonkeyPatch, output_file: Path) -> None:
+def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None:
     """Fetch schema from URL with custom HTTP headers.
 
     The `--url` flag specifies a remote URL to fetch the schema from instead of
@@ -1409,10 +1413,10 @@ def test_http_query_parameters(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--ignore-pyproject"],
-    input_schema="jsonschema/pet_simple.json",
+    input_schema="jsonschema/ignore_pyproject_example.json",
     cli_args=["--ignore-pyproject"],
     golden_output="main_kr/ignore_pyproject/output.py",
-    comparison_output="main_kr/pyproject_profile/ignore_pyproject.py",
+    comparison_output="main_kr/ignore_pyproject/without_option.py",
 )
 @freeze_time("2019-07-26")
 def test_ignore_pyproject_cli_doc(output_file: Path, tmp_path: Path) -> None:
