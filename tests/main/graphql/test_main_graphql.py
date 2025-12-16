@@ -107,7 +107,7 @@ def test_main_graphql_field_aliases(output_file: Path) -> None:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_casing(output_file: Path) -> None:
-    """Test GraphQL code generation with enums."""
+    """Test GraphQL code generation with casing transformations."""
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "casing.graphql",
         output_path=output_file,
