@@ -1507,9 +1507,7 @@ class JsonSchemaParser(Parser):
             return False
         if obj.type == "object":
             return False
-        if obj.enum:
-            return False
-        return True
+        return not obj.enum
 
     def _handle_allof_root_model_with_constraints(
         self,
@@ -1556,7 +1554,7 @@ class JsonSchemaParser(Parser):
         if not constraint_items:
             return None
 
-        all_items = [ref_schema] + constraint_items
+        all_items = [ref_schema, *constraint_items]
         merged_schema = self._merge_primitive_schemas_for_allof(all_items)
 
         if obj.description:
