@@ -60,7 +60,7 @@ from datamodel_code_generator.parser.base import (
     get_special_path,
     title_to_class_name,
 )
-from datamodel_code_generator.reference import ModelType, Reference, is_url
+from datamodel_code_generator.reference import ModelType, Reference, SPECIAL_PATH_MARKER, is_url
 from datamodel_code_generator.types import (
     ANY,
     DataType,
@@ -1521,18 +1521,26 @@ class JsonSchemaParser(Parser):
 
         This handler is for generating a root model from a root model reference.
         Object inheritance (with properties) is handled by existing _parse_all_of_item() path.
+        Only applies to named schema definitions, not inline properties.
         """
+        for path_element in path:
+            if SPECIAL_PATH_MARKER in path_element:
+                return None
+
         ref_items = [item for item in obj.allOf if item.ref]
 
         if len(ref_items) != 1:
             return None
 
         ref_item = ref_items[0]
+        ref_value = ref_item.ref
+        if ref_value is None:
+            return None
 
         if ref_item.has_ref_with_schema_keywords:
             ref_schema = self._merge_ref_with_schema(ref_item)
         else:
-            ref_schema = self._load_ref_schema_object(ref_item.ref)
+            ref_schema = self._load_ref_schema_object(ref_value)
 
         if not self._is_root_model_schema(ref_schema):
             return None
