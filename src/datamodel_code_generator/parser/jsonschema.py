@@ -60,7 +60,7 @@ from datamodel_code_generator.parser.base import (
     get_special_path,
     title_to_class_name,
 )
-from datamodel_code_generator.reference import ModelType, Reference, SPECIAL_PATH_MARKER, is_url
+from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
 from datamodel_code_generator.types import (
     ANY,
     DataType,
