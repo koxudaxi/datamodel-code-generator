@@ -1162,6 +1162,37 @@ class JsonSchemaParser(Parser):
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
 
+    def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
+        """Merge primitive schemas for allOf, respecting allof_merge_mode setting."""
+        if len(items) == 1:
+            return items[0]
+
+        if self.allof_merge_mode != AllOfMergeMode.NoMerge:
+            merged = self._merge_primitive_schemas(items)
+            merged_dict = merged.dict(exclude_unset=True, by_alias=True)
+            for item in items:
+                if item.format:
+                    merged_dict["format"] = item.format
+            return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+
+        base_dict: dict[str, Any] = {}
+        for item in items:
+            if item.type:
+                base_dict = item.dict(exclude_unset=True, by_alias=True)
+                break
+
+        for item in items:
+            for constraint_field in JsonSchemaObject.__constraint_fields__:
+                value = getattr(item, constraint_field, None)
+                if value is None:
+                    value = item.extras.get(constraint_field)
+                if value is not None:
+                    base_dict[constraint_field] = value
+            if item.format:
+                base_dict["format"] = item.format
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
+
     @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
         """Compute the intersection of two constraint values."""
@@ -1459,6 +1490,81 @@ class JsonSchemaParser(Parser):
         if isinstance(prop_schema, bool):
             return prop_schema
         return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
+
+    def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:
+        """Check if schema represents a root model (primitive type with constraints).
+
+        Based on parse_raw_obj() else branch conditions. Returns True when
+        the schema would be processed by parse_root_type().
+        """
+        if obj.is_array:
+            return False
+        if obj.allOf or obj.oneOf or obj.anyOf:
+            return False
+        if obj.properties:
+            return False
+        if obj.patternProperties:
+            return False
+        if obj.type == "object":
+            return False
+        if obj.enum:
+            return False
+        return True
+
+    def _handle_allof_root_model_with_constraints(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType | None:
+        """Handle allOf that combines a root model $ref with additional constraints.
+
+        This handler is for generating a root model from a root model reference.
+        Object inheritance (with properties) is handled by existing _parse_all_of_item() path.
+        """
+        ref_items = [item for item in obj.allOf if item.ref]
+
+        if len(ref_items) != 1:
+            return None
+
+        ref_item = ref_items[0]
+
+        if ref_item.has_ref_with_schema_keywords:
+            ref_schema = self._merge_ref_with_schema(ref_item)
+        else:
+            ref_schema = self._load_ref_schema_object(ref_item.ref)
+
+        if not self._is_root_model_schema(ref_schema):
+            return None
+
+        constraint_items: list[JsonSchemaObject] = []
+        for item in obj.allOf:
+            if item.ref:
+                continue
+            if item.properties or item.items:
+                return None
+            if item.has_constraint or item.type or item.format:
+                if item.type and ref_schema.type:
+                    compatible_type_pairs = {
+                        ("integer", "number"),
+                        ("number", "integer"),
+                    }
+                    if item.type != ref_schema.type and (item.type, ref_schema.type) not in compatible_type_pairs:
+                        return None
+                constraint_items.append(item)
+
+        if not constraint_items:
+            return None
+
+        all_items = [ref_schema] + constraint_items
+        merged_schema = self._merge_primitive_schemas_for_allof(all_items)
+
+        if obj.description:
+            merged_dict = merged_schema.dict(exclude_unset=True, by_alias=True)
+            merged_dict["description"] = obj.description
+            merged_schema = self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+
+        return self.parse_root_type(name, merged_schema, path)
 
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         """Merge allOf items when they share object properties to avoid duplicate models.
@@ -1869,6 +1975,11 @@ class JsonSchemaParser(Parser):
                 base_classes=[],
                 required=[],
             )
+
+        root_model_result = self._handle_allof_root_model_with_constraints(name, obj, path)
+        if root_model_result is not None:
+            return root_model_result
+
         fields: list[DataModelFieldBase] = []
         base_classes: list[Reference] = []
         required: list[str] = []

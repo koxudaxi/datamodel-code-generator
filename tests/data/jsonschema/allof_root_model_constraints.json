@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "StringDatatype": {
+      "description": "A base string type.",
+      "type": "string",
+      "pattern": "^\\S(.*\\S)?$"
+    },
+    "ConstrainedStringDatatype": {
+      "description": "A constrained string.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" },
+        { "type": "string", "minLength": 1, "pattern": "^[A-Z].*" }
+      ]
+    },
+    "IntegerDatatype": {
+      "description": "A whole number.",
+      "type": "integer"
+    },
+    "NonNegativeIntegerDatatype": {
+      "description": "Non-negative integer.",
+      "allOf": [
+        { "$ref": "#/definitions/IntegerDatatype" },
+        { "minimum": 0 }
+      ]
+    },
+    "BoundedIntegerDatatype": {
+      "description": "Integer between 0 and 100.",
+      "allOf": [
+        { "$ref": "#/definitions/IntegerDatatype" },
+        { "minimum": 0, "maximum": 100 }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "#/definitions/ConstrainedStringDatatype" },
+    "count": { "$ref": "#/definitions/NonNegativeIntegerDatatype" },
+    "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" }
+  }
+}
