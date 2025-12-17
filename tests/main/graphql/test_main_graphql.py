@@ -189,8 +189,8 @@ def test_main_graphql_enums_as_literals_one(output_file: Path) -> None:
     )
 
 
-def test_main_graphql_to_typed_dict(output_file: Path) -> None:
-    """Test GraphQL code generation paired with typed.dict output which forces enums as literals."""
+def test_main_graphql_enums_to_typed_dict(output_file: Path) -> None:
+    """Test GraphQL code generation paired with typing.TypedDict output which forces enums as literals."""
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "enums.graphql",
         output_path=output_file,
