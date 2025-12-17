@@ -4172,3 +4172,14 @@ def test_main_unique_items_default_set(output_model: str, expected_output: str, 
         expected_file=expected_output,
         extra_args=["--output-model-type", output_model, "--use-unique-items-as-set"],
     )
+
+
+def test_main_openapi_null_only_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with enum containing only null value."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "null_only_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="null_only_enum.py",
+    )

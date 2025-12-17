@@ -921,3 +921,11 @@ def test_parse_combined_schema_anyof_with_ref_and_schema_keywords() -> None:
     parser.parse_raw_obj("Model", schema, [])
     results = list(parser.results)
     assert len(results) >= 1
+
+
+def test_parse_enum_empty_enum_not_nullable() -> None:
+    """Test parse_enum returns null type when enum_fields is empty and not nullable."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.parse_obj({"type": "integer", "enum": []})
+    result = parser.parse_enum("EmptyEnum", obj, ["EmptyEnum"])
+    assert result.type == "None"
