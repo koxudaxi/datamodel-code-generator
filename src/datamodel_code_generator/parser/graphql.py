@@ -426,7 +426,6 @@ class GraphQLParser(Parser):
                 self.data_model_field_type(
                     required=True,
                     data_type=data_type,
-                    use_annotated=self.use_annotated,
                 )
             ],
             custom_base_class=self.base_class,
