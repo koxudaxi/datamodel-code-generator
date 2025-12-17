@@ -424,6 +424,7 @@ class GraphQLParser(Parser):
             reference=self.references[enum_object.name],
             fields=[
                 self.data_model_field_type(
+                    required=True,
                     data_type=data_type,
                     use_annotated=self.use_annotated,
                 )
