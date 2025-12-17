@@ -837,6 +837,10 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         pilots_ids: List[ID]
         vehicle_class: Optional[String] = None
         typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
+    
+    
+    Film.update_forward_refs()
+    Person.update_forward_refs()
     ```
 
 ---
