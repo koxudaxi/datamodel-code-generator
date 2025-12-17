@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "日本語Model",
+  "description": "モデルの説明文",
+  "type": "object",
+  "properties": {
+    "名前": {
+      "type": "string",
+      "description": "ユーザー名"
+    },
+    "年齢": {
+      "type": "integer"
+    }
+  }
+}

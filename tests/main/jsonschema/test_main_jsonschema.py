@@ -56,8 +56,20 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
 
 
 @pytest.mark.benchmark
+@pytest.mark.cli_doc(
+    options=["--keep-model-order"],
+    input_schema="jsonschema/inheritance_forward_ref.json",
+    cli_args=["--keep-model-order"],
+    golden_output="jsonschema/inheritance_forward_ref_keep_model_order.py",
+    related_options=["--collapse-root-models"],
+)
 def test_main_inheritance_forward_ref_keep_model_order(output_file: Path, tmp_path: Path) -> None:
-    """Test inheritance with forward references keeping model order."""
+    """Keep model definition order as specified in schema.
+
+    The `--keep-model-order` flag preserves the original definition order from the schema
+    instead of reordering models based on dependencies. This is useful when the order
+    of model definitions matters for documentation or readability.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "inheritance_forward_ref.json",
         output_path=output_file,
@@ -110,9 +122,21 @@ def test_main_type_alias_cycle_keep_model_order(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--disable-future-imports"],
+    input_schema="jsonschema/keep_model_order_field_references.json",
+    cli_args=["--disable-future-imports", "--target-python-version", "3.10"],
+    golden_output="main/jsonschema/keep_model_order_field_references.py",
+)
 @pytest.mark.benchmark
 def test_main_keep_model_order_field_references(output_file: Path) -> None:
-    """Test field references are considered when keeping model order."""
+    """Prevent automatic addition of __future__ imports in generated code.
+
+    The --disable-future-imports option stops the generator from adding
+    'from __future__ import annotations' to the output. This is useful when
+    you need compatibility with tools or environments that don't support
+    postponed evaluation of annotations (PEP 563).
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
         output_path=output_file,
@@ -198,9 +222,18 @@ def test_main_keep_model_order_matrix_keep_model_order_field_references(
         exec(compile(code, str(output_file), "exec"), {})
 
 
+@pytest.mark.cli_doc(
+    options=["--target-python-version"],
+    input_schema="jsonschema/pydantic_v2_model_rebuild_inheritance.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--keep-model-order", "--target-python-version", "3.10"],
+    golden_output="jsonschema/pydantic_v2_model_rebuild_inheritance.py",
+)
 @pytest.mark.benchmark
 def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
-    """Test rebuild call propagation from base class to inheritors."""
+    """Target Python version for generated code syntax and imports.
+
+    The `--target-python-version` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_model_rebuild_inheritance.json",
         output_path=output_file,
@@ -395,8 +428,17 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--output-model-type"],
+    input_schema="jsonschema/null_and_array.json",
+    cli_args=["--output-model-type", "pydantic.BaseModel"],
+    golden_output="jsonschema/null_and_array.py",
+)
 def test_main_null_and_array(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test handling of null and array types."""
+    """Specify the output model type (pydantic, dataclass, typeddict, msgspec).
+
+    The `--output-model-type` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null_and_array.json",
         output_path=output_file,
@@ -407,8 +449,17 @@ def test_main_null_and_array(output_model: str, expected_output: str, output_fil
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-default"],
+    input_schema="jsonschema/use_default_with_const.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-default"],
+    golden_output="jsonschema/use_default_with_const.py",
+)
 def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> None:
-    """Test use-default with const in Pydantic v2."""
+    """Use default values from schema in generated models.
+
+    The `--use-default` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_default_with_const.json",
         output_path=output_file,
@@ -454,9 +505,18 @@ def test_main_complicated_enum_default_member(
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--set-default-enum-member"],
+    input_schema="jsonschema/duplicate_enum.json",
+    cli_args=["--reuse-model", "--set-default-enum-member"],
+    golden_output="jsonschema/json_reuse_enum_default_member.py",
+)
 @pytest.mark.benchmark
 def test_main_json_reuse_enum_default_member(output_file: Path) -> None:
-    """Test enum reuse with default member."""
+    """Set the first enum member as the default value for enum fields.
+
+    The `--set-default-enum-member` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_enum.json",
         output_path=output_file,
@@ -491,8 +551,20 @@ def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture[str], o
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--class-name"],
+    input_schema="jsonschema/invalid_model_name.json",
+    cli_args=["--class-name", "ValidModelName"],
+    golden_output="main/jsonschema/invalid_model_name.py",
+)
 def test_main_invalid_model_name(output_file: Path) -> None:
-    """Test invalid model name with custom class name."""
+    """Override the auto-generated class name with a custom name.
+
+    The --class-name option allows you to specify a custom class name for the
+    generated model. This is useful when the schema title is invalid as a Python
+    class name (e.g., starts with a number) or when you want to use a different
+    naming convention than what's in the schema.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_model_name.json",
         output_path=output_file,
@@ -763,8 +835,20 @@ def test_main_invalid_enum_name(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--snake-case-field"],
+    input_schema="jsonschema/invalid_enum_name.json",
+    cli_args=["--snake-case-field"],
+    golden_output="jsonschema/invalid_enum_name_snake_case_field.py",
+    related_options=["--capitalize-enum-members"],
+)
 def test_main_invalid_enum_name_snake_case_field(output_file: Path) -> None:
-    """Test invalid enum name with snake case fields."""
+    """Convert field names to snake_case format.
+
+    The `--snake-case-field` flag converts camelCase or PascalCase field names
+    to snake_case format in the generated Python code, following Python naming
+    conventions (PEP 8).
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_enum_name.json",
         output_path=output_file,
@@ -774,8 +858,20 @@ def test_main_invalid_enum_name_snake_case_field(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--reuse-model"],
+    input_schema="jsonschema/duplicate_enum.json",
+    cli_args=["--reuse-model"],
+    golden_output="jsonschema/json_reuse_enum.py",
+    related_options=["--collapse-root-models"],
+)
 def test_main_json_reuse_enum(output_file: Path) -> None:
-    """Test enum reuse in JSON generation."""
+    """Reuse identical model definitions instead of generating duplicates.
+
+    The `--reuse-model` flag detects identical enum or model definitions
+    across the schema and generates a single shared definition, reducing
+    code duplication in the output.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_enum.json",
         output_path=output_file,
@@ -785,8 +881,20 @@ def test_main_json_reuse_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--capitalize-enum-members"],
+    input_schema="jsonschema/many_case_enum.json",
+    cli_args=["--capitalize-enum-members"],
+    golden_output="jsonschema/json_capitalise_enum_members.py",
+    related_options=["--snake-case-field"],
+)
 def test_main_json_capitalise_enum_members(output_file: Path) -> None:
-    """Test enum member capitalization."""
+    """Capitalize enum member names to UPPER_CASE format.
+
+    The `--capitalize-enum-members` flag converts enum member names to
+    UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
+    naming conventions for constants.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "many_case_enum.json",
         output_path=output_file,
@@ -945,8 +1053,20 @@ def test_main_root_model_with_additional_properties(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-generic-container-types"],
+    input_schema="jsonschema/root_model_with_additional_properties.json",
+    cli_args=["--use-generic-container-types"],
+    golden_output="jsonschema/root_model_with_additional_properties_use_generic_container_types.py",
+    related_options=["--use-standard-collections"],
+)
 def test_main_root_model_with_additional_properties_use_generic_container_types(output_file: Path) -> None:
-    """Test root model additional properties with generic containers."""
+    """Use typing.Dict/List instead of dict/list for container types.
+
+    The `--use-generic-container-types` flag generates typing module generic
+    containers (Dict, List, etc.) instead of built-in types. This is useful for
+    Python 3.8 compatibility or when explicit typing imports are preferred.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
         output_path=output_file,
@@ -956,8 +1076,20 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-standard-collections"],
+    input_schema="jsonschema/root_model_with_additional_properties.json",
+    cli_args=["--use-standard-collections"],
+    golden_output="jsonschema/root_model_with_additional_properties_use_standard_collections.py",
+    related_options=["--use-generic-container-types"],
+)
 def test_main_root_model_with_additional_properties_use_standard_collections(output_file: Path) -> None:
-    """Test root model additional properties with standard collections."""
+    """Use built-in dict/list instead of typing.Dict/List.
+
+    The `--use-standard-collections` flag generates built-in container types
+    (dict, list) instead of typing module equivalents. This produces cleaner
+    code for Python 3.9+ where built-in types support subscripting.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
         output_path=output_file,
@@ -1000,8 +1132,20 @@ def test_main_jsonschema_multiple_files_ref_test_json(output_file: Path) -> None
         )
 
 
+@pytest.mark.cli_doc(
+    options=["--original-field-name-delimiter"],
+    input_schema="jsonschema/space_field_enum.json",
+    cli_args=["--snake-case-field", "--original-field-name-delimiter", " "],
+    golden_output="main/jsonschema/space_field_enum_snake_case_field.py",
+)
 def test_main_space_field_enum_snake_case_field(output_file: Path) -> None:
-    """Test enum with space in field name using snake case."""
+    """Specify delimiter for original field names when using snake-case conversion.
+
+    The `--original-field-name-delimiter` option works with `--snake-case-field` to specify
+    the delimiter used in original field names. This is useful when field names contain
+    delimiters like spaces or hyphens that should be treated as word boundaries during
+    snake_case conversion.
+    """
     with chdir(JSON_SCHEMA_DATA_PATH / "space_field_enum.json"):
         run_main_and_assert(
             input_path=Path("space_field_enum.json"),
@@ -1089,14 +1233,24 @@ def test_main_combined_array(output_file: Path) -> None:
         )
 
 
+@pytest.mark.cli_doc(
+    options=["--disable-timestamp"],
+    input_schema="jsonschema/pattern.json",
+    cli_args=["--disable-timestamp"],
+    golden_output="jsonschema/pattern.py",
+)
 def test_main_jsonschema_pattern(output_file: Path) -> None:
-    """Test JSON Schema pattern validation."""
+    """Disable timestamp in generated file header for reproducible output.
+
+    The `--disable-timestamp` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "pattern.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="pattern.py",
+        extra_args=["--disable-timestamp"],
     )
 
 
@@ -1453,12 +1607,24 @@ def test_main_strict_types(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--strict-types"],
+    input_schema="jsonschema/strict_types.json",
+    cli_args=["--strict-types", "str", "bytes", "int", "float", "bool"],
+    golden_output="main/jsonschema/strict_types_all.py",
+)
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
 def test_main_strict_types_all(output_file: Path) -> None:
-    """Test strict types for all fields."""
+    """Enable strict type validation for specified Python types.
+
+    The --strict-types option enforces stricter type checking by preventing implicit
+    type coercion for the specified types (str, bytes, int, float, bool). This
+    generates StrictStr, StrictBytes, StrictInt, StrictFloat, and StrictBool types
+    in Pydantic models, ensuring values match exactly without automatic conversion.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "strict_types.json",
         output_path=output_file,
@@ -1468,8 +1634,20 @@ def test_main_strict_types_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--field-constraints"],
+    input_schema="jsonschema/strict_types.json",
+    cli_args=["--strict-types", "str", "bytes", "int", "float", "bool", "--field-constraints"],
+    golden_output="jsonschema/strict_types_all_field_constraints.py",
+    related_options=["--strict-types"],
+)
 def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None:
-    """Test strict types with field constraints."""
+    """Generate Field() with validation constraints from schema.
+
+    The `--field-constraints` flag generates Pydantic Field() declarations with
+    validation constraints (min/max length, pattern, minimum/maximum values, etc.)
+    extracted from the JSON Schema, enabling runtime validation.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "strict_types.json",
         output_path=output_file,
@@ -1491,8 +1669,17 @@ def test_main_jsonschema_special_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--special-field-name-prefix"],
+    input_schema="jsonschema/special_enum.json",
+    cli_args=["--special-field-name-prefix", "special"],
+    golden_output="jsonschema/special_enum_special_field_name_prefix.py",
+)
 def test_main_jsonschema_special_enum_special_field_name_prefix(output_file: Path) -> None:
-    """Test special enum with field name prefix."""
+    """Prefix to add to special field names (like reserved keywords).
+
+    The `--special-field-name-prefix` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "special_enum.json",
         output_path=output_file,
@@ -1515,8 +1702,17 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private(out
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--remove-special-field-name-prefix"],
+    input_schema="jsonschema/special_prefix_model.json",
+    cli_args=["--remove-special-field-name-prefix"],
+    golden_output="jsonschema/special_model_remove_special_field_name_prefix.py",
+)
 def test_main_jsonschema_special_model_remove_special_field_name_prefix(output_file: Path) -> None:
-    """Test removing special field name prefix from models."""
+    """Remove the special prefix from field names.
+
+    The `--remove-special-field-name-prefix` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "special_prefix_model.json",
         output_path=output_file,
@@ -1595,8 +1791,17 @@ def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--empty-enum-field-name"],
+    input_schema="jsonschema/special_enum.json",
+    cli_args=["--empty-enum-field-name", "empty"],
+    golden_output="jsonschema/special_enum_empty_enum_field_name.py",
+)
 def test_main_jsonschema_special_enum_empty_enum_field_name(output_file: Path) -> None:
-    """Test special enum with empty field name."""
+    """Name for empty string enum field values.
+
+    The `--empty-enum-field-name` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "special_enum.json",
         output_path=output_file,
@@ -1668,10 +1873,19 @@ def test_main_jsonschema_combine_one_of_object(output_file: Path) -> None:
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--union-mode"],
+    input_schema="jsonschema/combine_any_of_object.json",
+    cli_args=["--union-mode", "left_to_right", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/combine_any_of_object_left_to_right.py",
+)
 def test_main_jsonschema_combine_any_of_object(
     union_mode: str | None, output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Test combining anyOf with objects."""
+    """Union mode for combining anyOf/oneOf schemas (smart or left_to_right).
+
+    The `--union-mode` flag configures the code generation behavior.
+    """
     extra_args = ["--output-model-type", output_model]
     if union_mode is not None:
         extra_args.extend(["--union-mode", union_mode])
@@ -1708,9 +1922,18 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--field-include-all-keys"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--field-include-all-keys"],
+    golden_output="jsonschema/general.py",
+)
 @pytest.mark.benchmark
 def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
-    """Test field generation including all keys."""
+    """Include all schema keys in Field() json_schema_extra.
+
+    The `--field-include-all-keys` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
@@ -1721,6 +1944,12 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--field-extra-keys-without-x-prefix"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--field-include-all-keys", "--field-extra-keys-without-x-prefix", "x-repr"],
+    golden_output="main/jsonschema/field_extras_field_include_all_keys.py",
+)
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
@@ -1737,7 +1966,13 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
 def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Test field extras including all keys."""
+    """Include specified schema extension keys in Field() without requiring 'x-' prefix.
+
+    The --field-extra-keys-without-x-prefix option allows you to specify custom
+    schema extension keys that should be included in Pydantic Field() extras without
+    the 'x-' prefix requirement. For example, 'x-repr' in the schema becomes 'repr'
+    in Field(). This is useful for custom schema extensions and vendor-specific metadata.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
@@ -1767,10 +2002,19 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--field-extra-keys"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--field-extra-keys", "key2", "--field-extra-keys-without-x-prefix", "x-repr"],
+    golden_output="jsonschema/field_extras_field_extra_keys.py",
+)
 def test_main_jsonschema_field_extras_field_extra_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Test field extras with extra keys."""
+    """Include specific extra keys in Field() definitions.
+
+    The `--field-extra-keys` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
@@ -1835,8 +2079,19 @@ def test_long_description(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--wrap-string-literal"],
+    input_schema="jsonschema/long_description.json",
+    cli_args=["--wrap-string-literal"],
+    golden_output="jsonschema/long_description_wrap_string_literal.py",
+)
 def test_long_description_wrap_string_literal(output_file: Path) -> None:
-    """Test long description with string literal wrapping."""
+    """Wrap long string literals across multiple lines.
+
+    The `--wrap-string-literal` flag breaks long string literals (like descriptions)
+    across multiple lines for better readability, instead of having very long
+    single-line strings in the generated code.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "long_description.json",
         output_path=output_file,
@@ -1890,8 +2145,20 @@ def test_jsonschema_titles(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-title-as-name"],
+    input_schema="jsonschema/titles.json",
+    cli_args=["--use-title-as-name"],
+    golden_output="jsonschema/titles_use_title_as_name.py",
+    related_options=["--class-name"],
+)
 def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
-    """Test using title as model name."""
+    """Use schema title as the generated class name.
+
+    The `--use-title-as-name` flag uses the `title` property from the schema
+    as the class name instead of deriving it from the property name or path.
+    This is useful when schemas have descriptive titles that should be preserved.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "titles.json",
         output_path=output_file,
@@ -1987,8 +2254,17 @@ def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--treat-dot-as-module"],
+    input_schema="jsonschema/treat_dot_as_module_single",
+    cli_args=["--treat-dot-as-module"],
+    golden_output="jsonschema/treat_dot_as_module_single/",
+)
 def test_treat_dot_as_module_single_file(output_dir: Path) -> None:
-    """Test treat-dot-as-module with single file having short path."""
+    """Treat dots in schema names as module separators.
+
+    The `--treat-dot-as-module` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module_single",
         output_path=output_dir,
@@ -2107,8 +2383,20 @@ def test_main_jsonschema_oneof_const_enum_nested(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal"],
+    input_schema="jsonschema/oneof_const_enum_nested.yaml",
+    cli_args=["--enum-field-as-literal", "all"],
+    golden_output="main/jsonschema/oneof_const_enum_nested_literal.py",
+)
 def test_main_jsonschema_oneof_const_enum_nested_literal(output_file: Path) -> None:
-    """Test nested oneOf const with --enum-field-as-literal all."""
+    """Generate Literal types instead of Enums for fields with enumerated values.
+
+    The --enum-field-as-literal option replaces Enum classes with Literal types for
+    fields that have a fixed set of allowed values. Use 'all' to convert all enum
+    fields, or 'one' to only convert enums with a single value. This produces more
+    concise type hints and avoids creating Enum classes when not needed.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nested.yaml",
         output_path=output_file,
@@ -2282,9 +2570,20 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture[str], output
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--disable-warnings"],
+    input_schema="jsonschema/all_of_with_object.json",
+    cli_args=["--disable-warnings"],
+    golden_output="main/jsonschema/all_of_with_object.py",
+)
 @pytest.mark.filterwarnings("error")
 def test_main_disable_warnings(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
-    """Test disable warnings flag."""
+    """Suppress warning messages during code generation.
+
+    The --disable-warnings option silences all warning messages that the generator
+    might emit during processing (e.g., about unsupported features, ambiguous schemas,
+    or potential issues). Useful for clean output in CI/CD pipelines.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_with_object.json",
         output_path=output_file,
@@ -2404,8 +2703,19 @@ def test_main_all_of_any_of(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-double-quotes"],
+    input_schema="jsonschema/all_of_any_of_base_class_ref.json",
+    cli_args=["--use-double-quotes"],
+    golden_output="main/jsonschema/all_of_any_of_base_class_ref.py",
+)
 def test_main_all_of_any_of_base_class_ref(output_file: Path) -> None:
-    """Test allOf/anyOf with base class references to avoid invalid imports."""
+    """Use double quotes for string literals in generated code.
+
+    The --use-double-quotes option formats all string literals in the generated
+    Python code with double quotes instead of the default single quotes. This
+    helps maintain consistency with codebases that prefer double-quote formatting.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_any_of_base_class_ref.json",
         output_path=output_file,
@@ -3152,8 +3462,17 @@ def test_main_jsonschema_forwarding_reference_collapse_root(output_dir: Path) ->
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-type-alias"],
+    input_schema="jsonschema/type_alias.json",
+    cli_args=["--use-type-alias"],
+    golden_output="jsonschema/type_alias.py",
+)
 def test_main_jsonschema_type_alias(output_file: Path) -> None:
-    """Test that TypeAliasType is generated for Python 3.9-3.11."""
+    """Generate TypeAlias for root models instead of wrapper classes.
+
+    The `--use-type-alias` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
@@ -3186,8 +3505,19 @@ def test_main_jsonschema_type_alias_py312(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-field-description"],
+    input_schema="jsonschema/type_alias.json",
+    cli_args=["--use-type-alias", "--use-field-description"],
+    golden_output="jsonschema/type_alias_with_field_description.py",
+)
 def test_main_jsonschema_type_alias_with_field_description(output_file: Path) -> None:
-    """Test that TypeAliasType is generated with field descriptions for Python 3.9-3.11."""
+    """Include schema descriptions as Field docstrings.
+
+    The `--use-field-description` flag extracts the `description` property from
+    schema fields and includes them as docstrings or Field descriptions in the
+    generated models, preserving documentation from the original schema.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
@@ -3221,8 +3551,17 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--type-mappings"],
+    input_schema="jsonschema/type_mappings.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--type-mappings", "binary=string"],
+    golden_output="jsonschema/type_mappings.py",
+)
 def test_main_jsonschema_type_mappings(output_file: Path) -> None:
-    """Test --type-mappings option to override format-to-type mappings."""
+    """Override default type mappings for schema formats.
+
+    The `--type-mappings` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
         output_path=output_file,
@@ -3306,8 +3645,17 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--reuse-scope"],
+    input_schema="jsonschema/reuse_scope_tree",
+    cli_args=["--reuse-model", "--reuse-scope", "tree"],
+    golden_output="jsonschema/reuse_scope_tree",
+)
 def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
-    """Test --reuse-scope=tree to deduplicate models across multiple files."""
+    """Scope for model reuse detection (root or tree).
+
+    The `--reuse-scope` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
         output_path=output_dir,
@@ -3453,6 +3801,12 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--aliases"],
+    input_schema="jsonschema/hierarchical_aliases.json",
+    cli_args=["--aliases", "aliases/hierarchical_aliases_scoped.json"],
+    golden_output="jsonschema/jsonschema_hierarchical_aliases_scoped.py",
+)
 def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
     """Test hierarchical aliases with scoped format (ClassName.field)."""
     run_main_and_assert(
@@ -3505,8 +3859,20 @@ def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--collapse-root-models"],
+    input_schema="jsonschema/collapse_root_models_empty_union.json",
+    cli_args=["--collapse-root-models"],
+    golden_output="main/jsonschema/jsonschema_collapse_root_models_empty_union.py",
+)
 def test_main_jsonschema_collapse_root_models_empty_union(output_file: Path) -> None:
-    """Test that collapse-root-models with empty union fallback generates Any instead of invalid Union syntax."""
+    """Inline root model definitions instead of creating separate wrapper classes.
+
+    The --collapse-root-models option simplifies generated code by collapsing
+    root-level models (top-level type aliases) directly into their usage sites.
+    This eliminates unnecessary wrapper classes and produces more concise output,
+    especially useful when schemas define simple root types or type aliases.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_empty_union.json",
         output_path=output_file,
@@ -3834,10 +4200,19 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-frozen-field"],
+    input_schema="jsonschema/use_frozen_field.json",
+    cli_args=["--use-frozen-field", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/use_frozen_field_v2.py",
+)
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
 def test_main_use_frozen_field_pydantic_v2(output_file: Path) -> None:
-    """Test --use-frozen-field with Pydantic v2 generates Field(frozen=True) for readOnly fields."""
+    """Generate frozen (immutable) field definitions.
+
+    The `--use-frozen-field` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
         output_path=output_file,

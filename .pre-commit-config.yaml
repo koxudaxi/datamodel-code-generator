@@ -31,7 +31,7 @@ repos:
   - id: codespell
     additional_dependencies:
     - tomli
-    exclude: "^tests/|^CODE_OF_CONDUCT.md"
+    exclude: "^tests/|^CODE_OF_CONDUCT.md|^docs/cli-reference/"
 - repo: local
   hooks:
   - id: readme
