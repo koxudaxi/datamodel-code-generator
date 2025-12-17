@@ -410,12 +410,18 @@ class GraphQLParser(Parser):
             self.enum_field_as_literal == LiteralType.One and len(obj.values) == 1
         )
 
-    def parse_enum_as_literal(self, obj: graphql.GraphQLEnumType) -> None:
+    def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse a GraphQL enum type and add it to results."""
+        if self.should_parse_enum_as_literal(enum_object):
+            return self.parse_enum_as_literal(enum_object)
+        return self.parse_enum_as_enum_class(enum_object)
+
+    def parse_enum_as_literal(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse enum values as a Literal type."""
-        data_type = self.data_type(literals=list(obj.values.keys()))
+        data_type = self.data_type(literals=list(enum_object.values.keys()))
         data_model_type = self._create_data_model(
             model_type=self.data_model_root_type,
-            reference=self.references[obj.name],
+            reference=self.references[enum_object.name],
             fields=[
                 self.data_model_field_type(
                     data_type=data_type,
@@ -427,12 +433,12 @@ class GraphQLParser(Parser):
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
-            description=obj.description,
+            description=enum_object.description,
         )
         self.results.append(data_model_type)
 
-    def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
-        """Parse a GraphQL enum type and add it to results."""
+    def parse_enum_as_enum_class(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum values as an Enum class."""
         enum_fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
 
@@ -628,9 +634,7 @@ class GraphQLParser(Parser):
         # may be as a parameter in the future (??)
         mapper_from_graphql_type_to_parser_method = {
             graphql.type.introspection.TypeKind.SCALAR: self.parse_scalar,
-            graphql.type.introspection.TypeKind.ENUM: lambda obj: self.parse_enum_as_literal(obj)
-            if self.should_parse_enum_as_literal(obj)
-            else self.parse_enum(obj),
+            graphql.type.introspection.TypeKind.ENUM: self.parse_enum,
             graphql.type.introspection.TypeKind.INTERFACE: self.parse_interface,
             graphql.type.introspection.TypeKind.OBJECT: self.parse_object,
             graphql.type.introspection.TypeKind.INPUT_OBJECT: self.parse_input_object,
